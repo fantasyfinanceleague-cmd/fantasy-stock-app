@@ -207,6 +207,30 @@
           </div>
         </section>
 
+        <section className="b-sec" id="your-turn" aria-labelledby="your-turn-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="your-turn-h">Your turn must be unmissable (decided)</h2>
+              <p className="b-job"><b>Giorgio, 2026-10-06:</b> the top of the screen should "flash a color when they're up just to make sure that they're they really notice it", with text "that's very hard to miss", plus "a sound notification or a buzz". Spec by the Design Lead. Stock Scudetto, Roberto B.'s phone: Alessandro D. picks 10, then it's Roberto's pick 11.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>When:</b> the moment the server's clock makes it your turn, once per turn. Never on a refreshed screen that was already your turn (no replay on re-open).</li>
+            <li><b>The flash:</b> the clock card fills with <code>live</code> gold, its text in navy (<code>on-live</code>, new token: #0D1B2E in both themes; 5.1:1 on Light gold, 11.0:1 on Dark gold). Two flashes, then it rests: on 90 ms, hold 220 ms, off to the resting tint 160 ms, on again 90 ms, hold 220 ms, settle 160 ms. About 0.95 s in all, two flashes in that second (under the 3-per-second seizure threshold), never blocking input, never looping.</li>
+            <li><b>At rest, for the whole turn:</b> the card keeps a <code>warn-tint</code> fill and a 2 pt <code>live</code> border; the clock is in score type at 44 pt; "You're on the clock" is 30 pt, weight 900, in <code>liveText</code>. It is the largest text on the screen.</li>
+            <li><b>Buzz and sound, with the flash:</b> <code>Haptics.notificationAsync(Warning)</code> and one short chime (under 0.5 s). The chime respects the silent switch (<code>playsInSilentModeIOS: false</code>) and mixes with other audio, never stopping it. Both fire whenever the app is in front; the flash shows when the draft room is on screen (elsewhere, Home's drafting card already says it's your turn).</li>
+            <li><b>Last 10 seconds:</b> one more Warning haptic at 10 s left. No sound, no second flash: the clock's turn to <code>loss</code> red is the visual.</li>
+            <li><b>Reduce Motion:</b> no flash. The card switches straight to its resting state (tint, border, the big title) with no fade; the haptic and the chime stay, since they aren't motion.</li>
+          </ul>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before: someone else is up" note="The card is quiet; your next pick is named."><I.YourTurn phase="before" /></Fit>
+            <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
+            <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
+            <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
@@ -220,7 +244,7 @@
             <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
             <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
             <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
-            <li><b>The sheet's buttons</b> (Design Lead, UX audit G-3, 2026-10-06): the one filled button is the action, "Leave league" in the destructive red; "Stay" is a text button under it, as on the transfer sheet. Earlier frames had "Stay" filled and "Leave league" outlined; two filled buttons stacked (the first build) is the case this rules out.</li>
+            <li><b>The sheet's buttons</b> (Giorgio, 2026-10-06: "I want stay as a button"): "Leave league" is the filled red button; "Stay" is a real button under it, in the secondary (outlined) style, full width. This overrules the Design Lead's G-3, which had made Stay a text button.</li>
           </ul>
 
           <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
@@ -486,6 +510,57 @@
           <Fit caption="Trade history" note="Includes the draft"><I.TradeHistory /></Fit>
         </Group>
 
+
+        <section className="b-sec" id="buy-a-stock" aria-labelledby="buy-a-stock-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="buy-a-stock-h">Buy a stock</h2>
+              <p className="b-job">Find any stock, see whether you can buy it, and open its sheet. Built in 3e (<code>StockSearchScreen</code>, route <code>/stock-search</code>); framed after the fact by the Design Lead, 2026-10-06. Roberto B.'s phone, Stock Scudetto. Owners come from the draft; AMD, AMGN, AMC and SHW prices are sample. All copy here is new and listed in the box at the end.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Entry point: keep the row, on Portfolio, under the slots summary.</b> Not a header button (a "+" in the header reads as "create league" in this app) and not a floating button (not an iOS pattern for a secondary action). The row says what you can spend before you search (rule 4): a sale's cash, the budget left, or that every slot is invested.</li>
+            <li><b>Results sit inline under the field</b>, never an overlay (G-14), so the keyboard can't hide them. An exact ticker match is always first.</li>
+            <li><b>Every result says who owns it</b> (ruling at the end): yours, another manager's, or nobody's. Only a stock that isn't in the league's list is dimmed and can't be tapped.</li>
+            <li><b>Tapping a result opens the existing stock sheet.</b> Your own stock opens on Sell (already built and verified). For any stock you can't buy, the sheet says why <i>before</i> Review buy, which stays disabled: the refusal never waits for the review.</li>
+            <li><b>The tier league's "Fill" row</b> (decided frame, Tiers call A) opens this same screen scoped to the open slot: the title names the slot, and stocks outside its price range are dimmed. Ready to build once the Portfolio view has <code>preview.unfilled_slots</code>.</li>
+          </ul>
+
+          <h3 className="b-sub">The entry</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · every slot invested" note="The row still opens search (you can look up any stock), and says up front that a buy needs a sale first."><I.BuyEntryPortfolio /></Fit>
+            <Fit caption="Portfolio · a sale's cash waiting" note="The row names the cash and where it came from. The Cash row's Invest (decided, Trading) goes to the same screen."><I.BuyEntryPortfolio cash /></Fit>
+          </div>
+
+          <h3 className="b-sub">The search</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Empty" note="Focused, keyboard up; a hint says what to type."><I.StockSearch state="empty" /></Fit>
+            <Fit caption="Results" note="Owned by another manager (AMZN, AMD) stays tappable to view; not in the league's list (AMC) is dimmed, no chevron."><I.StockSearch state="results" /></Fit>
+            <Fit caption="Exact match" note="An exact ticker is first, on its own if nothing else matches."><I.StockSearch state="exact" /></Fit>
+            <Fit caption="No results" note="Names what was searched and what to try. Whole sentences."><I.StockSearch state="none" /></Fit>
+            <Fit caption="Loading" note="Skeleton rows in place of results, never a blank (rule 9)."><I.StockSearch state="loading" /></Fit>
+            <Fit caption="Error" note="The load-failure pattern: the alert disc in text2 (not red), what failed, and Try again."><I.StockSearch state="error" /></Fit>
+          </div>
+
+          <h3 className="b-sub">The hand-off into the stock sheet</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Another manager's stock" note="The sheet shows who owns it, and why you can't buy it, before Review buy (disabled). Your own stock opens on Sell instead: the existing NVDA frame in Portfolio and stock sheet."><I.SearchSheet kind="owned" /></Fit>
+            <Fit caption="Nobody's stock, nothing to spend" note="Same pattern when every slot is invested. With a sale's cash waiting, the sheet goes to the existing Review buy (Trading)."><I.SearchSheet kind="full" /></Fit>
+            <Fit caption="Tier league · Fill from the open slot" note="Tier Cup, after selling DIS. Scoped to the $100–$200 slot: SHOP ($104.20) fits; SHW (sample price) is outside the range, dimmed. Ready to build with preview.unfilled_slots."><I.StockSearch state="tier" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Design Lead ruling · ownership in results (2026-10-06; Giorgio may overrule)</h3>
+            <ul>
+              <li><b>(a) A stock you hold:</b> "You own this" in your colour; it opens the sheet on Sell. Distinct from (b) by colour and words.</li>
+              <li><b>(b) A stock another manager holds:</b> <b>stays tappable</b>, labelled "Owned by {'{name}'}", not dimmed. The sheet is how you look at a stock (price, chart, who owns it), and looking is allowed. What can't happen is the buy, so the <i>Buy</i> is what's blocked: the sheet says "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league." and Review buy is disabled. The player never reaches a review the server will refuse.</li>
+              <li><b>Why this differs from the draft room</b> (where owned stocks are dimmed): there the row's only action <i>is</i> the pick. The principle is the same in both places: disable the action the server would refuse, never the information.</li>
+              <li><b>(c) Not in the league's list:</b> dimmed, no chevron, "Not in this league's list".</li>
+              <li><b>New copy:</b> "Buy a stock" (row and title), "{'{$X}'} from your {'{SYMBOL}'} sale is ready to invest.", "Every slot is invested. Sell a holding to free one.", "Search by ticker or name" (the draft room's existing wording), "Type a ticker (AMZN) or a company name (Amazon).", "You own this", "Owned by {'{name}'}", "Not in this league's list", "No stock matches “{'{query}'}”." + "Check the ticker, or try the company name.", "Stocks didn't load" + "Check your connection, then try again.", "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league.", "Every slot is invested. Sell a holding to free one, then buy.", "Fill your {'{range}'} slot", "Pick a stock priced {'{lo}'} to {'{hi}'}. It takes the slot {'{SYMBOL}'} left.", "Doesn't fit this slot".</li>
+            </ul>
+          </div>
+        </section>
 
         <Group id="web" code="3d" name="Web app" job="The same four destinations in a left rail, the same content in two columns, and the stock sheet as a side panel."
           notes={[

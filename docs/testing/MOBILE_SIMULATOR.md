@@ -45,6 +45,72 @@ xcrun simctl openurl <UDID> exp://127.0.0.1:8081
 A second person or worker can run in parallel on another device, with Metro on
 `--port 8082` and `exp://127.0.0.1:8082`.
 
+## Captures, accessibility settings and recordings
+
+The method the Design Lead used for the Home audit's F2 evidence (Reduce Motion), on the
+iPhone 17e. `$U` is the simulator's UDID (`xcrun simctl list devices available`).
+
+**Fixtures, not sign-in.** Put the fixture vars in `apps/mobile/.env.local` (gitignored;
+baked into the bundle, so changing it needs a Metro restart), e.g.
+`EXPO_PUBLIC_SHELL_FIXTURE=leagues` (fakes the session, so no sign-in) plus the screen's own
+fixture var. Start Metro from `apps/mobile` with stdin closed (not `CI=1`):
+`npx expo start --go --port 8083 < /dev/null`. Delete `.env.local` when you're done.
+
+**Reduce Motion, text size, appearance: simctl only.** The Settings app's switches ignore
+simulated taps, so don't use them.
+
+```bash
+xcrun simctl spawn $U defaults write com.apple.Accessibility ReduceMotionEnabled -bool YES
+xcrun simctl spawn $U defaults read com.apple.Accessibility ReduceMotionEnabled
+xcrun simctl ui $U content_size accessibility-extra-large
+xcrun simctl ui $U appearance dark
+```
+
+- The `read` prints `1` when Reduce Motion is on; write `NO` to undo it.
+- Text sizes: `large` is the default, `accessibility-extra-large` is XL, and
+  `accessibility-extra-extra-extra-large` is XXXL.
+- **Reduce Motion and text size need a relaunch.** React Native and Reanimated read them
+  once, when the JS loads, so changing them mid-session silently does nothing. Appearance
+  switches live.
+- Relaunch with `xcrun simctl terminate $U host.exp.Exponent`, wait a second, then
+  `xcrun simctl launch $U host.exp.Exponent` and wait about 5 s.
+- Then open `exp://127.0.0.1:<port>` with the simulator tool's `open_url` action. A plain
+  `simctl openurl` can no-op when Expo Go isn't frontmost.
+- Wait for a NEW fixture or "Bundled" line in the Metro log before capturing.
+- **Reset at the end:** Reduce Motion `NO`, content size `large`, appearance `light`.
+
+**Recording video.**
+
+```bash
+xcrun simctl io $U recordVideo --codec=h264 --force /path/out.mov &
+pkill -INT -f "io $U recordVideo"
+```
+
+- Wait about 2 s after starting the recording, then do the interaction (taps at
+  device-point coordinates).
+- `pkill -INT` finalises the file. Scope it to YOUR UDID; never kill every `recordVideo`.
+- Wait until `pgrep -f "io $U recordVideo"` is empty before reading the file.
+
+**Frames (no ffmpeg on this Mac):** use `scripts/sim/vidtool.swift`.
+
+```bash
+swift scripts/sim/vidtool.swift info out.mov
+swift scripts/sim/vidtool.swift frames out.mov outdir 10 0 12.1 390
+```
+
+- `info` prints the frame count, gaps and dropped frames.
+- `frames` takes, in order: fps, start s, end s, and width px.
+- Recordings are **variable frame rate**: a frame is written only when the screen changes,
+  so few frames over a long span means nothing animated in between.
+- To find the frames that changed, diff consecutive PNGs, e.g. with Python PIL's
+  `ImageChops.difference(a, b).getbbox()`. Then lay a changed frame beside its neighbours.
+- For example, "drawn in the first frame" was shown by the frame right after the tap
+  already equalling a frame a second later.
+
+**Gotchas.** Screenshots can lag the screen by 1–3 s on a loaded machine, so re-take one
+before calling something a bug. Detaching the simulator panel can detach other devices'
+panels too.
+
 ## Traps
 - **Stale bundle.** Opening `exp://127.0.0.1:8081` while Expo Go already has a project
   at that address just brings the *old* one to the front. After switching the

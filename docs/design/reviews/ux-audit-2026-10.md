@@ -488,7 +488,7 @@ tests on the G-1 snake and G-4) are taken as reported.
 |---|---|---|
 | G-1 manager columns, your picks | **fixed.** Initials header with "RB" in `youText`; seat *i*'s picks in column *i*, snaking L→R / R→L (round 2 reads 12…7), matching the server's turn order; your cells carry the `you` border and tint. | `draft-room-on-clock-*`, `-after-pick-*` |
 | G-2 the on-clock state stands out | **fixed.** On your turn "0:42" in score type and "You're on the clock" in `title` / `liveText`; off your turn the card is quiet. Squint test passes. | `draft-room-on-clock-*` |
-| G-3 leave sheets | **fixed.** One filled "Leave league", "Stay" as text (matches the board, `6af5ba4`). | `leave-sheet-*`, `leave-unknown-still-in-*` |
+| G-3 leave sheets | **fixed** as ruled then; **overruled by Giorgio** on 2026-10-06 ("I want stay as a button"): "Stay" is a full-width secondary (outlined) button under the red "Leave league" (board `ac74345`). 3c-2 rebuilds it. | `leave-sheet-*`, `leave-unknown-still-in-*` |
 | G-4 your own auto-pick | **fixed.** "11 AAPL · Auto-picked · from your queue"; others' still "from their queue". | `draft-room-after-auto-pick-log-*` |
 | G-5 roster grid | **fixed.** Labels centred, no dead space (room and Home). | `home-drafting-roster-grid-*` |
 | G-6 finished League tab | **fixed.** Run it back card padded; medal discs and rank numerals share one column. | `league-finished-tab-*` |
@@ -518,3 +518,155 @@ gold), and it can never collide with `you`. Keep 2 pt.
    P1). Small fix; re-capture the room's and the queue's search in Dark with results showing.
 2. **Standings block without card padding:** real, **follow-up** (G-12, P2). Doesn't block.
 3. **Create league step-1 "‹ Cancel":** real, **follow-up** (G-13, P3). Doesn't block.
+
+---
+
+## Pass 2c · 3c-2 final re-gate (2026-10-06)
+
+**Verdict: PASS. DESIGN-APPROVED `ui/mobile-league-setup` @ `fa2b160`**, on one condition: the
+branch's last commit (the re-capture of the two stale capture sets, ruling 2 below) must be
+captures-only, with no code change. If it touches code, it comes back here.
+
+### Scope examined
+
+Diff `01cc859..fa2b160` (8 commits) read in source; the 9 new or replaced captures reviewed (the
+room's search with results in Light and Dark, the queue's search in Dark, the on-clock board in
+Light and Dark, the League tab standings and Create league step 1 in Light and Dark). Same gaps as
+pass 2b: no XL/XXXL, Reduce Motion or VoiceOver captures, and no ux-reviewer run. The shared-shell
+change (`5d471fa`, BarsRefresh: iOS `automaticallyAdjustKeyboardInsets` and
+`keyboardShouldPersistTaps="handled"`) is judged from its code and these captures; both settings act
+only while the keyboard is up. The Orchestrator's checks (deno 1145/0, functions 618/0, map,
+gitleaks, mutation tests on the legacy `Colors` import and the on-clock colour) are taken as
+reported.
+
+### Items
+
+| ID | Result | Evidence |
+|---|---|---|
+| G-10 Dark search field | **fixed.** `SymbolSearchField` reads `useTheme()`; the field, the results and the dividers are themed; the results list is no longer clipped to one row by its card (`91d05d0`); a guard forbids the legacy `Colors` returning. Owned stocks show dimmed with an "Already owned" badge, so the picker can't offer a stock the server would refuse (rule 8). | `draft-room-search-results-*`, `queue-search-results-dark` |
+| G-11 on-clock outline | **fixed.** `live` at 2 pt in both themes; in Light the on-clock cell is now gold against your blue cells. | `draft-room-on-clock-*` |
+| G-12 League tab standings | **fixed.** A padded card like its neighbours. | `league-standings-card-*` |
+| G-13 Create league step 1 | **fixed.** Text-only "Cancel"; steps 2–4 keep "‹ Back", which is right for a push. | `create-league-step1-*` |
+
+### Rulings
+
+1. **Search results as an overlay near a tab's end (the worker's observation):** **follow-up,
+   not a block** (G-14, P2). The field itself stays visible above the keyboard (`5d471fa`), so the
+   player is never typing blind. The case where results can be covered is the queue's search at the
+   bottom of the League tab, which isn't the time-pressured moment: on your turn you use the room's
+   search near the top, and its results show in full (`draft-room-search-results-*`). Laying the
+   results inline is a layout change across four callers; do it as its own branch, gated.
+2. **The stale `league-finished-tab-*` and `league-season-settings-entry-*` captures:**
+   **re-capture them, don't delete them.** They are the evidence for G-6 and the League tab's
+   settings entry, and a gate record with holes is worse than an extra commit. Re-capturing as the
+   branch's last commit is fine under the condition above.
+
+### Follow-ups after 3c-2 merges
+
+| ID | What | P |
+|---|---|---|
+| G-9 | The key-screen ring clock, with its Reduce Motion fallback | P2 |
+| G-14 | Search results inline, not an overlay (all four `SymbolSearchField` callers) | P2 |
+| G-15 | **Draft board redesign** (Giorgio, 2026-10-06: "not a fan" of the current draft board UI; "save that for later"). Not started; the next design pass on the draft room takes it, with G-9's ring clock. | P2 |
+
+Everything else found in passes 2, 2b and 2c on this branch is closed.
+
+---
+
+## 3e · Buy a stock (stock search): pre-gate rulings (2026-10-06)
+
+3e built the buy entry point (`ui/mobile-money` @ `7db3879`: `components/money/StockSearchScreen.tsx`,
+route `/stock-search`, a "Buy a stock" row on Portfolio) with no board frame. The Design Lead framed it
+after the fact (board `#buy-a-stock`, branch `design/stock-search` @ `8b6ddc0`) and rules below. These
+are spec-level changes for the 3e worker before its gate, not a gate verdict. **Examined:** the
+screen's source and `useSymbolSearch` / `useMoneyStockSearch`; no captures of this screen yet.
+
+### Ruling: ownership in results
+
+| Kind | In the results | On tap | In the sheet |
+|---|---|---|---|
+| (a) **yours** | "You own this" in `youText` | opens the sheet | Sell pre-selected (built, verified on device) |
+| (b) **another manager's** | "Owned by {name}", in secondary text, **not dimmed, still tappable** | opens the sheet | "In your league · {name}"; a warn-tint line "{Name} owns {SYMBOL}. A stock has one owner per league."; **Review buy disabled** |
+| (c) **not in the league's list** | dimmed, no chevron, "Not in this league's list" | nothing | — |
+
+**Why (b) stays tappable:** the sheet is how you look at a stock (price, chart, who owns it), and
+looking is allowed. The server would refuse the *buy*, so the buy is what's blocked, before the
+review, not at it: the player never reaches a review the server will refuse (rule 8). The draft room
+dims owned stocks because there the row's only action *is* the pick. One principle covers both:
+**disable the action the server would refuse, never the information.** The same pre-review block
+applies when there is nothing to spend ("Every slot is invested. Sell a holding to free one, then
+buy.").
+
+### Spec-level changes for 3e
+
+| ID | Rule | What's wrong (built) | Change | P |
+|---|---|---|---|---|
+| E-1 | 8 / 9 | A failed search reads as "No matching stocks found": `useSymbolSearch` catches the error and returns `[]` with `loading:false` (`lib/useSymbolSearch.ts:74-77`), so a network failure says the stock doesn't exist. The hook is shared: the draft room's search fails silently the same way. | Add `error` to `UseSymbolSearchResult`; show the frame's load failure ("Stocks didn't load" + "Check your connection, then try again." + Try again). Draft room: the same line under its field. | **P1** |
+| E-2 | 9 | Nothing on screen while a search loads. | Skeleton rows (the frame's Loading). | **P1** |
+| E-3 | 8 | Ownership isn't shown, and a buy of another manager's stock is refused only at review. | The ruling above: labels in results; the sheet blocks Buy before review. | **P1** |
+| E-4 | 4 | The "Buy a stock" row doesn't say what you can spend. | Its second line: "{$X} from your {SYMBOL} sale is ready to invest." / the budget left / "Every slot is invested. Sell a holding to free one." | P2 |
+| E-5 | 4 | Prices print as `$${price.toFixed(2)}`, with no thousands separator ($5,000.00 reads "$5000.00"). | The shared money formatter. | P2 |
+| E-6 | 1 / 5 | Two back controls: the header plus a "Back" text button in the content. | One back, "‹ Portfolio", in the header; the title below it, as framed. | P3 |
+| E-7 | — | "No matching stocks found" is a fragment and doesn't help. | "No stock matches “{query}”." + "Check the ticker, or try the company name." | P3 |
+| E-8 | 8 | The field uppercases everything typed, so "amazon" shows as "AMAZON". | Keep the input as typed; match case-insensitively (already does). | P3 |
+
+**Entry point:** keep the row on Portfolio, under the slots summary. Not a header "+" (reads as
+"create league" here) and not a floating button (not an iOS pattern for a secondary action). No
+Giorgio decision needed.
+
+**Tier "Fill ›":** framed (board, "Tier league · Fill from the open slot"): the same screen scoped to
+the open slot, title "Fill your {range} slot", stocks outside the range dimmed "Doesn't fit this
+slot". Ready to build once the Portfolio view has `preview.unfilled_slots`.
+
+### Ruling: the stock chart's labels (2026-10-06)
+
+Follows Giorgio's ranges ruling (1W / 1M / 3M / 1Y, 1W by default, no 1D; daily bars only). The
+chart's dashed reference line is the range's first close.
+
+- **Reference-line labels:** "A week ago {$}", "A month ago {$}", "3 months ago {$}", "A year ago
+  {$}". If the price history starts later than the range does, the line is the first bar's close
+  and is labelled with its date: "{Sep 15} close {$}" (never the range's name, which would claim
+  history that isn't there).
+- **The header's "today" stays today's change against the previous close**, whatever the range.
+  It is the same fact as "today" on Portfolio's rows; switching it with the range would put two
+  different "today"-shaped numbers on one sheet. The range comparison lives on the chart.
+- **The scrub label shows the bar's date, its close, and its change against the range start**, in
+  gain/loss colour with the sign (colour is never the only code): "Wed, Oct 1 · $306.68 ·
+  +$4.83 · +1.60%". The date has no year unless it isn't this year ("Oct 1, 2025"). The last
+  point reads "Today · {price} · {change} · {%}". No "since …" text: the reference line's label
+  already says what the change is against.
+
+---
+
+## Decided after pass 2 (2026-10-06)
+
+### Giorgio overrules G-3
+
+"I want stay as a button." The leave sheets keep "Leave league" as the filled red button; "Stay" is
+a real button under it, the secondary (outlined) style, full width (board `#call-leave`,
+`ac74345`). **Process, from here on:** a Design Lead ruling that changes the look or feel of an
+approved frame, rather than fixing a defect, goes to the Orchestrator flagged **"Giorgio's call"**
+and to Giorgio as an A/B mockup before anyone builds it. G-3 was relayed as polish; it should
+have been a call.
+
+### Your turn must be unmissable (Giorgio; spec by the Design Lead)
+
+Giorgio's words: the top of the screen should "flash a color when they're up just to make sure
+that they're they really notice it", with text "that's very hard to miss", and "a sound
+notification or a buzz". Board: `#your-turn` (before, the flash, at rest, Reduce Motion), `ac74345`.
+
+| Part | Spec |
+|---|---|
+| Trigger | The moment the server's clock makes it your turn; once per turn. A re-opened or refreshed room that is already on your turn doesn't replay it. |
+| Flash | The clock card fills with `live` gold, text in navy. Two flashes, then rest: on 90 ms (`instant`), hold 220 ms, settle to the rest state 160 ms (`quick`), on 90 ms, hold 220 ms, settle 160 ms. About 0.95 s; two flashes inside one second (under WCAG 2.3.1's three-per-second limit). One-shot, never a loop (§4), and it never blocks input. |
+| New token | `on-live`: #0D1B2E in both themes. 5.1:1 on Light `live` (#C07E00), 11.0:1 on Dark `live` (#FFC53D); add the pair to the contrast table (§9A). |
+| At rest (the whole turn) | `warn-tint` fill, 2 pt `live` border; the clock in score type, 44 pt; "You're on the clock" at 30 pt, weight 900, `liveText`: the largest text on the screen. |
+| Haptic | `Haptics.notificationAsync(NotificationFeedbackType.Warning)`, with the first flash. |
+| Sound | One short chime (under 0.5 s), with the first flash. Respects the silent switch (`playsInSilentModeIOS: false`) and mixes with other audio, never stopping it. |
+| Where | The haptic and the chime fire whenever the app is in front. The flash shows when the draft room is on screen; elsewhere, Home's drafting card already says it's your turn. |
+| Last 10 s | One more Warning haptic at 10 s left. No sound and no second flash: the clock turning `loss` red is the visual. |
+| Reduce Motion | No flash. The card switches straight to its rest state, with no fade. The haptic and the chime stay (they aren't motion). |
+
+**A consequence for U-14** (no foreground banners while your clock runs): it should hold only
+while the draft room is on screen. If the player is elsewhere in the app when the turn starts, the
+your-turn push banner should show; the haptic and chime fire either way.
