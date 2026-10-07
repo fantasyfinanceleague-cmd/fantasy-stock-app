@@ -96,3 +96,31 @@ Deno.test('a stock in a tier slot shows its slot label; a stock in no slot shows
   assertEquals(v.rows.find((r) => r.symbol === 'NVDA')!.slotText, '$100–$200 slot');
   assertEquals(v.rows.find((r) => r.symbol === 'AAPL')!.slotText, null);
 });
+
+// C-6 (Design Lead gate, M3): gainMoneyText/gainPctText and
+// todayMoneyText/todayPctText are the SAME combined text split in two, so
+// RollingMoney can roll each figure on its own (a single composite string
+// rolls badly -- digitDiff right-aligns for one value, not a sentence).
+Deno.test('the gain splits into money + percent, joined with the same separator as gainText', () => {
+  const v = view();
+  assertEquals(`${v.gainMoneyText} · ${v.gainPctText}`, v.gainText);
+});
+
+Deno.test('today splits into money + percent, joined with the same separator as todayText', () => {
+  const v = view();
+  assertEquals(`${v.todayMoneyText} · ${v.todayPctText}`, v.todayText);
+});
+
+Deno.test('no stake: gainText and its split parts are all null together', () => {
+  const v = view({ stake: 0 });
+  assertEquals(v.gainText, null);
+  assertEquals(v.gainMoneyText, null);
+  assertEquals(v.gainPctText, null);
+});
+
+Deno.test('a missing prevClose: todayText and its split parts are all null together', () => {
+  const v = view({ holdings: holdings.map((h, i) => (i === 0 ? { ...h, prevClose: null } : h)) });
+  assertEquals(v.todayText, null);
+  assertEquals(v.todayMoneyText, null);
+  assertEquals(v.todayPctText, null);
+});

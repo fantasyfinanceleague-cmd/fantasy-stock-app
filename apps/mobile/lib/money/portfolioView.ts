@@ -62,9 +62,17 @@ export interface PortfolioView {
   valueLabel: string;
   valueText: string;
   gainText: string | null;
+  /** gainText split into its two rollable parts (C-6, M3): a single combined
+   * string rolls badly (RollingMoney's digitDiff right-aligns for a single
+   * value; a composite sentence can misalign mid-string when one part's
+   * width changes). Null together with gainText. */
+  gainMoneyText: string | null;
+  gainPctText: string | null;
   gainTone: 'gain' | 'loss' | 'zero' | null;
   sinceDraftLabel: string;
   todayText: string | null;
+  todayMoneyText: string | null;
+  todayPctText: string | null;
   todayTone: 'gain' | 'loss' | 'zero' | null;
   slotsText: string | null;
   perSlotText: string | null;
@@ -83,23 +91,31 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
   const valueLabel = Math.abs(i.cash) >= 0.005 ? COPY.portfolioValueIncludesCash : 'Portfolio value';
 
   let gainText: string | null = null;
+  let gainMoneyText: string | null = null;
+  let gainPctText: string | null = null;
   let gainTone: PortfolioView['gainTone'] = null;
   if (i.stake > 0) {
     const gain = cents(i.value - i.stake);
     const pct = (gain / i.stake) * 100;
-    gainText = `${formatMoney(gain, { sign: 'always' })} · ${formatPercent(pct, { sign: 'always' })}`;
+    gainMoneyText = formatMoney(gain, { sign: 'always' });
+    gainPctText = formatPercent(pct, { sign: 'always' });
+    gainText = `${gainMoneyText} · ${gainPctText}`;
     gainTone = toneOf(gain);
   }
 
   // Today: only when every held position has a price AND a previous close.
   let todayText: string | null = null;
+  let todayMoneyText: string | null = null;
+  let todayPctText: string | null = null;
   let todayTone: PortfolioView['todayTone'] = null;
   const held = i.holdings;
   if (held.length > 0 && held.every((h) => h.price != null && h.prevClose != null && h.prevClose > 0)) {
     const change = held.reduce((a, h) => a + h.quantity * (h.price! - h.prevClose!), 0);
     const base = held.reduce((a, h) => a + h.quantity * h.prevClose!, 0);
     const pct = base > 0 ? (change / base) * 100 : 0;
-    todayText = `${formatMoney(cents(change), { sign: 'always' })} · ${formatPercent(pct, { sign: 'always' })}`;
+    todayMoneyText = formatMoney(cents(change), { sign: 'always' });
+    todayPctText = formatPercent(pct, { sign: 'always' });
+    todayText = `${todayMoneyText} · ${todayPctText}`;
     todayTone = toneOf(change);
   }
 
@@ -127,9 +143,13 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
     valueLabel,
     valueText,
     gainText,
+    gainMoneyText,
+    gainPctText,
     gainTone,
     sinceDraftLabel: COPY.sinceTheDraft,
     todayText,
+    todayMoneyText,
+    todayPctText,
     todayTone,
     slotsText: fixed ? COPY.slotsInvested(held.length, i.numRounds) : null,
     perSlotText: fixed && i.perSlotNotional != null ? COPY.perSlotAtDraft(formatMoney(i.perSlotNotional)) : null,

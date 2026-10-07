@@ -14,6 +14,7 @@ import Animated, { LinearTransition } from 'react-native-reanimated';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { radius } from '@/constants/tokens';
+import type { ThemeColors } from '@/constants/tokens/color';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { Icon } from '@/components/sp/Icon';
@@ -26,10 +27,18 @@ import { RollingMoney } from '@/components/home/RollingMoney';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMotion } from '@/components/sp/motion';
 
+/** gain/loss/zero -> its theme colour (C-6: the same mapping Home's hero uses). */
+function toneColor(colors: ThemeColors, tone: 'gain' | 'loss' | 'zero' | null): string {
+  if (tone === 'gain') return colors.gain;
+  if (tone === 'loss') return colors.loss;
+  return colors.zero;
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
   stack: { gap: 10 },
+  rollRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
   list: { gap: 0 },
   row: {
     minHeight: 44,
@@ -82,18 +91,28 @@ export function PortfolioScreen() {
     body = (
       <View style={styles.stack}>
         <Text variant="callout" tone="secondary">{v.valueLabel}</Text>
-        {/* M3: the value rolls per changed digit on a quote refresh, never on first paint. */}
+        {/* M3 (Design Lead gate, rule 5): every money figure that changes on a quote
+            refresh rolls, not just the header value -- matching Home's own hero.
+            One accessible element each, since RollingMoney renders one Text per
+            character (Home's own fix, code review 2026-09-29): VoiceOver should
+            land on the whole sentence, never a single rolling digit. */}
         <RollingMoney text={v.valueText} size="display" rollKey={activeLeague?.id ?? ''} />
 
-        {v.gainText ? (
-          <Text variant="callout">
-            {v.gainText} <Text variant="callout" tone="secondary">{v.sinceDraftLabel}</Text>
-          </Text>
+        {v.gainMoneyText && v.gainPctText ? (
+          <View accessible accessibilityLabel={`${v.gainText} ${v.sinceDraftLabel}`} style={styles.rollRow}>
+            <RollingMoney text={v.gainMoneyText} size="callout" color={toneColor(colors, v.gainTone)} rollKey={activeLeague?.id ?? ''} />
+            <Text variant="callout" style={{ color: toneColor(colors, v.gainTone) }}> · </Text>
+            <RollingMoney text={v.gainPctText} size="callout" color={toneColor(colors, v.gainTone)} rollKey={activeLeague?.id ?? ''} />
+            <Text variant="callout" tone="secondary"> {v.sinceDraftLabel}</Text>
+          </View>
         ) : null}
-        {v.todayText ? (
-          <Text variant="callout">
-            {v.todayText} <Text variant="callout" tone="secondary">today</Text>
-          </Text>
+        {v.todayMoneyText && v.todayPctText ? (
+          <View accessible accessibilityLabel={`${v.todayText} today`} style={styles.rollRow}>
+            <RollingMoney text={v.todayMoneyText} size="callout" color={toneColor(colors, v.todayTone)} rollKey={activeLeague?.id ?? ''} />
+            <Text variant="callout" style={{ color: toneColor(colors, v.todayTone) }}> · </Text>
+            <RollingMoney text={v.todayPctText} size="callout" color={toneColor(colors, v.todayTone)} rollKey={activeLeague?.id ?? ''} />
+            <Text variant="callout" tone="secondary"> today</Text>
+          </View>
         ) : null}
 
         {v.slotsText ? <Text variant="callout">{v.slotsText}</Text> : null}
