@@ -25,7 +25,8 @@ import { useWeekOne } from '@/lib/game/useWeekOne';
 import type { MarketCalendarSession } from '@/lib/time/marketWeek';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
-import { ownPickClockRunning, setForegroundQuiet } from '@/lib/foregroundQuiet';
+import { ownPickClockQuiet, setForegroundQuiet } from '@/lib/foregroundQuiet';
+import { useIsFocused } from '@react-navigation/native';
 import { turnState } from '@/lib/game/draftRefusals';
 
 export interface DraftRoomProps {
@@ -69,7 +70,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const nameOf = (id: string | null) => (id && room.names[id]?.name) || '';
   const draftDone = m > 0 && room.pickCount >= totalPicks;
   // UX rule 11: no foreground banners while YOUR pick clock runs (the room shows it).
-  const quiet = ownPickClockRunning(isMyTurn, room.clock.kind);
+  // Only while the room is ON SCREEN (your-turn spec): tabs stay mounted, so mounted isn't on screen.
+  const roomOnScreen = useIsFocused();
+  const quiet = ownPickClockQuiet(isMyTurn, room.clock.kind, roomOnScreen);
   useEffect(() => {
     setForegroundQuiet('own_pick_clock', quiet);
     return () => setForegroundQuiet('own_pick_clock', false);
