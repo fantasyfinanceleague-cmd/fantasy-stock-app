@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useState } from 'react';
 import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -25,6 +26,8 @@ import {
   yourPickLine,
 } from '@/lib/game/autoStart';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
+import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import { PICK_A_TIME_HOME, SET_DRAFT_TIME, homeSetsDraftTime } from '@/lib/game/draftTimeSheet';
 import {
   pickClockLine, BUILD_YOUR_QUEUE, GO_TO_DRAFT_ROOM, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
   MEMBERS_TITLE, membersJoinedCaption, membersNeededCaption, INVITE_CODE_LABEL, NO_BUYING_BEFORE_DRAFT,
@@ -105,6 +108,11 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   const roomOpen = view?.countdown === 'room_open' || view?.countdown === 'starting';
   const pick = roomOpen ? yourPickLine(orderRevealed, user?.id ?? '', ordinal) : null;
   const postponed = phase === 'postponed';
+  // Ruling B (board #call-ux-pass1): the commissioner sets the time right here,
+  // in the same Draft time sheet, opened in place (its own, so it never doubles
+  // up with the blockers card's sheet). No Set later: there's no time yet.
+  const setsTime = homeSetsDraftTime(!!view?.noDate, ds.isCommissioner);
+  const [picking, setPicking] = useState(false);
 
   return (
     <>
@@ -138,7 +146,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
         ) : view?.noDate ? (
           <>
             <Text variant="title">{NO_DATE_TITLE}</Text>
-            <Text variant="callout" tone="secondary">{noDateCopy(ds.isCommissioner, commissionerName)}</Text>
+            <Text variant="callout" tone="secondary">{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}</Text>
           </>
         ) : (
           <>
@@ -194,7 +202,15 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </View>
         ) : null}
 
-        {!waiting ? (
+        {!waiting && setsTime ? (
+          <>
+            <Button label={SET_DRAFT_TIME} onPress={() => setPicking(true)} variant="primary" status={auto.fixes.busy ? 'loading' : 'idle'} />
+            <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="secondary" />
+            {auto.fixes.fixError ? (
+              <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{auto.fixes.fixError}</Text>
+            ) : null}
+          </>
+        ) : !waiting ? (
           <Button label={roomOpen ? GO_TO_DRAFT_ROOM : BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" />
         ) : null}
       </Card>
@@ -235,6 +251,13 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           <Button label="Share" onPress={onShare} variant="secondary" size="sm" />
         </View>
       </Card>
+
+      <DraftDateSheet
+        visible={picking && setsTime}
+        initial={null}
+        onConfirm={(d) => void auto.fixes.saveDraftTime(d)}
+        onClose={() => setPicking(false)}
+      />
 
       {!waiting ? (
         <Card style={styles.card}>

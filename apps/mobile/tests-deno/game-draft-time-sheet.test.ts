@@ -7,14 +7,14 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  PICK_A_TIME_HOME, SET_DRAFT_TIME, SET_LATER, draftTimeSheet, shownDraftTime, type SheetAction, type SheetWrite,
+  PICK_A_TIME_HOME, SET_DRAFT_TIME, SET_LATER, draftTimeSheet, homeSetsDraftTime, shownDraftTime, type SheetAction, type SheetWrite,
 } from '../lib/game/draftTimeSheet.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
 const NOW = new Date('2026-10-06T18:07:12Z'); // earliest: 19:15Z
 const at = (iso: string) => new Date(iso);
 
-const SHEET_CALLERS = ['app/create-league.tsx', 'app/league-settings.tsx', 'components/game/AutoStartBlockers.tsx'];
+const SHEET_CALLERS = ['app/create-league.tsx', 'app/league-settings.tsx', 'components/game/AutoStartBlockers.tsx', 'components/home/PreDraftCard.tsx'];
 /** The <DraftDateSheet …/> element in a caller's source. */
 function sheetElement(src: string): string {
   const start = src.indexOf('<DraftDateSheet');
@@ -126,4 +126,24 @@ Deno.test('every caller commits through onConfirm; a required time has no Set la
     assertEquals(el.includes('onConfirm={'), true, p);
     assertEquals(el.includes('initial={'), true, p);
   }
+});
+
+// ── Ruling B, Home: no draft time yet (commissioner) ──
+
+Deno.test('Home leads with setting the time for the commissioner only; members are unchanged', () => {
+  assertEquals(homeSetsDraftTime(true, true), true);
+  assertEquals(homeSetsDraftTime(true, false), false); // a member: "{Commissioner} will set the draft time."
+  assertEquals(homeSetsDraftTime(false, true), false); // a time is set: the countdown
+});
+
+Deno.test('Home: the ruled line, primary "Set draft time" opening the sheet in place, Build your queue secondary (source guard)', () => {
+  const home = SOURCES['components/home/PreDraftCard.tsx'];
+  assertEquals(home.includes('{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}'), true);
+  assertEquals(home.includes('<Button label={SET_DRAFT_TIME} onPress={() => setPicking(true)} variant="primary"'), true);
+  assertEquals(home.includes("<Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant=\"secondary\" />"), true);
+  // The same sheet and the same save as a postponed draft's new time; no Set later (no time yet).
+  const el = sheetElement(home);
+  assertEquals(el.includes('onConfirm={(d) => void auto.fixes.saveDraftTime(d)}'), true);
+  assertEquals(el.includes('onSetLater'), false);
+  assertEquals(el.includes('visible={picking && setsTime}'), true);
 });

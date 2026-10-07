@@ -16,6 +16,12 @@ export const SET_LATER = 'Set later'; // board
 /** Home, commissioner, no draft time yet (ruling B). */
 export const PICK_A_TIME_HOME = 'Pick a time, and the countdown starts here.'; // Design Lead, ruled (B)
 
+/** Home's no-time card leads with setting the time (ruling B): the commissioner
+ * only. Members keep "{Commissioner} will set the draft time." and Build your queue. */
+export function homeSetsDraftTime(noDate: boolean, isCommissioner: boolean): boolean {
+  return noDate && isCommissioner;
+}
+
 export type SheetAction =
   | { type: 'open'; current: Date | null; now: Date }
   | { type: 'spin'; date: Date }
