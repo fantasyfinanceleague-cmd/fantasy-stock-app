@@ -58,12 +58,12 @@ correction, `f6e0ab2b`) for the code and its Deno tests.
 | File(s) | Proves |
 |---|---|
 | `portfolio-buyrow-xl-light.png` | Re-capture, same screen as C-10's XL state above: `$14,446,031.99` now renders in full at XL text, shrunk to fit, no clip. |
-| `home-hero-million-xl-light.png` | Home's hero (the same `RollingMoney`) at XL with a value of $1,000,000 or more (`$1,234,567.80`, the `xl_million` DEV fixture) — the Design Lead asked for this case specifically, since a fix proven only on Portfolio wouldn't prove the shared component. |
+| `home-hero-million-xl-light.png` | Home's hero (the same `RollingMoney`) at XL with a value of $1,000,000 or more (`$1,234,567.80`, the `xl_million` DEV fixture) — the Design Lead asked for this case specifically, since a fix proven only on Portfolio wouldn't prove the shared component. Re-shot after the scoreboard fix below (Design Lead final re-check, 2026-10-07): the original 12:46 capture predated that fix and still showed the overlap underneath the hero — kept as `home-hero-million-xl-light-before.png` for context, not current. |
 | `search-ownership-standard-light.png`, `…-dark.png` | Re-capture at default text size, unrelated to X-1 — confirms C-2 (own-line ownership text) still holds after the merge brought in main's changes since `ui/mobile-money` diverged. |
 
 ### A follow-up bug the first re-capture surfaced: the scoreboard overlap
 
-The `home-hero-million-xl-light.png` capture above showed a SECOND, separate
+The `home-hero-million-xl-light-before.png` capture above showed a SECOND, separate
 bug below the hero: Home's "This week" card (`ThisWeekCard.tsx`) had its two
 `ScoreDigits` values ("You" / the opponent) overlapping mid-row at $1M+.
 Despite looking like the same shape of bug, it was NOT RollingMoney/X-1 —
