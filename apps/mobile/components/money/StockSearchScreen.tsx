@@ -16,8 +16,10 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { Icon } from '@/components/sp/Icon';
 import { ListRow } from '@/components/sp/ListRow';
 import { Text } from '@/components/sp/Text';
+import { formatMoney } from '@/components/sp/logic/money';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
@@ -38,7 +40,7 @@ import type { ShapedSearchResult } from '@/lib/symbolSearch';
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: 16, gap: 16, paddingBottom: 32 },
-  back: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
+  back: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' },
   input: { minHeight: 44, borderRadius: 10, paddingHorizontal: 14, fontSize: 17, borderWidth: 1 },
   results: { gap: 0 },
   disabled: { opacity: 0.5 },
@@ -84,17 +86,23 @@ export function StockSearchScreen() {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={styles.back}>
-          <Text variant="callout" tone="primary">Back</Text>
+        {/* E-6: one back control, "‹ Portfolio" -- the ShellHeader title never shows while
+            a league is active, so the screen's own title goes right below it. */}
+        <Pressable accessibilityRole="button" accessibilityLabel="Portfolio" onPress={() => router.back()} hitSlop={8} style={styles.back}>
+          <Icon name="chevronLeft" size="callout" tone="text" />
+          <Text variant="callout" tone="primary">Portfolio</Text>
         </Pressable>
+        <Text variant="headline">{COPY.stockSearchTitle}</Text>
 
         <TextInput
           style={[styles.input, { backgroundColor: colors.inset, color: colors.text, borderColor: colors.border }]}
           value={query}
-          onChangeText={(t) => setQuery(t.toUpperCase())}
+          // E-8 (3e UX audit): kept as typed -- matching is already case-insensitive,
+          // both live (symbols-search) and in the fixture (filterStressSearchCatalog).
+          onChangeText={setQuery}
           placeholder={COPY.stockSearchPlaceholder}
           placeholderTextColor={colors.text2}
-          autoCapitalize="characters"
+          autoCapitalize="none"
           autoCorrect={false}
           autoFocus
         />
@@ -117,8 +125,10 @@ export function StockSearchScreen() {
             ))}
           </View>
         ) : query.length > 0 && !loading && results.length === 0 ? (
+          // E-7: names what was searched and what to try, whole sentences.
           <View style={styles.empty}>
-            <Text variant="callout" tone="secondary">{COPY.noMatchingStocks}</Text>
+            <Text variant="callout" style={{ textAlign: 'center' }}>{COPY.noStockMatches(query)}</Text>
+            <Text variant="callout" tone="secondary" style={{ textAlign: 'center' }}>{COPY.tryTickerOrName}</Text>
           </View>
         ) : (
           <View style={styles.results}>
@@ -131,7 +141,7 @@ export function StockSearchScreen() {
                   <ListRow
                     title={item.symbol}
                     subtitle={suffix ? `${item.name} · ${suffix}` : item.name}
-                    trailing={item.price != null ? <Text variant="callout">{`$${item.price.toFixed(2)}`}</Text> : undefined}
+                    trailing={item.price != null ? <Text variant="callout">{formatMoney(item.price)}</Text> : undefined}
                     onPress={item.selectable ? () => handleSelect(item) : undefined}
                     hideChevron
                   />

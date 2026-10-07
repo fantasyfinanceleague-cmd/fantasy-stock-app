@@ -49,7 +49,10 @@ export const COPY = {
   buyAStock: 'Buy a stock',
   stockSearchTitle: 'Buy a stock',
   stockSearchPlaceholder: 'Search by ticker or name',
-  noMatchingStocks: 'No matching stocks found',
+  // E-7 (3e UX audit, board verbatim): names what was searched and what to try.
+  // (Replaces the earlier noMatchingStocks fragment, now unused.)
+  noStockMatches: (query: string) => `No stock matches “${query}”.`,
+  tryTickerOrName: 'Check the ticker, or try the company name.',
   goToPortfolio: 'Go to Portfolio',
   sessionEnded: 'Your session ended. Sign in again.',
   signIn: 'Sign in',
