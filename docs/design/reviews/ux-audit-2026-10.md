@@ -670,3 +670,84 @@ notification or a buzz". Board: `#your-turn` (before, the flash, at rest, Reduce
 **A consequence for U-14** (no foreground banners while your clock runs): it should hold only
 while the draft room is on screen. If the player is elsewhere in the app when the turn starts, the
 your-turn push banner should show; the haptic and chime fire either way.
+
+---
+
+## Re-gate · 3c-2 (your turn + Stay), 2026-10-07
+
+**Verdict: PASS. DESIGN-APPROVED `ui/mobile-league-setup` @ `24d176d7`**, with one cheap item to
+land before merge (B-1) and the follow-ups below.
+
+**Scope examined:** diff `fa2b160..24d176d7` (16 commits) in source; the captures
+`your-turn-rest-standard-{light,dark}`, `your-turn-flash-frames-{light,dark}` (9 timed frames each),
+`your-turn-reduce-motion-frames-light`, and the leave sheets in Light and Dark. **Not verifiable on
+the simulator** (no verdict): the haptics, the chime being audible, and the silent switch. The chime's
+code is right (`expo-audio`, `playsInSilentMode: false`, `interruptionMode: 'mixWithOthers'`,
+`shouldPlayInBackground: false`, playback only; a ~0.42 s WAV) and a dev log shows it fired. These
+three go on Giorgio's device walkthrough.
+
+| Check | Result |
+|---|---|
+| Stay is a button (Giorgio) | **Pass.** Full-width secondary under the red Leave league, all four sheets, both themes. |
+| The flash | **Pass.** Two pulses, all card text navy on the gold at both peaks, rest by ~1.1 s, the clock still counting (0:42 → 0:41). Measured 1.0 s vs the specified 0.94 (device step timing): accepted. |
+| At rest | **Pass.** Tint, 2 pt live border, the title the largest text, in Light and Dark; matches `#your-turn`. |
+| Reduce Motion | **Pass.** Straight to rest in one frame; no flash. |
+| Once per turn, 10 s buzz, U-14 keyed on the room having focus, the clock ticking between reads | **Pass** (code). |
+| Weight 800 vs the spec's 900 | **Accepted.** 800 is the heaviest Archivo face loaded; the spec now reads "the heaviest loaded weight". No new font for this. |
+
+| ID | What | P | Answer |
+|---|---|---|---|
+| B-1 | The two new colour pairs aren't in the contrast test yet: `onLive` on `live` (both themes; measured 5.1:1 / 11.0:1) and `liveText` on `warnTint` over `surface` (Light 5.4:1). §9A: a component that puts text on a fill adds its pair. | P2 | **before merge** (one test entry) |
+| B-2 | During each ~150 ms settle the text switches back to its rest colours while the fill is still half gold, so for a few frames the title is low-contrast (most visible in Dark at +400 ms: gold on half gold). | P3 | follow-up: switch the text colour at the fill's midpoint |
+| B-3 | A one-frame (~17 ms) rise edge, navy on barely-gold. | — | accepted (one frame) |
+| B-4 | The "Auto-picking…" card leaves an empty clock row above its text (pre-existing). | P3 | follow-up |
+
+---
+
+## Gate · 3e Money, 2026-10-07
+
+**Verdict: PASS on conditions. DESIGN-APPROVED `ui/mobile-money` @ `ab73dec` once C-1 to C-3 land.**
+All three are small; none needs a new design.
+
+**Scope examined:** source at `ab73dec` (search, stock sheet, chart, trade review, Portfolio); the
+47 files in `docs/design/captures/ui-mobile-money/` and its README (M1 standard + XL frames, M1/M2
+Reduce Motion recordings, the M2 mid-fade frame, E-1/E-2/E-3 in Light and Dark, the earlier review,
+conflict, unconfirmed, history and load-failure captures). **Not examined:** a normal-motion M1
+recording (stills only, from the worker's frame-diff), VoiceOver, tap latency. Several Portfolio
+captures predate the "Buy a stock" row (`19e2ba46`, 2026-10-05), so the row is judged from the M1
+frames and the code.
+
+**Passes:**
+- E-1 (load failure "Stocks didn't load" + Try again), E-2 (skeleton rows), E-5 (money formatter),
+  E-6 (one back, "‹ Portfolio"), E-7, E-8 (input kept as typed).
+- M2: 1W/1M/3M/1Y, 1W default; "A week ago" / "A month ago" reference lines; a true simultaneous
+  two-layer cross-fade, never a blank chart; Reduce Motion swaps in one frame.
+- M1: the tile starts at the row, the sheet rises, and the chart draws on first view. The XL settle
+  matches standard text, with no visible end-jump. Reduce Motion: one frame change, no tile.
+- Trade review: U-19 (no dismiss mid-submit), U-20 (reset), U-21 ("Selling…" / "Buying…"),
+  U-22 (the sale picker and "Pick another sale"), U-23 (next steps), the conflict and unconfirmed
+  copy. All in code; conflict and unconfirmed also on screen.
+
+**Conditions, before merge:**
+
+| ID | What | P | Fix |
+|---|---|---|---|
+| C-1 | U-14's trade half: no foreground banner over an open trade review. Not wired: the quiet-banner module (`lib/foregroundQuiet.ts`) lives on 3c-2, which this branch predates. | P1 | Merge 3c-2 first, rebase, and set quiet while a review sheet is open. |
+| C-2 | E-3 isn't as ruled. The ownership text is joined onto the company-name subtitle, so a long name truncates the owner ("Owned by Ma…"), and "You own this" is grey: the `mine` flag is computed and unused. | P2 (my ruling; cheap) | The status on its own line (never truncated); "You own this" in `youText`. |
+| C-3 | `review-sell-standard-light.png` shows the review panel flush to the screen edge. The same panel is padded in Dark (a minute later), at XL and in every conflict/unconfirmed capture, so this is most likely a capture taken mid-transition. | — | Re-capture to confirm; if it's real, it's a P1. |
+
+**Follow-ups (after merge, before the 1.2.0 cut where marked):**
+
+| ID | What | P |
+|---|---|---|
+| C-4 | The stock sheet has no "Your position" block (shares, avg entry, value, gain) from key screen 5; only "Drafted by you · …" and the share count. The gain on a position is what a sell decision rests on (rule 4). **Before the cut.** | P2 |
+| C-5 | No-price sheet: "Try again shortly." with no way to (U-33). | P2 |
+| C-6 | M3 (value roll on change): Home rolls money, Portfolio doesn't (rule 5). Cheap with Home's `RollingMoney`. **Before the cut.** | P2 |
+| C-7 | M4 (trade success: the check draws, the Cash row becomes the stock). The ending itself exists (Sold / Bought, rule 11), so this is motion polish. | P2 (1.3) |
+| C-8 | M5 (holdings re-order) appears built (`PortfolioScreen`, `LinearTransition`, "M5: rows FLIP"): needs a recording, not a build. | P3 |
+| C-9 | The "Buy a stock" row is plain text; the board draws it with the search icon tile and an accent title. The "Buy a stock" title is headline size, not the board's page title. The sheet closes with "Done" text, not the board's ×. | P3 |
+| C-10 | Re-capture Portfolio (Light, Dark, XL) with the "Buy a stock" row. | P3 |
+
+**M3–M5 and 1.2.0:** none of them blocks the cut on the UX rules. The trade's ending exists (rule 11).
+I recommend M3 (C-6) before the cut, because Home already rolls money and Portfolio not doing so is an
+inconsistency on the same numbers. M4 is 1.3. M5 needs only evidence.

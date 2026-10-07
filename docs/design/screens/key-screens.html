@@ -171,6 +171,7 @@
   --c-opp: #E8541F;
   --c-opp-text: #B93C0E;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #C07E00;
   --c-live-text: #8A5B00;
   --c-live-glow: rgba(192, 126, 0, 0.35);
@@ -229,6 +230,7 @@
   --c-opp: #FF6A3D;
   --c-opp-text: #FF8F66;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #FFC53D;
   --c-live-text: #FFC53D;
   --c-live-glow: rgba(255, 197, 61, 0.45);
@@ -4897,7 +4899,7 @@
     const card = flash
       ? { background: 'var(--c-live)', border: '2px solid var(--c-live)' }
       : mine ? { background: 'var(--c-warn-tint)', border: '2px solid var(--c-live)' } : {};
-    const ink = flash ? 'var(--c-on-opp)' : undefined;
+    const ink = flash ? 'var(--c-on-live)' : undefined;
     return (
       <Device game tab="league" label={`Draft room, your turn, ${phase}`}>
         <Head chip={<Chip kind="live">Drafting</Chip>} />
@@ -5660,6 +5662,8 @@
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
+    ['on-live', 'live', null, 4.5, 'Your turn: card text during the gold flash'],
+    ['live-text', 'warn-tint', 'surface', 4.5, 'Your turn: the title on the resting card'],
   ];
   function readTheme(theme) {
     const el = document.createElement('div');

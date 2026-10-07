@@ -2963,7 +2963,7 @@
     const card = flash
       ? { background: 'var(--c-live)', border: '2px solid var(--c-live)' }
       : mine ? { background: 'var(--c-warn-tint)', border: '2px solid var(--c-live)' } : {};
-    const ink = flash ? 'var(--c-on-opp)' : undefined;
+    const ink = flash ? 'var(--c-on-live)' : undefined;
     return (
       <Device game tab="league" label={`Draft room, your turn, ${phase}`}>
         <Head chip={<Chip kind="live">Drafting</Chip>} />

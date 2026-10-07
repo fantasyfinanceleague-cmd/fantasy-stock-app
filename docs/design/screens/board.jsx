@@ -136,6 +136,8 @@
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
+    ['on-live', 'live', null, 4.5, 'Your turn: card text during the gold flash'],
+    ['live-text', 'warn-tint', 'surface', 4.5, 'Your turn: the title on the resting card'],
   ];
   function readTheme(theme) {
     const el = document.createElement('div');

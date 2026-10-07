@@ -37,6 +37,7 @@
   --c-opp: #E8541F;
   --c-opp-text: #B93C0E;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #C07E00;
   --c-live-text: #8A5B00;
   --c-live-glow: rgba(192, 126, 0, 0.35);
@@ -95,6 +96,7 @@
   --c-opp: #FF6A3D;
   --c-opp-text: #FF8F66;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #FFC53D;
   --c-live-text: #FFC53D;
   --c-live-glow: rgba(255, 197, 61, 0.45);
