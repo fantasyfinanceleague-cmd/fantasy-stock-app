@@ -340,6 +340,19 @@ export function StockSheetBody({
         ) : (
           <Text variant="callout" tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
         )}
+        {/* C-5 (Design Lead gate, U-33): no_price/invalid_price get a Try again,
+            not just Edit -- the price itself is what failed, so re-reading it
+            (data.refresh) before re-opening the review is the actual retry. */}
+        {open.error === COPY.noPrice || open.error === COPY.invalidPrice ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => { data.refresh(); void openReview(open.kind); }}
+            hitSlop={8}
+            style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}
+          >
+            <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" onPress={() => setOpen(null)} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' }}>
           <Text variant="callout" tone="primary">Edit</Text>
         </Pressable>
@@ -372,7 +385,13 @@ export function StockSheetBody({
       {data.price != null ? (
         <Text variant="title">{formatMoney(data.price)}</Text>
       ) : (
-        <Text variant="callout" tone="secondary">{COPY.noPrice}</Text>
+        // C-5 (Design Lead gate, U-33): a way to retry, same as calendar_unavailable's.
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Text variant="callout" tone="secondary">{COPY.noPrice} </Text>
+          <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8}>
+            <Text variant="callout" tone="primary">{COPY.tryAgain}</Text>
+          </Pressable>
+        </View>
       )}
       {model.todayChange ? (
         <Text variant="callout">
