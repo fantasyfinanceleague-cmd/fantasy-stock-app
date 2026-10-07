@@ -38,4 +38,10 @@ Captured with the `search_fail` / `search_delay` dev fixture scenarios
 |---|---|
 | `search-fail-standard-light.png`, `search-fail-standard-dark.png` | E-1: a thrown search reads as "Stocks didn't load" / "Check your connection, then try again." / Try again — never a silent "no matches". |
 | `search-delay-skeleton-standard-light.png`, `…-dark.png` | E-2: the three-row skeleton, mid-delay (caught via the video + frame-diff method below, since a live screenshot can't reliably land inside a ~900 ms window given this harness's input lag). |
-| `search-ownership-standard-light.png`, `…-dark.png` | E-3: all three ownership states in one result list for query "s0" — "You own this" (S001), no suffix / available (S002, S004…), "Owned by Ma…" (S003, S005…). |
+| `search-ownership-standard-light.png`, `…-dark.png` | E-3: all three ownership states in one result list for query "s0" — "You own this" (S001), no suffix / available (S002, S004…), "Owned by Ma…" (S003, S005…). Predates C-2 (own-line, never-truncated ownership text, `4d068f7`) — shown for context, not current. |
+
+## C-10 — Portfolio with the "Buy a stock" row
+
+| File(s) | Proves |
+|---|---|
+| `portfolio-buyrow-standard-light.png`, `…-standard-dark.png`, `…-xl-light.png` | Re-capture after the row was added (`19e2ba46`): the "Buy a stock" row sits under the slots summary, above Holdings, in Light, Dark and XL text. Predates C-9 (the search-icon tile and accent title, queued) — shown for context, not current. |
