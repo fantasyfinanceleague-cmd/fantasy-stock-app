@@ -4,11 +4,21 @@
  * captured: the on-clock card (the default: 10 picks made, you're on pick 11),
  * the board's "After the pick" card (you took pick 11; Paolo picks 12, then 13),
  * the same after YOUR auto-pick, and the draft's ending (all 36 picks in).
+ * 'turn_arrives' is the your-turn signal's capture: the room first reads pick 10
+ * (Alessandro's) overdue, its auto-pick backstop asks the seam, and the re-read
+ * is 'on_clock', so the turn becomes yours AFTER the first reading (the first
+ * reading never fires the signal) the way it does in a real draft.
  * DEV-only: read through the seam, which is off outside a dev build.
  */
-export type DraftRoomVariant = 'on_clock' | 'after_pick' | 'after_auto_pick' | 'complete';
+export type DraftRoomVariant = 'on_clock' | 'after_pick' | 'after_auto_pick' | 'complete' | 'turn_arrives';
 
-const VARIANTS: readonly DraftRoomVariant[] = ['on_clock', 'after_pick', 'after_auto_pick', 'complete'];
+const VARIANTS: readonly DraftRoomVariant[] = ['on_clock', 'after_pick', 'after_auto_pick', 'complete', 'turn_arrives'];
+
+/** The variant after the room's auto-pick backstop reaches the seam: 'turn_arrives'
+ * becomes 'on_clock' (Alessandro's overdue pick 10 lands; you're on pick 11). */
+export function roomVariantAfterAutoPick(variant: DraftRoomVariant): DraftRoomVariant {
+  return variant === 'turn_arrives' ? 'on_clock' : variant;
+}
 
 export function parseDraftRoomVariant(raw: string | null | undefined): DraftRoomVariant {
   return raw && (VARIANTS as readonly string[]).includes(raw) ? (raw as DraftRoomVariant) : 'on_clock';
@@ -44,6 +54,7 @@ const OTHERS = ['AVGO', 'NFLX', 'ORCL', 'ADBE', 'INTC', 'QCOM', 'TXN', 'IBM', 'U
 /** The drafts rows for a variant. */
 export function draftRoomPicks(variant: DraftRoomVariant): PickRow[] {
   if (variant === 'on_clock') return FIRST_TEN;
+  if (variant === 'turn_arrives') return FIRST_TEN.slice(0, 9);
   if (variant === 'after_pick' || variant === 'after_auto_pick') {
     return [...FIRST_TEN, { pick_number: 11, symbol: 'AAPL', pick_source: variant === 'after_pick' ? 'manual' : 'auto_queue', entry_price: 211.42 }];
   }
@@ -70,7 +81,8 @@ export function draftRoomClock(variant: DraftRoomVariant, nowMs: number): Record
     pick_seconds: 60,
     picks_made: picks,
     turn_started_at: now,
-    deadline_at: done ? null : new Date(nowMs + 42_000).toISOString(),
+    // 'turn_arrives': pick 10's deadline has just passed (the room's backstop asks for it).
+    deadline_at: done ? null : new Date(nowMs + (variant === 'turn_arrives' ? -1_000 : 42_000)).toISOString(),
     server_now: now,
   };
 }
