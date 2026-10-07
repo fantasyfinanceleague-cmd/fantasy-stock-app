@@ -2,22 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1f13272f9674571086e76f183a67fa51fb12f2bd",
-    "commitShort": "1f13272",
+    "commit": "48b6437bb507faefb1a631c32d242f8c7bd6a2dc",
+    "commitShort": "48b6437",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-06T21:58:25Z",
-    "sourceHash": "sha256:eb8dbb330d214b4c61c939fea340b8925a1b1433a8e97b16527fa59e4d5c0bd3",
+    "branch": "ui/mobile-money",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/money/recordTradeOutcome.ts"
+      }
+    ],
+    "timestamp": "2026-10-07T05:08:08Z",
+    "sourceHash": "sha256:c31f0d63d055ed07b1bb68485c53682c84bb7540035466bd7924a5bfabda172e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 2.8,
-    "ageDays": 0.1,
+    "ageHours": 9.9,
+    "ageDays": 0.4,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -3136,6 +3141,37 @@
       "source": {
         "path": "supabase/migrations/20261004000000_participant_display_names.sql",
         "line": 170
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261031000000_get_portfolio_ledger.sql:60"
+        ],
+        "latestDefinition": "supabase/migrations/20261031000000_get_portfolio_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.get_portfolio_ledger",
+      "label": "get_portfolio_ledger()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261031000000_get_portfolio_ledger.sql",
+        "line": 60
       }
     },
     {
@@ -6494,12 +6530,12 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.notifications",
-      "label": "notifications.ts",
-      "sublabel": "mobile/lib/notifications.ts",
+      "id": "ui.money.priceReads",
+      "label": "priceReads.ts",
+      "sublabel": "mobile/lib/money/priceReads.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/lib/notifications.ts",
+        "path": "apps/mobile/lib/money/priceReads.ts",
         "line": 1
       }
     },
@@ -6511,12 +6547,80 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.player-portfolio",
-      "label": "player-portfolio.tsx",
-      "sublabel": "mobile/app/player-portfolio.tsx",
+      "id": "ui.money.recordTrade",
+      "label": "recordTrade.ts",
+      "sublabel": "mobile/lib/money/recordTrade.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/app/player-portfolio.tsx",
+        "path": "apps/mobile/lib/money/recordTrade.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.money.usePortfolioData",
+      "label": "usePortfolioData.ts",
+      "sublabel": "mobile/lib/money/usePortfolioData.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/money/usePortfolioData.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.money.usePortfolioLedger",
+      "label": "usePortfolioLedger.ts",
+      "sublabel": "mobile/lib/money/usePortfolioLedger.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/money/usePortfolioLedger.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.money.useStockSheetData",
+      "label": "useStockSheetData.ts",
+      "sublabel": "mobile/lib/money/useStockSheetData.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/money/useStockSheetData.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.notifications",
+      "label": "notifications.ts",
+      "sublabel": "mobile/lib/notifications.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/notifications.ts",
         "line": 1
       }
     },
@@ -6840,23 +6944,6 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/Ticker.jsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "ui.trade-history",
-      "label": "trade-history.tsx",
-      "sublabel": "mobile/app/trade-history.tsx",
-      "kind": "client-screen",
-      "source": {
-        "path": "apps/mobile/app/trade-history.tsx",
         "line": 1
       }
     },
@@ -10050,6 +10137,32 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.get_portfolio_ledger->tbl.league_members",
+      "from": "pg.get_portfolio_ledger",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261031000000_get_portfolio_ledger.sql:121"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_portfolio_ledger->tbl.symbols",
+      "from": "pg.get_portfolio_ledger",
+      "to": "tbl.symbols",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT symbols (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261031000000_get_portfolio_ledger.sql:102"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.get_season_result->tbl.league_seasons",
       "from": "pg.get_season_result",
       "to": "tbl.league_seasons",
@@ -12157,6 +12270,103 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.money.priceReads->fn.historical-bars",
+      "from": "ui.money.priceReads",
+      "to": "fn.historical-bars",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('historical-bars')",
+      "callSites": [
+        "apps/mobile/lib/money/priceReads.ts:40"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.priceReads->fn.quote",
+      "from": "ui.money.priceReads",
+      "to": "fn.quote",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('quote')",
+      "callSites": [
+        "apps/mobile/lib/money/priceReads.ts:28"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.recordTrade->fn.record-trade",
+      "from": "ui.money.recordTrade",
+      "to": "fn.record-trade",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('record-trade')",
+      "callSites": [
+        "apps/mobile/lib/money/recordTrade.ts:24",
+        "apps/mobile/lib/money/recordTrade.ts:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.usePortfolioData->fn.historical-bars",
+      "from": "ui.money.usePortfolioData",
+      "to": "fn.historical-bars",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('historical-bars')",
+      "callSites": [
+        "apps/mobile/lib/money/usePortfolioData.ts:130"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.usePortfolioData->fn.quote",
+      "from": "ui.money.usePortfolioData",
+      "to": "fn.quote",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('quote')",
+      "callSites": [
+        "apps/mobile/lib/money/usePortfolioData.ts:120"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.usePortfolioLedger->pg.get_portfolio_ledger",
+      "from": "ui.money.usePortfolioLedger",
+      "to": "pg.get_portfolio_ledger",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_portfolio_ledger')",
+      "callSites": [
+        "apps/mobile/lib/money/usePortfolioLedger.ts:31"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.useStockSheetData->fn.symbol-name",
+      "from": "ui.money.useStockSheetData",
+      "to": "fn.symbol-name",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('symbol-name')",
+      "callSites": [
+        "apps/mobile/lib/money/useStockSheetData.ts:133"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.useStockSheetData->fn.ticker-quotes",
+      "from": "ui.money.useStockSheetData",
+      "to": "fn.ticker-quotes",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('ticker-quotes')",
+      "callSites": [
+        "apps/mobile/lib/money/useStockSheetData.ts:117"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.notifications->fn.send-notification",
       "from": "ui.notifications",
       "to": "fn.send-notification",
@@ -12204,51 +12414,6 @@
       "callSites": [
         "apps/mobile/lib/notifications.ts:72",
         "apps/mobile/lib/notifications.ts:97"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.player-portfolio->tbl.drafts",
-      "from": "ui.player-portfolio",
-      "to": "tbl.drafts",
-      "protocol": "postgrest-select",
-      "payload": ".from('drafts').select('symbol, quantity, entry_price')",
-      "columns": [
-        "symbol, quantity, entry_price"
-      ],
-      "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:135"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.player-portfolio->tbl.trades",
-      "from": "ui.player-portfolio",
-      "to": "tbl.trades",
-      "protocol": "postgrest-select",
-      "payload": ".from('trades').select('symbol, action, quantity, price')",
-      "columns": [
-        "symbol, action, quantity, price"
-      ],
-      "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:142"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.player-portfolio->tbl.user_profiles",
-      "from": "ui.player-portfolio",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('username, avatar')",
-      "columns": [
-        "username, avatar"
-      ],
-      "callSites": [
-        "apps/mobile/app/player-portfolio.tsx:123"
       ]
     },
     {
@@ -13097,21 +13262,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.trade-history->tbl.trades",
-      "from": "ui.trade-history",
-      "to": "tbl.trades",
-      "protocol": "postgrest-select",
-      "payload": ".from('trades').select('*')",
-      "columns": [
-        "*"
-      ],
-      "callSites": [
-        "apps/mobile/app/trade-history.tsx:58"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.TradeModal->fn.quote",
       "from": "ui.TradeModal",
       "to": "fn.quote",
@@ -13839,11 +13989,14 @@
         "fn.quote",
         "ui.TradeModal",
         "ui.home.useHomeLeague",
+        "ui.money.priceReads",
+        "ui.money.usePortfolioData",
         "ui.src.components.TradeModal.jsx",
         "ui.src.context.PriceContext.jsx",
         "ui.src.pages.DraftPage.jsx",
-        "ui.useStockPrices",
+        "ui.money.useStockSheetData",
         "fn.ticker-quotes",
+        "ui.useStockPrices",
         "ui.src.Ticker.jsx",
         "fn.symbol-name",
         "ui.useStockNames",
@@ -13860,6 +14013,8 @@
             "e.ui.draft->fn.quote",
             "e.ui.TradeModal->fn.quote",
             "e.ui.home.useHomeLeague->fn.quote",
+            "e.ui.money.priceReads->fn.quote",
+            "e.ui.money.usePortfolioData->fn.quote",
             "e.ui.src.components.TradeModal.jsx->fn.quote",
             "e.ui.src.context.PriceContext.jsx->fn.quote",
             "e.ui.src.pages.DraftPage.jsx->fn.quote"
@@ -13870,6 +14025,8 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/home/useHomeLeague.ts:561",
+            "apps/mobile/lib/money/priceReads.ts:28",
+            "apps/mobile/lib/money/usePortfolioData.ts:120",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -13879,11 +14036,13 @@
         {
           "n": 2,
           "edge": [
+            "e.ui.money.useStockSheetData->fn.ticker-quotes",
             "e.ui.useStockPrices->fn.ticker-quotes",
             "e.ui.src.Ticker.jsx->fn.ticker-quotes"
           ],
           "detail": "ticker-quotes — batch prices for the ticker strip.",
           "files": [
+            "apps/mobile/lib/money/useStockSheetData.ts:117",
             "apps/mobile/lib/useStockPrices.ts:32",
             "apps/web/src/Ticker.jsx:28"
           ]
@@ -13892,6 +14051,7 @@
           "n": 3,
           "edge": [
             "e.ui.TradeModal->fn.symbol-name",
+            "e.ui.money.useStockSheetData->fn.symbol-name",
             "e.ui.useStockNames->fn.symbol-name",
             "e.ui.src.components.TradeModal.jsx->fn.symbol-name"
           ],
@@ -13899,6 +14059,7 @@
           "files": [
             "apps/mobile/components/TradeModal.tsx:102",
             "apps/mobile/components/TradeModal.tsx:151",
+            "apps/mobile/lib/money/useStockSheetData.ts:133",
             "apps/mobile/lib/useStockNames.ts:13",
             "apps/web/src/components/TradeModal.jsx:82"
           ]
@@ -13921,11 +14082,15 @@
           "n": 5,
           "edge": [
             "e.ui.home.useHomeLeague->fn.historical-bars",
+            "e.ui.money.priceReads->fn.historical-bars",
+            "e.ui.money.usePortfolioData->fn.historical-bars",
             "e.ui.useHistoricalPL->fn.historical-bars"
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
             "apps/mobile/lib/home/useHomeLeague.ts:578",
+            "apps/mobile/lib/money/priceReads.ts:40",
+            "apps/mobile/lib/money/usePortfolioData.ts:130",
             "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
@@ -13948,6 +14113,16 @@
     {
       "node": "pg.enforce_commissioner_change_via_transfer",
       "label": "enforce_commissioner_change_via_transfer()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.get_portfolio_ledger",
+      "label": "get_portfolio_ledger()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -14607,6 +14782,12 @@
   },
   "unverified": [
     {
+      "scope": "pg.get_portfolio_ledger",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "pg._league_membership_window",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
@@ -14681,13 +14862,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 195,
-    "edges": 455,
+    "nodes": 199,
+    "edges": 461,
     "flows": 8,
-    "drift": 31,
-    "driftHigh": 4,
+    "drift": 32,
+    "driftHigh": 5,
     "deadCode": 32,
-    "unverified": 12
+    "unverified": 13
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -14730,6 +14911,14 @@
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:561 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:578 -> historical-bars",
+      "apps/mobile/lib/money/priceReads.ts:28 -> quote",
+      "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
+      "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
+      "apps/mobile/lib/money/recordTrade.ts:48 -> record-trade",
+      "apps/mobile/lib/money/usePortfolioData.ts:120 -> quote",
+      "apps/mobile/lib/money/usePortfolioData.ts:130 -> historical-bars",
+      "apps/mobile/lib/money/useStockSheetData.ts:117 -> ticker-quotes",
+      "apps/mobile/lib/money/useStockSheetData.ts:133 -> symbol-name",
       "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
@@ -14763,6 +14952,7 @@
       "apps/mobile/lib/home/usePreDraftData.ts:105 -> get_league_display_names",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
+      "apps/mobile/lib/money/usePortfolioLedger.ts:31 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
       "apps/web/src/pages/DraftPage.jsx:381 -> get_draft_order",
@@ -14810,10 +15000,6 @@
       "apps/mobile/app/create-league.tsx:126 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:152 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
-      "apps/mobile/app/player-portfolio.tsx:123 -> user_profiles.select",
-      "apps/mobile/app/player-portfolio.tsx:135 -> drafts.select",
-      "apps/mobile/app/player-portfolio.tsx:142 -> trades.select",
-      "apps/mobile/app/trade-history.tsx:58 -> trades.select",
       "apps/mobile/components/LeagueCarousel.tsx:109 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
@@ -15136,6 +15322,7 @@
       "20261023000000_lock_start_new_league_season.sql",
       "20261028000002_snapshot_week_end_heal_cron.sql",
       "20261029000000_get_home_league_rpc.sql",
+      "20261031000000_get_portfolio_ledger.sql",
       "20261101000000_draft_feasibility_pool.sql",
       "20261101000001_draft_stalls.sql",
       "20261101000003_draft_price_outages.sql",
