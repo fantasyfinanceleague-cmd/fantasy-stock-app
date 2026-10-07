@@ -28,7 +28,7 @@
 --   G1  every auto-start function: postgres + service_role only, DEFINER
 --       where expected, search_path pinned                           PASS
 --   G2  draft_start_watch + draft_postponements: RLS on, no client
---       grant, service_role SELECT-only                              PASS
+--       grant, service_role SELECT-only (r, or rm on PG17: MAINTAIN is a default)                              PASS
 --   G3  the four leagues triggers + the notifications trigger enabled;
 --       the freeze fn is server-only                                 PASS
 --   G4  draft_start_policy(): room 1h, gate 30s, reminder 2h, 55 min,
@@ -102,7 +102,7 @@ begin
     from pg_class
    where oid in ('public.draft_start_watch'::regclass, 'public.draft_postponements'::regclass)
      and (not relrowsecurity or relacl is null or relacl::text ~ '(anon|authenticated)='
-          or relacl::text !~ 'service_role=r/');
+          or relacl::text !~ 'service_role=rm?/');  -- PG17 adds MAINTAIN ('m') by default; prod reads rm
   out := out || format(E'G2 state tables rls/grants  %s  %s\n', coalesce(acl, 'ok'), case when acl is null then 'PASS' else 'FAIL' end);
 
   select count(*) into n from pg_trigger
@@ -171,11 +171,11 @@ begin
                               league_type, playoff_teams, stake_mode, budget_amount, draft_date)
   values ('__AUTOSTART_RECONFIRM__', c_uid, 'AST-' || gen_random_uuid(), 8, 6, 11, 'matchup', 4, 'budget_cap', 250,
           now() - interval '1 minute') returning id into l_recon;
-  insert into public.league_members (league_id, user_id)
-  select l, u from unnest(array[l_gate, l_post, l_post2, l_room, l_start, l_recon]) l,
+  insert into public.league_members (league_id, user_id, role)
+  select l, u, case when u = c_uid then 'commissioner' else 'member' end from unnest(array[l_gate, l_post, l_post2, l_room, l_start, l_recon]) l,
                    unnest(array[c_uid, gen_random_uuid()::text, gen_random_uuid()::text, 'bot-1']) u;
-  insert into public.league_members (league_id, user_id)
-  select l_watch, u from unnest(array[c_uid, gen_random_uuid()::text, gen_random_uuid()::text]) u;
+  insert into public.league_members (league_id, user_id, role)
+  select l_watch, u, case when u = c_uid then 'commissioner' else 'member' end from unnest(array[c_uid, gen_random_uuid()::text, gen_random_uuid()::text]) u;
 
   -- ---- W: the watch -------------------------------------------------------------
   begin
