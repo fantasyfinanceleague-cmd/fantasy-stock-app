@@ -2,7 +2,7 @@
 
 **Giorgio's rule (2026-10-06, verbatim):** "the draft is not something that is started manually. It should be something that starts at the minute that is selected by the commissioner. So if the commissioner sets it for noon tomorrow, the draft room will open at 11 a.m. and the draft will automatically start at noon."
 
-Branch `feat/draft-auto-start` off `origin/main` @ `89b79c1`. Provisional migrations `20261109000000`–`09`.
+Branch `feat/draft-auto-start` off `origin/main` @ `89b79c1`. Provisional migrations `20261111000000`–`09`.
 Builds on: #67 draft order modes (applied), #58 pick clock (applied), #105 feasibility (applied),
 #123 freeze (merged), `ops/autopick-cron-live` (`20261106000000`, sweep cron, in flight),
 #126 leave-league (`20261107000000`–`06`, open).
@@ -125,7 +125,7 @@ New server work for T−1h:
 
 ## Release order (sketch)
 
-`ops/autopick-cron-live` (sweep cron live) → #126 → draft-order-notify cron promoted → this branch: `db push` (`20261109…`), then deploy draft-autopick-sweep **and** draft-control (both import `_shared/draft-start.ts`; byte-verify both upload lists) → effect test → the mobile countdown UI ships with 1.2.0. The server is safe ahead of the UI: old clients' Start button becomes a redundant kick.
+`ops/autopick-cron-live` (sweep cron live) → #126 → draft-order-notify cron promoted → this branch: `db push` (`20261111…`), then deploy draft-autopick-sweep **and** draft-control (both import `_shared/draft-start.ts`; byte-verify both upload lists) → effect test → the mobile countdown UI ships with 1.2.0. The server is safe ahead of the UI: old clients' Start button becomes a redundant kick.
 
 ---
 
@@ -141,11 +141,11 @@ Built: everything that doesn't depend on decisions 1–4. Not built: notificatio
 |---|---|
 | Policy (★A: 15-min grace, then missed; B/C noted in place) | `supabase/functions/_shared/draft-start-policy.ts` + `public.draft_start_grace()` (pinned equal by test) |
 | One start path | `supabase/functions/_shared/draft-start.ts` `startDraftIfDue`, used by `draft-control` `start` AND the sweep's start pass |
-| The flip (row lock + window + floor + CAS) | `public.start_league_draft` in `20261109000000` |
-| Due list + 60 s back-off | `public.due_draft_starts`, `draft_start_blocks`, `note_draft_start_blocked` (`20261109000000`) |
-| Cron | `20261109000002`: same job, guard = overdue (verbatim from `20261106000000`) OR due |
+| The flip (row lock + window + floor + CAS) | `public.start_league_draft` in `20261111000000` |
+| Due list + 60 s back-off | `public.due_draft_starts`, `draft_start_blocks`, `note_draft_start_blocked` (`20261111000000`) |
+| Cron | `20261111000002`: same job, guard = overdue (verbatim from `20261106000000`) OR due |
 | `status` | gains `starts_at` + `start_state`; from the room-open hour it evaluates feasibility too (the early warning) |
-| `draft_status` server-only | `20261109000001`: rule (1) of #123's `enforce_league_rules_frozen_after_draft_start` (one place, body otherwise verbatim) + an INSERT guard |
+| `draft_status` server-only | `20261111000001`: rule (1) of #123's `enforce_league_rules_frozen_after_draft_start` (one place, body otherwise verbatim) + an INSERT guard |
 | Effect test | `docs/security/draft-auto-start-effect-test.sql` (ONE DO block, 20 lines) |
 | Tests | `_shared/draft-start(-policy).test.ts` (hermetic), `supabase/tests/draft_auto_start.pglite.test.ts`, `draft_auto_start_cron_wiring.test.ts` |
 
@@ -173,10 +173,10 @@ Read it as: any `DUE NOW` row starts within 10 s of the push. Any `future` row s
 
 0. Preconditions: `20261106000000`–`02` (the auto-pick cron, on main) and `20261107000000`–`06` (#126, on main) applied first, or in the same push (timestamp order does it). Check with `SELECT version FROM supabase_migrations.schema_migrations WHERE version >= '20261106000000' ORDER BY version;`. The auto-pick runbook (`docs/migrations/AUTOPICK_CRON_LIVE.md`) must be complete before this push, because this file re-schedules the same job. #94 may land either side (its gate is caught by name). The draft-order-notify cron is recommended in the same release (§3).
 1. Merge. Refresh the deploy checkout (CLAUDE.md). Run the pre-check above.
-2. `supabase db push --dry-run`: it must list `20261109000000`–`02` (re-stamped later than anything already applied; never `--include-all`). Then `supabase db push`. Confirm in `supabase_migrations.schema_migrations`.
+2. `supabase db push --dry-run`: it must list `20261111000000`–`02` (re-stamped later than anything already applied; never `--include-all`). Then `supabase db push`. Confirm in `supabase_migrations.schema_migrations`.
 3. Deploy **draft-control** and **draft-autopick-sweep** (both import `_shared/draft-start.ts`). The upload list must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts` and `draft-control/rules.ts` (for the sweep too). Content check first: `grep -c startDraftIfDue supabase/functions/draft-autopick-sweep/index.ts` ≥ 1. Byte-verify both downloads against the commit.
    Push-vs-deploy order: deploy within minutes of the push. The new cron posts for due drafts at once, and the OLD sweep ignores them (harmless, no starts). The old draft-control `start` keeps working until redeployed, but it writes `draft_status` with the service role, which the server-only rule exempts.
-4. `docs/security/draft-auto-start-effect-test.sql`: 20 PASS lines. Also, as postgres, run `SELECT exists (SELECT 1 FROM public.due_draft_starts());`: it must return without error. The cron command isn't validated at schedule time, and a broken guard would silently stop the auto-pick backstop too. Then the live check in `20261109000002`'s footer (a test league ~62 min out, every app closed; `draft_started_at - draft_date` well under 15 s).
+4. `docs/security/draft-auto-start-effect-test.sql`: 20 PASS lines. Also, as postgres, run `SELECT exists (SELECT 1 FROM public.due_draft_starts());`: it must return without error. The cron command isn't validated at schedule time, and a broken guard would silently stop the auto-pick backstop too. Then the live check in `20261111000002`'s footer (a test league ~62 min out, every app closed; `draft_started_at - draft_date` well under 15 s).
 5. Re-capture `docs/architecture/db-snapshot.json` (new functions + grants + the cron command), re-run the map, update STATUS.
 
 **Supersedes:** `docs/security/freeze-league-rules-effect-test.sql` R7 and D1 now refuse with `draft_status_server_only`. Don't re-run that file as a gate.
@@ -221,7 +221,7 @@ Accepted / for Giorgio:
 
 **Why a new `draft_room_open` kind:** #67's `draft_order_set` is written by every finalize and is unique per member per league, *ever*. A league postponed after its order was set could never announce its new time. `draft_order_set` rows stay as in-app records; a trigger marks their push `skipped` at insert (and the never-delivered backlog is settled once), so nobody gets two pushes. No #67/#126 function is re-created.
 
-## Files (20261109000000–03)
+## Files (20261111000000–03)
 
 - `…000000_draft_auto_start.sql`:
   - `draft_start_policy()`, `draft_start_watch`, `draft_postponements`;
@@ -282,7 +282,7 @@ Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.t
    - The upload lists must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts`, `draft-control/rules.ts` (sweep and draft-control), plus `draft-order-notify/plan.ts`, `_shared/push.ts`, `_shared/cron-auth.ts`.
    - Content check first: `grep -c watchLeague supabase/functions/draft-autopick-sweep/index.ts` ≥ 1 and `grep -c decideNotice supabase/functions/draft-order-notify/index.ts` ≥ 1.
    - Byte-verify each with a download + diff.
-3. `supabase db push --dry-run`: exactly `20261109000000`–`03`. Then `supabase db push`, and confirm in `schema_migrations`.
+3. `supabase db push --dry-run`: exactly `20261111000000`–`03`. Then `supabase db push`, and confirm in `schema_migrations`.
 4. `docs/security/draft-auto-start-effect-test.sql`: every line PASS (24 lines; C1/C2 need pg_cron).
 5. As postgres: `SELECT exists (SELECT 1 FROM public.draft_watch_due()), exists (SELECT 1 FROM public.due_draft_starts()), public.draft_room_notices_due();` must return without error. Neither cron command is validated at schedule time.
 6. **Live test** (a throwaway league, every app closed; verify by DATA):

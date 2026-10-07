@@ -1,6 +1,6 @@
 /**
- * Draft auto-start (20261109000000 + 20261109000001, and the cron guards of
- * 20261109000002 / 20261109000003) against REAL Postgres (PGlite). NOT
+ * Draft auto-start (20261111000000 + 20261111000001, and the cron guards of
+ * 20261111000002 / 20261111000003) against REAL Postgres (PGlite). NOT
  * hermetic: the first run fetches npm:@electric-sql/pglite. Run:
  *   deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts
  *
@@ -19,7 +19,7 @@
  * Time: every case sets draft_date relative to the DB clock (now()), so the
  * gate/room/reminder windows are exercised for real. What one connection cannot
  * show: two writers racing on the row lock; the lock clauses are pinned
- * structurally and the argument is in 20261109000000's header.
+ * structurally and the argument is in 20261111000000's header.
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
@@ -47,8 +47,8 @@ const BASE = [   // prod (timestamp) order, before the migrations under test
   '20261107000006_draft_waits_for_roster_reconfirm.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 const UNDER_TEST = [
-  '20261109000000_draft_auto_start.sql',
-  '20261109000001_draft_status_server_only.sql',
+  '20261111000000_draft_auto_start.sql',
+  '20261111000001_draft_status_server_only.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 
 const SCHEMA_PRE = `

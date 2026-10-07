@@ -11,7 +11,7 @@
  *       - START pass: startDraftIfDue for every league due_draft_starts() lists.
  *   * draft-control action:'start' (the 1.1.0 Start button): startDraftIfDue,
  *     so it can only do what the next tick would.
- * Every write is a service-role SQL function (20261109000000) that takes the
+ * Every write is a service-role SQL function (20261111000000) that takes the
  * league row lock and compare-and-swaps the inputs judged here
  * (_draft_start_inputs vs buildStartExpect), so an edit or a join between this
  * evaluation and the write is 'changed', never a decision on rules nobody
@@ -136,7 +136,7 @@ export async function evaluateStartBlockers(
 }
 
 /** Every input the evaluation judged, in the exact shape public._draft_start_inputs
- * rebuilds under the row lock (20261109000000) — compared with jsonb `=`, so keys
+ * rebuilds under the row lock (20261111000000) — compared with jsonb `=`, so keys
  * must match and numerics compare by value (250 = 250.00). Slots sorted by
  * (slot_index, id), the SQL side's ORDER BY. */
 export function buildStartExpect(league: LeagueRow, memberCount: number, slots: Slot[], reconfirmOwed: boolean) {

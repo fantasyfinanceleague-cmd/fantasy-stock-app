@@ -12,7 +12,7 @@
 --   BEFORE the room opens: the moment the league becomes blocked, and again at
 --   T-2h if still blocked.
 --
--- PROVISIONAL TIMESTAMP (20261109000000-09). Requires 20261106000000 (the
+-- PROVISIONAL TIMESTAMP (20261111000000-09). Requires 20261106000000 (the
 -- auto-pick cron) and 20261107000000-06 (#126) applied first.
 --
 -- THE LIFECYCLE (T = draft_date), all on the service role:
@@ -50,7 +50,7 @@
 -- _draft_order_is_due(draft_date)), (c) every client shows "no time set"; and
 -- _draft_order_sync (re-created below) never finalizes a postponed league.
 -- postponed_from keeps the old time. A new draft_date clears the row
--- (trg_leagues_draft_rescheduled, 20261109000001).
+-- (trg_leagues_draft_rescheduled, 20261111000001).
 --
 -- CONCURRENCY: postpone and start take the league row FOR UPDATE; the watch
 -- recorder takes FOR SHARE; joins/leaves (#67/#123/#126 triggers) take FOR NO
@@ -83,7 +83,7 @@ as $$
 $$;
 
 comment on function public.draft_start_policy() is
-  'Draft auto-start policy numbers (20261109000000). Mirrored by supabase/functions/_shared/draft-start-policy.ts; supabase/tests/draft_auto_start.pglite.test.ts pins them equal.';
+  'Draft auto-start policy numbers (20261111000000). Mirrored by supabase/functions/_shared/draft-start-policy.ts; supabase/tests/draft_auto_start.pglite.test.ts pins them equal.';
 
 revoke all on function public.draft_start_policy() from public;
 revoke all on function public.draft_start_policy() from anon, authenticated;
@@ -121,7 +121,7 @@ create table if not exists public.draft_postponements (
 );
 
 comment on table public.draft_postponements is
-  'Draft auto-start: the explicit POSTPONED state. One row per league whose draft could not happen at postponed_from; the commissioner must set a new draft_date (which deletes the row, trg_leagues_draft_rescheduled). stage: room_open (blocked at the T-1h gate), start (blocked at T), legacy (a not_started league whose time had already passed when 20261109000000 was pushed; nobody was notified).';
+  'Draft auto-start: the explicit POSTPONED state. One row per league whose draft could not happen at postponed_from; the commissioner must set a new draft_date (which deletes the row, trg_leagues_draft_rescheduled). stage: room_open (blocked at the T-1h gate), start (blocked at T), legacy (a not_started league whose time had already passed when 20261111000000 was pushed; nobody was notified).';
 
 alter table public.draft_start_watch   enable row level security;
 alter table public.draft_postponements enable row level security;
@@ -159,7 +159,7 @@ alter table public.league_notifications
 -- notification to know exactly when it's happening." DEBOUNCE: at most ONE
 -- pending 'draft_time_set' row per member per league. A change while one is
 -- pending re-stamps its created_at instead of adding a row
--- (trg_leagues_draft_rescheduled, 20261109000001, ON CONFLICT on this index),
+-- (trg_leagues_draft_rescheduled, 20261111000001, ON CONFLICT on this index),
 -- and draft-order-notify sends it only once the time has been quiet for 2
 -- minutes, worded from the CURRENT draft_date. So a commissioner fiddling with
 -- the picker produces one push, with the final time. A row being sent
@@ -236,9 +236,9 @@ begin
      and (select count(*) from public.league_members m where m.league_id = p_league_id) >= 4
      -- 20261107000006: and the commissioner has confirmed the teams after a leave
      and not exists (select 1 from public.league_roster_reconfirm rc where rc.league_id = p_league_id)
-     -- 20261109000000: and the draft is not postponed (draft auto-start)
+     -- 20261111000000: and the draft is not postponed (draft auto-start)
      and not exists (select 1 from public.draft_postponements pp where pp.league_id = p_league_id)
-     -- 20261109000000: and the auto-start gate cleared THIS draft time: the order
+     -- 20261111000000: and the auto-start gate cleared THIS draft time: the order
      -- is set when the room opens, never before the gate has judged the league
      -- (a time set 55-60 min out is already past T-1h when it is saved)
      and exists (select 1 from public.draft_start_watch gw
@@ -261,7 +261,7 @@ revoke all on function public._draft_order_sync(uuid, boolean) from public, anon
 -- any more (so the promoted notify cron's guard stays quiet about them),
 -- leaving re-opens per #126, and the gated _draft_order_sync above means the
 -- UPDATE's own trg_leagues_order_mode cannot finalize at the old date. This
--- runs before 20261109000001's triggers exist (no time-set notices, no guard).
+-- runs before 20261111000001's triggers exist (no time-set notices, no guard).
 -- An order already finalized before this push (e.g. by #67's own one-off
 -- sweep) stays as it is.
 insert into public.draft_postponements (league_id, postponed_from, stage, reason)
@@ -373,7 +373,7 @@ revoke all on function public.draft_watch_due() from public;
 revoke all on function public.draft_watch_due() from anon, authenticated;
 grant execute on function public.draft_watch_due() to service_role;
 
--- The sweep cron's auto-start post guard (20261109000002), isolated: a runtime
+-- The sweep cron's auto-start post guard (20261111000002), isolated: a runtime
 -- error in either list returns false instead of failing the whole cron
 -- statement, so it can never take down the auto-pick backstop for live drafts
 -- (supabase review #6). The error is raised as a WARNING into the postgres log.
@@ -705,7 +705,7 @@ end;
 $$;
 
 comment on function public.start_league_draft(uuid, jsonb) is
-  'Draft auto-start: THE flip from not_started to in_progress (20261109000000). Row lock, not postponed, draft_date reached, the room opened, a rules floor, and a compare-and-swap against the inputs the caller judged. Writes the draft_started notices. Service role only.';
+  'Draft auto-start: THE flip from not_started to in_progress (20261111000000). Row lock, not postponed, draft_date reached, the room opened, a rules floor, and a compare-and-swap against the inputs the caller judged. Writes the draft_started notices. Service role only.';
 
 revoke all on function public.start_league_draft(uuid, jsonb) from public;
 revoke all on function public.start_league_draft(uuid, jsonb) from anon, authenticated;
@@ -787,7 +787,7 @@ revoke all on function public.open_due_draft_rooms() from public;
 revoke all on function public.open_due_draft_rooms() from anon, authenticated;
 grant execute on function public.open_due_draft_rooms() to service_role;
 
--- The notify cron's post guard (20261109000003): a room due to open, a late
+-- The notify cron's post guard (20261111000003): a room due to open, a late
 -- joiner owed a notice, or a pending (or stale 'sending') push of a kind
 -- draft-order-notify DELIVERS. Deliberately not #126's draft_order_notify_due():
 -- that one is true for ANY pending kind but member_left (e.g. #94's renewal_*,

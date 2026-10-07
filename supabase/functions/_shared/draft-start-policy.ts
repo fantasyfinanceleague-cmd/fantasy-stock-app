@@ -18,7 +18,7 @@
  *   4. Draft times: quarter hours only, at least an hour ahead (55 min floor).
  *   5. The time can't change once the room is open, except when postponed.
  *
- * SQL holds the same numbers in public.draft_start_policy() (20261109000000);
+ * SQL holds the same numbers in public.draft_start_policy() (20261111000000);
  * supabase/tests/draft_auto_start.pglite.test.ts pins the two equal.
  */
 

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- DRAFT AUTO-START EFFECT TEST — run in the Supabase SQL editor AFTER `db push`
--- of 20261109000000-03 (auto-start, draft_status server-only + draft time
+-- of 20261111000000-03 (auto-start, draft_status server-only + draft time
 -- guard, the sweep cron, the draft-order-notify cron).
 -- Read-only in effect: NOTHING persists.
 -- ============================================================================
@@ -19,7 +19,7 @@
 --     PGlite has no pg_cron).
 --
 -- SUPERSEDES two lines of docs/security/freeze-league-rules-effect-test.sql:
--- after 20261109000001 its R7 (a user-session completing UPDATE -> 1 row) and
+-- after 20261111000001 its R7 (a user-session completing UPDATE -> 1 row) and
 -- D1 (expects 'league_draft_status_locked') are refused with
 -- 'draft_status_server_only' instead. That file is the record of the
 -- 20261104000000 release; do not re-run it as a gate after this one.

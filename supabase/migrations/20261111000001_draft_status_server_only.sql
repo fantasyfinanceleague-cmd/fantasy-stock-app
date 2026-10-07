@@ -2,7 +2,7 @@
 -- draft_status is server-only (draft auto-start, 2026-10-06; Orchestrator
 -- decision 5 = YES, a security fix). Plan: docs/migrations/DRAFT_AUTO_START_PLAN.md §1.7.
 --
--- PROVISIONAL TIMESTAMP (20261109000000-09 range): re-stamp at release if
+-- PROVISIONAL TIMESTAMP (20261111000000-09 range): re-stamp at release if
 -- anything later is applied first.
 --
 -- THE HOLE: [I2a] leagues_update_commissioner lets the commissioner PATCH any
@@ -56,7 +56,7 @@ begin
     return new;
   end if;
 
-  -- (1) draft_status is SERVER-ONLY (20261109000001, draft auto-start). A user
+  -- (1) draft_status is SERVER-ONLY (20261111000001, draft auto-start). A user
   -- session may not change it at all: the server starts the draft at
   -- draft_date (start_league_draft) and finalizes it (finalize_league_draft),
   -- both on the service role, which returned above. This replaces

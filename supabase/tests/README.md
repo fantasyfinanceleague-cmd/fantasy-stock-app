@@ -669,7 +669,7 @@ rejected status write cannot change the HTTP response. Hermetic (no network, no 
 What it does: loads, verbatim and in prod order, every migration whose triggers
 fire on a `leagues` / `league_members` / `league_notifications` write (the freeze
 test's chain, plus `draft_stalls`, participant names, and #126's reconfirm table +
-real start gate), then `20261109000000` (auto-start) and `20261109000001`
+real start gate), then `20261111000000` (auto-start) and `20261111000001`
 (`draft_status` server-only + the draft-time guard). The chain is loaded in two
 halves around legacy fixtures, so the one-off backfills run on real rows.
 `leagues` is replayed from the migrations' DDL, so the compare-and-swap is judged
@@ -721,13 +721,13 @@ Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.
 ## draft_auto_start_cron_wiring.test.ts
 
 A structural guard (files only). The auto-pick cron (`20261106000000`) and the
-auto-start reschedule (`20261109000002`) both re-schedule `draft_autopick_sweep`,
+auto-start reschedule (`20261111000002`) both re-schedule `draft_autopick_sweep`,
 and the last one applied wins. So the LATEST migration scheduling the job must
 guard on `overdue_draft_turns()`, `due_draft_starts()` and `draft_watch_due()`,
 and both files must be present with the auto-start one sorting after the
 auto-pick one. It also pins the job contract (10 s, vault key, 180000 ms, URL, no
 key literal, no other job), and that `draft_order_notify` is promoted: scheduled
-once (`20261109000003`), guarded by `draft_order_notify_due() OR
+once (`20261111000003`), guarded by `draft_order_notify_due() OR
 draft_room_notices_due()`, 180000 ms, gone from `deferred/`.
 
 Run: `deno test --allow-read supabase/tests/draft_auto_start_cron_wiring.test.ts`.

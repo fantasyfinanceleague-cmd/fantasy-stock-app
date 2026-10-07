@@ -3,7 +3,7 @@
  * tested in plan.test.ts.
  *
  * The notices (league_notifications rows) are created in SQL, in the same
- * transaction as their event (20261109000000: the room opening, the start, a
+ * transaction as their event (20261111000000: the room opening, the start, a
  * postponement, a league becoming at risk). This function only DELIVERS them:
  * pending -> sending -> sent | no_device | skipped | failed. The words are
  * built HERE, at send time, from verified rows (draft_notice_context), so a
@@ -105,7 +105,7 @@ export function nextPushStatus(outcome: DeliveryOutcome, attempts: number): Push
 }
 
 // ===========================================================================
-// Draft auto-start pushes (20261109000000). COPY: the Design Lead's strings,
+// Draft auto-start pushes (20261111000000). COPY: the Design Lead's strings,
 // VERBATIM (board #call-auto-start: 6cd10b8 / PR #128; blocker clauses from the
 // strings box, PR #135). Lines the board does not cover are marked NEW COPY.
 // ===========================================================================
@@ -161,7 +161,7 @@ export function isDebouncing(kind: string, createdAt: string, now: Date): boolea
   return kind === 'draft_time_set' && now.getTime() - new Date(createdAt).getTime() < TIME_SET_QUIET_MS;
 }
 
-/** draft_notice_context's shape (20261109000000), read at send time. */
+/** draft_notice_context's shape (20261111000000), read at send time. */
 export interface NoticeContext {
   kind: string;
   league_id: string;

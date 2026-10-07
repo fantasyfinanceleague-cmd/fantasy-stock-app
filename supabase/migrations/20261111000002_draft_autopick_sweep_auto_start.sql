@@ -7,7 +7,7 @@
 -- and body as 20261106000000 (whose header explains each of them). No other
 -- cron job is touched.
 --
--- PROVISIONAL TIMESTAMP (20261109000000-09 range). ORDERING IS LOAD-BEARING:
+-- PROVISIONAL TIMESTAMP (20261111000000-09 range). ORDERING IS LOAD-BEARING:
 -- this MUST be applied AFTER 20261106000000 (ops/autopick-cron-live). That file
 -- unschedules and re-schedules the same job name, so if it ran second it would
 -- silently revert the job to overdue-only and no draft would ever auto-start.
@@ -15,7 +15,7 @@
 -- --include-all to push 20261106000000 after this one. Re-stamp both together
 -- if either moves. supabase/tests/draft_auto_start_cron_wiring.test.ts fails if
 -- the LATEST migration scheduling 'draft_autopick_sweep' lacks either guard.
--- Requires 20261109000000 (due_draft_starts, draft_watch_due) in the same or an
+-- Requires 20261111000000 (due_draft_starts, draft_watch_due) in the same or an
 -- earlier push.
 --
 -- THE GUARD: post when there is an overdue turn worth a call (20261106000000's

@@ -1,20 +1,20 @@
 -- Schedules draft_order_notify (every minute). PROMOTED 2026-10-06 from
 -- deferred/20261013000001 by draft auto-start (docs/migrations/DRAFT_AUTO_START_PLAN.md):
 -- the "draft room is open" push (T-1h, with your position) now rides this job,
--- so auto-start needs it. Re-stamped into the 20261109 range (never
+-- so auto-start needs it. Re-stamped into the 20261111 range (never
 -- --include-all an old stamp).
 --
 -- WHAT A RUN DOES (supabase/functions/draft-order-notify):
---   1. open_due_draft_rooms() (20261109000000): every league the auto-start
+--   1. open_due_draft_rooms() (20261111000000): every league the auto-start
 --      gate cleared whose room time has come gets its order finalized and a
 --      'draft_room_open' notice per human; late joiners get theirs.
 --   2. finalize_due_draft_orders() (#67/#126): on-time finalize for every other
 --      due league. Its 'draft_order_set' rows are in-app records now (their push
---      is marked skipped at insert, 20261109000000), so this sends nothing.
+--      is marked skipped at insert, 20261111000000), so this sends nothing.
 --   3. Deliver pending draft_room_open / draft_started / draft_at_risk /
 --      draft_postponed pushes (built at send time from draft_notice_context).
 --
--- THE GUARD posts ONLY WHERE draft_room_notices_due() (20261109000000): a room
+-- THE GUARD posts ONLY WHERE draft_room_notices_due() (20261111000000): a room
 -- to open, a late joiner owed a notice, or a pending push of a kind this
 -- function delivers. NOT #126's draft_order_notify_due(): that is true for ANY
 -- pending kind but member_left (e.g. #94's renewal_*, delivered elsewhere), so it

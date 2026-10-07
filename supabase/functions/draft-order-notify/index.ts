@@ -1,6 +1,6 @@
 // draft-order-notify — the draft-lifecycle push delivery, CRON ONLY.
 //
-// Draft auto-start (2026-10-06, 20261109000000) made this the delivery for
+// Draft auto-start (2026-10-06, 20261111000000) made this the delivery for
 // every draft push: the room opening (T-1h, with your position), the start, a
 // postponement (everyone), and the commissioner's at-risk warning. A run:
 //   1. open_due_draft_rooms() — every league the auto-start gate cleared whose
@@ -15,7 +15,7 @@
 //      double-send), read the CURRENT context (draft_notice_context: position,
 //      names, state), decide (plan.ts decideNotice: a notice whose event no
 //      longer holds is skipped, never sent), send via Expo, settle the status.
-// Scheduled by supabase/migrations/20261109000003_schedule_draft_order_notify.sql,
+// Scheduled by supabase/migrations/20261111000003_schedule_draft_order_notify.sql,
 // whose command posts only WHERE draft_order_notify_due() OR
 // draft_room_notices_due() — an idle system makes no edge calls.
 //

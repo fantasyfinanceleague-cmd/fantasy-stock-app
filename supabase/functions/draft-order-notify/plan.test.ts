@@ -43,7 +43,7 @@ Deno.test('nextPushStatus: transient failures retry until the budget is spent, t
   }
 });
 
-// ---- draft auto-start pushes (20261109000000): the Design Lead's copy, verbatim ----
+// ---- draft auto-start pushes (20261111000000): the Design Lead's copy, verbatim ----
 
 Deno.test('ET formatting: time, weekday+time, full date; hourCycle h12 pinned; DST both ways; noon/midnight', () => {
   assertEquals(formatDraftTime('2026-10-10T23:00:00Z'), '7:00 PM'); // EDT
