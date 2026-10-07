@@ -220,6 +220,7 @@
             <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
             <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
             <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
+            <li><b>The sheet's buttons</b> (Design Lead, UX audit G-3, 2026-10-06): the one filled button is the action, "Leave league" in the destructive red; "Stay" is a text button under it, as on the transfer sheet. Earlier frames had "Stay" filled and "Leave league" outlined; two filled buttons stacked (the first build) is the case this rules out.</li>
           </ul>
 
           <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
