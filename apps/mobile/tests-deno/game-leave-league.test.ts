@@ -283,3 +283,7 @@ Deno.test('the transfer rows carry only the name (G-8; source guard)', () => {
   assertEquals(v.includes('<ChoiceRow title={c.name} selected={picked === c.userId}'), true);
   assertEquals(v.includes('help={'), false);
 });
+
+Deno.test('Create league step 1\'s Cancel is the modal\'s, text only; later steps keep Back with a chevron (G-13; source guard)', () => {
+  assertEquals(SOURCES['app/create-league.tsx'].includes("back={{ label: step === 'league' ? 'Cancel' : 'Back', onPress: goBack, modal: step === 'league' }}"), true);
+});

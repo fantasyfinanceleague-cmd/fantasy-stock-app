@@ -601,7 +601,8 @@ export default function CreateLeagueWizard() {
 
   return (
     <SetupScaffold
-      back={{ label: step === 'league' ? 'Cancel' : 'Back', onPress: goBack }}
+      // G-13: step 1's Cancel closes the modal (text only, as G-7); later steps go Back (chevron).
+      back={{ label: step === 'league' ? 'Cancel' : 'Back', onPress: goBack, modal: step === 'league' }}
       step={{ number: stepNumber(step), total: CREATE_STEPS.length }}
       title={CREATE_STEP_COPY[step].title}
       subtitle={CREATE_STEP_COPY[step].subtitle}
