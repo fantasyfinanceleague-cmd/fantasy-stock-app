@@ -769,3 +769,21 @@ Fixed: C-1 (quiet while a trade review is open), C-2 (ownership on its own line,
 | X-1 | At XL text, Portfolio's value is clipped at the right edge: the stress value reads "$14,446,031.9" (`portfolio-buyrow-xl-light.png`). `RollingMoney` draws one Text per character, so the line can't shrink to fit the way a single Text would. A hidden digit on the big number is a P0 by the plan's definition. Values of $1,000,000 and more are part of the required stress fixture. | **P0** | Fit the row to its container: measure it, and scale the digits down to fit (a minimum of about 0.7) while staying on one line. Re-capture Portfolio at XL with the stress value, and Home's hero at XL with a value of $1,000,000 or more (same component). |
 
 Nothing else is open on 3e for the 1.2.0 cut. M4 is 1.3, and the M5 recording is on the walkthrough.
+
+### 3e · X-1 re-check · PASS, DESIGN-APPROVED `ui/mobile-money` @ `33ea1c09`
+
+X-1 is fixed (PR #167, `fix/rolling-money-fit`, also on main's Home): `RollingMoney` measures the
+container against its natural width and scales by clamp(…, 0.7, 1), anchored by an `align` prop.
+Portfolio at XL shows "$14,446,031.99" in full; Home's hero at XL shows "$1,234,567.80" in full. At
+the scale it lands on (≈0.85 for the 14-character stress value) the value is still the largest and
+heaviest thing on screen, so it reads as the hero; 0.7 is a floor no realistic value reaches. The
+same stress case found a second defect, now fixed: Home's this-week scores overlapped at $1M and
+more (`ScoreDigits` cells had `flex: 1` without `minWidth: 0`). They now split 50/50 with the
+opponent's score against the right edge, and read as a pair in Light and Dark at XL and at standard
+text. C-2 is confirmed on screen: the owner on its own line, untruncated, and "You own this" in
+`youText`.
+
+Evidence note: `home-hero-million-xl-light.png` (12:46) was taken before the scoreboard fix and
+still shows the overlap. Rename it `-before` or replace it, so the record shows the fixed state.
+Nothing else is open on 3e for the 1.2.0 cut. M4 is in 1.3, and the M5 recording is on Giorgio's
+walkthrough.
