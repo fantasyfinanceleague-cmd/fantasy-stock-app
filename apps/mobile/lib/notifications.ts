@@ -2,16 +2,13 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { foregroundPresentation, foregroundQuiet } from './foregroundQuiet';
 
 // Configure how notifications are displayed when app is in foreground
+// Foreground banners stay quiet while the app already shows what they'd say
+// (your pick clock in the draft room; 3e's trade review): lib/foregroundQuiet.ts.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => foregroundPresentation(foregroundQuiet()),
 });
 
 /**
@@ -142,41 +139,9 @@ export function addNotificationListeners(
 // annotations tbl.user_profiles (L2). Do not reintroduce a client-side
 // token reader; notification sending belongs behind an edge function.
 
-/**
- * Notify a user that it's their turn to draft.
- *
- * CUT OVER 2026-07-30 to the send-notification edge function (scan F7/F8).
- * This used to read the TARGET user's expo_push_token client-side and POST to
- * Expo directly, which is why every authenticated user needed to be able to read
- * every other user's token. An Expo token is a bearer capability, so that was a
- * spam/phishing primitive. The token never reaches the client now.
- *
- * SIGNATURE CHANGED: leagueId, not leagueName. The league name used to be a
- * caller-supplied string that went straight into the notification body — content
- * the sender controlled. The server now looks it up from the id, so the body
- * cannot be forged. Callers pass the id they already have.
- *
- * Still fire-and-forget and still swallows errors: a failed notification must
- * never block a draft pick.
- */
-export async function notifyDraftTurn(
-  userId: string,
-  leagueId: string
-): Promise<void> {
-  try {
-    const { data, error } = await supabase.functions.invoke('send-notification', {
-      body: { type: 'draft_turn', league_id: leagueId, target_user_id: userId },
-    });
-    if (error) {
-      console.error('notifyDraftTurn failed:', error.message ?? error);
-      return;
-    }
-    // `sent: false` is a normal outcome (no device, notifications off, bot target),
-    // not a failure — log it so a silent non-delivery is still visible.
-    if (data && data.sent === false) {
-      console.log('Draft-turn notification not delivered:', data.reason);
-    }
-  } catch (error) {
-    console.error('Error sending draft turn notification:', error);
-  }
-}
+// notifyDraftTurn was REMOVED 2026-10-06. Its only caller (the legacy
+// app/(tabs)/draft.tsx handleSubmit) pushed the next picker client-side after
+// a pick on that one screen, so picks from the draft room and auto-picks pushed
+// nobody. The turn push is now sent SERVER-side after every recorded pick
+// (supabase/functions/_shared/draft-write.ts commitGatedPick); a client call
+// as well would double-push.

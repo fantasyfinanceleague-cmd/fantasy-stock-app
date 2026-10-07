@@ -10,8 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Colors } from '@/constants/Colors';
-import { shadows } from '@/constants/theme';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { useSymbolSearch, type UseSymbolSearchOptions } from '@/lib/useSymbolSearch';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
 
@@ -62,6 +61,9 @@ export default function SymbolSearchField({
     setShowResults(true);
   };
 
+  // G-10 (pass-2b gate, §9A): every colour from the theme, so Dark is dark here too.
+  const { colors, elevation } = useTheme();
+
   const handleSelect = (result: ShapedSearchResult) => {
     if (!result.selectable) return;
     setShowResults(false);
@@ -74,11 +76,11 @@ export default function SymbolSearchField({
   return (
     <View style={styles.container}>
       <TextInput
-        style={styles.textInput}
+        style={[styles.textInput, { backgroundColor: colors.inset, color: colors.text, borderColor: colors.border }]}
         value={value}
         onChangeText={handleChangeText}
         placeholder={placeholder}
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={colors.text2}
         autoCapitalize="characters"
         autoCorrect={false}
         onFocus={() => {
@@ -86,31 +88,31 @@ export default function SymbolSearchField({
         }}
       />
       {(loading || extraLoading) && value.length > 0 && (
-        <ActivityIndicator size="small" color={Colors.primary} style={styles.spinner} />
+        <ActivityIndicator size="small" color={colors.accent} style={styles.spinner} />
       )}
 
       {visible && results.length > 0 && (
-        <View style={styles.resultsContainer}>
+        <View style={[styles.resultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }, elevation.card]}>
           <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {results.map((item) => (
               <TouchableOpacity
                 key={item.symbol}
-                style={[styles.resultItem, !item.selectable && styles.resultItemDisabled]}
+                style={[styles.resultItem, { borderBottomColor: colors.line }, !item.selectable && styles.resultItemDisabled]}
                 onPress={() => handleSelect(item)}
                 disabled={!item.selectable}
               >
                 <View style={styles.resultLeft}>
                   <View style={styles.resultSymbolRow}>
-                    <Text style={styles.resultSymbol}>{item.symbol}</Text>
+                    <Text style={[styles.resultSymbol, { color: colors.text }]}>{item.symbol}</Text>
                     {item.badgeLabel && (
-                      <Text style={styles.badge}>{item.badgeLabel}</Text>
+                      <Text style={[styles.badge, { color: colors.warnText, borderColor: colors.warnText }]}>{item.badgeLabel}</Text>
                     )}
                   </View>
-                  <Text style={styles.resultName} numberOfLines={1}>
+                  <Text style={[styles.resultName, { color: colors.text2 }]} numberOfLines={1}>
                     {item.name}
                   </Text>
                 </View>
-                {item.price ? <Text style={styles.resultPrice}>${item.price.toFixed(2)}</Text> : null}
+                {item.price ? <Text style={[styles.resultPrice, { color: colors.text2 }]}>${item.price.toFixed(2)}</Text> : null}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -118,8 +120,8 @@ export default function SymbolSearchField({
       )}
 
       {visible && !loading && results.length === 0 && (
-        <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>No matching stocks found</Text>
+        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+          <Text style={[styles.noResultsText, { color: colors.text2 }]}>No matching stocks found</Text>
         </View>
       )}
     </View>
@@ -132,14 +134,11 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   textInput: {
-    backgroundColor: Colors.inputBg,
     borderRadius: 8,
     padding: 14,
     fontSize: 18,
     fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   spinner: {
     position: 'absolute',
@@ -151,15 +150,12 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: Colors.cardBg,
     borderWidth: 1,
-    borderColor: Colors.border,
     borderTopWidth: 0,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
     maxHeight: 250,
     zIndex: 100,
-    ...shadows.cardLifted,
   },
   resultsList: {
     maxHeight: 250,
@@ -171,7 +167,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   resultItemDisabled: {
     opacity: 0.5,
@@ -188,14 +183,11 @@ const styles = StyleSheet.create({
   resultSymbol: {
     fontSize: 16,
     fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
   },
   badge: {
     fontSize: 9,
     fontFamily: 'Inter_700Bold',
-    color: Colors.warning,
     borderWidth: 1,
-    borderColor: Colors.warning,
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
@@ -203,23 +195,19 @@ const styles = StyleSheet.create({
   resultName: {
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
     marginTop: 2,
   },
   resultPrice: {
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     fontVariant: ['tabular-nums'],
-    color: Colors.textSecondary,
   },
   noResultsContainer: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: Colors.cardBg,
     borderWidth: 1,
-    borderColor: Colors.border,
     borderTopWidth: 0,
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
@@ -229,7 +217,6 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
     textAlign: 'center',
   },
 });

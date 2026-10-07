@@ -145,7 +145,7 @@ export function ThisWeekCard({
           <View style={styles.scoreCell}>
             <Skeleton width="70%" height={38} />
           </View>
-          <View style={styles.scoreCell}>
+          <View style={[styles.scoreCell, styles.scoreCellRight]}>
             <Skeleton width="70%" height={38} />
           </View>
         </View>
@@ -154,7 +154,7 @@ export function ThisWeekCard({
           <View style={styles.scoreCell}>
             <ScoreDigits text={youText} variant="score.lg" color={preSeason || scoreTone(you.gain, 'you') === 'zero' ? colors.zero : colors.youText} />
           </View>
-          <View style={styles.scoreCell}>
+          <View style={[styles.scoreCell, styles.scoreCellRight]}>
             <ScoreDigits text={oppText} variant="score.lg" color={preSeason || scoreTone(opponent.gain, 'opp') === 'zero' ? colors.zero : colors.oppText} />
           </View>
         </View>
@@ -229,8 +229,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: space[5],
   },
+  // `minWidth: 0` is load-bearing (2026-10-07, the X-1 follow-up): without
+  // it, a flex item's minimum width defaults to its CONTENT's intrinsic
+  // size, not 0 -- so at a wide enough value (seen: both sides' gains
+  // overlapping at $1M+), `flex: 1` never actually constrained either
+  // cell, and ScoreDigits' own `adjustsFontSizeToFit` safety net never
+  // got a real width to shrink against (it only sees what Yoga gives it).
+  // With this, the 50/50 split is real and the two sides can never overlap.
   scoreCell: {
     flex: 1,
+    minWidth: 0,
+  },
+  // The opponent's score hugs its own (right) edge rather than growing
+  // from the shared middle, mirroring "You" on the left.
+  scoreCellRight: {
+    alignItems: 'flex-end',
   },
   footerRow: {
     flexDirection: 'row',

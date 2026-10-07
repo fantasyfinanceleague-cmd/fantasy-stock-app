@@ -171,6 +171,7 @@
   --c-opp: #E8541F;
   --c-opp-text: #B93C0E;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #C07E00;
   --c-live-text: #8A5B00;
   --c-live-glow: rgba(192, 126, 0, 0.35);
@@ -229,6 +230,7 @@
   --c-opp: #FF6A3D;
   --c-opp-text: #FF8F66;
   --c-on-opp: #0D1B2E;
+  --c-on-live: #0D1B2E;
   --c-live: #FFC53D;
   --c-live-text: #FFC53D;
   --c-live-glow: rgba(255, 197, 61, 0.45);
@@ -1005,8 +1007,11 @@
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
     return {
       ...r,
-      dayPoints: [306.68, 307.9, 309.4, 308.7, 311.2, 313.05, 312.4, 314.9, 316.2, 315.6, 317.1, 318.37],
-      range: ['1D', '1W', '1M', '3M', '1Y'],
+      // 1W of daily closes (Giorgio: ranges 1W / 1M / 3M / 1Y, 1W default, no 1D;
+      // the price history is daily bars only). A week ago .. Tue are SAMPLE closes;
+      // Wed = prev (306.68) and Thu = the live price (318.37) are derived.
+      weekPoints: [301.85, 303.4, 300.95, 304.1, 306.68, 318.37],
+      range: ['1W', '1M', '3M', '1Y'],
       ownership: 'Drafted by you · Round 1, pick 2',
     };
   })();
@@ -1058,7 +1063,7 @@
     const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
     return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
   };
-  /** Serie A Traders (pre-draft sample): 8 members incl. 2 bots; Roberto
+  /** Serie A Traders (pre-draft sample): 8 members; Roberto
    * is the commissioner. Draft order mode (Giorgio, 2026-09-29): 'random'
    * (revealed 1 hour before the draft) or 'manual' (the commissioner sets
    * it). Never automatically commissioner-first. Order below = the revealed
@@ -1066,9 +1071,9 @@
   const SERIE_A = {
     name: 'Serie A Traders', draftAt: 'Sat 7:00 PM ET', revealAt: 'Sat 6:00 PM ET', rounds: 6,
     order: [
-      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Atlas', init: 'AT', bot: true },
+      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Elena M.', init: 'EM' },
       { name: 'Roberto B.', init: 'RB', you: true, commish: true }, { name: 'Sofia F.', init: 'SF' },
-      { name: 'Giulia V.', init: 'GV' }, { name: 'Nova', init: 'NV', bot: true }, { name: 'Tommaso P.', init: 'TP' },
+      { name: 'Giulia V.', init: 'GV' }, { name: 'Dario N.', init: 'DN' }, { name: 'Tommaso P.', init: 'TP' },
     ],
   };
   /** Overall pick numbers for a seat in a snake draft. */
@@ -1664,13 +1669,13 @@
               {landed ? (
                 <>
                   <span className="ks-title">Paolo M. is up</span>
-                  <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
-                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · next pick 14</span>
+                  <span className="ks-callout ks-muted">Round 2 of {K.LEAGUE.slots} · Pick 12, then 13</span>
+                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · you're up in 2 picks</span>
                 </>
               ) : (
                 <>
                   <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span>
-                  <span className="ks-callout">Round 2 · Pick 11</span>
+                  <span className="ks-callout">Round 2 of {K.LEAGUE.slots} · Pick 11</span>
                   <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
                   <span className="ks-caption ks-muted">{D.secondsTotal}-second picks · set by the commissioner</span>
                 </>
@@ -1750,7 +1755,7 @@
           </div>
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
-              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM ET" />
+              <Row k="Draft time" v="Sat, Oct 3 · 7:00 PM ET" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
                 <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
                 <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
@@ -1773,7 +1778,7 @@
   // ═════════════════════════════════════════════════════════════════════
   function StockSheet({ open }) {
     const N = K.NVDA;
-    const pts = N.dayPoints;
+    const pts = N.weekPoints;
     const w = 362, h = 120;
     const min = Math.min(...pts) - 1, max = Math.max(...pts) + 1;
     const X = (i) => (i / (pts.length - 1)) * (w - 8);
@@ -1795,9 +1800,9 @@
               <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(N.thu)}</div>
               <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(perShare)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></div>
             </div>
-            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA today">
-              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--c-border-strong)" strokeDasharray="3 4" />
-              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--c-text-2)">Prev close {$(N.prev)}</text>
+            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA, the past week">
+              <line x1="0" x2={w} y1={Y(pts[0])} y2={Y(pts[0])} stroke="var(--c-border-strong)" strokeDasharray="3 4" />
+              <text x="0" y={Y(pts[0]) + 14} fontSize="11" fontWeight="600" fill="var(--c-text-2)">A week ago {$(pts[0])}</text>
               <path d={d} fill="none" stroke="var(--c-gain)" strokeWidth="2.25" strokeLinejoin="round" />
               <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--c-gain)" stroke="var(--c-surface)" strokeWidth="2" />
             </svg>
@@ -2573,6 +2578,35 @@
     );
   }
 
+  /** Season complete for a manager who didn't win, on Francesco T.'s phone. Documents the
+   * APPROVED 3b-2 build (SeasonCompleteCard, rulings B6 + S8): place as the headline,
+   * "{League} · {record}", a neutral disc (gold is a champion signal). Tile values are
+   * SAMPLE (data.js has no Week 14 for Francesco T.). */
+  function HomeCompleteOther() {
+    return (
+      <Device tab="home" label="Home, season complete, not the champion">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-text-2)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
+            <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>4th place</span>
+            <span className="ks-callout">{K.LEAGUE.name} · 7–7</span>
+          </div>
+          <Card pad="14px">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 12 }} className="ks-num">
+              <span><span className="ks-caption">Season gain</span><br /><b className="ks-gain">+$612.35</b></span>
+              <span><span className="ks-caption">Best week</span><br /><b>Week 9 · +$188.20</b></span>
+              <span><span className="ks-caption">Regular season</span><br /><b>4th of 6 · 7–7</b></span>
+              <span><span className="ks-caption">Playoffs</span><br /><b>0–1 · lost in the Semifinals</b></span>
+            </div>
+          </Card>
+          <span className="ks-btn">See the final standings</span>
+        </div>
+      </Device>
+    );
+  }
+
   // ═════════════════════════════════════════════════════════════════════
   // C. GAME (3c)
   // ═════════════════════════════════════════════════════════════════════
@@ -2932,6 +2966,40 @@
               ))}
             </ul>
           </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Draft complete (UX audit U-10/U-26): the draft's designed ending, on Roberto B.'s phone.
+   * The roster comes from the draft (DRAFT recap data); Week 1 is the pre-season matchup. */
+  function DraftComplete() {
+    const R = { NVDA: 1, AAPL: 2, CRM: 3, TSLA: 4, COST: 5, V: 6 };
+    const mine = K.PORTFOLIO_LIVE.rows.slice().sort((a, b) => R[a.t] - R[b.t]);
+    return (
+      <Device game tab="league" label="Draft complete">
+        <Head chip={<span className="ks-chip">Pre-season</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-game" style={{ padding: 18, display: 'grid', gap: 6 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft complete</span>
+            <span className="ks-title" style={{ fontSize: 24 }}>Your team is set</span>
+            <span className="ks-callout">Week 1 starts Mon 9:30 AM ET. You play {K.byId.gianluigi.name}</span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-muted">{mine.length} of {K.LEAGUE.slots} · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+            <Card>
+              <ul className="ks-rows">
+                {mine.map((r) => (
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                    <Logo t={r.t} />
+                    <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption">Round {R[r.t]} · pick {r.pick}</span></span>
+                    <span className="ks-right ks-num ks-callout">{$(r.draft)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+          <span className="ks-btn">See your Week 1 matchup</span>
         </div>
       </Device>
     );
@@ -3578,7 +3646,7 @@
           </Card>
           <Card>
             <ul className="ks-rows" style={{ opacity: 0.5 }}>
-              <Row k="Draft date" v="Not set" />
+              <Row k="Draft time" v="Not set" />
               <Row k="Draft order" v="Random" />
             </ul>
           </Card>
@@ -3769,13 +3837,13 @@
   function DraftStalled({ commish }) {
     return (
       <Device tab="league" label={commish ? 'Draft paused, commissioner' : 'Draft paused, member'}>
-        <Head chip={<span className="ks-chip">Paused</span>} />
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
         <div className="ks-pad ks-stack">
           <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
             <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft paused</span>
             <span className="ks-title" style={{ fontSize: 20 }}>No stock left fits Paolo M.'s next slot</span>
             <span className="ks-callout ks-muted">{commish
-              ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+              ? 'The clock is stopped and nobody is skipped. The draft continues once the slot can be filled.'
               : 'The clock is stopped and nobody is skipped. The commissioner has been told.'}</span>
           </div>
           <span className="ks-caption">Round 2 · Pick 12 · Paolo M.</span>
@@ -3805,7 +3873,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -3897,9 +3965,13 @@
   //   Scudetto on Tuesday of Week 6;
   //   playoffs: Francesco T. left in Week 9 and still finished 4th (Season 1).
   // ═════════════════════════════════════════════════════════════════════
+  // Leave sheets (Giorgio, 2026-10-06, overruling G-3: "I want stay as a button"):
+  // Leave league is the filled red button; Stay is a real button under it, the
+  // secondary (outlined) style, full width.
   const DangerBtn = ({ children, off }) => (
-    <span className="ks-btn ks-btn--secondary" style={{ color: 'var(--c-danger)', opacity: off ? 0.45 : 1 }}>{children}</span>
+    <span className="ks-btn ks-btn--sell" style={{ opacity: off ? 0.45 : 1 }}>{children}</span>
   );
+  const StayBtn = () => <span className="ks-btn ks-btn--secondary">Stay</span>;
   const LeaveRow = ({ off, sub }) => (
     <Card><ul className="ks-rows">
       <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }} aria-disabled={off || undefined}>
@@ -3943,7 +4015,7 @@
           <span className="ks-title">Leave {name}?</span>
           <Bullets items={items} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={name} chip={pre ? null : <Chip kind="live">Week 6</Chip>} />
@@ -3971,7 +4043,7 @@
             <Alert>Marco R. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
           )}
           <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Marco R.' : 'Leave league'}</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={K.SERIE_A.name} chip={null} />
@@ -4271,7 +4343,7 @@
           <span className="ks-title">Leave {K.LEAGUE.name}?</span>
           <Bullets items={['It comes off your Home and Your leagues.', 'Season 1 stays in the league’s History, with your record in it.']} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
@@ -4542,6 +4614,69 @@
       </Device>
     );
   }
+  /** Home's pre-draft card under auto-start (same states as the lobby).
+   * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
+   * commish: the commissioner's phone (blockers card ON TOP of the draft card;
+   * when postponed, the blockers card replaces it). */
+  function HomeAuto({ phase = 'scheduled', commish, setFirst }) {
+    // setFirst (UX audit call B): the commissioner's no-time card leads with setting the time.
+    const setTimeLead = setFirst && commish && phase === 'nodate';
+    // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
+    const members = ['scheduled', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP']
+      : ['open', 'starting'].includes(phase) ? ['RB', 'MR', 'LC', 'EM', 'SF', 'GV', 'DN', 'TP']
+      : ['RB', 'MR', 'LC', 'EM', 'GV', 'DN', 'TP'];
+    const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
+    const live = phase === 'open' || phase === 'starting';
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
+    const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
+    const draftCard = phase === 'postponed' && commish ? null : (
+      <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
+        {phase === 'postponed' ? (
+          <>
+            <span className="ks-title">Roberto B. will pick a new time.</span>
+            <span className="ks-callout ks-muted">You'll see it here, with at least an hour's notice.</span>
+          </>
+        ) : phase === 'nodate' ? (
+          <>
+            <span className="ks-title">No draft time yet</span>
+            <span className="ks-callout ks-muted">{setTimeLead ? 'Pick a time, and the countdown starts here.' : commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+          </>
+        ) : (
+          <>
+            <span className="ks-title">{AS.when}</span>
+            {phase === 'open' ? <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft room open · starts in</span> : null}
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>{clock}</span>
+            {phase === 'starting' ? <span className="ks-callout" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', fontWeight: 700 }}><Spinner />Starting the draft</span> : null}
+            {live ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-you-text)' }}>You pick {K.ordinal(AS.seat)}</span> : null}
+          </>
+        )}
+        {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
+        {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
+        {setTimeLead ? (
+          <>
+            <span className="ks-btn">Set draft time</span>
+            <span className="ks-btn ks-btn--secondary">Build your queue</span>
+          </>
+        ) : <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>}
+      </GameCard>
+    );
+    return (
+      <Device tab="home" label={`Home, pre-draft, ${phase}${commish ? ', commissioner' : ''}`}>
+        <Head name={K.SERIE_A.name} avatar={mine} />
+        <div className="ks-pad ks-stack">
+          {commish && (phase === 'risk' || phase === 'postponed') ? <BlockersCard phase={phase} /> : null}
+          {draftCard}
+          {phase === 'risk' || (phase === 'postponed' && commish) ? null : (
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">{members.length} of 8 joined</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={mine && i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}</div>
+            </Card>
+          )}
+        </div>
+      </Device>
+    );
+  }
+
   /** Decision 3: the Draft date row after the room opens. allow: postponing is allowed. */
   function DateAfterRoom({ allow }) {
     return (
@@ -4552,7 +4687,7 @@
           <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
           <Card><ul className="ks-rows">
             <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft time</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
               <span className="ks-callout ks-muted">{AS.when}</span>
               <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
             </li>
@@ -4563,16 +4698,17 @@
     );
   }
   /** Decision 4: the draft date sheet, earliest time = now + 1 hour, 15-minute steps. */
-  function DraftDatePicker() {
+  /** variant 'B' (UX audit call): the confirm is the full-width bottom button; the header has Close. */
+  function DraftDatePicker({ variant = 'A' }) {
     const Col = ({ items, on, off = [] }) => (
       <div style={{ display: 'grid', gap: 2, textAlign: 'center' }}>
         {items.map((x) => <span key={x} className="ks-callout ks-num" style={{ padding: '6px 0', borderRadius: 8, fontWeight: x === on ? 800 : 500, background: x === on ? 'var(--c-sunken)' : undefined, color: off.includes(x) ? 'var(--c-text-3)' : undefined }}>{x}</span>)}
       </div>
     );
     return (
-      <Device noTabs label="Draft date sheet" overlay={
+      <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span>{variant === 'B' ? <span className="ks-muted"><Icon d={ICON.close} size={22} /></span> : <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span>}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -4581,7 +4717,12 @@
           </div>
           <span className="ks-callout"><b>Today · 3:15 PM ET</b> <span className="ks-muted">(the earliest you can pick: an hour from now)</span></span>
           <span className="ks-caption">The draft room opens 1 hour before, and the draft starts automatically.</span>
-          <span className="ks-btn ks-btn--secondary">Set later</span>
+          {variant === 'B' ? (
+            <>
+              <span className="ks-btn">Set draft time</span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Set later</span>
+            </>
+          ) : <span className="ks-btn ks-btn--secondary">Set later</span>}
         </Sheet>
       }>
         <Back label="League" />
@@ -4589,18 +4730,210 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // 3e · BUY A STOCK (stock search, the buy entry point). Design Lead,
+  // 2026-10-06. Roberto B.'s phone, Stock Scudetto (per-slot league).
+  // Owners come from the draft (DRAFT_PICKS). Prices for AMD, AMGN, AMC and
+  // SHW are SAMPLE (not in data.js); every other number is derived.
+  // ═════════════════════════════════════════════════════════════════════
+  const ALERT = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5v5.5M12 16.5v.01';
+  const ownerOf = (t) => {
+    const p = K.DRAFT_PICKS.find((x) => x.intended === t);
+    return p ? K.byId[p.player] : null;
+  };
+  const priceOf = (t) => {
+    const r = K.PORTFOLIO_LIVE.rows.find((x) => x.t === t);
+    if (r) return r.thu;
+    const g = { AMZN: 236.4, SHOP: K.SALE.buy.price, AMD: 162.85, AMGN: 289.5, AMC: 3.42, SHW: 352.1 }; // AMZN (H.gianluigi thu), SHOP (SALE) derived; AMD, AMGN, AMC, SHW sample
+    return g[t];
+  };
+  const NAMES = { AAPL: 'Apple', AMZN: 'Amazon', AMD: 'Advanced Micro Devices', AMGN: 'Amgen', AMC: 'AMC Entertainment', SHOP: 'Shopify', NVDA: 'NVIDIA', SHW: 'Sherwin-Williams' };
+  /** One search result. kind: 'mine' | 'owned' | 'free' | 'out' (not in the league's list) | 'nofit' (tier scope). */
+  const ResultRow = ({ t, kind = 'free', last }) => {
+    const owner = kind === 'owned' ? ownerOf(t) : null;
+    const off = kind === 'out' || kind === 'nofit';
+    const status = kind === 'mine' ? <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You own this</span>
+      : kind === 'owned' ? <>Owned by {owner ? owner.name : 'another manager'}</>
+      : kind === 'out' ? <>Not in this league's list</>
+      : kind === 'nofit' ? <>Doesn't fit this slot</> : null;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto 16px', opacity: off ? 0.45 : 1, borderBottom: last ? 'none' : undefined }} aria-disabled={off || undefined}>
+        <Logo t={t} />
+        <span><span className="ks-t">{t}</span><br /><span className="ks-caption">{NAMES[t]}{status ? <> · {status}</> : null}</span></span>
+        <span className="ks-right ks-num ks-callout"><b>{$(priceOf(t))}</b></span>
+        <span className="ks-muted">{off ? null : <Icon d={ICON.right} size={16} />}</span>
+      </li>
+    );
+  };
+  const SearchBox = ({ q, focus = true }) => (
+    <div className="ks-search" style={focus ? { borderColor: 'var(--c-accent)' } : undefined}>
+      <Icon d={ICON.search} size={18} />
+      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or name'}</span>
+      {focus ? <span className="ks-caret ks-caret--dark" /> : null}
+    </div>
+  );
+  /** Portfolio with the "Buy a stock" entry. cash: a sale's cash is waiting. */
+  function BuyEntryPortfolio({ cash }) {
+    const P = K.PORTFOLIO_LIVE, S = K.SALE;
+    const rows = (cash ? P.rows.filter((r) => r.t !== S.sold) : P.rows).slice(0, 3);
+    return (
+      <Device tab="portfolio" label={cash ? 'Portfolio, Buy a stock with cash waiting' : 'Portfolio, Buy a stock with every slot invested'}>
+        <Head chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value{cash ? ' · includes cash' : ''}</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>{cash ? '5 of 6' : '6 of 6'}</b> slots invested</span>
+            <span className="ks-callout ks-muted">{cash ? '1 ready to invest' : `${$(K.LEAGUE.notionalPerSlot)} per slot at the draft`}</span>
+          </div>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+              <span className="ks-logo" style={{ background: 'var(--c-accent-tint)', color: 'var(--c-accent)' }}><Icon d={ICON.search} size={18} /></span>
+              <span><span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)' }}>Buy a stock</span><br />
+                <span className="ks-caption ks-num">{cash ? `${$(S.proceeds)} from your ${S.sold} sale is ready to invest.` : 'Every slot is invested. Sell a holding to free one.'}</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+          </ul></Card>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {rows.map((r) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={r.t} />
+                  <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** The search screen. state: 'empty' | 'results' | 'exact' | 'none' | 'loading' | 'error' | 'tier'. */
+  function StockSearch({ state = 'results' }) {
+    const tier = state === 'tier';
+    const q = { empty: '', results: 'AM', exact: 'SHOP', none: 'QZX', loading: 'AM', error: 'AM', tier: 'SH' }[state];
+    const kbd = state === 'empty' || state === 'results' || state === 'none';
+    return (
+      <Device noTabs label={`Buy a stock, ${state}`}>
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>{tier ? 'Fill your $100–$200 slot' : 'Buy a stock'}</h2>
+          {tier ? <span className="ks-callout ks-muted" style={{ marginTop: -6 }}>Pick a stock priced $100 to $200. It takes the slot DIS left.</span> : null}
+          <SearchBox q={q} />
+          {state === 'empty' ? <span className="ks-caption">Type a ticker (AMZN) or a company name (Amazon).</span> : null}
+          {state === 'results' ? (
+            <Card><ul className="ks-rows">
+              <ResultRow t="AMZN" kind="owned" />
+              <ResultRow t="AMD" kind="owned" />
+              <ResultRow t="AMGN" kind="free" />
+              <ResultRow t="AMC" kind="out" last />
+            </ul></Card>
+          ) : null}
+          {state === 'exact' ? (
+            <Card><ul className="ks-rows"><ResultRow t="SHOP" kind="free" last /></ul></Card>
+          ) : null}
+          {state === 'tier' ? (
+            <Card><ul className="ks-rows">
+              <ResultRow t="SHOP" kind="free" />
+              <ResultRow t="SHW" kind="nofit" last />
+            </ul></Card>
+          ) : null}
+          {state === 'none' ? <span className="ks-callout" style={{ textAlign: 'center', padding: '18px 0' }}>No stock matches “QZX”.<br /><span className="ks-muted">Check the ticker, or try the company name.</span></span> : null}
+          {state === 'loading' ? (
+            <Card><ul className="ks-rows" aria-label="Loading results">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <span className="ks-logo" style={{ background: 'var(--c-sunken)' }} />
+                  <span style={{ display: 'grid', gap: 6 }}><span style={{ height: 12, width: 64, borderRadius: 6, background: 'var(--c-sunken)' }} /><span style={{ height: 10, width: 140, borderRadius: 5, background: 'var(--c-sunken)' }} /></span>
+                  <span style={{ height: 12, width: 56, borderRadius: 6, background: 'var(--c-sunken)' }} />
+                </li>
+              ))}
+            </ul></Card>
+          ) : null}
+          {state === 'error' ? <Empty icon={ALERT} title="Stocks didn't load" line="Check your connection, then try again." primary="Try again" /> : null}
+        </div>
+        {kbd ? <div className="ks-kbd-dock"><Keyboard /></div> : null}
+      </Device>
+    );
+  }
+  /** The hand-off: the existing stock sheet, opened from a result. kind: 'owned' (AMZN, another manager's) | 'full' (AMGN, nothing to spend). */
+  function SearchSheet({ kind = 'owned' }) {
+    const t = kind === 'owned' ? 'AMZN' : 'AMGN';
+    const owner = ownerOf('AMZN');
+    return (
+      <Device tab="portfolio" label={`Stock sheet from search, ${kind}`} overlay={
+        <Sheet top={300}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Logo t={t} /><span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption">{NAMES[t]} · {$(priceOf(t))}</span></span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
+          {kind === 'owned' ? (
+            <div className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-inset)', boxShadow: 'none', display: 'flex', justifyContent: 'space-between' }}>
+              <span className="ks-callout">In your league</span><span className="ks-callout"><b>{owner.name}</b></span>
+            </div>
+          ) : null}
+          <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span style={{ opacity: 0.45 }}>Sell</span></div>
+          <div className="ks-card" role="note" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+            <span className="ks-callout" style={{ fontWeight: 600 }}>{kind === 'owned' ? `${owner.name} owns ${t}. A stock has one owner per league.` : 'Every slot is invested. Sell a holding to free one, then buy.'}</span>
+          </div>
+          <span className="ks-btn" style={{ opacity: 0.45 }} aria-disabled="true">Review buy</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR TURN must be unmissable (Giorgio, 2026-10-06). Stock Scudetto,
+  // Roberto B.'s phone, round 2: Alessandro D. picks 10, Roberto picks 11.
+  // phase: 'before' | 'flash' | 'rest' | 'rm' (Reduce Motion). The clock
+  // values other than 0:42 (DRAFT_MOMENT) are sample moments of the same turn.
+  // ═════════════════════════════════════════════════════════════════════
+  function YourTurn({ phase = 'flash' }) {
+    const mine = phase !== 'before';
+    const clock = { before: '0:18', flash: '1:00', rest: '0:42', rm: '1:00' }[phase];
+    const flash = phase === 'flash';
+    const card = flash
+      ? { background: 'var(--c-live)', border: '2px solid var(--c-live)' }
+      : mine ? { background: 'var(--c-warn-tint)', border: '2px solid var(--c-live)' } : {};
+    const ink = flash ? 'var(--c-on-live)' : undefined;
+    return (
+      <Device game tab="league" label={`Draft room, your turn, ${phase}`}>
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, ...card }}>
+            <span className="ks-score ks-num" style={{ fontSize: mine ? 44 : 28, lineHeight: mine ? '46px' : '30px', color: ink }}>{clock}</span>
+            {mine ? (
+              <span style={{ fontSize: 30, lineHeight: '34px', fontWeight: 900, letterSpacing: '-0.01em', color: flash ? ink : 'var(--c-live-text)' }}>You're on the clock</span>
+            ) : (
+              <span className="ks-headline">Alessandro D. is up</span>
+            )}
+            <span className="ks-callout" style={{ color: ink }}>{mine ? 'Round 2 of 6 · Pick 11' : 'Round 2 of 6 · Pick 10 · you’re up next'}</span>
+          </div>
+          <div className="ks-search"><Icon d={ICON.search} size={18} /><span className="ks-callout ks-muted">Search by ticker or name</span></div>
+          <span className="ks-btn" style={{ opacity: 0.45 }}>Draft</span>
+          <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-num">1 of 6 · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
-    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
+    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
-    AutoLobby, CommishBlocked, MemberPostponed, DateAfterRoom, DraftDatePicker, LockPush,
+    AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -4726,6 +5059,7 @@
           <Fit caption="A holding without a live price" note='Counted at cost (zero gain, never $0 of value), and the screen says so in the approved caption. "{name}: " is new copy. Appears instantly.'><I.HomeUnpriced /></Fit>
           <Fit caption="Week final, scoring" note="Friday after 4 PM"><I.HomeScoring /></Fit>
           <Fit caption="Season complete" note="New copy throughout. Every tile comes from the season result (ask #11): season gain, best week, regular-season rank and record, playoff result"><I.HomeComplete /></Fit>
+          <Fit caption="Season complete · not the champion" note={'On Francesco T.\'s phone. Documents the approved 3b-2 build (rulings B6, S8): the place is the headline, then "{League} · {record}", on a neutral disc because gold means champion. No new copy. Tile values are sample.'}><I.HomeCompleteOther /></Fit>
         </Group>
 
         <Group id="game" code="3c" name="Matchups, draft and playoffs" job="The game surfaces around the key Matchup, Standings and Draft room screens."
@@ -4765,6 +5099,7 @@
           <Fit caption="Draft paused (should never happen)" note="Stalled turn, as members see it. New copy."><I.DraftStalled /></Fit>
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
+          <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
           <Fit caption="Draft recap"><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
@@ -4814,12 +5149,36 @@
           </div>
         </section>
 
+        <section className="b-sec" id="your-turn" aria-labelledby="your-turn-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="your-turn-h">Your turn must be unmissable (decided)</h2>
+              <p className="b-job"><b>Giorgio, 2026-10-06:</b> the top of the screen should "flash a color when they're up just to make sure that they're they really notice it", with text "that's very hard to miss", plus "a sound notification or a buzz". Spec by the Design Lead. Stock Scudetto, Roberto B.'s phone: Alessandro D. picks 10, then it's Roberto's pick 11.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>When:</b> the moment the server's clock makes it your turn, once per turn. Never on a refreshed screen that was already your turn (no replay on re-open).</li>
+            <li><b>The flash:</b> the clock card fills with <code>live</code> gold, its text in navy (<code>on-live</code>, new token: #0D1B2E in both themes; 5.1:1 on Light gold, 11.0:1 on Dark gold). Two flashes, then it rests: on 90 ms, hold 220 ms, off to the resting tint 160 ms, on again 90 ms, hold 220 ms, settle 160 ms. About 0.95 s in all, two flashes in that second (under the 3-per-second seizure threshold), never blocking input, never looping.</li>
+            <li><b>At rest, for the whole turn:</b> the card keeps a <code>warn-tint</code> fill and a 2 pt <code>live</code> border; the clock is in score type at 44 pt; "You're on the clock" is 30 pt, weight 900, in <code>liveText</code>. It is the largest text on the screen.</li>
+            <li><b>Buzz and sound, with the flash:</b> <code>Haptics.notificationAsync(Warning)</code> and one short chime (under 0.5 s). The chime respects the silent switch (<code>playsInSilentModeIOS: false</code>) and mixes with other audio, never stopping it. Both fire whenever the app is in front; the flash shows when the draft room is on screen (elsewhere, Home's drafting card already says it's your turn).</li>
+            <li><b>Last 10 seconds:</b> one more Warning haptic at 10 s left. No sound, no second flash: the clock's turn to <code>loss</code> red is the visual.</li>
+            <li><b>Reduce Motion:</b> no flash. The card switches straight to its resting state (tint, border, the big title) with no fade; the haptic and the chime stay, since they aren't motion.</li>
+          </ul>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Before: someone else is up" note="The card is quiet; your next pick is named."><I.YourTurn phase="before" /></Fit>
+            <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
+            <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
+            <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
               <h2 id="call-leave-h">Your call: leaving a league</h2>
-              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q3 and Q5 don't apply. Still open: Q4. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q4 = A (transfer the title first); Q3 and Q5 don't apply. All decided. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
             </div>
           </header>
           <ul className="b-inv__notes">
@@ -4827,6 +5186,7 @@
             <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
             <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
             <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
+            <li><b>The sheet's buttons</b> (Giorgio, 2026-10-06: "I want stay as a button"): "Leave league" is the filled red button; "Stay" is a real button under it, in the secondary (outlined) style, full width. This overrules the Design Lead's G-3, which had made Stay a text button.</li>
           </ul>
 
           <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
@@ -4866,11 +5226,11 @@
             <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
           </div>
 
-          <h3 className="b-sub">Q4 · The commissioner leaving (before the draft) · open</h3>
+          <h3 className="b-sub">Q4 · The commissioner leaving · decided: A, transfer first</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="A · Block until transferred" note="Leave is disabled; first make someone else commissioner from the Commissioner row, then leave as a member."><I.LeaveRefused kind="commish" /></Fit>
-            <Fit caption="★ B · Pick a successor in the leave sheet" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
-            <Fit caption="C · Auto-transfer" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
+            <Fit caption="✓ A · Transfer first (chosen)" note="Leave is disabled for the commissioner: first make someone else commissioner from the Commissioner row, then leave as a member. A transfer is allowed only before the draft room opens or after the season (PR #132)."><I.LeaveRefused kind="commish" /></Fit>
+            <Fit caption="B · Pick a successor in the leave sheet (not chosen)" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
+            <Fit caption="C · Auto-transfer (not chosen)" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
           </div>
 
           <h3 className="b-sub">Q5 · What the leaver sees, and rejoining · not applicable (Q2 = C)</h3>
@@ -4888,9 +5248,9 @@
           </div>
 
           <div className="b-ask">
-            <h3>Your call · decided: the leave window, Q2 = C, Q1 = reconfirm. Open: Q4 (recommend B, no successor preselected)</h3>
+            <h3>Decided: the leave window, Q2 = C, Q1 = reconfirm, Q4 = A (transfer first)</h3>
             <ul>
-              <li><b>Still to rule, from the new frames:</b> (1) if the commissioner hasn't chosen by the draft time, the draft simply doesn't start (Start draft stays disabled). Recommend that, plus a push at T−1h if it is still open. (2) Does a commissioner's "Invite someone new" need a deadline? Recommend no: they can switch to Move forward at any time. (3) After a post-season leave, does Run it back still ask that player? Recommend no. Can they unhide the league? Recommend not in 1.2.0.</li>
+              <li><b>Edges:</b> (1) not chosen in time and (2) the invite deadline are settled by auto-start: the deadline is when the draft room opens, and if the teams still aren't confirmed then, the draft is postponed. Still open: (3) after a post-season leave, does Run it back still ask that player (recommend no)? (4) Can they unhide the league (recommend not in 1.2.0)?</li>
             </ul>
             <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
             <ul>
@@ -4944,9 +5304,23 @@
             <Fit caption="Members · postponed" note="Who decides, and how much notice they'll get."><I.MemberPostponed /></Fit>
           </div>
 
+          <h3 className="b-sub">Home's draft card (decided, matches 3c-2's build with three corrections)</h3>
+          <ul className="b-inv__notes">
+            <li><b>Corrections to the build</b> (ui/mobile-league-setup @ 55f4f68): (1) the order line becomes "The draft room opens Sat 6:00 PM ET, when the order is set." (was "Draft order set … an hour before the draft"). (2) Once the room is open, the button is "Go to the draft room", not "Build your queue": the queue lives in the room. (3) On Home, the members' postponed line drops "and on your Home": "You'll see it here, with at least an hour's notice."</li>
+          </ul>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Scheduled" note="The same card as the pre-draft Home, with the room-opening line."><I.HomeAuto phase="scheduled" /></Fit>
+            <Fit caption="Room open" note={'"Draft room open · starts in" and your position; the button goes to the room.'}><I.HomeAuto phase="open" /></Fit>
+            <Fit caption="At 0:00" note="Home never asks the server to start (the lobby and the server do); it just shows the state."><I.HomeAuto phase="starting" /></Fit>
+            <Fit caption="Commissioner · at risk" note="The blockers card sits on top of the draft card."><I.HomeAuto phase="risk" commish /></Fit>
+            <Fit caption="Commissioner · postponed" note="The blockers card replaces the draft card until a new time is set."><I.HomeAuto phase="postponed" commish /></Fit>
+            <Fit caption="Members · postponed" note={'Tag "Draft postponed", chip "Postponed".'}><I.HomeAuto phase="postponed" /></Fit>
+            <Fit caption="No draft time yet · commissioner" note={'Members read "Roberto B. will set the draft time."'}><I.HomeAuto phase="nodate" commish /></Fit>
+          </div>
+
           <h3 className="b-sub">Draft time (decided)</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="Draft date sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
+            <Fit caption="Draft time sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
             <Fit caption="After the room opens" note="The time can't change. A postponed draft is the exception: its room never opened."><I.DateAfterRoom /></Fit>
           </div>
 
@@ -4959,8 +5333,45 @@
               <li><b>Reminder</b> (commissioner, about T−2h, only if still blocked): "One hour left to fix your league. If it isn't ready by {'{6:00 PM ET}'}, the draft is postponed."</li>
               <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
               <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
-              <li><b>New time</b> (everyone, proposed, when a postponed draft gets its new time): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
-              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "8 playoff teams, but 7 teams are in"; "fewer than 4 teams have joined"; "some slots can't be filled". Each is a full sentence on its own in the card.</li>
+              <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
+              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
+              <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-ux-pass1" aria-labelledby="call-ux-pass1-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-ux-pass1-h">Two fixes from the UX audit (decided: B, B)</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-06): B for both.</b> From the pass-1 audit against the UX rules (docs/design/reviews/ux-audit-2026-10.md). Both are about where the one action that matters sits. A is what 3c-2 builds today (the decided auto-start frames); B is the Design Lead's proposal. New copy is listed in the box at the end, never on the phone. Sample: Serie A Traders, Roberto B. is the commissioner.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Rule 3, reachable targets:</b> a screen's primary action sits in the bottom third or is full width. "Set draft time" is named in the rule.</li>
+            <li><b>Rule 10, leave a hook:</b> anything waiting on you stays on Home until it's done, and Home should let you do it, not send you to find it.</li>
+            <li>Neither changes a product rule: the 15-minute steps, the one-hour minimum and Set later all stay.</li>
+          </ul>
+
+          <h3 className="b-sub">1 · The draft time sheet: where is the confirm?</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Done in the header (not chosen)" note="The confirm is a small text link in the top corner, the hardest place to reach one-handed. The only full-width button is Set later, so the biggest target is the one that does NOT set a time."><I.DraftDatePicker /></Fit>
+            <Fit caption="✓ B · Set draft time at the bottom (chosen)" note="The confirm is the full-width button at the bottom, named for what it does. Close (×) dismisses without saving; Set later becomes a text button under it, still 44 pt tall. Where a time is required (a postponed draft), Set later is absent, as today."><I.DraftDatePicker variant="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · Home, no draft time yet (commissioner)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Points to League settings (not chosen)" note="The only thing blocking the league is the draft time, but the button builds your queue, and the line sends you to another tab to find the setting."><I.HomeAuto phase="nodate" commish /></Fit>
+            <Fit caption="✓ B · Set draft time, right here (chosen)" note="The primary opens the same Draft time sheet in place. Build your queue moves to secondary. Members' card is unchanged (Roberto B. will set the draft time + Build your queue)."><I.HomeAuto phase="nodate" commish setFirst /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Decided · B for both (Giorgio, 2026-10-06)</h3>
+            <ul>
+              <li><b>1-B:</b> the action that commits the draft time becomes the biggest, lowest thing on the sheet, and its label says what it does. A swipe or × no longer half-saves a time you were still scrolling to (today the picker writes as it spins and Done only closes). Familiar: Calendar's new-event sheet confirms at the top, but our sheets confirm at the bottom everywhere else (Review sell, Join), so B is consistent with the rest of the app.</li>
+              <li><b>2-B:</b> the commissioner can finish the one task blocking the league in two taps from Home, without hunting for League settings. Members see no change.</li>
+              <li><b>New copy (flagged):</b> "Set draft time" (sheet button), "Pick a time, and the countdown starts here." and "Set draft time" (Home, the same words as the sheet). The countdown claim is true by your rule: it shows as soon as a draft time is set. No push is promised.</li>
             </ul>
           </div>
         </section>
@@ -5041,6 +5452,57 @@
           <Fit caption="Trade history" note="Includes the draft"><I.TradeHistory /></Fit>
         </Group>
 
+
+        <section className="b-sec" id="buy-a-stock" aria-labelledby="buy-a-stock-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="buy-a-stock-h">Buy a stock</h2>
+              <p className="b-job">Find any stock, see whether you can buy it, and open its sheet. Built in 3e (<code>StockSearchScreen</code>, route <code>/stock-search</code>); framed after the fact by the Design Lead, 2026-10-06. Roberto B.'s phone, Stock Scudetto. Owners come from the draft; AMD, AMGN, AMC and SHW prices are sample. All copy here is new and listed in the box at the end.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Entry point: keep the row, on Portfolio, under the slots summary.</b> Not a header button (a "+" in the header reads as "create league" in this app) and not a floating button (not an iOS pattern for a secondary action). The row says what you can spend before you search (rule 4): a sale's cash, the budget left, or that every slot is invested.</li>
+            <li><b>Results sit inline under the field</b>, never an overlay (G-14), so the keyboard can't hide them. An exact ticker match is always first.</li>
+            <li><b>Every result says who owns it</b> (ruling at the end): yours, another manager's, or nobody's. Only a stock that isn't in the league's list is dimmed and can't be tapped.</li>
+            <li><b>Tapping a result opens the existing stock sheet.</b> Your own stock opens on Sell (already built and verified). For any stock you can't buy, the sheet says why <i>before</i> Review buy, which stays disabled: the refusal never waits for the review.</li>
+            <li><b>The tier league's "Fill" row</b> (decided frame, Tiers call A) opens this same screen scoped to the open slot: the title names the slot, and stocks outside its price range are dimmed. Ready to build once the Portfolio view has <code>preview.unfilled_slots</code>.</li>
+          </ul>
+
+          <h3 className="b-sub">The entry</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Portfolio · every slot invested" note="The row still opens search (you can look up any stock), and says up front that a buy needs a sale first."><I.BuyEntryPortfolio /></Fit>
+            <Fit caption="Portfolio · a sale's cash waiting" note="The row names the cash and where it came from. The Cash row's Invest (decided, Trading) goes to the same screen."><I.BuyEntryPortfolio cash /></Fit>
+          </div>
+
+          <h3 className="b-sub">The search</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Empty" note="Focused, keyboard up; a hint says what to type."><I.StockSearch state="empty" /></Fit>
+            <Fit caption="Results" note="Owned by another manager (AMZN, AMD) stays tappable to view; not in the league's list (AMC) is dimmed, no chevron."><I.StockSearch state="results" /></Fit>
+            <Fit caption="Exact match" note="An exact ticker is first, on its own if nothing else matches."><I.StockSearch state="exact" /></Fit>
+            <Fit caption="No results" note="Names what was searched and what to try. Whole sentences."><I.StockSearch state="none" /></Fit>
+            <Fit caption="Loading" note="Skeleton rows in place of results, never a blank (rule 9)."><I.StockSearch state="loading" /></Fit>
+            <Fit caption="Error" note="The load-failure pattern: the alert disc in text2 (not red), what failed, and Try again."><I.StockSearch state="error" /></Fit>
+          </div>
+
+          <h3 className="b-sub">The hand-off into the stock sheet</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Another manager's stock" note="The sheet shows who owns it, and why you can't buy it, before Review buy (disabled). Your own stock opens on Sell instead: the existing NVDA frame in Portfolio and stock sheet."><I.SearchSheet kind="owned" /></Fit>
+            <Fit caption="Nobody's stock, nothing to spend" note="Same pattern when every slot is invested. With a sale's cash waiting, the sheet goes to the existing Review buy (Trading)."><I.SearchSheet kind="full" /></Fit>
+            <Fit caption="Tier league · Fill from the open slot" note="Tier Cup, after selling DIS. Scoped to the $100–$200 slot: SHOP ($104.20) fits; SHW (sample price) is outside the range, dimmed. Ready to build with preview.unfilled_slots."><I.StockSearch state="tier" /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Design Lead ruling · ownership in results (2026-10-06; Giorgio may overrule)</h3>
+            <ul>
+              <li><b>(a) A stock you hold:</b> "You own this" in your colour; it opens the sheet on Sell. Distinct from (b) by colour and words.</li>
+              <li><b>(b) A stock another manager holds:</b> <b>stays tappable</b>, labelled "Owned by {'{name}'}", not dimmed. The sheet is how you look at a stock (price, chart, who owns it), and looking is allowed. What can't happen is the buy, so the <i>Buy</i> is what's blocked: the sheet says "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league." and Review buy is disabled. The player never reaches a review the server will refuse.</li>
+              <li><b>Why this differs from the draft room</b> (where owned stocks are dimmed): there the row's only action <i>is</i> the pick. The principle is the same in both places: disable the action the server would refuse, never the information.</li>
+              <li><b>(c) Not in the league's list:</b> dimmed, no chevron, "Not in this league's list".</li>
+              <li><b>New copy:</b> "Buy a stock" (row and title), "{'{$X}'} from your {'{SYMBOL}'} sale is ready to invest.", "Every slot is invested. Sell a holding to free one.", "Search by ticker or name" (the draft room's existing wording), "Type a ticker (AMZN) or a company name (Amazon).", "You own this", "Owned by {'{name}'}", "Not in this league's list", "No stock matches “{'{query}'}”." + "Check the ticker, or try the company name.", "Stocks didn't load" + "Check your connection, then try again.", "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league.", "Every slot is invested. Sell a holding to free one, then buy.", "Fill your {'{range}'} slot", "Pick a stock priced {'{lo}'} to {'{hi}'}. It takes the slot {'{SYMBOL}'} left.", "Doesn't fit this slot".</li>
+            </ul>
+          </div>
+        </section>
 
         <Group id="web" code="3d" name="Web app" job="The same four destinations in a left rail, the same content in two columns, and the stock sheet as a side panel."
           notes={[
@@ -5200,6 +5662,8 @@
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
     ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
+    ['on-live', 'live', null, 4.5, 'Your turn: card text during the gold flash'],
+    ['live-text', 'warn-tint', 'surface', 4.5, 'Your turn: the title on the resting card'],
   ];
   function readTheme(theme) {
     const el = document.createElement('div');
@@ -5365,7 +5829,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -5468,7 +5932,7 @@
             shows={[
               <>Value {$(K.PORTFOLIO_LIVE.value)}; gain since the draft {$s(K.PORTFOLIO_LIVE.gain)} against a $12,000.00 basis; today {$s(K.PORTFOLIO_LIVE.today)}.</>,
               <>Six holdings, each with value and today's move. Trade history includes the draft picks.</>,
-              <>Any ticker row opens the stock sheet: price and today's chart against the previous close, your position, who in the league owns it, and <b>Sell pre-selected</b> because you hold it.</>,
+              <>Any ticker row opens the stock sheet: price and today's change, a chart of daily closes (1W by default; 1W, 1M, 3M, 1Y, no 1D, because the price history is daily only: Giorgio's ruling), your position, who in the league owns it, and <b>Sell pre-selected</b> because you hold it.</>,
               <><b>Trading</b> (your call, v1.2): buy and sell freely, whole positions only, but a slot you sell out of can only reinvest what the sale brought in ({$(K.SALE.proceeds)} from TSLA), never a fresh $2,000. The freed slot shows as a Cash row ready to invest; cash earns nothing but counts in value, so the portfolio value doesn't change on the sale. The buy sheet says "You have {$(K.SALE.proceeds)} from selling TSLA to invest" and lets you pick which freed slot pays.</>,
             ]}
             motion={<>

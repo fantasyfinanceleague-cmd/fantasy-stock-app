@@ -375,8 +375,11 @@
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
     return {
       ...r,
-      dayPoints: [306.68, 307.9, 309.4, 308.7, 311.2, 313.05, 312.4, 314.9, 316.2, 315.6, 317.1, 318.37],
-      range: ['1D', '1W', '1M', '3M', '1Y'],
+      // 1W of daily closes (Giorgio: ranges 1W / 1M / 3M / 1Y, 1W default, no 1D;
+      // the price history is daily bars only). A week ago .. Tue are SAMPLE closes;
+      // Wed = prev (306.68) and Thu = the live price (318.37) are derived.
+      weekPoints: [301.85, 303.4, 300.95, 304.1, 306.68, 318.37],
+      range: ['1W', '1M', '3M', '1Y'],
       ownership: 'Drafted by you · Round 1, pick 2',
     };
   })();
@@ -428,7 +431,7 @@
     const bye = p.byes === 0 ? 'no byes' : p.byes === 1 ? 'the top seed gets a first-round bye' : `the top ${p.byes} seeds get first-round byes`;
     return `${P} teams · ${p.weeks} ${p.weeks === 1 ? 'week' : 'weeks'} of playoffs · ${bye}`;
   };
-  /** Serie A Traders (pre-draft sample): 8 members incl. 2 bots; Roberto
+  /** Serie A Traders (pre-draft sample): 8 members; Roberto
    * is the commissioner. Draft order mode (Giorgio, 2026-09-29): 'random'
    * (revealed 1 hour before the draft) or 'manual' (the commissioner sets
    * it). Never automatically commissioner-first. Order below = the revealed
@@ -436,9 +439,9 @@
   const SERIE_A = {
     name: 'Serie A Traders', draftAt: 'Sat 7:00 PM ET', revealAt: 'Sat 6:00 PM ET', rounds: 6,
     order: [
-      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Atlas', init: 'AT', bot: true },
+      { name: 'Marco R.', init: 'MR' }, { name: 'Luca C.', init: 'LC' }, { name: 'Elena M.', init: 'EM' },
       { name: 'Roberto B.', init: 'RB', you: true, commish: true }, { name: 'Sofia F.', init: 'SF' },
-      { name: 'Giulia V.', init: 'GV' }, { name: 'Nova', init: 'NV', bot: true }, { name: 'Tommaso P.', init: 'TP' },
+      { name: 'Giulia V.', init: 'GV' }, { name: 'Dario N.', init: 'DN' }, { name: 'Tommaso P.', init: 'TP' },
     ],
   };
   /** Overall pick numbers for a seat in a snake draft. */

@@ -551,7 +551,7 @@ What it does:
   - the display-name and Home RPCs, with the ranking they read;
   - `join_league_by_code`, for the rejoin case.
 - Simulates Supabase's default API-role grants, so the `proacl` assertions prove the explicit revokes work.
-- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 20 lines to PASS and the fixture to roll back.
+- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 25 lines to PASS and the fixture to roll back.
 
 It covers:
 - the leave window:
@@ -575,6 +575,14 @@ It covers:
 - the draft order WAITING past T−1h while a reconfirmation is owed, and set the moment it clears (on confirm, or on an invite cleared by a join);
 - the start gate binding the commissioner's raw flip and the service role;
 - `draft_order_notify_due` ignoring stranded `member_left` rows.
+- Q4 = A (`20261110000000`–`02`):
+  - the commissioner is always refused `transfer_first`;
+  - `transfer_commissioner`'s who/whom/when refusals (the locked middle; both open windows);
+  - the post-season transfer on the service path with #123 loaded;
+  - a user session can never write `commissioner_id` directly;
+  - transfer then leave;
+  - a transfer while a confirmation is owed;
+  - the renewal transfer: the old commissioner leaves as an invitee.
 
 The second `Deno.test` boots a fresh database with `fixtures/run_it_back_398da84_membership.sql`, a verbatim copy of PR #94's renewal response table and its `trg_league_members_renewal_sync_delete`. It proves three things:
 - an invitee's leave is an `out` reply with no reconfirm row;
@@ -733,3 +741,32 @@ A structural guard (files only). draft-control `status` returns `server_now`
 unit-tested in `functions/_shared/draft-start-policy.test.ts`.
 
 Run: `deno test --allow-read supabase/tests/draft_control_status_wiring.test.ts`.
+
+## arch_call_sites.test.ts
+
+What it does:
+- Runs `scripts/arch-call-sites.mjs` (the architecture map's wrapper attribution and
+  blind-spot report) over fixtures in `fixtures/arch-seam/`: real seam files copied from
+  `origin/ui/mobile-league-setup` @ 572ada6 (`seamCalls.ts`, `categoryData.ts`,
+  `RenewalRoster.tsx`, `useAllMatchups.ts`, `useDraftRoom.ts`, `QueueEditor.tsx`), minimal
+  skeletons that keep the real call lines (`league.tsx`, `createLeague.tsx`), and synthetic
+  edge cases (dynamic and templated names, a wrapper used as a value, a same-named function
+  from another module, a pure helper that takes a callback).
+- Pins that wrappers are found from their definitions (no list of names), that a caller's
+  name argument is parsed like a direct call, that a ternary of literals is INFERRED, that a
+  callback wrapper's first argument (a fixture key) is never minted into a table, and that
+  everything unattributable is REPORTED.
+- INVARIANT: every call of a wrapper is attributed or reported, never silently dropped.
+- Wiring: the generator hashes the blind spots and qualifies `--check`'s "current".
+
+Hermetic: `deno test --allow-read supabase/tests/arch_call_sites.test.ts`.
+
+## send_notification_types.test.ts
+
+Drives the REAL `send-notification/index.ts` (Deno.serve captured, `fetch` replaced by a
+fake Supabase: an authenticated caller, an allowing rate limit) and pins that `draft_turn`,
+removed from the closed set on 2026-10-06, is refused exactly like an unknown type (400
+`unknown notification type`) before any membership, league or push-token read. The turn
+push is server-side now (`_shared/draft-write.ts` notifyNextPicker), and a callerless
+entry would be a "your turn" spam template any leaguemate could fire. Hermetic:
+`deno test --allow-read --allow-env supabase/tests/send_notification_types.test.ts`.

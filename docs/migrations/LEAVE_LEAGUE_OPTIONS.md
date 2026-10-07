@@ -2,6 +2,33 @@
 
 **Status:** BUILT on `feat/leave-league` 2026-10-05, NOT applied and NOT deployed. Q4 defaults to B (pick a successor) until Giorgio rules; the A/C deltas are in §3. The board (#call-leave, PR #122) is reconciled. **"As built" below is authoritative wherever the sections after it differ.**
 
+## Q4 = A (Giorgio, 2026-10-06): transfer, then leave
+
+*"A commissioner cannot leave, but a commissioner can transfer that title to someone else and then leave."* #126 (applied) shipped Q4-B. These migrations replace it:
+
+- **`20261110000000`: `transfer_commissioner(league, user, new_commissioner)`.**
+  - SECURITY DEFINER, service_role only.
+  - Caller: the current commissioner. Target: a current human member.
+  - **Window = exactly the leave window** (Giorgio: *"a commissioner can only hand over the title before or after a season. From once the draft opens an hour before … and the end, commissioner cannot change."*). Both RPCs read one internal helper, `_league_membership_window()`: open before T−1h and after the season, `locked_in` (`order_set` / `season`) in between.
+  - Runs under the leagues row lock.
+  - After the season it runs on the service path, so #123's user-session freeze doesn't block it. The PGlite suite proves both halves.
+  - **`trg_leagues_commissioner_via_transfer`:** a user session can never change `commissioner_id` directly (it closes the `[I2a]` bypass from the security review). The RPC is the only path.
+  - It moves `commissioner_id` and both roles, then writes a `commissioner_transferred` notice to the new commissioner.
+  - A pending reconfirmation becomes theirs (`confirm_league_roster` checks `commissioner_id` at call time).
+  - The notice-kind CHECK becomes the union of all 8 kinds.
+- **`20261110000001`: `leave_league` refuses the commissioner** with `transfer_first`.
+  - This happens whatever they pass, and the sole human gets the same refusal.
+  - The renewal commissioner case folds into it.
+  - It applies in BOTH open windows: after the season, "leave" (hide) also needs a transfer first.
+  - Open question (flagged): the sole human of a finished league can't transfer (no human to take it), so they can't hide it.
+  - `p_new_commissioner` stays in the signature for the deployed #126 edge function, but it is refused if passed.
+- **`20261110000002`: `draft_order_notify_due` ignores `commissioner_transferred`**, as it does `member_left`.
+- **Edge:**
+  - The `leave-league` function gets a `transfer` action `{league_id, new_commissioner_id}` and pushes the new commissioner.
+  - Provisional copy: *"Roberto B. made you commissioner of Serie A Traders."*, plus *"Confirm your roster before the draft."* when one is owed.
+
+The §3 and Q4-B text below is history.
+
 ## As built
 
 - **Migrations `20261107000000`–`06`:**

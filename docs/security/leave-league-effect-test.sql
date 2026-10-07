@@ -1,6 +1,7 @@
 -- ============================================================================
 -- LEAVE LEAGUE EFFECT TEST: run in the Supabase SQL editor AFTER `db push` of
--- 20261107000000-06. Read-only in effect: NOTHING persists.
+-- 20261107000000-06 AND 20261110000000-02 (commissioner transfer, Q4 = A).
+-- Read-only in effect: NOTHING persists.
 -- Scope note: the order WAITING past T-1h and being set on confirm needs real
 -- elapsed time, so it is proven in supabase/tests/leave_league.pglite.test.ts;
 -- here G6 checks the catalog (the four functions + the gate trigger) and S8 the
@@ -28,28 +29,35 @@
 --     Postgres and requires every line to PASS.
 --
 -- EXPECTED OUTPUT (the final "ERROR:" text): every line ends in PASS.
---   G1  leave/unhide/confirm RPCs: service_role only, definer, path pinned  PASS
+--   G1  leave/unhide/confirm/transfer RPCs: service_role only, definer, path PASS
 --   G2  league_roster_reconfirm: RLS on; read-only for authenticated/service PASS
 --   G3  league_members has NO DELETE policy ([I5] gone)                       PASS
 --   G4  get_home_summary: authenticated only, skips hidden leagues           PASS
---   G5  all 7 notice kinds allowed; league_members.hidden_at exists          PASS
+--   G5  all 8 notice kinds allowed; league_members.hidden_at exists          PASS
 --   G6  the order + start wait on the reconfirmation (sync/cron/gate)       PASS
+--   G7  Q4 = A live: leave_league says transfer_first; the cron ignores the
+--       transfer notice                                                     PASS
 --   S1  pre-draft leave: row gone, reconfirm row, member_left to commish     PASS
 --   S2  inside the hour: locked_in (order_set), nothing written              PASS
---   S3  commissioner: successor_required, then hand-over to the successor    PASS
+--   S3  commissioner leave -> transfer_first; transfer; then leave -> OK      PASS
 --   S4  confirm (matchup): P above members refused; confirm with P = members PASS
 --   S4b confirm (duration): playoff spots don't apply, so it succeeds        PASS
 --   S5  after the season: hidden, membership kept                            PASS
 --   S6  mid-season: locked_in (season)                                        PASS
---   S7  commissioner successor injection (bot / outsider / self) refused     PASS
+--   S7  transfer injection (bot / outsider / self / non-commissioner) and a
+--       successor passed to leave_league: refused, nothing written           PASS
 --   S8  start refused while owed (gate binds service_role); invite + human
 --       join clears it; then the start goes through                         PASS
 --   S9  confirm by a non-commissioner refused                               PASS
---   A1  authenticated cannot call leave_league                               PASS
+--   S10 transfer in the locked window (mid-season; inside the hour): locked_in PASS
+--   S11 after the season: commissioner hide -> transfer_first; the transfer
+--       is open again; then the old commissioner hides it                    PASS
+--   A1  authenticated cannot call leave_league or transfer_commissioner      PASS
 --   A2  a client DELETE of one's own membership deletes nothing              PASS
 --   A3  a client cannot write league_roster_reconfirm                        PASS
 --   A4  a member reads the reconfirm row; an outsider sees none              PASS
---   N1  anon cannot call leave_league / read the reconfirm row               PASS
+--   A5  the commissioner's session cannot write commissioner_id directly     PASS
+--   N1  anon cannot call transfer/leave_league or read the reconfirm row     PASS
 -- Any FAIL line is a real finding: stop and report it.
 -- ============================================================================
 do $$
@@ -75,13 +83,13 @@ begin
   select string_agg(proname || '=' || coalesce(proacl::text, 'NULL') || ' sd=' || prosecdef || ' cfg=' || coalesce(proconfig::text, 'NULL'), ' ')
     into acl
     from pg_proc p join pg_namespace s on s.oid = p.pronamespace
-   where s.nspname = 'public' and proname in ('leave_league', 'unhide_league', 'confirm_league_roster')
+   where s.nspname = 'public' and proname in ('leave_league', 'unhide_league', 'confirm_league_roster', 'transfer_commissioner')
      and (proacl::text !~ 'service_role=X' or proacl::text ~ '(anon|authenticated)=' or proacl::text ~ '(^|[{,])=X'
           or not prosecdef or coalesce(proconfig::text, '') !~ 'search_path=public, pg_temp');
   select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
-   where s.nspname = 'public' and proname in ('leave_league', 'unhide_league', 'confirm_league_roster');
+   where s.nspname = 'public' and proname in ('leave_league', 'unhide_league', 'confirm_league_roster', 'transfer_commissioner');
   out := out || format(E'G1 RPC grants (%s fns)       %s  %s\n', n, coalesce(acl, 'ok'),
-    case when acl is null and n = 3 then 'PASS' else 'FAIL' end);
+    case when acl is null and n = 4 then 'PASS' else 'FAIL' end);
 
   select relname || '=' || coalesce(relacl::text, 'NULL') || ' rls=' || relrowsecurity into acl
     from pg_class where relname = 'league_roster_reconfirm' and relnamespace = 'public'::regnamespace;
@@ -107,7 +115,8 @@ begin
      and pg_get_constraintdef(oid) ~ 'member_left' and pg_get_constraintdef(oid) ~ 'draft_order_set'
      and pg_get_constraintdef(oid) ~ 'renewal_invite' and pg_get_constraintdef(oid) ~ 'renewal_reply'
      and pg_get_constraintdef(oid) ~ 'renewal_nudge' and pg_get_constraintdef(oid) ~ 'renewal_removed'
-     and pg_get_constraintdef(oid) ~ 'season_set';
+     and pg_get_constraintdef(oid) ~ 'season_set'
+     and pg_get_constraintdef(oid) ~ 'commissioner_transferred';
   out := out || format(E'G5 member_left kind / hidden_at col  %s  %s\n',
     n || '/' || (select count(*) from information_schema.columns
                   where table_schema = 'public' and table_name = 'league_members' and column_name = 'hidden_at'),
@@ -122,6 +131,14 @@ begin
     (select count(*) from pg_trigger where tgname = 'trg_leagues_roster_reconfirm_gate' and tgenabled = 'O'),
     case when n = 4 and exists (select 1 from pg_trigger where tgname = 'trg_leagues_roster_reconfirm_gate' and tgenabled = 'O')
          then 'PASS' else 'FAIL' end);
+
+  -- G7: Q4 = A is live: leave_league refuses the commissioner, and the cron's
+  -- predicate ignores the transfer notice (delivered by leave-league).
+  select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public'
+     and ((proname = 'leave_league' and prosrc ~ 'transfer_first' and prosrc !~ 'successor_required')
+       or (proname = 'draft_order_notify_due' and prosrc ~ 'commissioner_transferred'));
+  out := out || format(E'G7 Q4=A live: %s/2  %s\n', n, case when n = 2 then 'PASS' else 'FAIL' end);
 
   -- ---- fixture (as the editor's own role) -----------------------------------
   insert into public.leagues (name, commissioner_id, invite_code, num_participants, draft_status, draft_date, playoff_teams, league_type)
@@ -181,22 +198,32 @@ begin
   end;
 
   begin
+    -- Q4 = A: the commissioner can't leave (even naming a successor); they
+    -- transfer the title, then leave as a member.
     res := public.leave_league(l_far, c_uid);
-    if res->>'reason' is distinct from 'successor_required' then
-      out := out || format(E'S3 commissioner, no successor -> %s  FAIL\n', res::text);
+    if res->>'reason' is distinct from 'transfer_first'
+       or (public.leave_league(l_far, c_uid, b_uid)->>'reason') is distinct from 'transfer_first' then
+      out := out || format(E'S3 commissioner leave        -> %s  FAIL\n', res::text);
     else
-      res := public.leave_league(l_far, c_uid, b_uid);
-      out := out || format(E'S3 commissioner hand-over    -> %s commish=%s role=%s  %s\n', res->>'status',
-        (select commissioner_id = b_uid from public.leagues where id = l_far),
-        (select role from public.league_members where league_id = l_far and user_id = b_uid),
-        case when res->>'status' = 'left' and (res->>'made_commissioner')::boolean
-              and (select commissioner_id from public.leagues where id = l_far) = b_uid
-              and (select role from public.league_members where league_id = l_far and user_id = b_uid) = 'commissioner'
-              and not exists (select 1 from public.league_members where league_id = l_far and user_id = c_uid)
-             then 'PASS' else 'FAIL ' || res::text end);
+      res := public.transfer_commissioner(l_far, c_uid, b_uid);
+      if res->>'status' is distinct from 'transferred'
+         or (select commissioner_id from public.leagues where id = l_far) is distinct from b_uid
+         or (select role from public.league_members where league_id = l_far and user_id = b_uid) is distinct from 'commissioner'
+         or (select role from public.league_members where league_id = l_far and user_id = c_uid) is distinct from 'member'
+         or (select count(*) from public.league_notifications
+              where league_id = l_far and kind = 'commissioner_transferred' and user_id = b_uid) <> 1 then
+        out := out || format(E'S3 transfer                  -> %s  FAIL\n', res::text);
+      else
+        res := public.leave_league(l_far, c_uid);
+        out := out || format(E'S3 transfer_first / transfer / leave -> %s commish=%s  %s\n', res->>'status',
+          (select commissioner_id = b_uid from public.leagues where id = l_far),
+          case when res->>'status' = 'left' and res->>'notify_user_id' = b_uid
+                and not exists (select 1 from public.league_members where league_id = l_far and user_id = c_uid)
+               then 'PASS' else 'FAIL ' || res::text end);
+      end if;
     end if;
   exception when others then
-    out := out || format(E'S3 commissioner hand-over    -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+    out := out || format(E'S3 transfer then leave       -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
   begin
@@ -257,18 +284,55 @@ begin
 
   begin
     -- l_soon is locked (order set), so use l_rd while still open: c is its commissioner.
-    if (public.leave_league(l_rd, c_uid, 'bot-1')->>'reason') = 'successor_invalid'
-       and (public.leave_league(l_rd, c_uid, x_uid)->>'reason') = 'successor_invalid'
-       and (public.leave_league(l_rd, c_uid, c_uid)->>'reason') = 'successor_invalid'
+    if (public.transfer_commissioner(l_rd, c_uid, 'bot-1')->>'reason') = 'target_invalid'
+       and (public.transfer_commissioner(l_rd, c_uid, x_uid)->>'reason') = 'target_invalid'
+       and (public.transfer_commissioner(l_rd, c_uid, c_uid)->>'reason') = 'target_invalid'
+       and (public.transfer_commissioner(l_rd, a_uid, b_uid)->>'reason') = 'not_commissioner'
+       and (public.leave_league(l_rd, c_uid, b_uid)->>'reason') = 'transfer_first'
        and (public.leave_league(l_rd, a_uid, b_uid)->>'reason') = 'successor_not_allowed'
        and (select commissioner_id from public.leagues where id = l_rd) = c_uid
        and (select count(*) from public.league_members where league_id = l_rd) = 5 then
-      out := out || E'S7 successor injection        -> refused, nothing written  PASS\n';
+      out := out || E'S7 transfer/successor injection -> refused, nothing written  PASS\n';
     else
-      out := out || E'S7 successor injection        -> FAIL\n';
+      out := out || E'S7 transfer/successor injection -> FAIL\n';
     end if;
   exception when others then
-    out := out || format(E'S7 successor injection        -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+    out := out || format(E'S7 transfer/successor injection -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    -- The locked middle: the same window as leaving.
+    res := public.transfer_commissioner(l_live, c_uid, a_uid);
+    out := out || format(E'S10 transfer mid-season / inside the hour -> %s/%s, %s  %s\n', res->>'reason', res->>'window',
+      public.transfer_commissioner(l_soon, c_uid, a_uid)->>'window',
+      case when res->>'reason' = 'locked_in' and res->>'window' = 'season'
+            and (public.transfer_commissioner(l_soon, c_uid, a_uid)->>'window') = 'order_set'
+            and (select commissioner_id from public.leagues where id = l_live) = c_uid
+            and (select commissioner_id from public.leagues where id = l_soon) = c_uid
+           then 'PASS' else 'FAIL ' || res::text end);
+  exception when others then
+    out := out || format(E'S10 transfer in the locked window -> %s FAIL (%s)\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    -- After the season: the commissioner's "leave" (hide) needs a transfer first,
+    -- and the transfer is open again (the service path; #123 locks only user sessions).
+    res := public.leave_league(l_done, c_uid);
+    if res->>'reason' is distinct from 'transfer_first' then
+      out := out || format(E'S11 after the season         -> %s  FAIL\n', res::text);
+    else
+      res := public.transfer_commissioner(l_done, c_uid, b_uid);
+      -- Separate statements: a check in the SAME statement as the hide would not
+      -- see the hide's write (one snapshot per statement).
+      acl := public.leave_league(l_done, c_uid)->>'status';
+      out := out || format(E'S11 post-season transfer + hide -> %s/%s hide=%s  %s\n', res->>'status', res->>'window', acl,
+        case when res->>'status' = 'transferred' and res->>'window' = 'after_season' and acl = 'hidden'
+              and (select commissioner_id from public.leagues where id = l_done) = b_uid
+              and (select hidden_at is not null from public.league_members where league_id = l_done and user_id = c_uid)
+             then 'PASS' else 'FAIL ' || res::text end);
+    end if;
+  exception when others then
+    out := out || format(E'S11 post-season transfer     -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
   begin
@@ -315,8 +379,17 @@ begin
     res := public.leave_league(l_rd, d_uid);
     out := out || format(E'A1 authenticated leave_league -> accepted %s  FAIL\n', res::text);
   exception when others then
-    out := out || format(E'A1 authenticated leave_league -> %s  %s\n', sqlstate,
-      case when sqlerrm like 'permission denied%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+    if sqlerrm not like 'permission denied%' then
+      out := out || format(E'A1 authenticated leave_league -> %s  FAIL (%s)\n', sqlstate, sqlerrm);
+    else
+      begin
+        res := public.transfer_commissioner(l_rd, d_uid, a_uid);
+        out := out || format(E'A1 authenticated transfer_commissioner -> accepted %s  FAIL\n', res::text);
+      exception when others then
+        out := out || format(E'A1 authenticated leave_league / transfer_commissioner -> denied / %s  %s\n', sqlstate,
+          case when sqlerrm like 'permission denied%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+      end;
+    end if;
   end;
 
   begin
@@ -348,9 +421,26 @@ begin
     out := out || format(E'A4 reconfirm read            -> %s FAIL (%s)\n', sqlstate, sqlerrm);
   end;
 
+  begin
+    -- The commissioner's own session: a direct commissioner_id write is refused
+    -- (only transfer_commissioner may change it). l_rd's commissioner is c.
+    perform set_config('request.jwt.claims', json_build_object('sub', c_uid, 'role', 'authenticated')::text, true);
+    update public.leagues set commissioner_id = a_uid where id = l_rd;
+    out := out || E'A5 commissioner direct commissioner_id write -> accepted  FAIL\n';
+  exception when others then
+    out := out || format(E'A5 commissioner direct commissioner_id write -> %s  %s\n', sqlstate,
+      case when sqlerrm like 'commissioner_transfer_only%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
   -- ---- anon ------------------------------------------------------------------
   perform set_config('role', 'anon', true);
   perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  begin
+    res := public.transfer_commissioner(l_rd, c_uid, a_uid);
+    out := out || E'N1 anon transfer_commissioner   -> accepted  FAIL\n';
+  exception when others then
+    null;   -- denied, as expected; the leave_league call below records the line
+  end;
   begin
     res := public.leave_league(l_rd, d_uid);
     out := out || E'N1 anon leave_league           -> accepted  FAIL\n';

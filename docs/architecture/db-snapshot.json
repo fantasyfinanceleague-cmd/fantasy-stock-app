@@ -447,7 +447,7 @@
             "checkConstraints": [
                 {
                     "name": "league_notifications_kind_check",
-                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text])))"
+                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text, 'commissioner_transferred'::text])))"
                 },
                 {
                     "name": "league_notifications_push_status_check",
@@ -1150,6 +1150,20 @@
         },
         {
             "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_league_membership_window",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -1267,6 +1281,20 @@
             ],
             "searchPath": "public, pg_temp",
             "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_commissioner_change_via_transfer",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
             "securityDefiner": false
         },
         {
@@ -1912,6 +1940,21 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "p_league_id uuid, p_user_id text, p_new_commissioner text",
+            "name": "transfer_commissioner",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "",
             "name": "trigger_week_end_snapshot",
             "owner": "postgres",
@@ -2000,6 +2043,6 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-10-06T19:12:57Z",
+    "capturedAt": "2026-10-07T19:41:46Z",
     "postgresVersion": "17.4"
 }

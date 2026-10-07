@@ -642,6 +642,35 @@
     );
   }
 
+  /** Season complete for a manager who didn't win, on Francesco T.'s phone. Documents the
+   * APPROVED 3b-2 build (SeasonCompleteCard, rulings B6 + S8): place as the headline,
+   * "{League} · {record}", a neutral disc (gold is a champion signal). Tile values are
+   * SAMPLE (data.js has no Week 14 for Francesco T.). */
+  function HomeCompleteOther() {
+    return (
+      <Device tab="home" label="Home, season complete, not the champion">
+        <Head avatar chip={null} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-game" style={{ padding: 20, display: 'grid', justifyItems: 'center', gap: 8, textAlign: 'center' }}>
+            <span style={{ width: 72, height: 72, borderRadius: 36, display: 'grid', placeItems: 'center', background: 'var(--c-text-2)', color: 'var(--c-surface)' }}><Icon d={TROPHY} size={36} width={2.2} /></span>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season complete</span>
+            <span className="ks-score" style={{ fontSize: 44, lineHeight: '44px', whiteSpace: 'normal' }}>4th place</span>
+            <span className="ks-callout">{K.LEAGUE.name} · 7–7</span>
+          </div>
+          <Card pad="14px">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 12 }} className="ks-num">
+              <span><span className="ks-caption">Season gain</span><br /><b className="ks-gain">+$612.35</b></span>
+              <span><span className="ks-caption">Best week</span><br /><b>Week 9 · +$188.20</b></span>
+              <span><span className="ks-caption">Regular season</span><br /><b>4th of 6 · 7–7</b></span>
+              <span><span className="ks-caption">Playoffs</span><br /><b>0–1 · lost in the Semifinals</b></span>
+            </div>
+          </Card>
+          <span className="ks-btn">See the final standings</span>
+        </div>
+      </Device>
+    );
+  }
+
   // ═════════════════════════════════════════════════════════════════════
   // C. GAME (3c)
   // ═════════════════════════════════════════════════════════════════════
@@ -1001,6 +1030,40 @@
               ))}
             </ul>
           </div>
+        </div>
+      </Device>
+    );
+  }
+
+  /** Draft complete (UX audit U-10/U-26): the draft's designed ending, on Roberto B.'s phone.
+   * The roster comes from the draft (DRAFT recap data); Week 1 is the pre-season matchup. */
+  function DraftComplete() {
+    const R = { NVDA: 1, AAPL: 2, CRM: 3, TSLA: 4, COST: 5, V: 6 };
+    const mine = K.PORTFOLIO_LIVE.rows.slice().sort((a, b) => R[a.t] - R[b.t]);
+    return (
+      <Device game tab="league" label="Draft complete">
+        <Head chip={<span className="ks-chip">Pre-season</span>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-game" style={{ padding: 18, display: 'grid', gap: 6 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft complete</span>
+            <span className="ks-title" style={{ fontSize: 24 }}>Your team is set</span>
+            <span className="ks-callout">Week 1 starts Mon 9:30 AM ET. You play {K.byId.gianluigi.name}</span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-muted">{mine.length} of {K.LEAGUE.slots} · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+            <Card>
+              <ul className="ks-rows">
+                {mine.map((r) => (
+                  <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                    <Logo t={r.t} />
+                    <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption">Round {R[r.t]} · pick {r.pick}</span></span>
+                    <span className="ks-right ks-num ks-callout">{$(r.draft)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+          <span className="ks-btn">See your Week 1 matchup</span>
         </div>
       </Device>
     );
@@ -1647,7 +1710,7 @@
           </Card>
           <Card>
             <ul className="ks-rows" style={{ opacity: 0.5 }}>
-              <Row k="Draft date" v="Not set" />
+              <Row k="Draft time" v="Not set" />
               <Row k="Draft order" v="Random" />
             </ul>
           </Card>
@@ -1838,13 +1901,13 @@
   function DraftStalled({ commish }) {
     return (
       <Device tab="league" label={commish ? 'Draft paused, commissioner' : 'Draft paused, member'}>
-        <Head chip={<span className="ks-chip">Paused</span>} />
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
         <div className="ks-pad ks-stack">
           <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 8 }}>
             <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft paused</span>
             <span className="ks-title" style={{ fontSize: 20 }}>No stock left fits Paolo M.'s next slot</span>
             <span className="ks-callout ks-muted">{commish
-              ? "The clock is stopped and nobody is skipped. You've been notified; the draft continues once the slot can be filled."
+              ? 'The clock is stopped and nobody is skipped. The draft continues once the slot can be filled.'
               : 'The clock is stopped and nobody is skipped. The commissioner has been told.'}</span>
           </div>
           <span className="ks-caption">Round 2 · Pick 12 · Paolo M.</span>
@@ -1874,7 +1937,7 @@
 
   // ═════════════════════════════════════════════════════════════════════
   // YOUR CALL: which tier a traded stock fills (price-tier leagues),
-  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (his
+  // 2026-10-05. "Tier Cup": six one-share tiers. Roberto sold DIS (their
   // $100–$200 stock) and wants to buy. New copy throughout.
   // ═════════════════════════════════════════════════════════════════════
   const TIER = (() => {
@@ -1966,9 +2029,13 @@
   //   Scudetto on Tuesday of Week 6;
   //   playoffs: Francesco T. left in Week 9 and still finished 4th (Season 1).
   // ═════════════════════════════════════════════════════════════════════
+  // Leave sheets (Giorgio, 2026-10-06, overruling G-3: "I want stay as a button"):
+  // Leave league is the filled red button; Stay is a real button under it, the
+  // secondary (outlined) style, full width.
   const DangerBtn = ({ children, off }) => (
-    <span className="ks-btn ks-btn--secondary" style={{ color: 'var(--c-danger)', opacity: off ? 0.45 : 1 }}>{children}</span>
+    <span className="ks-btn ks-btn--sell" style={{ opacity: off ? 0.45 : 1 }}>{children}</span>
   );
+  const StayBtn = () => <span className="ks-btn ks-btn--secondary">Stay</span>;
   const LeaveRow = ({ off, sub }) => (
     <Card><ul className="ks-rows">
       <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0' }} aria-disabled={off || undefined}>
@@ -2012,7 +2079,7 @@
           <span className="ks-title">Leave {name}?</span>
           <Bullets items={items} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={name} chip={pre ? null : <Chip kind="live">Week 6</Chip>} />
@@ -2040,7 +2107,7 @@
             <Alert>Marco R. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
           )}
           <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Marco R.' : 'Leave league'}</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={K.SERIE_A.name} chip={null} />
@@ -2340,7 +2407,7 @@
           <span className="ks-title">Leave {K.LEAGUE.name}?</span>
           <Bullets items={['It comes off your Home and Your leagues.', 'Season 1 stays in the league’s History, with your record in it.']} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
@@ -2611,6 +2678,69 @@
       </Device>
     );
   }
+  /** Home's pre-draft card under auto-start (same states as the lobby).
+   * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
+   * commish: the commissioner's phone (blockers card ON TOP of the draft card;
+   * when postponed, the blockers card replaces it). */
+  function HomeAuto({ phase = 'scheduled', commish, setFirst }) {
+    // setFirst (UX audit call B): the commissioner's no-time card leads with setting the time.
+    const setTimeLead = setFirst && commish && phase === 'nodate';
+    // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
+    const members = ['scheduled', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP']
+      : ['open', 'starting'].includes(phase) ? ['RB', 'MR', 'LC', 'EM', 'SF', 'GV', 'DN', 'TP']
+      : ['RB', 'MR', 'LC', 'EM', 'GV', 'DN', 'TP'];
+    const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
+    const live = phase === 'open' || phase === 'starting';
+    // The everyone-states are shown on Roberto B.'s phone (seat 4); the member frames on Giulia V.'s.
+    const mine = commish || ['scheduled', 'open', 'starting'].includes(phase);
+    const draftCard = phase === 'postponed' && commish ? null : (
+      <GameCard tag={phase === 'postponed' ? 'Draft postponed' : 'Draft'} chip={<span className="ks-chip">{phase === 'postponed' ? 'Postponed' : 'Pre-draft'}</span>}>
+        {phase === 'postponed' ? (
+          <>
+            <span className="ks-title">Roberto B. will pick a new time.</span>
+            <span className="ks-callout ks-muted">You'll see it here, with at least an hour's notice.</span>
+          </>
+        ) : phase === 'nodate' ? (
+          <>
+            <span className="ks-title">No draft time yet</span>
+            <span className="ks-callout ks-muted">{setTimeLead ? 'Pick a time, and the countdown starts here.' : commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+          </>
+        ) : (
+          <>
+            <span className="ks-title">{AS.when}</span>
+            {phase === 'open' ? <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Draft room open · starts in</span> : null}
+            <span className="ks-score ks-num" style={{ fontSize: 40 }}>{clock}</span>
+            {phase === 'starting' ? <span className="ks-callout" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', fontWeight: 700 }}><Spinner />Starting the draft</span> : null}
+            {live ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-you-text)' }}>You pick {K.ordinal(AS.seat)}</span> : null}
+          </>
+        )}
+        {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
+        {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
+        {setTimeLead ? (
+          <>
+            <span className="ks-btn">Set draft time</span>
+            <span className="ks-btn ks-btn--secondary">Build your queue</span>
+          </>
+        ) : <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>}
+      </GameCard>
+    );
+    return (
+      <Device tab="home" label={`Home, pre-draft, ${phase}${commish ? ', commissioner' : ''}`}>
+        <Head name={K.SERIE_A.name} avatar={mine} />
+        <div className="ks-pad ks-stack">
+          {commish && (phase === 'risk' || phase === 'postponed') ? <BlockersCard phase={phase} /> : null}
+          {draftCard}
+          {phase === 'risk' || (phase === 'postponed' && commish) ? null : (
+            <Card pad="14px">
+              <div className="ks-section-h"><h3>Members</h3><span className="ks-caption ks-num">{members.length} of 8 joined</span></div>
+              <div style={{ display: 'flex', gap: 6 }}>{members.map((m, i) => <span key={m} className={mine && i === 0 ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m}</span>)}</div>
+            </Card>
+          )}
+        </div>
+      </Device>
+    );
+  }
+
   /** Decision 3: the Draft date row after the room opens. allow: postponing is allowed. */
   function DateAfterRoom({ allow }) {
     return (
@@ -2621,7 +2751,7 @@
           <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Draft</span>
           <Card><ul className="ks-rows">
             <li className="ks-row" style={{ gridTemplateColumns: '1fr auto 16px', padding: '13px 0' }}>
-              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft date</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
+              <span><span className="ks-callout" style={{ fontWeight: 600, color: allow ? undefined : 'var(--c-text-3)' }}>Draft time</span><br /><span className="ks-caption">{allow ? 'Moving it keeps everyone locked in until the new time.' : 'The draft time can’t change once the draft room opens.'}</span></span>
               <span className="ks-callout ks-muted">{AS.when}</span>
               <span className="ks-muted">{allow ? <Icon d={ICON.right} size={16} /> : null}</span>
             </li>
@@ -2632,16 +2762,17 @@
     );
   }
   /** Decision 4: the draft date sheet, earliest time = now + 1 hour, 15-minute steps. */
-  function DraftDatePicker() {
+  /** variant 'B' (UX audit call): the confirm is the full-width bottom button; the header has Close. */
+  function DraftDatePicker({ variant = 'A' }) {
     const Col = ({ items, on, off = [] }) => (
       <div style={{ display: 'grid', gap: 2, textAlign: 'center' }}>
         {items.map((x) => <span key={x} className="ks-callout ks-num" style={{ padding: '6px 0', borderRadius: 8, fontWeight: x === on ? 800 : 500, background: x === on ? 'var(--c-sunken)' : undefined, color: off.includes(x) ? 'var(--c-text-3)' : undefined }}>{x}</span>)}
       </div>
     );
     return (
-      <Device noTabs label="Draft date sheet" overlay={
+      <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft date</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span>{variant === 'B' ? <span className="ks-muted"><Icon d={ICON.close} size={22} /></span> : <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span>}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -2650,7 +2781,12 @@
           </div>
           <span className="ks-callout"><b>Today · 3:15 PM ET</b> <span className="ks-muted">(the earliest you can pick: an hour from now)</span></span>
           <span className="ks-caption">The draft room opens 1 hour before, and the draft starts automatically.</span>
-          <span className="ks-btn ks-btn--secondary">Set later</span>
+          {variant === 'B' ? (
+            <>
+              <span className="ks-btn">Set draft time</span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Set later</span>
+            </>
+          ) : <span className="ks-btn ks-btn--secondary">Set later</span>}
         </Sheet>
       }>
         <Back label="League" />
@@ -2658,18 +2794,210 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // 3e · BUY A STOCK (stock search, the buy entry point). Design Lead,
+  // 2026-10-06. Roberto B.'s phone, Stock Scudetto (per-slot league).
+  // Owners come from the draft (DRAFT_PICKS). Prices for AMD, AMGN, AMC and
+  // SHW are SAMPLE (not in data.js); every other number is derived.
+  // ═════════════════════════════════════════════════════════════════════
+  const ALERT = 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7.5v5.5M12 16.5v.01';
+  const ownerOf = (t) => {
+    const p = K.DRAFT_PICKS.find((x) => x.intended === t);
+    return p ? K.byId[p.player] : null;
+  };
+  const priceOf = (t) => {
+    const r = K.PORTFOLIO_LIVE.rows.find((x) => x.t === t);
+    if (r) return r.thu;
+    const g = { AMZN: 236.4, SHOP: K.SALE.buy.price, AMD: 162.85, AMGN: 289.5, AMC: 3.42, SHW: 352.1 }; // AMZN (H.gianluigi thu), SHOP (SALE) derived; AMD, AMGN, AMC, SHW sample
+    return g[t];
+  };
+  const NAMES = { AAPL: 'Apple', AMZN: 'Amazon', AMD: 'Advanced Micro Devices', AMGN: 'Amgen', AMC: 'AMC Entertainment', SHOP: 'Shopify', NVDA: 'NVIDIA', SHW: 'Sherwin-Williams' };
+  /** One search result. kind: 'mine' | 'owned' | 'free' | 'out' (not in the league's list) | 'nofit' (tier scope). */
+  const ResultRow = ({ t, kind = 'free', last }) => {
+    const owner = kind === 'owned' ? ownerOf(t) : null;
+    const off = kind === 'out' || kind === 'nofit';
+    const status = kind === 'mine' ? <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>You own this</span>
+      : kind === 'owned' ? <>Owned by {owner ? owner.name : 'another manager'}</>
+      : kind === 'out' ? <>Not in this league's list</>
+      : kind === 'nofit' ? <>Doesn't fit this slot</> : null;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto 16px', opacity: off ? 0.45 : 1, borderBottom: last ? 'none' : undefined }} aria-disabled={off || undefined}>
+        <Logo t={t} />
+        <span><span className="ks-t">{t}</span><br /><span className="ks-caption">{NAMES[t]}{status ? <> · {status}</> : null}</span></span>
+        <span className="ks-right ks-num ks-callout"><b>{$(priceOf(t))}</b></span>
+        <span className="ks-muted">{off ? null : <Icon d={ICON.right} size={16} />}</span>
+      </li>
+    );
+  };
+  const SearchBox = ({ q, focus = true }) => (
+    <div className="ks-search" style={focus ? { borderColor: 'var(--c-accent)' } : undefined}>
+      <Icon d={ICON.search} size={18} />
+      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or name'}</span>
+      {focus ? <span className="ks-caret ks-caret--dark" /> : null}
+    </div>
+  );
+  /** Portfolio with the "Buy a stock" entry. cash: a sale's cash is waiting. */
+  function BuyEntryPortfolio({ cash }) {
+    const P = K.PORTFOLIO_LIVE, S = K.SALE;
+    const rows = (cash ? P.rows.filter((r) => r.t !== S.sold) : P.rows).slice(0, 3);
+    return (
+      <Device tab="portfolio" label={cash ? 'Portfolio, Buy a stock with cash waiting' : 'Portfolio, Buy a stock with every slot invested'}>
+        <Head chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value{cash ? ' · includes cash' : ''}</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>{cash ? '5 of 6' : '6 of 6'}</b> slots invested</span>
+            <span className="ks-callout ks-muted">{cash ? '1 ready to invest' : `${$(K.LEAGUE.notionalPerSlot)} per slot at the draft`}</span>
+          </div>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+              <span className="ks-logo" style={{ background: 'var(--c-accent-tint)', color: 'var(--c-accent)' }}><Icon d={ICON.search} size={18} /></span>
+              <span><span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)' }}>Buy a stock</span><br />
+                <span className="ks-caption ks-num">{cash ? `${$(S.proceeds)} from your ${S.sold} sale is ready to invest.` : 'Every slot is invested. Sell a holding to free one.'}</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+          </ul></Card>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {rows.map((r) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={r.t} />
+                  <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** The search screen. state: 'empty' | 'results' | 'exact' | 'none' | 'loading' | 'error' | 'tier'. */
+  function StockSearch({ state = 'results' }) {
+    const tier = state === 'tier';
+    const q = { empty: '', results: 'AM', exact: 'SHOP', none: 'QZX', loading: 'AM', error: 'AM', tier: 'SH' }[state];
+    const kbd = state === 'empty' || state === 'results' || state === 'none';
+    return (
+      <Device noTabs label={`Buy a stock, ${state}`}>
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>{tier ? 'Fill your $100–$200 slot' : 'Buy a stock'}</h2>
+          {tier ? <span className="ks-callout ks-muted" style={{ marginTop: -6 }}>Pick a stock priced $100 to $200. It takes the slot DIS left.</span> : null}
+          <SearchBox q={q} />
+          {state === 'empty' ? <span className="ks-caption">Type a ticker (AMZN) or a company name (Amazon).</span> : null}
+          {state === 'results' ? (
+            <Card><ul className="ks-rows">
+              <ResultRow t="AMZN" kind="owned" />
+              <ResultRow t="AMD" kind="owned" />
+              <ResultRow t="AMGN" kind="free" />
+              <ResultRow t="AMC" kind="out" last />
+            </ul></Card>
+          ) : null}
+          {state === 'exact' ? (
+            <Card><ul className="ks-rows"><ResultRow t="SHOP" kind="free" last /></ul></Card>
+          ) : null}
+          {state === 'tier' ? (
+            <Card><ul className="ks-rows">
+              <ResultRow t="SHOP" kind="free" />
+              <ResultRow t="SHW" kind="nofit" last />
+            </ul></Card>
+          ) : null}
+          {state === 'none' ? <span className="ks-callout" style={{ textAlign: 'center', padding: '18px 0' }}>No stock matches “QZX”.<br /><span className="ks-muted">Check the ticker, or try the company name.</span></span> : null}
+          {state === 'loading' ? (
+            <Card><ul className="ks-rows" aria-label="Loading results">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <span className="ks-logo" style={{ background: 'var(--c-sunken)' }} />
+                  <span style={{ display: 'grid', gap: 6 }}><span style={{ height: 12, width: 64, borderRadius: 6, background: 'var(--c-sunken)' }} /><span style={{ height: 10, width: 140, borderRadius: 5, background: 'var(--c-sunken)' }} /></span>
+                  <span style={{ height: 12, width: 56, borderRadius: 6, background: 'var(--c-sunken)' }} />
+                </li>
+              ))}
+            </ul></Card>
+          ) : null}
+          {state === 'error' ? <Empty icon={ALERT} title="Stocks didn't load" line="Check your connection, then try again." primary="Try again" /> : null}
+        </div>
+        {kbd ? <div className="ks-kbd-dock"><Keyboard /></div> : null}
+      </Device>
+    );
+  }
+  /** The hand-off: the existing stock sheet, opened from a result. kind: 'owned' (AMZN, another manager's) | 'full' (AMGN, nothing to spend). */
+  function SearchSheet({ kind = 'owned' }) {
+    const t = kind === 'owned' ? 'AMZN' : 'AMGN';
+    const owner = ownerOf('AMZN');
+    return (
+      <Device tab="portfolio" label={`Stock sheet from search, ${kind}`} overlay={
+        <Sheet top={300}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Logo t={t} /><span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption">{NAMES[t]} · {$(priceOf(t))}</span></span><span className="ks-muted"><Icon d={ICON.close} size={22} /></span></div>
+          {kind === 'owned' ? (
+            <div className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-inset)', boxShadow: 'none', display: 'flex', justifyContent: 'space-between' }}>
+              <span className="ks-callout">In your league</span><span className="ks-callout"><b>{owner.name}</b></span>
+            </div>
+          ) : null}
+          <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span style={{ opacity: 0.45 }}>Sell</span></div>
+          <div className="ks-card" role="note" style={{ padding: '10px 12px', background: 'var(--c-warn-tint)', borderColor: 'var(--c-warn-line)', boxShadow: 'none' }}>
+            <span className="ks-callout" style={{ fontWeight: 600 }}>{kind === 'owned' ? `${owner.name} owns ${t}. A stock has one owner per league.` : 'Every slot is invested. Sell a holding to free one, then buy.'}</span>
+          </div>
+          <span className="ks-btn" style={{ opacity: 0.45 }} aria-disabled="true">Review buy</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR TURN must be unmissable (Giorgio, 2026-10-06). Stock Scudetto,
+  // Roberto B.'s phone, round 2: Alessandro D. picks 10, Roberto picks 11.
+  // phase: 'before' | 'flash' | 'rest' | 'rm' (Reduce Motion). The clock
+  // values other than 0:42 (DRAFT_MOMENT) are sample moments of the same turn.
+  // ═════════════════════════════════════════════════════════════════════
+  function YourTurn({ phase = 'flash' }) {
+    const mine = phase !== 'before';
+    const clock = { before: '0:18', flash: '1:00', rest: '0:42', rm: '1:00' }[phase];
+    const flash = phase === 'flash';
+    const card = flash
+      ? { background: 'var(--c-live)', border: '2px solid var(--c-live)' }
+      : mine ? { background: 'var(--c-warn-tint)', border: '2px solid var(--c-live)' } : {};
+    const ink = flash ? 'var(--c-on-live)' : undefined;
+    return (
+      <Device game tab="league" label={`Draft room, your turn, ${phase}`}>
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 14 }}>
+          <div className="ks-raised" style={{ padding: 16, display: 'grid', gap: 4, ...card }}>
+            <span className="ks-score ks-num" style={{ fontSize: mine ? 44 : 28, lineHeight: mine ? '46px' : '30px', color: ink }}>{clock}</span>
+            {mine ? (
+              <span style={{ fontSize: 30, lineHeight: '34px', fontWeight: 900, letterSpacing: '-0.01em', color: flash ? ink : 'var(--c-live-text)' }}>You're on the clock</span>
+            ) : (
+              <span className="ks-headline">Alessandro D. is up</span>
+            )}
+            <span className="ks-callout" style={{ color: ink }}>{mine ? 'Round 2 of 6 · Pick 11' : 'Round 2 of 6 · Pick 10 · you’re up next'}</span>
+          </div>
+          <div className="ks-search"><Icon d={ICON.search} size={18} /><span className="ks-callout ks-muted">Search by ticker or name</span></div>
+          <span className="ks-btn" style={{ opacity: 0.45 }}>Draft</span>
+          <div className="ks-section-h"><h3>Your roster</h3><span className="ks-caption ks-num">1 of 6 · {$(K.LEAGUE.notionalPerSlot)} per slot</span></div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
-    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete,
+    HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
     AllMatchups, MatchupPreSeason, Playoffs6, ArrangeOrder, OrderPush, DraftLobby, StartDraftConfirm, CreateSeason, DraftAutoPick, DraftRecap, Playoffs,
     SellSheet, ReviewSell, Done, ReviewBuy, PickSource, MarketClosed, TradeHistory,
     OneShareSell, OneShareBuy,
     TierPortfolio, TierReview, TierRefused,
     LeagueSettingsLeave, LeaveSheet, CommishLeave, OrderAfterLeave, DepartedMatchup, DepartedStandings, DepartedBracket, LeaverLeague, LeaverSheet, LeaveRefused, LeaveRow, ReconfirmHome, ReconfirmStartBlocked, ReconfirmMember, LeaveOpenRow, LeaveFinished,
     JoinCode, JoinPreview, JoinDone, NotFound,
-    AutoLobby, CommishBlocked, MemberPostponed, DateAfterRoom, DraftDatePicker, LockPush,
+    AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
