@@ -93,7 +93,7 @@ import { SOURCES } from './sourceManifest.generated.ts';
 
 Deno.test('the draft room renders the clock through pickClockLabel, never a hand-built "0:" (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('{pickClockLabel(room.clock)}'), true);
+  assertEquals(room.includes('{pickClockLabel(shownClock)}'), true); // the live (ticking) clock
   assertEquals(room.includes('`0:${'), false);
 });
 
@@ -349,11 +349,11 @@ Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; s
 
 Deno.test('your turn: "You\'re on the clock" in title + liveText, the clock in score type; off-turn unchanged (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && room.clock.kind !== 'auto_picking';"), true);
+  assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';"), true);
   assertEquals(room.includes('<Text variant="title" color={colors.liveText} accessibilityRole="header">{headline}</Text>'), true);
   assertEquals(room.includes("variant={onTheClock ? 'score.md' : 'headline'}"), true);
   // The last 10 s stay in loss on and off your turn.
-  assertEquals(room.includes("style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}"), true);
+  assertEquals(room.includes("style={{ color: shownClock.kind === 'last10' ? colors.loss : colors.text }}"), true);
   // Off your turn ("{Name} is up") keeps the plain callout.
   assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
   assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);
@@ -400,4 +400,31 @@ Deno.test('the League tab standings block is a padded card (G-12; source guard)'
   assertEquals(table.includes('<Card style={styles.card}>'), true);
   assertEquals(table.includes('card: { borderRadius: radius.lg, padding: space[5] },'), true);
   assertEquals(table.includes('<Card>'), false);
+});
+
+
+// ── The clock ticks between reads (liveClock) ──
+
+import { liveClock } from '../lib/game/draftRoom.ts';
+
+Deno.test('the reading counts down locally: on the clock → last 10 → auto-picking', () => {
+  const read = { kind: 'on_clock' as const, secondsLeft: 42 };
+  assertEquals(liveClock(read, 0), read);
+  assertEquals(liveClock(read, 999), read); // whole seconds only
+  assertEquals(liveClock(read, 1000), { kind: 'on_clock', secondsLeft: 41 });
+  assertEquals(liveClock(read, 32_000), { kind: 'last10', secondsLeft: 10 });
+  assertEquals(liveClock(read, 41_000), { kind: 'last10', secondsLeft: 1 });
+  assertEquals(liveClock(read, 42_000), { kind: 'auto_picking', secondsLeft: 0 });
+  assertEquals(liveClock(read, -5000), read); // a clock skew never counts up
+});
+
+Deno.test('a stopped or auto-picking clock doesn\'t tick', () => {
+  assertEquals(liveClock({ kind: 'idle', secondsLeft: null }, 5000), { kind: 'idle', secondsLeft: null });
+  assertEquals(liveClock({ kind: 'auto_picking', secondsLeft: 0 }, 5000), { kind: 'auto_picking', secondsLeft: 0 });
+});
+
+Deno.test('the room shows the live clock but its auto-pick backstop still keys on the server reading (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('const shownClock = liveClock(room.clock, nowMs - readAt);'), true);
+  assertEquals(room.includes("if (clock.kind !== 'auto_picking' || m === 0) return;"), true); // clock = room.clock (the reading)
 });

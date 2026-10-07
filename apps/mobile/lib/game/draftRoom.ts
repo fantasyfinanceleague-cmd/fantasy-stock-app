@@ -59,6 +59,18 @@ export function clockState(input: { running: boolean; deadlineAt: string | null;
   return { kind: 'on_clock', secondsLeft: left };
 }
 
+/** The clock as it stands now: the server's reading (`clock`, taken `elapsedMs`
+ * ago) counted down locally, so the room's clock ticks between reads instead of
+ * sitting on the last reading. The server stays the authority: every re-read
+ * replaces the reading, and nothing here decides a pick. */
+export function liveClock(clock: ClockState, elapsedMs: number): ClockState {
+  if ((clock.kind !== 'on_clock' && clock.kind !== 'last10') || clock.secondsLeft === null) return clock;
+  const left = clock.secondsLeft - Math.floor(Math.max(0, elapsedMs) / 1000);
+  if (!(left > 0)) return { kind: 'auto_picking', secondsLeft: 0 };
+  if (left <= 10) return { kind: 'last10', secondsLeft: left };
+  return { kind: 'on_clock', secondsLeft: left };
+}
+
 /** "Round 2 of 6 · Pick 11" (Design Lead, UX rule 10: the round says "of" the total). NEW. */
 export function roundPickLine(round: number, rounds: number, pick: number, thenPick: number | null = null): string {
   return `Round ${round} of ${rounds} · Pick ${pick}${thenPick !== null ? `, then ${thenPick}` : ''}`;

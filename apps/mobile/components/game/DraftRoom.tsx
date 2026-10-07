@@ -16,7 +16,7 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardHeader, boardRows } from '@/lib/game/draftBoard';
-import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick } from '@/lib/game/draftRoom';
+import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick, liveClock } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
@@ -73,6 +73,23 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   // Only while the room is ON SCREEN (your-turn spec): tabs stay mounted, so mounted isn't on screen.
   const roomOnScreen = useIsFocused();
   const quiet = ownPickClockQuiet(isMyTurn, room.clock.kind, roomOnScreen);
+
+  // The clock ticks between reads (liveClock): the reading counted down from when it
+  // arrived. Display only: the auto-pick backstop below still keys on the server's reading.
+  const [readAt, setReadAt] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = Date.now();
+    setReadAt(t);
+    setNowMs(t);
+  }, [room.clock]);
+  const ticking = room.clock.kind === 'on_clock' || room.clock.kind === 'last10';
+  useEffect(() => {
+    if (!ticking) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [ticking]);
+  const shownClock = liveClock(room.clock, nowMs - readAt);
   useEffect(() => {
     setForegroundQuiet('own_pick_clock', quiet);
     return () => setForegroundQuiet('own_pick_clock', false);
@@ -209,18 +226,18 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;
   const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
   // Your turn, really yours (not stalled, not the auto-pick running): the screen's one emphasis (G-2).
-  const onTheClock = isMyTurn && !stalled && room.clock.kind !== 'auto_picking';
-  const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
+  const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';
+  const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
     <View style={styles.stack}>
       <Card style={styles.card}>
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={styles.clockRow}>
-          {room.clock.kind === 'last10' ? <LiveDot size={8} /> : null}
+          {shownClock.kind === 'last10' ? <LiveDot size={8} /> : null}
           {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
-          <Text variant={onTheClock ? 'score.md' : 'headline'} style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}>
-            {pickClockLabel(room.clock)}
+          <Text variant={onTheClock ? 'score.md' : 'headline'} style={{ color: shownClock.kind === 'last10' ? colors.loss : colors.text }}>
+            {pickClockLabel(shownClock)}
           </Text>
         </View>
         {onTheClock ? (
