@@ -291,7 +291,7 @@ export default function LeagueSettingsScreen() {
   if (league && !isCommissioner && leaveOn) {
     const code = league.invite_code;
     return (
-      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose }} title="League settings">
+      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
         <SetupCard>
           <View style={styles.inviteRow}>
             <View style={styles.grow}>
@@ -310,7 +310,7 @@ export default function LeagueSettingsScreen() {
 
   if (!league || !isCommissioner) {
     return (
-      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose }} title="League settings">
+      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
         <View style={styles.center}>
           {league ? <Icon name="lock" size="title" tone="text2" /> : null}
           <Text variant="body" tone="secondary" style={styles.centerText}>
@@ -330,7 +330,7 @@ export default function LeagueSettingsScreen() {
 
   return (
     <SetupScaffold
-      back={{ label: 'Cancel', onPress: handleClose }}
+      back={{ label: 'Cancel', onPress: handleClose, modal: true }}
       title="League settings"
       footer={!isLocked ? <Button label="Save changes" onPress={handleSave} status={saving ? 'loading' : 'idle'} /> : undefined}
     >

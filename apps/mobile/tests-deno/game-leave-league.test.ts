@@ -269,3 +269,10 @@ Deno.test('the transfer sheet shows the ruled line under its title (source guard
   const v = SOURCES['components/game/LeaveLeagueSheets.tsx'];
   assertEquals(v.includes('{TRANSFER_TITLE}</Text>\n        <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>'), true);
 });
+
+Deno.test('League settings is a modal: its Cancel is text only, no back chevron (G-7; source guard)', () => {
+  const s = SOURCES['app/league-settings.tsx'];
+  assertEquals(s.includes("back={{ label: 'Cancel', onPress: handleClose }}"), false);
+  assertEquals((s.match(/back=\{\{ label: 'Cancel', onPress: handleClose, modal: true \}\}/g) ?? []).length >= 3, true);
+  assertEquals(SOURCES['components/game/SetupScaffold.tsx'].includes('{back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}'), true);
+});

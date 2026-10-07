@@ -18,7 +18,8 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
 export interface SetupScaffoldProps {
   /** Omitted on a screen with nowhere to go back to (Create league's done screen). */
-  back?: { label: string; onPress: () => void };
+  /** `modal`: an iOS modal's text-only "Cancel", no back chevron (G-7; League settings). */
+  back?: { label: string; onPress: () => void; modal?: boolean };
   /** Shows "Step N of M" and the progress bar (Create league only). */
   step?: { number: number; total: number };
   title: string;
@@ -38,7 +39,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
       <View style={styles.topRow}>
         {back ? (
           <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
-            <Icon name="chevronLeft" size="callout" tone="text2" />
+            {back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}
             <Text variant="callout" tone="secondary">
               {back.label}
             </Text>
