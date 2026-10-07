@@ -1,12 +1,20 @@
 /**
- * Who sees the "League settings" row on the pre-draft League tab (3c-2; board
- * RibHistory). The commissioner only: the same check League settings itself
- * makes, so the row never leads to its "Only the commissioner can edit
- * settings" screen. A missing user or commissioner id never matches (unlike a
- * bare `a === b`, where undefined === undefined).
+ * Who sees the "League settings" row on the League tab (3c-2; board
+ * RibHistory). The commissioner; and, with the leave flow on (item 13), every
+ * member, because League settings is where Leave league lives (board
+ * #call-leave draws a member's League settings). Always the same check League
+ * settings itself makes, so the row never leads to its "Only the commissioner
+ * can edit settings" screen. A missing user or commissioner id never matches
+ * (unlike a bare `a === b`, where undefined === undefined).
  */
-export function showsLeagueSettingsRow(commissionerId: string | null | undefined, userId: string | null | undefined): boolean {
-  return !!commissionerId && !!userId && commissionerId === userId;
+export function showsLeagueSettingsRow(
+  commissionerId: string | null | undefined,
+  userId: string | null | undefined,
+  leaveFlowOn = false,
+): boolean {
+  if (!userId) return false;
+  if (leaveFlowOn) return true;
+  return !!commissionerId && commissionerId === userId;
 }
 
 /** League settings' lock note (Design Lead ruling): ONE sentence for both

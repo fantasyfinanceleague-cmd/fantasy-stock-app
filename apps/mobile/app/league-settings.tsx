@@ -24,7 +24,12 @@ import {
 } from '@/lib/categoryData';
 import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
-import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
+import {
+  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates,
+} from '@/lib/game/leaveLeague';
+import { useLeaveLeague } from '@/lib/game/useLeaveLeague';
+import { COMMISSIONER_FALLBACK } from '@/lib/game/autoStart';
+import { LeaveLeagueRow, LeaveLeagueSheet, TransferCommissionerSheet } from '@/components/game/LeaveLeagueSheets';
 import { DEFAULT_PICK_SECONDS, PICK_SECONDS_OPTIONS, pickClockLocked, pickSecondsCaption } from '@/lib/game/createLeagueSetup';
 import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
@@ -45,14 +50,15 @@ import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { ChoiceRow, LockNote, RowDivider, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
-/** Off until the leave flow ships. The row's placement is decided (Design Lead's leave board); its behaviour is not
- * (Giorgio: players are locked in from an hour before the draft until the season ends). */
+/** The leave flow's kill switch (item 13; board #call-leave). On: members reach League settings too (Invite
+ * code, Commissioner, Leave league), the commissioner gets the Commissioner row's transfer, and the Leave row
+ * is real. Off: exactly the commissioner-only screen as before. */
 const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
 
 export default function LeagueSettingsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { leagues, refresh } = useLeagueContext();
+  const { leagues, refresh, homeSummaryByLeague } = useLeagueContext();
   const { leagueId } = useLocalSearchParams<{ leagueId: string }>();
 
   const [saving, setSaving] = useState(false);
@@ -114,6 +120,63 @@ export default function LeagueSettingsScreen() {
   // the draft starts, except when postponed. From the server's start_state.
   const draftStatus = useDraftStatus(league?.id ?? null, !!league && isCommissioner && !isLocked, 0);
   const dateLocked = !isLocked && draftTimeLocked(draftStatus.startState);
+
+  // Leaving and the commissioner's transfer (item 13). The server decides; the
+  // window here only shapes the row and the sheet.
+  const leaveOn = LEAVE_LEAGUE_ON && !!league;
+  const leaving = useLeaveLeague(league?.id ?? null, leaveOn);
+  const membershipWindow = leaveWindow({ seasonStatus: league?.season_status, draftStatus: league?.draft_status, draftDate: league?.draft_date }, Date.now());
+  const commissionerName = leaving.names.find((n) => n.user_id === league?.commissioner_id)?.display_name?.trim() || COMMISSIONER_FALLBACK;
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const onLeave = async () => {
+    const out = await leaving.leave();
+    if (out.kind === 'left' || out.kind === 'hidden') {
+      setLeaveOpen(false);
+      await refresh();
+      // The league is gone from your leagues (left) or hidden: Home, with the next league.
+      router.replace('/(tabs)');
+      return;
+    }
+    setLeaveError(out.kind === 'refused' ? out.line : null);
+  };
+  const onTransfer = async (userId: string) => {
+    const out = await leaving.transfer(userId);
+    if (out.kind === 'transferred') {
+      setTransferOpen(false);
+      await refresh(); // you're a member now: the screen re-renders as a member's, Leave league open
+      return;
+    }
+    setLeaveError(out.kind === 'refused' ? out.line : null);
+  };
+  const leaveBlock = leaveOn && league ? (
+    <>
+      <LeaveLeagueRow
+        view={leaveRowView(membershipWindow, isCommissioner, league.draft_date)}
+        onPress={() => {
+          setLeaveError(null);
+          setLeaveOpen(true);
+        }}
+      />
+      <LeaveLeagueSheet
+        visible={leaveOpen}
+        copy={leaveSheetCopy(membershipWindow, { leagueName: league.name, commissionerName, seasonNumber: homeSummaryByLeague.get(league.id)?.season_number ?? null, draftDate: league.draft_date })}
+        busy={leaving.busy}
+        error={leaveError}
+        onLeave={() => void onLeave()}
+        onStay={() => setLeaveOpen(false)}
+      />
+      <TransferCommissionerSheet
+        visible={transferOpen && isCommissioner}
+        candidates={transferCandidates(leaving.memberIds, leaving.names, user?.id ?? '')}
+        busy={leaving.busy}
+        error={leaveError}
+        onTransfer={(id) => void onTransfer(id)}
+        onClose={() => setTransferOpen(false)}
+      />
+    </>
+  ) : null;
 
   const handleSave = async () => {
     if (!league || !user?.id) return;
@@ -213,6 +276,20 @@ export default function LeagueSettingsScreen() {
       setSaving(false);
     }
   };
+
+  // A member (leave flow on): the board's member League settings, read-only, with Leave league.
+  if (league && !isCommissioner && leaveOn) {
+    return (
+      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose }} title="League settings">
+        <SetupCard>
+          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          <RowDivider />
+          <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
+        </SetupCard>
+        {leaveBlock}
+      </SetupScaffold>
+    );
+  }
 
   if (!league || !isCommissioner) {
     return (
@@ -426,17 +503,24 @@ export default function LeagueSettingsScreen() {
           ) : null}
           <RowDivider />
           <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          {leaveOn ? (
+            <>
+              <RowDivider />
+              {/* Q4 = A: transfer first, from the Commissioner row (only when the title can change hands). */}
+              <SettingRow
+                label={COMMISSIONER_ROW}
+                value={COMMISSIONER_YOU}
+                onPress={transferAllowed(membershipWindow) ? () => {
+                  setLeaveError(null);
+                  setTransferOpen(true);
+                } : undefined}
+              />
+            </>
+          ) : null}
         </SetupCard>
       </View>
 
-      {LEAVE_LEAGUE_ON ? (
-        // No onPress until the leave flow ships: the row is placement only.
-        <View style={styles.leave}>
-          <Text variant="headline" color={colors.danger} accessibilityRole="button" accessibilityState={{ disabled: true }}>
-            Leave league
-          </Text>
-        </View>
-      ) : null}
+      {leaveBlock}
 
       <DraftDateSheet
         visible={showDatePicker && !isLocked && !dateLocked}
@@ -492,11 +576,5 @@ const styles = StyleSheet.create({
   },
   centerText: {
     textAlign: 'center',
-  },
-  leave: {
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: space[5],
   },
 });

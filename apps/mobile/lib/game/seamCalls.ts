@@ -20,7 +20,7 @@ export async function seamRpc(name: string, args: Record<string, unknown>) {
 
 export async function seamInvoke(fn: string, opts: { body: Record<string, unknown> }) {
   if (SEAM_ON) {
-    const f = invokeFixtureFor(fn, opts.body, process.env.EXPO_PUBLIC_DRAFT_START_FIXTURE);
+    const f = invokeFixtureFor(fn, opts.body, process.env.EXPO_PUBLIC_DRAFT_START_FIXTURE, process.env.EXPO_PUBLIC_LEAVE_FIXTURE);
     if (f) return f;
   }
   return supabase.functions.invoke(fn, opts);

@@ -49,6 +49,10 @@ import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
+import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
+
+/** The leave flow's kill switch (item 13): members reach League settings (and Leave league) too. */
+const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
@@ -167,6 +171,15 @@ export default function LeagueScreen() {
                   playoffLine={playoffLine(activeLeague?.playoff_teams)}
                 />
               )}
+              {/* Item 13: League settings (Leave league: locked in mid-season, hide after it), leave flow on only. */}
+              {LEAVE_LEAGUE_ON && activeLeagueId && showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id, true) ? (
+                <SetupCard>
+                  <SettingRow
+                    label="League settings"
+                    onPress={() => router.push({ pathname: '/league-settings', params: { leagueId: activeLeagueId } })}
+                  />
+                </SetupCard>
+              ) : null}
             </View>
           ) : null}
         </BarsRefresh>
@@ -397,8 +410,8 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
         ) : null}
 
         {/* Board (RibHistory): League settings is a row on the pre-draft League
-            tab. Commissioner only, the same check League settings itself makes. */}
-        {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id) ? (
+            tab. The commissioner; every member with the leave flow on (item 13). */}
+        {showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id, LEAVE_LEAGUE_ON) ? (
           <SetupCard>
             <SettingRow
               label="League settings"

@@ -4,7 +4,7 @@
  * so the real query stands. Derived from the board's sample league (Stock Scudetto,
  * week 6) so a capture shows the board's own numbers.
  */
-export type SeamTableName = 'drafts' | 'draft_queue' | 'matchups_week' | 'matchups_week_one' | 'matchups_playoff' | 'week_snapshots' | 'trades';
+export type SeamTableName = 'drafts' | 'draft_queue' | 'matchups_week' | 'matchups_week_one' | 'matchups_playoff' | 'week_snapshots' | 'trades' | 'league_members';
 
 const WEEK = 6;
 const WEEK_START = '2026-09-28T13:30:00Z';
@@ -74,6 +74,8 @@ export function seamTableRows(on: boolean, table: SeamTableName): unknown[] | nu
         { symbol: 'V', position: 3 },
       ];
     case 'matchups_week': return weekMatchups();
+    // The transfer picker's current members (the draft fixture's names; Roberto is you).
+    case 'league_members': return ['paolo', 'roberto', 'alessandro', 'francesco', 'gianluigi', 'andrea'].map((user_id) => ({ user_id }));
     // The draft's ending (U-10): Week 1 as finalize writes it (nominal Tuesday 14:30Z;
     // the room resolves it to Monday's open through the market calendar).
     case 'matchups_week_one': return [

@@ -75,13 +75,27 @@ export function fixtureFor(name: string, args: Record<string, unknown>): { data:
   }
 }
 
+/** leave-league's client response (logic.ts clientResponse's shape) for a capture. */
+export function leaveLeagueFixture(body: Record<string, unknown>, fixture?: string | null): Record<string, unknown> {
+  const [what, window] = String(fixture ?? '').split(':');
+  if (what === 'left') return { ok: true, status: 'left', reconfirm_required: true };
+  if (what === 'hidden') return { ok: true, status: 'hidden' };
+  if (what === 'transferred') return { ok: true, status: 'transferred', reconfirm_owed: false };
+  if (what) return window ? { ok: false, reason: what, window } : { ok: false, reason: what };
+  return body.action === 'transfer' ? { ok: true, status: 'transferred', reconfirm_owed: false } : { ok: true, status: 'left', reconfirm_required: true };
+}
+
 /** The fixture for a function invocation (validate-and-record-pick, draft-control), or null. */
 export function invokeFixtureFor(
   fn: string,
   body: Record<string, unknown>,
   /** EXPO_PUBLIC_DRAFT_START_FIXTURE (e.g. "at_risk", "postponed:member"): draft-control status for that start_state. */
   draftStartFixture?: string | null,
+  /** EXPO_PUBLIC_LEAVE_FIXTURE: a leave-league outcome ("left", "hidden", "transferred") or a refusal
+   * reason, with an optional window ("locked_in:season"). Unset: leave → left, transfer → transferred. */
+  leaveFixture?: string | null,
 ): { data: unknown; error: null } | null {
+  if (fn === 'leave-league') return { data: leaveLeagueFixture(body, leaveFixture), error: null };
   if (fn === 'validate-and-record-pick') {
     const pick = body.action === 'auto_pick' ? { pick_source: 'auto_best' } : { pick_source: 'manual' };
     return { data: { ok: true, pick: { symbol: body.symbol ?? 'NVDA', ...pick }, pick_source: pick.pick_source, draft_complete: false }, error: null };
@@ -101,3 +115,4 @@ export function invokeFixtureFor(
   }
   return null;
 }
+

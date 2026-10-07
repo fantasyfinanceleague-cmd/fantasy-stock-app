@@ -289,10 +289,13 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // A finished league you left is hidden (league_members.hidden_at, #126): it
+    // comes off Home and Your leagues; its History stays readable to you.
     const { data: memberships, error: memberError } = await supabase
       .from('league_members')
       .select('league_id')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('hidden_at', null);
 
     if (memberError || !memberships || memberships.length === 0) {
       setLeagues([]);
