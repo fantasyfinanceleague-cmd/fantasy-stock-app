@@ -4,6 +4,8 @@
  * writing anything. Reads return the board's own data (the Season 1 roster and the
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
+import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
+import { SEAM_ME } from './seamTables';
 import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
@@ -35,14 +37,14 @@ export function fixtureHistory() {
 }
 
 /** The draft board's clock and order (the board's Serie A / Stock Scudetto draft). */
-function fixtureDraftRoom() {
-  const order = ['paolo', 'roberto', 'alessandro', 'francesco', 'gianluigi', 'andrea'];
+function fixtureDraftRoom(roomVariant: DraftRoomVariant = 'on_clock') {
+  const order = ['paolo', SEAM_ME, 'alessandro', 'francesco', 'gianluigi', 'andrea'];
   return {
-    clock: [{ league_id: 'fixture-draft', draft_status: 'in_progress', clock_running: true, pick_seconds: 60, picks_made: 10, turn_started_at: NOW(), deadline_at: new Date(Date.now() + 42_000).toISOString(), server_now: NOW() }],
+    clock: [draftRoomClock(roomVariant, Date.now())],
     order: { ok: true, mode: 'random', state: 'finalized', order: order.map((user_id, i) => ({ position: i + 1, user_id })) },
     names: [
       { user_id: 'paolo', display_name: 'Paolo M.', is_bot: false },
-      { user_id: 'roberto', display_name: 'Roberto B.', is_bot: false },
+      { user_id: SEAM_ME, display_name: 'Roberto B.', is_bot: false },
       { user_id: 'alessandro', display_name: 'Alessandro D.', is_bot: false },
       { user_id: 'francesco', display_name: 'Francesco T.', is_bot: false },
       { user_id: 'gianluigi', display_name: 'Gianluigi B.', is_bot: false },
@@ -52,7 +54,7 @@ function fixtureDraftRoom() {
 }
 
 /** The fixture for a call, or null when there is none (the real call is then NOT made). */
-export function fixtureFor(name: string, args: Record<string, unknown>): { data: unknown; error: null } | null {
+export function fixtureFor(name: string, args: Record<string, unknown>, roomVariant: DraftRoomVariant = 'on_clock'): { data: unknown; error: null } | null {
   switch (name) {
     // ---- Run it back: writes ----
     case 'renew_league': return { data: { status: 'renewed', league_id: SUCCESSOR, invite_code: 'SCUD26', invited: 4 }, error: null };
@@ -68,7 +70,7 @@ export function fixtureFor(name: string, args: Record<string, unknown>): { data:
     case 'get_renewal_roster': return { data: fixtureRoster('commissioner', new Date()), error: null };
     case 'get_league_history': return { data: fixtureHistory(), error: null };
     // ---- the draft room: reads ----
-    case 'get_draft_clock': return { data: fixtureDraftRoom().clock, error: null };
+    case 'get_draft_clock': return { data: fixtureDraftRoom(roomVariant).clock, error: null };
     case 'get_draft_order': return { data: fixtureDraftRoom().order, error: null };
     case 'get_league_display_names': return { data: fixtureDraftRoom().names, error: null };
     default: return null;

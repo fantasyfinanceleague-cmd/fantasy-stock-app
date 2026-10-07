@@ -13,7 +13,7 @@ import { pickLeagueFixture } from './game/devSeamGate';
 // The shell fixture, or the board's leagues under the capture seam (3c). Narrowest point:
 // only this fetch branch reads it, and the seam is off outside a dev build.
 const LEAGUE_FIXTURE = pickLeagueFixture<ShellFixture>(SHELL_FIXTURE, SEAM_ON, 'leagues');
-import type { MarketCalendarSession } from './time/marketWeek';
+import { standardWeekSessions, type MarketCalendarSession } from './time/marketWeek';
 
 export interface League {
   id: string;
@@ -283,6 +283,9 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       const stored = await readStoredActiveLeague(userId);
       setLeagues(fixture.leagues);
       setSheetLeagues(fixture.sheet);
+      // A normal Mon–Fri calendar for this week and the next two, so fixture captures
+      // resolve week starts the real way (resolveWeekWindow), never the nominal time.
+      setMarketCalendar([0, 7, 14].flatMap((d) => standardWeekSessions(new Date(Date.now() + d * 86_400_000).toISOString())));
       const resolved = resolveActiveLeagueId(activeRef.current ?? stored, fixture.sheet);
       if (resolved !== activeRef.current) setActiveLeagueId(resolved);
       setLoading(false);

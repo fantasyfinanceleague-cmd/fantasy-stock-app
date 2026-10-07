@@ -8,11 +8,15 @@ import { supabase } from '../supabase';
 import { SEAM_ON } from './devSeam';
 import { fixtureFor, invokeFixtureFor } from './seamFixtures';
 import { seamTableRows, type SeamTableName } from './seamTables';
+import { parseDraftRoomVariant } from './seamRoom';
+
+/** EXPO_PUBLIC_DRAFT_ROOM_FIXTURE: how far the board's draft has gone (seamRoom.ts). */
+const ROOM_VARIANT = parseDraftRoomVariant(process.env.EXPO_PUBLIC_DRAFT_ROOM_FIXTURE);
 import { saveLeagueSlots, type SlotDraft } from '../categoryData';
 
 export async function seamRpc(name: string, args: Record<string, unknown>) {
   if (SEAM_ON) {
-    const f = fixtureFor(name, args);
+    const f = fixtureFor(name, args, ROOM_VARIANT);
     if (f) return f;
   }
   return supabase.rpc(name, args);
@@ -40,7 +44,7 @@ export async function seamTable<T>(
   name: SeamTableName,
   real: () => PromiseLike<{ data: T[] | null; error: unknown; count?: number | null }>,
 ): Promise<{ data: T[] | null; error: unknown; count?: number | null }> {
-  const rows = seamTableRows(SEAM_ON, name);
+  const rows = seamTableRows(SEAM_ON, name, ROOM_VARIANT);
   if (rows) return { data: rows as T[], error: null, count: rows.length };
   return real();
 }
