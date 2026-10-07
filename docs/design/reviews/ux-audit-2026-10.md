@@ -360,3 +360,105 @@ New copy from `ui/mobile-league-setup` @ `7bd56e9`. Design Lead rulings.
 
 P2/P3 items marked **backlog** above, unless a worker picks one up cheaply on the way past:
 U-31, U-34, U-35, U-36, U-40, U-45, U-46, U-47, U-48, U-49, U-51 (the `would_strand_slot` names backend ask).
+
+---
+
+## Pass 2 · 3c-2 gate (2026-10-06)
+
+**Verdict: BLOCK.** Two P1s on the Draft room (G-1, G-2). Everything pass 1 assigned to 3c-2 is
+fixed; the block is on two rule breaks that were in the draft room since 3c and that pass 1
+missed (it graded the room's copy and states, not its board and clock). Fix G-1 and G-2, re-capture
+the four draft-room states, and this gate passes; the P2/P3 below can ride as a follow-up list.
+
+### Scope examined
+
+| Evidence | Version | How |
+|---|---|---|
+| `ui/mobile-league-setup` | `5b51858` (round diff `7bd56e9..5b51858`, 8 commits; whole branch since pass 1 `656e192..5b51858`, 33 commits) | Source, read-only scratch checkout |
+| Captures | `docs/design/captures/ui-mobile-league-setup/`, 43 PNGs, 22 states (20 in Light and Dark, 3 Light only), iPhone 17e, standard text, fixture data | Every image reviewed |
+
+**Not examined** (no verdict): XL / XXXL text and Reduce Motion for this round's screens (the
+captures are standard text only; no recordings), VoiceOver, tap latency, the finished-league
+League tab (observation 4 has no capture; graded from the worker's report), the stress
+fixture. The `ux-reviewer` subagent is defined but wasn't loaded in this session (agents load at
+session start), so this is the Design Lead's review alone; the reviewer should run at the 3e gate.
+The Orchestrator's own checks (deno 1125/0, functions 618/0, architecture map, gitleaks, four
+mutation tests) are taken as reported.
+
+### Pass 1 findings assigned to 3c-2
+
+All **fixed**, verified in code at `5b51858` and, where a capture exists, on screen.
+
+| ID | Check | Result |
+|---|---|---|
+| U-01, U-02 | No "[new copy: …]" string left in `lib/`, `components/`, `app/` | fixed |
+| U-03 | Clock is m:ss (`draftRoom.ts:149`) | fixed |
+| U-04 | Unknown pick outcome: "Couldn't confirm your pick. Checking…" + re-read | fixed |
+| U-05 | "Round 2 of 6 · Pick 11" in the room; Home `upNextLine` has "of {rounds}" | fixed |
+| U-06 | "Your roster · 2 of 6 · $1,000 per slot" strip in the room | fixed |
+| U-07 | `PICK_SENDING` "Sending…" | fixed |
+| U-08 | `DraftRoomSkeleton`, `HomeSkeleton` | fixed |
+| U-09 | "You took AAPL · you're up in 2 picks"; auto form "Auto-picked AAPL for you · …" | fixed |
+| U-10 | Draft complete: "Your team is set", roster, Week 1 line, "See your Week 1 matchup" | fixed |
+| U-11 | Rule 8 table lines + shared next step; `readFunctionRefusal` reads non-2xx bodies | fixed |
+| U-12, U-13 | Standings pins your row (same component); VoiceOver says "down N" | fixed (code) |
+| U-14 | `foregroundQuiet` silences foreground banners while your clock runs (`93c0440`) | fixed (draft side; the trade side is 3e's) |
+| U-15 | `HomeRenewalAsk` on Home | fixed (code) |
+| U-16, U-17 | Giorgio's B for both, as drawn | fixed |
+| U-24 | `confirm_roster` per-reason lines (`autoStart.ts:406-416`) | fixed |
+| U-25 | The lock is named only on `slots_locked` / `rules_locked` | fixed |
+| U-50 | Home's standings excerpt signs its gains ("+$512.40") | fixed |
+| Round-2 rulings 1, 2, 4, 6, 7, 10, 11 + the last-pick auto line | All on screen as ruled (transfer note, "You can leave until…", the re-read line "You're still in Summer Cup. Try again.", the bye line, members' three rows) | fixed |
+
+### Gate report
+
+1. **Specificity.** The leave and transfer sheets, the draft-time sheet and Draft complete are
+   authored for this app. The draft room is not yet: a plain number grid and a text clock could
+   be any draft app (G-1, G-2). The board's key screen 4 (ring clock, manager columns, your picks
+   in team blue, the snake track) is what makes it ours.
+2. **Squint test.** Home, Draft complete, the sheets: pass (one primary each). **Draft room, on
+   the clock: fail.** Blurred, the 36-cell grid dominates; "You're on the clock" and "0:42" read
+   at the same weight as "Paolo M. is up" does off the clock.
+3. **Scorecard** (0–4): accessibility 3 (labels and live regions in place; Dynamic Type not
+   captured) · performance not examined · theming 4 (both themes complete, no mixed surfaces) ·
+   platform conformance 3 (native wheel picker, sheets; "‹ Cancel" mixes a back chevron with a
+   modal's Cancel, G-7) · adaptivity not examined (standard text only).
+4. **Persona walk.**
+   - *The invitee* (member): League settings shows exactly Invite code, Commissioner, Leave league
+     with its window line; the leave sheet says what happens. **Red flag:** in the draft room they
+     can't tell which column or picks are theirs (G-1).
+   - *The commissioner*: no-time Home → Set draft time → the B sheet → set; transfer then leave
+     reads in the right order ("Make someone else commissioner first."). No red flag.
+   - *The active trader*: not this branch (3e).
+5. **Findings** (new in pass 2):
+
+| ID | Screen | Rule | Drift class | What's wrong | Fix | P | Answer |
+|---|---|---|---|---|---|---|---|
+| G-1 | Draft room board | 7 (and 4) | conceptual mismatch | The board has no manager header row and never marks your picks (`DraftRoom.tsx` cells: no `myUserId` styling); the on-clock outline is the only mark. Key screen 4 has initials over each column, yours in team blue, and your picks outlined in `you`. In a 6–16 manager snake you can't find your own picks. | Header row of manager initials (yours `youText`, bold); your picks: `you` border + `youTint` fill; keep the on-clock outline in `accent`. | **P1** | escalated to the 3c-2 worker as a fix (no Giorgio decision needed: it's the approved key screen) |
+| G-2 | Draft room clock card | 6 | one-off implementation | On your turn, "You're on the clock" is a bold `callout` and the clock a `headline` (`DraftRoom.tsx:215-220`), the same weight as the off-turn state. Rule 6: the screen's one emphasised element answers the moment's question ("is it my pick, and how long have I got?"). | Your turn: "You're on the clock" in `title` with `liveText`, the clock in score type (`score.md`), `loss` in the last 10 s (already wired). The ring from key screen 4 is P2 follow-up G-9. | **P1** | escalated (fix) |
+| G-3 | Leave sheets | 2 / 3 | one-off implementation | Observation 1. "Leave league" (filled red) sits directly on "Stay" (filled primary; filled white in Dark): two primaries, and a destructive one adjacent to a filled one. | Ruling below: Leave stays `destructive` (filled), "Stay" becomes `ghost` like the transfer sheet's Cancel. | P2 | follow-up |
+| G-4 | Draft room pick log | 5 | local defect | Observation 2. Your own auto-pick reads "Auto-picked · from their queue" (`draftRoom.ts:11`). | Viewer-aware: "from your queue" for your picks. | P2 | follow-up |
+| G-5 | TeamSoFarGrid (room + Home) | 5 | local defect | Observation 3. Empty space under the slots; filled-slot labels sit low in their tiles. | Centre labels vertically; trim the bottom padding. | P3 | follow-up |
+| G-6 | League tab, finished league | 5 | local defect | Observation 4 (no capture; worker's report). The "Run it back" strip lacks card padding; names in medal rows 1–3 don't line up with rows 4–6 (the 36 pt disc is wider than the rank numeral). | Card padding; give the rank cell a fixed width that fits the disc. | P3 | follow-up |
+| G-7 | League settings (modal) | 1 | local defect | "‹ Cancel": a back chevron on a modal's Cancel. | "Cancel" text only (iOS modal), or a true back chevron with "League" if it's a push. | P3 | follow-up |
+| G-8 | Transfer sheet | 4 | local defect | Every row's subtitle is "Member": the same word six times carries nothing. | Drop the subtitle. | P3 | follow-up |
+| G-9 | Draft room clock | 4 motion | conceptual mismatch | Key screen 4's ring (the screen's authored moment) isn't built. | Ring per key screen 4, with its Reduce Motion fallback. | P2 | follow-up |
+
+   **Fixture notes, not findings:** the capture fixture shows a legacy skip ("—" at pick 4),
+   which a current draft can't produce; the transfer list shows all six managers because the
+   shell fixture's user id matches none of them (`transferCandidates` does exclude you,
+   `leaveLeague.ts:202-210`); and the member lobby shows the commissioner's no-time line
+   (observation 5).
+
+### Rulings on the worker's observations
+
+1. **Leave sheets' buttons:** Leave league stays **filled red** (`destructive`, the `loss-fill`
+   token's stated role: "Sell / destructive button fill"); **Stay becomes `ghost`**, matching the
+   transfer sheet's Cancel. One filled action per sheet, and the safe choice is never a second
+   primary. The board's red-outline DangerBtn is updated to the filled form in the next board
+   pass. (G-3, P2.)
+2. **Your own auto-pick in the log:** "Auto-picked · from your queue" (and "Auto-picked · best
+   available" unchanged). (G-4, P2.)
+3. **Roster grid:** a real defect; centre the labels and trim the space. (G-5, P3.)
+4. **Finished League tab:** both real; card padding and a fixed rank-cell width. (G-6, P3.)
+5. **Member lobby no-time line:** fixture limit, accepted; no change.
