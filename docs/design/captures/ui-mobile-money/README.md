@@ -44,7 +44,22 @@ Captured with the `search_fail` / `search_delay` dev fixture scenarios
 
 | File(s) | Proves |
 |---|---|
-| `portfolio-buyrow-standard-light.png`, `…-standard-dark.png`, `…-xl-light.png` | Re-capture after the row was added (`19e2ba46`): the "Buy a stock" row sits under the slots summary, above Holdings, in Light, Dark and XL text. Predates C-9 (the search-icon tile and accent title, queued) — shown for context, not current. |
+| `portfolio-buyrow-standard-light.png`, `…-standard-dark.png`, `…-xl-light.png` | Re-capture after the row was added (`19e2ba46`): the "Buy a stock" row sits under the slots summary, above Holdings, in Light, Dark and XL text. Predates C-9 (the search-icon tile and accent title, queued) — shown for context, not current. `…-xl-light.png` was overwritten by the X-1 re-capture below (same screen, same state — only the header value's rendering changed), so it no longer shows the row-placement-only state this row describes. |
+
+## X-1 — RollingMoney fit-to-container (Design Lead final check, P0)
+
+The Design Lead's final check blocked on X-1: at XL text, Portfolio's value
+clipped its last digit (`$14,446,031.9`, the original `portfolio-buyrow-xl-light.png`).
+Fixed in `RollingMoney.tsx` (shared with Home's hero) by measuring the
+container and the row's own natural width, then shrinking the row to fit —
+see `fix/rolling-money-fit` (`aa3b1ac` + the `alignSelf: 'flex-start'`
+correction, `f6e0ab2b`) for the code and its Deno tests.
+
+| File(s) | Proves |
+|---|---|
+| `portfolio-buyrow-xl-light.png` | Re-capture, same screen as C-10's XL state above: `$14,446,031.99` now renders in full at XL text, shrunk to fit, no clip. |
+| `home-hero-million-xl-light.png` | Home's hero (the same `RollingMoney`) at XL with a value of $1,000,000 or more (`$1,234,567.80`, the `xl_million` DEV fixture) — the Design Lead asked for this case specifically, since a fix proven only on Portfolio wouldn't prove the shared component. |
+| `search-ownership-standard-light.png`, `…-dark.png` | Re-capture at default text size, unrelated to X-1 — confirms C-2 (own-line ownership text) still holds after the merge brought in main's changes since `ui/mobile-money` diverged. |
 
 ## C-3 — review-sell panel re-capture
 
