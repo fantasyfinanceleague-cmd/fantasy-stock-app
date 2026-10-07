@@ -2615,7 +2615,9 @@
    * phase: 'scheduled' | 'open' | 'starting' | 'risk' | 'postponed' | 'nodate'.
    * commish: the commissioner's phone (blockers card ON TOP of the draft card;
    * when postponed, the blockers card replaces it). */
-  function HomeAuto({ phase = 'scheduled', commish }) {
+  function HomeAuto({ phase = 'scheduled', commish, setFirst }) {
+    // setFirst (UX audit call B): the commissioner's no-time card leads with setting the time.
+    const setTimeLead = setFirst && commish && phase === 'nodate';
     // On time, nobody left (6 of 8, as the pre-draft Home); at risk / postponed, Sofia F. left.
     const members = ['scheduled', 'open', 'starting', 'nodate'].includes(phase) ? ['RB', 'MR', 'LC', 'SF', 'GV', 'TP'] : ['RB', 'MR', 'LC', 'GV', 'TP'];
     const clock = { scheduled: '2d 06h 40m', open: '42:18', starting: '00:00', risk: '1h 58m' }[phase];
@@ -2632,7 +2634,7 @@
         ) : phase === 'nodate' ? (
           <>
             <span className="ks-title">No draft time yet</span>
-            <span className="ks-callout ks-muted">{commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
+            <span className="ks-callout ks-muted">{setTimeLead ? 'Pick a time, and the countdown starts here.' : commish ? 'Set a draft time in League settings.' : 'Roberto B. will set the draft time.'}</span>
           </>
         ) : (
           <>
@@ -2645,7 +2647,12 @@
         )}
         {phase === 'postponed' ? null : <span className="ks-callout ks-muted">60-second picks · 6 rounds</span>}
         {phase === 'scheduled' || phase === 'risk' ? <span className="ks-callout" style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-dot" />The draft room opens Sat 6:00 PM ET, when the order is set.</span> : null}
-        <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>
+        {setTimeLead ? (
+          <>
+            <span className="ks-btn">Set draft time</span>
+            <span className="ks-btn ks-btn--secondary">Build your queue</span>
+          </>
+        ) : <span className="ks-btn ks-btn--ongame">{live ? 'Go to the draft room' : 'Build your queue'}</span>}
       </GameCard>
     );
     return (
@@ -2686,7 +2693,8 @@
     );
   }
   /** Decision 4: the draft date sheet, earliest time = now + 1 hour, 15-minute steps. */
-  function DraftDatePicker() {
+  /** variant 'B' (UX audit call): the confirm is the full-width bottom button; the header has Close. */
+  function DraftDatePicker({ variant = 'A' }) {
     const Col = ({ items, on, off = [] }) => (
       <div style={{ display: 'grid', gap: 2, textAlign: 'center' }}>
         {items.map((x) => <span key={x} className="ks-callout ks-num" style={{ padding: '6px 0', borderRadius: 8, fontWeight: x === on ? 800 : 500, background: x === on ? 'var(--c-sunken)' : undefined, color: off.includes(x) ? 'var(--c-text-3)' : undefined }}>{x}</span>)}
@@ -2695,7 +2703,7 @@
     return (
       <Device noTabs label="Draft time sheet" overlay={
         <Sheet top={300}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Draft time</span>{variant === 'B' ? <span className="ks-muted"><Icon d={ICON.close} size={22} /></span> : <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Done</span>}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: 6 }}>
             <Col items={['Today', 'Tomorrow', 'Thu, Oct 1']} on="Today" />
             <Col items={['1', '2', '3']} on="3" off={['1', '2']} />
@@ -2704,7 +2712,12 @@
           </div>
           <span className="ks-callout"><b>Today · 3:15 PM ET</b> <span className="ks-muted">(the earliest you can pick: an hour from now)</span></span>
           <span className="ks-caption">The draft room opens 1 hour before, and the draft starts automatically.</span>
-          <span className="ks-btn ks-btn--secondary">Set later</span>
+          {variant === 'B' ? (
+            <>
+              <span className="ks-btn">Set draft time</span>
+              <span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Set later</span>
+            </>
+          ) : <span className="ks-btn ks-btn--secondary">Set later</span>}
         </Sheet>
       }>
         <Back label="League" />

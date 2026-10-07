@@ -371,6 +371,42 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-ux-pass1" aria-labelledby="call-ux-pass1-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-ux-pass1-h">Two fixes from the UX audit (decided: B, B)</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-06): B for both.</b> From the pass-1 audit against the UX rules (docs/design/reviews/ux-audit-2026-10.md). Both are about where the one action that matters sits. A is what 3c-2 builds today (the decided auto-start frames); B is the Design Lead's proposal. New copy is listed in the box at the end, never on the phone. Sample: Serie A Traders, Roberto B. is the commissioner.</p>
+            </div>
+          </header>
+          <ul className="b-inv__notes">
+            <li><b>Rule 3, reachable targets:</b> a screen's primary action sits in the bottom third or is full width. "Set draft time" is named in the rule.</li>
+            <li><b>Rule 10, leave a hook:</b> anything waiting on you stays on Home until it's done, and Home should let you do it, not send you to find it.</li>
+            <li>Neither changes a product rule: the 15-minute steps, the one-hour minimum and Set later all stay.</li>
+          </ul>
+
+          <h3 className="b-sub">1 · The draft time sheet: where is the confirm?</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Done in the header (not chosen)" note="The confirm is a small text link in the top corner, the hardest place to reach one-handed. The only full-width button is Set later, so the biggest target is the one that does NOT set a time."><I.DraftDatePicker /></Fit>
+            <Fit caption="✓ B · Set draft time at the bottom (chosen)" note="The confirm is the full-width button at the bottom, named for what it does. Close (×) dismisses without saving; Set later becomes a text button under it, still 44 pt tall. Where a time is required (a postponed draft), Set later is absent, as today."><I.DraftDatePicker variant="B" /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · Home, no draft time yet (commissioner)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="A · Points to League settings (not chosen)" note="The only thing blocking the league is the draft time, but the button builds your queue, and the line sends you to another tab to find the setting."><I.HomeAuto phase="nodate" commish /></Fit>
+            <Fit caption="✓ B · Set draft time, right here (chosen)" note="The primary opens the same Draft time sheet in place. Build your queue moves to secondary. Members' card is unchanged (Roberto B. will set the draft time + Build your queue)."><I.HomeAuto phase="nodate" commish setFirst /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Decided · B for both (Giorgio, 2026-10-06)</h3>
+            <ul>
+              <li><b>1-B:</b> the action that commits the draft time becomes the biggest, lowest thing on the sheet, and its label says what it does. A swipe or × no longer half-saves a time you were still scrolling to (today the picker writes as it spins and Done only closes). Familiar: Calendar's new-event sheet confirms at the top, but our sheets confirm at the bottom everywhere else (Review sell, Join), so B is consistent with the rest of the app.</li>
+              <li><b>2-B:</b> the commissioner can finish the one task blocking the league in two taps from Home, without hunting for League settings. Members see no change.</li>
+              <li><b>New copy (flagged):</b> "Set draft time" (sheet button), "Pick a time, and the countdown starts here." and "Set draft time" (Home, the same words as the sheet). The countdown claim is true by your rule: it shows as soon as a draft time is set. No push is promised.</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3e</span>
