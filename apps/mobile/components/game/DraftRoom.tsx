@@ -15,7 +15,7 @@ import type { ShapedSearchResult } from '@/lib/symbolSearch';
 import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
-import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
+import { managerAtPick, boardHeader, boardRows } from '@/lib/game/draftBoard';
 import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
@@ -232,13 +232,35 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       </Card>
 
       <Card style={styles.card}>
+        {/* G-1 (rule 7): each column is a manager; yours in team blue. */}
+        <View style={styles.boardRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {boardHeader(room.order, room.names, myUserId).map((h) => (
+            <Text
+              key={h.manager}
+              variant="tag"
+              color={h.you ? colors.youText : colors.text2}
+              style={[styles.headCell, h.you ? styles.bold : null]}
+              numberOfLines={1}
+            >
+              {h.initials}
+            </Text>
+          ))}
+        </View>
         {rows.map((row, ri) => (
           <View key={ri} style={styles.boardRow}>
             {row.map((cell) => {
               const made = cell.symbol !== null ? pickRowView({ symbol: cell.symbol, source: cell.source ?? 'manual' }) : null;
               const auto = made?.auto === true;
+              // G-1: your picks in `you` (border + tint); the pick on the clock keeps its accent outline.
+              const mine = cell.manager === myUserId;
+              const cellStyle = [
+                styles.cell,
+                mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,
+                cell.onClock ? { borderColor: colors.accent } : null,
+              ];
+              const who = mine ? 'your pick' : null;
               return (
-                <View key={cell.pick} style={[styles.cell, cell.onClock ? { borderColor: colors.accent } : null]} accessible accessibilityLabel={made ? `Round ${cell.round}, pick ${cell.pick}, ${made.symbolLabel}` : `Round ${cell.round}, pick ${cell.pick}, open`}>
+                <View key={cell.pick} style={cellStyle} accessible accessibilityLabel={[`Round ${cell.round}, pick ${cell.pick}`, who, made ? made.symbolLabel : 'open'].filter(Boolean).join(', ')}>
                   <Text variant="caption" tone="secondary">{cell.pick}</Text>
                   <Text variant="callout">{made ? made.symbolCell : ''}</Text>
                   {auto ? <Text variant="tag" tone="secondary">Auto</Text> : null}
@@ -309,6 +331,8 @@ const styles = StyleSheet.create({
   refusal: { gap: space[1] },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   boardRow: { flexDirection: 'row', gap: space[1] },
+  headCell: { flex: 1, textAlign: 'center' },
+  bold: { fontWeight: '700' },
   cell: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: 'transparent', borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: space[1] },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[1] },
   logPick: { minWidth: 24, textAlign: 'right' },
