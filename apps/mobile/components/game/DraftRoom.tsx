@@ -263,8 +263,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
               const cellStyle = [
                 styles.cell,
                 mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,
-                // 2 pt: in Light, accent and you are the same blue, so weight tells the clock apart in your column.
-                cell.onClock ? { borderColor: colors.accent, borderWidth: 2 } : null,
+                // G-11 (ruled): the clock's own colour, live, at 2 pt in both themes; in Light
+                // accent === you, so an accent outline vanished in your own column.
+                cell.onClock ? { borderColor: colors.live, borderWidth: 2 } : null,
               ];
               const who = mine ? 'your pick' : null;
               return (

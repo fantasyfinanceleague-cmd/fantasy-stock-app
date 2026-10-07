@@ -60,15 +60,16 @@ Deno.test('the header row: each manager\'s initials over their column, yours mar
 
 import { SOURCES } from './sourceManifest.generated.ts';
 
-Deno.test('the room draws the header and marks your picks; the on-clock outline stays accent (source guard)', () => {
+Deno.test('the room draws the header and marks your picks; the on-clock outline is live (G-11; source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes('{boardHeader(room.order, room.names, myUserId).map((h) => ('), true);
   assertEquals(room.includes('color={h.you ? colors.youText : colors.text2}'), true);
   assertEquals(room.includes('mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,'), true);
   // Order matters: the on-clock outline is applied after yours, so it wins the border.
-  assertEquals(room.indexOf('mine ? { borderColor: colors.you') < room.indexOf('cell.onClock ? { borderColor: colors.accent'), true);
-  // Light theme: accent === you, so the on-clock outline is heavier (2 pt) to stand out in your column.
-  assertEquals(room.includes('cell.onClock ? { borderColor: colors.accent, borderWidth: 2 } : null,'), true);
+  assertEquals(room.indexOf('mine ? { borderColor: colors.you') < room.indexOf('cell.onClock ? { borderColor: colors.live'), true);
+  // G-11 (ruled): live at 2 pt in both themes (accent === you in Light vanished in your column).
+  assertEquals(room.includes('cell.onClock ? { borderColor: colors.live, borderWidth: 2 } : null,'), true);
+  assertEquals(room.includes('cell.onClock ? { borderColor: colors.accent'), false);
   // Your pick numbers in youText (key screen 4's .ks-cell--you .ks-cell__n).
   assertEquals(room.includes("color={mine ? colors.youText : undefined}>{cell.pick}</Text>"), true);
 });
@@ -83,4 +84,13 @@ Deno.test('indexPicks keys picks by overall number; a legacy SKIP row keeps its 
   assertEquals(m.get(1), { symbol: 'MSFT', source: 'manual', price: null });
   assertEquals(m.get(2), { symbol: 'SKIP', source: 'skip', price: null });
   assertEquals(m.get(3), undefined);
+});
+
+import { color } from '../constants/tokens/color.ts';
+const { light, dark } = color;
+
+Deno.test('why live: in Light accent is you; live differs from you in both themes (G-11)', () => {
+  assertEquals(light.accent, light.you); // the reason an accent outline vanished in your column
+  assertEquals(light.live !== light.you, true);
+  assertEquals(dark.live !== dark.you, true);
 });
