@@ -3,8 +3,9 @@
  * nothing else: every figure comes from portfolioView, and every row opens the
  * stock sheet through the one route, passing the name the row already shows.
  *
- * Not yet built: the trade-history link, the Cash row for per-slot sales (it
- * needs the open-proceeds read), and the value-roll and reorder motion.
+ * Not yet built: fixed_notional's per-slot open proceeds (which freed slot
+ * funds a buy — needs the preview's sources/unfilledSlots, since it's
+ * per-slot, not the single cash figure budget_cap/price_tiers show below).
  */
 import React, { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -99,11 +100,18 @@ export function PortfolioScreen() {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={COPY.buyAStock}
+          accessibilityLabel={v.cashText ? `${COPY.buyAStock}, ${v.cashText}` : COPY.buyAStock}
           onPress={() => router.push('/stock-search')}
           style={({ pressed }) => [styles.buyLink, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
         >
-          <Text variant="callout" tone="primary">{COPY.buyAStock}</Text>
+          <View style={styles.rowLead}>
+            <Text variant="callout" tone="primary">{COPY.buyAStock}</Text>
+            {/* E-4: budget_cap/price_tiers leagues repeat the header's own cash
+                figure here — the same uninvested cash the value already counts,
+                not a separate number. fixed_notional has no single cash figure
+                (see the per-slot note above), so this stays blank there. */}
+            {v.cashText ? <Text variant="caption" tone="secondary">{v.cashText}</Text> : null}
+          </View>
           <Icon name="chevronRight" size="callout" tone="text2" />
         </Pressable>
 
