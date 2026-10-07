@@ -17,6 +17,7 @@ import { useMotion } from '@/components/sp/motion';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { COPY } from '@/lib/money/moneyCopy';
+import { setForegroundQuiet } from '@/lib/foregroundQuiet';
 import type { ReviewPresentation } from '@/lib/money/reviewPresentation';
 import type { TradeReview } from '@/lib/money/reviewModel';
 
@@ -81,6 +82,17 @@ function DoneCheck() {
 export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canEdit, onNextStep, onBack, onDone }: TradeReviewPanelProps) {
   const { colors } = useTheme();
   const p = presentation;
+
+  // C-1 (U-14, Design Lead gate): no foreground banner over an open trade
+  // review. The panel is conditionally mounted (StockSheetBody only renders
+  // it while open.review is set), so mount/unmount already tracks the
+  // review's full open-to-closed lifetime -- on close, Back and Done both
+  // unmount it the same way, and quiet never survives a crash or a fast
+  // re-entry since it's set fresh on mount.
+  useEffect(() => {
+    setForegroundQuiet('trade_review', true);
+    return () => setForegroundQuiet('trade_review', false);
+  }, []);
   const nextStep = p.footer === 'back_to_picker' || p.footer === 'pick_stock' || p.footer === 'sell_first' || p.footer === 'sign_in' ? p.footer : null;
 
   return (
