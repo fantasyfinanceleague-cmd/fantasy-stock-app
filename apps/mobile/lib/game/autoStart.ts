@@ -388,6 +388,34 @@ export function draftTimeRefusal(err: unknown): string | null {
   return null;
 }
 
+/** A refused roster reconfirm (draft-control confirm_roster), per reason: the
+ * audit's Rule 8 table › draft-control, verbatim (U-24). Retrying fixes none of
+ * these, so none says "Try again". `transport` (no answer) and anything else keep
+ * RECONFIRM_NOT_SAVED. The playoff line needs both numbers from the refusal body
+ * (`playoff_teams`, `members`); with either missing (an invalid_playoff_teams
+ * can carry a null count) it falls back too, never "null playoff teams". */
+export function confirmRosterRefusal(
+  r: { transport: true } | { transport: false; reason: string | null; body: Record<string, unknown> },
+): string | null {
+  if (r.transport) return RECONFIRM_NOT_SAVED;
+  const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null);
+  switch (r.reason) {
+    case null: return null;
+    case 'draft_started': return 'The draft has started, so the teams are set.';
+    case 'playoff_teams_exceeds_members':
+    case 'invalid_playoff_teams': {
+      const p = count(r.body.playoff_teams);
+      const m = count(r.body.members);
+      return p !== null && m !== null ? `${p} playoff teams, but ${m} teams are in. Lower the playoff teams first.` : RECONFIRM_NOT_SAVED;
+    }
+    case 'playoff_teams_not_applicable': return 'This league has no playoffs to change.';
+    case 'not_commissioner': return 'Only the commissioner can change this.';
+    case 'not_a_member':
+    case 'league_not_found': return "That didn't go through.";
+    default: return RECONFIRM_NOT_SAVED;
+  }
+}
+
 /** What a start request's refusal means for the lobby: keep waiting (the
  * server retries), or re-read (postponed, not yet due on its clock, anything else). */
 export function startKickOutcome(res: { ok?: unknown; reason?: unknown } | null | undefined): 'started' | 'retrying' | 'reread' {

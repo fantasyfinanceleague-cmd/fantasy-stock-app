@@ -21,10 +21,10 @@ import { useDraftStatus } from './useDraftStatus';
 import { seamInvoke, seamUpdateLeague } from './seamCalls';
 import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
 import { draftDateForSave, seedDraftDate, updatedOneRow } from './draftDateSave';
-import { functionOk, readFunctionRefusal } from '../functionRefusal';
+import { readFunctionRefusal } from '../functionRefusal';
 import {
   NEW_TIME_NOT_SAVED,
-  RECONFIRM_NOT_SAVED,
+  confirmRosterRefusal,
   draftTimeRefusal,
   etTimeLabel,
   fixableBlockers,
@@ -116,7 +116,8 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     setBusy(true);
     const { data: res, error } = await seamInvoke('draft-control', { body: { league_id: leagueId, action: 'confirm_roster', choice } });
     setBusy(false);
-    setFixError(functionOk(await readFunctionRefusal(res, error)) ? null : RECONFIRM_NOT_SAVED);
+    // U-24: each refusal its own line (the audit's Rule 8 table); null when it saved.
+    setFixError(confirmRosterRefusal(await readFunctionRefusal(res, error)));
     reread();
     await refresh();
   };

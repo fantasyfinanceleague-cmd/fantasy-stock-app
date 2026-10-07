@@ -422,3 +422,41 @@ Deno.test('the hook reads get_draft_clock ONLY in the fallback branch (source gu
   assertEquals((statusHookSrc.match(/get_draft_clock/g) ?? []).length >= 1, true);
   assertEquals(statusHookSrc.includes('Promise.all'), false); // no more side read on every status
 });
+
+// ── U-24: a refused roster reconfirm, per reason (the audit's Rule 8 table › draft-control) ──
+
+import { RECONFIRM_NOT_SAVED as NOT_SAVED, confirmRosterRefusal } from '../lib/game/autoStart.ts';
+import { SOURCES } from './sourceManifest.generated.ts';
+
+const refused = (reason: string | null, body: Record<string, unknown> = {}) => confirmRosterRefusal({ transport: false, reason, body });
+
+Deno.test('confirm_roster: each refusal its own line, verbatim; a save is null', () => {
+  assertEquals(refused(null), null);
+  assertEquals(refused('draft_started'), 'The draft has started, so the teams are set.');
+  assertEquals(refused('playoff_teams_exceeds_members', { playoff_teams: 6, members: 5 }), '6 playoff teams, but 5 teams are in. Lower the playoff teams first.');
+  assertEquals(refused('invalid_playoff_teams', { playoff_teams: 4, members: 3 }), '4 playoff teams, but 3 teams are in. Lower the playoff teams first.');
+  assertEquals(refused('playoff_teams_not_applicable'), 'This league has no playoffs to change.');
+  assertEquals(refused('not_commissioner'), 'Only the commissioner can change this.');
+  assertEquals(refused('not_a_member'), "That didn't go through.");
+  assertEquals(refused('league_not_found'), "That didn't go through.");
+});
+
+Deno.test('confirm_roster: no "Try again" where retrying can\'t fix it', () => {
+  for (const r of ['draft_started', 'playoff_teams_not_applicable', 'not_commissioner', 'not_a_member', 'league_not_found']) {
+    assertEquals(refused(r)!.includes('Try again'), false, r);
+  }
+  assertEquals(refused('playoff_teams_exceeds_members', { playoff_teams: 6, members: 5 })!.includes('Try again'), false);
+});
+
+Deno.test('confirm_roster: a missing count is never printed; no answer or an unknown reason keeps the old line', () => {
+  assertEquals(refused('invalid_playoff_teams', { playoff_teams: null, members: 5 }), NOT_SAVED);
+  assertEquals(refused('playoff_teams_exceeds_members', { playoff_teams: 6 }), NOT_SAVED);
+  assertEquals(refused('playoff_teams_exceeds_members', { playoff_teams: '6', members: 5 }), NOT_SAVED);
+  assertEquals(confirmRosterRefusal({ transport: true }), NOT_SAVED);
+  assertEquals(refused('unhandled'), NOT_SAVED);
+});
+
+Deno.test('the reconfirm shows the per-reason line (source guard)', () => {
+  const hook = SOURCES['lib/game/useDraftAutoStart.ts'];
+  assertEquals(hook.includes('setFixError(confirmRosterRefusal(await readFunctionRefusal(res, error)));'), true);
+});
