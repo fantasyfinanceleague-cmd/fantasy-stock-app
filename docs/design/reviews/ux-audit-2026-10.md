@@ -616,3 +616,21 @@ Giorgio decision needed.
 **Tier "Fill ›":** framed (board, "Tier league · Fill from the open slot"): the same screen scoped to
 the open slot, title "Fill your {range} slot", stocks outside the range dimmed "Doesn't fit this
 slot". Ready to build once the Portfolio view has `preview.unfilled_slots`.
+
+### Ruling: the stock chart's labels (2026-10-06)
+
+Follows Giorgio's ranges ruling (1W / 1M / 3M / 1Y, 1W by default, no 1D; daily bars only). The
+chart's dashed reference line is the range's first close.
+
+- **Reference-line labels:** "A week ago {$}", "A month ago {$}", "3 months ago {$}", "A year ago
+  {$}". If the price history starts later than the range does, the line is the first bar's close
+  and is labelled with its date: "{Sep 15} close {$}" (never the range's name, which would claim
+  history that isn't there).
+- **The header's "today" stays today's change against the previous close**, whatever the range.
+  It is the same fact as "today" on Portfolio's rows; switching it with the range would put two
+  different "today"-shaped numbers on one sheet. The range comparison lives on the chart.
+- **The scrub label shows the bar's date, its close, and its change against the range start**, in
+  gain/loss colour with the sign (colour is never the only code): "Wed, Oct 1 · $306.68 ·
+  +$4.83 · +1.60%". The date has no year unless it isn't this year ("Oct 1, 2025"). The last
+  point reads "Today · {price} · {change} · {%}". No "since …" text: the reference line's label
+  already says what the change is against.
