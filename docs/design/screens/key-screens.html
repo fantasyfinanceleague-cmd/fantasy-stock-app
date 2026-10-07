@@ -4765,7 +4765,7 @@
   const SearchBox = ({ q, focus = true }) => (
     <div className="ks-search" style={focus ? { borderColor: 'var(--c-accent)' } : undefined}>
       <Icon d={ICON.search} size={18} />
-      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or company'}</span>
+      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or name'}</span>
       {focus ? <span className="ks-caret ks-caret--dark" /> : null}
     </div>
   );
@@ -5437,7 +5437,7 @@
               <li><b>(b) A stock another manager holds:</b> <b>stays tappable</b>, labelled "Owned by {'{name}'}", not dimmed. The sheet is how you look at a stock (price, chart, who owns it), and looking is allowed. What can't happen is the buy, so the <i>Buy</i> is what's blocked: the sheet says "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league." and Review buy is disabled. The player never reaches a review the server will refuse.</li>
               <li><b>Why this differs from the draft room</b> (where owned stocks are dimmed): there the row's only action <i>is</i> the pick. The principle is the same in both places: disable the action the server would refuse, never the information.</li>
               <li><b>(c) Not in the league's list:</b> dimmed, no chevron, "Not in this league's list".</li>
-              <li><b>New copy:</b> "Buy a stock" (row and title), "{'{$X}'} from your {'{SYMBOL}'} sale is ready to invest.", "Every slot is invested. Sell a holding to free one.", "Search by ticker or company", "Type a ticker (AMZN) or a company name (Amazon).", "You own this", "Owned by {'{name}'}", "Not in this league's list", "No stock matches “{'{query}'}”." + "Check the ticker, or try the company name.", "Stocks didn't load" + "Check your connection, then try again.", "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league.", "Every slot is invested. Sell a holding to free one, then buy.", "Fill your {'{range}'} slot", "Pick a stock priced {'{lo}'} to {'{hi}'}. It takes the slot {'{SYMBOL}'} left.", "Doesn't fit this slot".</li>
+              <li><b>New copy:</b> "Buy a stock" (row and title), "{'{$X}'} from your {'{SYMBOL}'} sale is ready to invest.", "Every slot is invested. Sell a holding to free one.", "Search by ticker or name" (the draft room's existing wording), "Type a ticker (AMZN) or a company name (Amazon).", "You own this", "Owned by {'{name}'}", "Not in this league's list", "No stock matches “{'{query}'}”." + "Check the ticker, or try the company name.", "Stocks didn't load" + "Check your connection, then try again.", "{'{Name}'} owns {'{SYMBOL}'}. A stock has one owner per league.", "Every slot is invested. Sell a holding to free one, then buy.", "Fill your {'{range}'} slot", "Pick a stock priced {'{lo}'} to {'{hi}'}. It takes the slot {'{SYMBOL}'} left.", "Doesn't fit this slot".</li>
             </ul>
           </div>
         </section>

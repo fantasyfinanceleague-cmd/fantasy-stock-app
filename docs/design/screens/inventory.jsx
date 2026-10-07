@@ -2834,7 +2834,7 @@
   const SearchBox = ({ q, focus = true }) => (
     <div className="ks-search" style={focus ? { borderColor: 'var(--c-accent)' } : undefined}>
       <Icon d={ICON.search} size={18} />
-      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or company'}</span>
+      <span className={q ? 'ks-callout' : 'ks-callout ks-muted'}>{q || 'Search by ticker or name'}</span>
       {focus ? <span className="ks-caret ks-caret--dark" /> : null}
     </div>
   );
