@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { digitDiff } from '@/components/sp/logic/digits';
-import { fitScale } from '@/components/sp/logic/fitScale';
+import { alignSelfFor, fitScale, transformOriginFor, type RollingMoneyAlign } from '@/components/sp/logic/fitScale';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -33,10 +33,20 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // natural, unscaled width (inner Animated.View -- `transform` never
 // affects layout, so its onLayout keeps reporting the TRUE natural size
 // even once scaled down), then shrinking the row by `fitScale`'s ratio,
-// anchored at the left edge (`transformOrigin`) so it still reads as the
-// same left-aligned number, just smaller. Floored at 0.7 -- if even that
-// doesn't fit, the row is left to overflow its box rather than ever clip
-// (see fitScale.ts).
+// anchored at the `align` edge (`transformOrigin`) so it still reads as
+// the same left/right/centre-aligned number, just smaller. Floored at
+// 0.7 -- if even that doesn't fit, the row is left to overflow its box
+// rather than ever clip (see fitScale.ts).
+//
+// `align` (2026-10-07 follow-up): defaults to 'left', the only case this
+// component had until a right-aligned opposing value (the far side of a
+// pair) was found to need the mirror image -- a left-anchored
+// transformOrigin on a right-aligned row shrinks it away from its own
+// edge, drifting toward the middle instead of hugging where it's meant
+// to sit. `align="right"` anchors both the row's own position in its
+// container (`alignSelf`) and the scale's anchor (`transformOrigin`) to
+// the right edge; `"center"` does the same at the centre. The
+// measure/scale math itself (fitScale) is identical either way.
 
 interface DigitColumnProps {
   char: string;
@@ -93,9 +103,12 @@ export interface RollingMoneyProps {
   color?: string;
   /** The active league's id — see the module doc's H5 guard. */
   rollKey: string;
+  /** Which edge the row shrinks toward when it doesn't fit. Default
+   * 'left' — a normal left-aligned number. See the module doc. */
+  align?: RollingMoneyAlign;
 }
 
-export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) {
+export function RollingMoney({ text, size, color, rollKey, align = 'left' }: RollingMoneyProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
   const prevTextRef = useRef(text);
@@ -117,7 +130,7 @@ export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) 
   return (
     <View style={styles.container} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
       <Animated.View
-        style={[styles.row, { transform: [{ scale }], transformOrigin: 'left center' }]}
+        style={[styles.row, { alignSelf: alignSelfFor(align), transform: [{ scale }], transformOrigin: transformOriginFor(align) }]}
         onLayout={(e) => setNaturalWidth(e.nativeEvent.layout.width)}
         accessibilityLabel={text}
       >
@@ -144,12 +157,12 @@ export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) 
 
 const styles = StyleSheet.create({
   container: { flexShrink: 1 },
-  // `alignSelf: 'flex-start'` is load-bearing: without it, the row inherits
-  // its column parent's default `alignItems: 'stretch'` and gets stretched
-  // to the CONTAINER's width -- so its onLayout would report the stretched
-  // width, not its own content's true natural width, and fitScale would
-  // always compute ~1 (nothing ever shrinks, verified live on device: the
-  // XL Portfolio value kept rendering at full size and running off-screen
-  // with this missing).
-  row: { flexDirection: 'row', alignSelf: 'flex-start' },
+  // `alignSelf` (set per `align`, inline above) is load-bearing: without
+  // it, the row inherits its column parent's default `alignItems:
+  // 'stretch'` and gets stretched to the CONTAINER's width -- so its
+  // onLayout would report the stretched width, not its own content's true
+  // natural width, and fitScale would always compute ~1 (nothing ever
+  // shrinks, verified live on device: the XL Portfolio value kept
+  // rendering at full size and running off-screen with this missing).
+  row: { flexDirection: 'row' },
 });

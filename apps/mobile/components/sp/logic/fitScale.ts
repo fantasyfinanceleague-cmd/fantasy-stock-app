@@ -22,3 +22,25 @@ export function fitScale(containerWidth: number | null, naturalWidth: number | n
   const raw = containerWidth / naturalWidth;
   return Math.min(MAX_SCALE, Math.max(FIT_MIN_SCALE, raw));
 }
+
+// Alignment-aware anchoring (2026-10-07, a RollingMoney follow-up): a
+// RIGHT-aligned value (e.g. the far side of an opposing pair) needs to
+// shrink toward ITS OWN edge, not the left one -- a left-anchored
+// transformOrigin on a right-aligned row shrinks it away from where it's
+// supposed to sit, reading as drifting toward the middle. `alignSelfFor`
+// positions the (possibly narrower-than-container) row within its
+// container; `transformOriginFor` anchors the scale to the same edge, so
+// the two always agree.
+export type RollingMoneyAlign = 'left' | 'right' | 'center';
+
+export function alignSelfFor(align: RollingMoneyAlign): 'flex-start' | 'flex-end' | 'center' {
+  if (align === 'right') return 'flex-end';
+  if (align === 'center') return 'center';
+  return 'flex-start';
+}
+
+export function transformOriginFor(align: RollingMoneyAlign): string {
+  if (align === 'right') return 'right center';
+  if (align === 'center') return 'center center';
+  return 'left center';
+}

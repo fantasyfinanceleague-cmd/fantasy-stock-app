@@ -3,7 +3,7 @@
  * scale math for <RollingMoney>. Run: cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { fitScale, FIT_MIN_SCALE } from '../components/sp/logic/fitScale.ts';
+import { fitScale, FIT_MIN_SCALE, alignSelfFor, transformOriginFor } from '../components/sp/logic/fitScale.ts';
 import rollingMoneySrc from '../components/home/RollingMoney.tsx' with { type: 'text' };
 
 Deno.test('fitScale: content that already fits renders at 1, never upscaled', () => {
@@ -64,4 +64,26 @@ Deno.test('wiring: RollingMoney measures its container and its natural row width
   const onLayoutCount = (rollingMoneySrc.match(/onLayout=/g) ?? []).length;
   assertEquals(onLayoutCount >= 2, true);
   assertEquals(rollingMoneySrc.includes('transformOrigin'), true);
+});
+
+// Alignment-aware anchoring follow-up (2026-10-07): a right-aligned value
+// (the far side of an opposing pair) needs to shrink toward its OWN edge,
+// not the left one.
+Deno.test('alignSelfFor: positions the row at the edge it should hug', () => {
+  assertEquals(alignSelfFor('left'), 'flex-start');
+  assertEquals(alignSelfFor('right'), 'flex-end');
+  assertEquals(alignSelfFor('center'), 'center');
+});
+
+Deno.test('transformOriginFor: anchors the scale to the SAME edge alignSelfFor positions it at', () => {
+  assertEquals(transformOriginFor('left'), 'left center');
+  assertEquals(transformOriginFor('right'), 'right center');
+  assertEquals(transformOriginFor('center'), 'center center');
+});
+
+Deno.test('wiring: RollingMoney accepts align and threads it through alignSelfFor/transformOriginFor, defaulting to left', () => {
+  assertEquals(rollingMoneySrc.includes('align?:'), true);
+  assertEquals(rollingMoneySrc.includes("align = 'left'"), true);
+  assertEquals(rollingMoneySrc.includes('alignSelfFor(align)'), true);
+  assertEquals(rollingMoneySrc.includes('transformOriginFor(align)'), true);
 });
