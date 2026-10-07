@@ -66,7 +66,11 @@ Deno.test('the room draws the header and marks your picks; the on-clock outline 
   assertEquals(room.includes('color={h.you ? colors.youText : colors.text2}'), true);
   assertEquals(room.includes('mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,'), true);
   // Order matters: the on-clock outline is applied after yours, so it wins the border.
-  assertEquals(room.indexOf('mine ? { borderColor: colors.you') < room.indexOf('cell.onClock ? { borderColor: colors.accent }'), true);
+  assertEquals(room.indexOf('mine ? { borderColor: colors.you') < room.indexOf('cell.onClock ? { borderColor: colors.accent'), true);
+  // Light theme: accent === you, so the on-clock outline is heavier (2 pt) to stand out in your column.
+  assertEquals(room.includes('cell.onClock ? { borderColor: colors.accent, borderWidth: 2 } : null,'), true);
+  // Your pick numbers in youText (key screen 4's .ks-cell--you .ks-cell__n).
+  assertEquals(room.includes("color={mine ? colors.youText : undefined}>{cell.pick}</Text>"), true);
 });
 
 import { indexPicks } from '../lib/game/draftBoard.ts';

@@ -263,12 +263,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
               const cellStyle = [
                 styles.cell,
                 mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,
-                cell.onClock ? { borderColor: colors.accent } : null,
+                // 2 pt: in Light, accent and you are the same blue, so weight tells the clock apart in your column.
+                cell.onClock ? { borderColor: colors.accent, borderWidth: 2 } : null,
               ];
               const who = mine ? 'your pick' : null;
               return (
                 <View key={cell.pick} style={cellStyle} accessible accessibilityLabel={[`Round ${cell.round}, pick ${cell.pick}`, who, made ? made.symbolLabel : 'open'].filter(Boolean).join(', ')}>
-                  <Text variant="caption" tone="secondary">{cell.pick}</Text>
+                  <Text variant="caption" tone={mine ? undefined : 'secondary'} color={mine ? colors.youText : undefined}>{cell.pick}</Text>
                   <Text variant="callout">{made ? made.symbolCell : ''}</Text>
                   {auto ? <Text variant="tag" tone="secondary">Auto</Text> : null}
                 </View>
