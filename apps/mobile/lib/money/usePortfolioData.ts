@@ -8,12 +8,10 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 
-import { etDateParts } from '@/lib/time/etParts';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useSession } from '@/lib/SessionProvider';
-import { supabase } from '@/lib/supabase';
 
-import { prevCloseFromBars, type DailyBar } from './prevClose';
+import { readPriceMarks } from './priceReads';
 import { portfolioHoldings, portfolioSummary } from './portfolioModel';
 import { buildPortfolioView, type PortfolioView, type ViewHolding } from './portfolioView';
 import { usePortfolioLedger } from './usePortfolioLedger';
@@ -37,13 +35,6 @@ export interface PortfolioData {
 
 const NOOP = () => {};
 const EMPTY: Omit<PortfolioData, 'refresh'> & { refresh: () => void } = { status: 'loading', view: null, requestCount: null, leagueName: null, refresh: NOOP };
-
-/** ET calendar date of a Date, YYYY-MM-DD, or null when Intl can't say. */
-function etIsoDate(d: Date): string | null {
-  const p = etDateParts(d);
-  if (!p) return null;
-  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
-}
 
 export function usePortfolioData(): PortfolioData {
   const { user } = useSession();
@@ -112,34 +103,13 @@ export function usePortfolioData(): PortfolioData {
       if (market) {
         for (const [sym, p] of Object.entries(market.prices)) prices[sym] = p;
         for (const [sym, p] of Object.entries(market.prevCloses)) prevCloses[sym] = p;
-      } else if (symbols.length > 0) {
-        const todayEt = etIsoDate(new Date());
-        const start = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
-
-        requests += 1;
-        const { data: quoteData, error: quoteError } = await supabase.functions.invoke('quote', { body: { symbols } });
-        if (quoteError) console.warn('[portfolio] quote failed', quoteError.message);
-        else {
-          for (const [sym, p] of Object.entries((quoteData?.prices ?? {}) as Record<string, unknown>)) {
-            if (typeof p === 'number' && Number.isFinite(p) && p > 0) prices[sym.toUpperCase()] = p;
-          }
-        }
-
-        if (todayEt) {
-          requests += 1;
-          const { data: barsData, error: barsError } = await supabase.functions.invoke('historical-bars', {
-            body: { symbols, start },
-          });
-          if (barsError) console.warn('[portfolio] historical-bars failed', barsError.message);
-          else {
-            const raw = (barsData?.bars ?? {}) as Record<string, { t: string; c: number }[]>;
-            for (const [sym, series] of Object.entries(raw)) {
-              const bars: DailyBar[] = series.map((b) => ({ date: b.t.slice(0, 10), close: b.c }));
-              const prev = prevCloseFromBars(bars, todayEt);
-              if (prev != null) prevCloses[sym.toUpperCase()] = prev;
-            }
-          }
-        }
+      } else {
+        // priceReads.readPriceMarks: the same quote + daily-bars read the stock sheet uses
+        // (shared, error-checked the same way — a failed read leaves its marks empty, never $0).
+        const marks = await readPriceMarks(symbols);
+        requests += marks.requests;
+        Object.assign(prices, marks.prices);
+        Object.assign(prevCloses, marks.prevCloses);
       }
       if (cancelled) return;
 
