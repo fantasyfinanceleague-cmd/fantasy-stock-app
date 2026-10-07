@@ -12,6 +12,7 @@ import { Pressable, View } from 'react-native';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { TradeReviewPanel, type NextStep } from '@/components/money/TradeReviewPanel';
 import { Button } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
@@ -344,14 +345,16 @@ export function StockSheetBody({
     <View accessibilityRole="summary" style={{ gap: 12, paddingHorizontal: 20, paddingBottom: 24 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text variant="headline" style={{ flex: 1 }}>{symbol}</Text>
+        {/* C-9 (Design Lead gate, key screen 5): the × close icon, not "Done" text --
+            matches SalePicker's own close control exactly. */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Done"
+          accessibilityLabel="Close"
           onPress={onDone}
           hitSlop={8}
           style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' }}
         >
-          <Text variant="callout" tone="primary">Done</Text>
+          <Icon name="close" size="body" tone="text2" />
         </Pressable>
       </View>
       <Text variant="caption" tone="secondary">{model.name || cleanCompanyName(data.companyName) || symbol}</Text>

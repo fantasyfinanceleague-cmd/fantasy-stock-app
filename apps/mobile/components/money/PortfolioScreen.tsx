@@ -13,6 +13,7 @@ import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { radius } from '@/constants/tokens';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { Icon } from '@/components/sp/Icon';
@@ -44,7 +45,9 @@ const styles = StyleSheet.create({
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
   historyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
-  buyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  buyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
+  buyTile: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  bold: { fontWeight: '700' },
 });
 
 export function PortfolioScreen() {
@@ -104,8 +107,13 @@ export function PortfolioScreen() {
           onPress={() => router.push('/stock-search')}
           style={({ pressed }) => [styles.buyLink, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
         >
+          {/* C-9 (Design Lead gate, board #buy-a-stock): a search-icon tile in
+              accent-tint, matching the board's ks-logo -- the row was plain text. */}
+          <View style={[styles.buyTile, { backgroundColor: colors.accentTint }]}>
+            <Icon name="search" size="body" tone="accent" />
+          </View>
           <View style={styles.rowLead}>
-            <Text variant="callout" tone="primary">{COPY.buyAStock}</Text>
+            <Text variant="callout" color={colors.accent} style={styles.bold}>{COPY.buyAStock}</Text>
             {/* E-4 (Design Lead verbatim): per open sale (fixed_notional) or per
                 open slot (price_tiers), or the budget left (budget_cap) — never
                 a total, since one buy spends exactly one sale's cash or fills

@@ -92,7 +92,8 @@ export function StockSearchScreen() {
           <Icon name="chevronLeft" size="callout" tone="text" />
           <Text variant="callout" tone="primary">Portfolio</Text>
         </Pressable>
-        <Text variant="headline">{COPY.stockSearchTitle}</Text>
+        {/* C-9 (Design Lead gate): the board's page-title size, not headline. */}
+        <Text variant="title">{COPY.stockSearchTitle}</Text>
 
         <TextInput
           style={[styles.input, { backgroundColor: colors.inset, color: colors.text, borderColor: colors.border }]}
