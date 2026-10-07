@@ -30,7 +30,7 @@ import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
-import { draftDateForSave, seedDraftDate, updatedOneRow } from '@/lib/game/draftDateSave';
+import { draftDateForSave, updatedOneRow } from '@/lib/game/draftDateSave';
 import { DATE_LOCKED_AFTER_ROOM, draftTimeLocked, draftTimeRefusal } from '@/lib/game/autoStart';
 import { useDraftStatus } from '@/lib/game/useDraftStatus';
 import { space, typeFontFamily } from '@/constants/tokens';
@@ -287,9 +287,7 @@ export default function LeagueSettingsScreen() {
             sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}
             disabled={isLocked || dateLocked}
             onPress={isLocked || dateLocked ? undefined : () => {
-              // Seed the value the picker shows, so accepting it unchanged commits a date.
-              setDraftDateTBD(false);
-              setDraftDate((d) => seedDraftDate(d, new Date()));
+              // Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).
               setDateError(null);
               setShowDatePicker(true);
             }}
@@ -441,9 +439,12 @@ export default function LeagueSettingsScreen() {
       ) : null}
 
       <DraftDateSheet
-        visible={showDatePicker && !draftDateTBD && !isLocked && !dateLocked}
-        value={draftDate}
-        onChange={setDraftDate}
+        visible={showDatePicker && !isLocked && !dateLocked}
+        initial={draftDate}
+        onConfirm={(d) => {
+          setDraftDateTBD(false);
+          setDraftDate(d);
+        }}
         onSetLater={() => {
           setDraftDateTBD(true);
           setDateError(null);

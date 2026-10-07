@@ -33,10 +33,9 @@ export function AutoStartBlockers({ auto, phase, playoffTeams, inviteCode }: Aut
       />
       <DraftDateSheet
         visible={f.pickingTime}
-        value={f.newTime}
-        onChange={f.setNewTime}
+        initial={null}
+        onConfirm={(d) => void f.saveDraftTime(d)}
         onClose={f.closePicker}
-        onDone={() => void f.saveNewTime()}
       />
     </>
   );

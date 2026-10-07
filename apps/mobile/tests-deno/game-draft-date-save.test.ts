@@ -99,9 +99,14 @@ Deno.test('neither screen writes draft_date from an optional chain (the undefine
   }
 });
 
-Deno.test('opening the picker seeds the date in both screens', () => {
-  assertEquals(createSrc.includes('seedDraftDate(state.draftDate, new Date())'), true);
-  assertEquals(settingsSrc.includes('seedDraftDate(d, new Date())'), true);
+Deno.test('opening the picker writes nothing in either screen; the sheet seeds its own held time (ruling B)', () => {
+  for (const src of [createSrc, settingsSrc]) {
+    assertEquals(src.includes('seedDraftDate('), false);
+    assertEquals(src.includes('// Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).'), true);
+  }
+  assertEquals(createSrc.includes("onConfirm={(d) => patch({ draftDate: d, draftDateTBD: false })}"), true);
+  assertEquals(settingsSrc.includes('onConfirm={(d) => {\n          setDraftDateTBD(false);\n          setDraftDate(d);'), true);
+  assertEquals(sheetSrc.includes("draftTimeSheet(null, { type: 'open', current: initial, now: new Date() })"), true);
 });
 
 Deno.test('the leagues update returns its row, and both callers check it', () => {
@@ -116,13 +121,14 @@ Deno.test('the leagues update returns its row, and both callers check it', () =>
 Deno.test('the sheet: 15-minute steps, ET, the earliest time as its minimum, the board\'s helper', () => {
   assertEquals(sheetSrc.includes('minuteInterval={15}'), true);
   assertEquals(sheetSrc.includes('timeZoneName="America/New_York"'), true);
-  assertEquals(sheetSrc.includes('minimumDate={new Date(earliest)}'), true);
+  assertEquals(sheetSrc.includes('minimumDate={new Date(earliestDraftMs(nowMs))}'), true);
   assertEquals(sheetSrc.includes('{PICKER_HELPER}'), true);
   assertEquals(sheetSrc.includes('minimumDate={new Date()}'), false); // never "now" any more
 });
 
-Deno.test('the sheet writes a stale value back, so what is shown is what is saved', () => {
-  assertEquals(sheetSrc.includes('if (stale) onChange(new Date(shown));'), true);
+Deno.test('what is shown is what is saved: the wheel and the commit both read shownDraftTime', () => {
+  assertEquals(sheetSrc.includes('const shown = shownDraftTime(local, nowMs).getTime();'), true);
+  assertEquals(sheetSrc.includes('onChange(new Date(shown))'), false); // no write-back while open any more
 });
 
 Deno.test('both screens show the server\'s draft-time refusals inline', () => {

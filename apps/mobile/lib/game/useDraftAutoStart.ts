@@ -11,8 +11,9 @@
  *   both, a 3 s poll of the status and the league until it has started (the
  *   screens switch to the room) or been postponed;
  * - the commissioner's fixes: the playoff-teams stepper (lock first), the
- *   roster reconfirm, the invite share, and a postponed draft's new time
- *   (seeded picker, Done saves, the row checked, refusals mapped).
+ *   roster reconfirm, the invite share, and a draft time (a postponed draft's
+ *   new one; Home's no-time card): the sheet holds it and "Set draft time"
+ *   saves it here (the row checked, refusals mapped).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Share } from 'react-native';
@@ -20,7 +21,7 @@ import { useLeagueContext } from '../LeagueContext';
 import { useDraftStatus } from './useDraftStatus';
 import { seamInvoke, seamUpdateLeague } from './seamCalls';
 import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
-import { draftDateForSave, seedDraftDate, updatedOneRow } from './draftDateSave';
+import { draftDateForSave, updatedOneRow } from './draftDateSave';
 import { readFunctionRefusal } from '../functionRefusal';
 import {
   NEW_TIME_NOT_SAVED,
@@ -127,18 +128,17 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     if (code) void Share.share({ message: `Join my league with code ${code}` });
   };
 
-  // A postponed draft's new time: the sheet seeds the value it shows, Done saves it.
-  const [newTime, setNewTime] = useState<Date | null>(null);
+  // A draft time (a postponed draft's new one, the blockers card's sheet; or
+  // Home's no-time card, its own sheet): the sheet holds it, "Set draft time" saves it.
   const [pickingTime, setPickingTime] = useState(false);
   const openPicker = () => {
-    setNewTime(seedDraftDate(null, new Date()));
     setFixError(null);
     setPickingTime(true);
   };
   const closePicker = () => setPickingTime(false);
-  const saveNewTime = async () => {
+  const saveDraftTime = async (date: Date) => {
     setPickingTime(false);
-    const value = draftDateForSave(false, newTime);
+    const value = draftDateForSave(false, date);
     if (!value.ok) {
       setFixError(value.error);
       return;
@@ -168,7 +168,7 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     postponedLabel: postponedAt !== null ? etTimeLabel(postponedAt) : null,
     fixes: {
       busy, fixError, setPlayoffTeams, reconfirm, shareInvite,
-      newTime, setNewTime, pickingTime, openPicker, closePicker, saveNewTime,
+      pickingTime, openPicker, closePicker, saveDraftTime,
     },
   };
 }

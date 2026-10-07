@@ -59,7 +59,7 @@ import {
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
-import { draftDateForSave, seedDraftDate } from '@/lib/game/draftDateSave';
+import { draftDateForSave } from '@/lib/game/draftDateSave';
 import { draftTimeRefusal } from '@/lib/game/autoStart';
 import { stakesLine } from '@/lib/stakesLine';
 import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
@@ -394,8 +394,7 @@ export default function CreateLeagueWizard() {
           value={draftDateValue}
           valueColor={state.draftDateTBD ? colors.warnText : undefined}
           onPress={() => {
-            // Seed the value the picker shows, so accepting it unchanged commits a date.
-            patch({ draftDateTBD: false, draftDate: seedDraftDate(state.draftDate, new Date()) });
+            // Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).
             setDateError(null);
             setShowDatePicker(true);
           }}
@@ -440,9 +439,9 @@ export default function CreateLeagueWizard() {
       ) : null}
 
       <DraftDateSheet
-        visible={showDatePicker && !state.draftDateTBD}
-        value={state.draftDate}
-        onChange={(d) => patch({ draftDate: d, draftDateTBD: false })}
+        visible={showDatePicker}
+        initial={state.draftDate}
+        onConfirm={(d) => patch({ draftDate: d, draftDateTBD: false })}
         onSetLater={() => {
           patch({ draftDateTBD: true, draftDate: null });
           setDateError(null);
