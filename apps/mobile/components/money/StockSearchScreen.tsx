@@ -34,6 +34,10 @@ const styles = StyleSheet.create({
   results: { gap: 0 },
   disabled: { opacity: 0.5 },
   empty: { paddingVertical: 24, alignItems: 'center' },
+  skeletonRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  skeletonLogo: { width: 36, height: 36, borderRadius: 18 },
+  skeletonLines: { flex: 1, gap: 6 },
+  skeletonBar: { borderRadius: 6 },
 });
 
 export function StockSearchScreen() {
@@ -75,6 +79,20 @@ export function StockSearchScreen() {
         {/* E-1 (3e UX audit): a failed search is its own framed state, never "no matches". */}
         {error ? (
           <LoadFailure title={COPY.stockSearchLoadTitle} message={COPY.loadRetryMessage} onRetry={retry} />
+        ) : query.length > 0 && loading && results.length === 0 ? (
+          // E-2: skeleton rows, never a blank screen, while the first results load.
+          <View style={styles.results} accessibilityLabel="Loading results">
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.skeletonRow}>
+                <View style={[styles.skeletonLogo, { backgroundColor: colors.sunken }]} />
+                <View style={styles.skeletonLines}>
+                  <View style={[styles.skeletonBar, { width: 64, height: 12, backgroundColor: colors.sunken }]} />
+                  <View style={[styles.skeletonBar, { width: 140, height: 10, backgroundColor: colors.sunken }]} />
+                </View>
+                <View style={[styles.skeletonBar, { width: 56, height: 12, backgroundColor: colors.sunken }]} />
+              </View>
+            ))}
+          </View>
         ) : query.length > 0 && !loading && results.length === 0 ? (
           <View style={styles.empty}>
             <Text variant="callout" tone="secondary">{COPY.noMatchingStocks}</Text>
