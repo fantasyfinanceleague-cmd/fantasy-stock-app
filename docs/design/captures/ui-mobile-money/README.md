@@ -46,6 +46,20 @@ Captured with the `search_fail` / `search_delay` dev fixture scenarios
 |---|---|
 | `portfolio-buyrow-standard-light.png`, `…-standard-dark.png`, `…-xl-light.png` | Re-capture after the row was added (`19e2ba46`): the "Buy a stock" row sits under the slots summary, above Holdings, in Light, Dark and XL text. Predates C-9 (the search-icon tile and accent title, queued) — shown for context, not current. |
 
+## C-3 — review-sell panel re-capture
+
+| File(s) | Proves |
+|---|---|
+| `review-sell-standard-light.png` | Re-capture confirming the review panel's side padding against the board, taken from a real tap (not synthetic) on the iPhone 17e, branch tip `2d68f1b9` — the original "flush to screen edge" report did not reproduce; the panel is evenly inset on both sides. |
+
+## C-8 — M5 holdings-reorder FLIP animation
+
+Deferred to Giorgio's device walkthrough. The code is built; this session's
+synthetic taps could not reliably drive "Sell S049" (an sp `Button` inside a
+Sheet) to complete a sell and trigger the reorder, so no recording exists
+yet. Per the Design Lead, M5 is evidence-only — it does not gate the release
+on its own.
+
 ## C-4 / C-6 / C-9 — the stock sheet's position card, rolling money, board defects
 
 | File(s) | Proves |
