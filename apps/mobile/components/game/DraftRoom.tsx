@@ -20,6 +20,9 @@ import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, myDraftedSoFar, p
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
+import { FINALIZE_GRACE_MS, myRosterPicks, shouldHandOffToFinalize, weekOneLine, weekOneRealStart } from '@/lib/game/draftComplete';
+import { useWeekOne } from '@/lib/game/useWeekOne';
+import type { MarketCalendarSession } from '@/lib/time/marketWeek';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
 import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { ownPickClockRunning, setForegroundQuiet } from '@/lib/foregroundQuiet';
@@ -36,13 +39,19 @@ export interface DraftRoomProps {
   stakeMode?: string | null;
   budgetAmount?: number | null;
   notionalPerSlot?: number | null;
+  /** The market calendar (LeagueContext): Week 1's real open for the ending. */
+  marketCalendar?: MarketCalendarSession[];
+  /** The last pick landed: the host keeps the room (its ending) on screen after the server finishes the draft. */
+  onEnding?: () => void;
+  /** "See your Week 1 matchup". */
+  onSeeMatchup?: () => void;
 }
 
 /** The draft room (3c, key screen 4): the clock, the snake board, the pick log,
  * search and the one-tap Draft, and the auto-pick backstop. A legacy SKIP row is
  * a plain row with a dash. Nothing is shown as a pick that the server did not
  * record. */
-export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, stakeMode = null, budgetAmount = null, notionalPerSlot = null }: DraftRoomProps) {
+export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, stakeMode = null, budgetAmount = null, notionalPerSlot = null, marketCalendar = [], onEnding, onSeeMatchup }: DraftRoomProps) {
   const { colors } = useTheme();
   const room = useDraftRoom(leagueId);
   const [search, setSearch] = useState('');
@@ -104,15 +113,32 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     return () => clearTimeout(t);
   }, [clock.kind, onClockPick, m, leagueId, refresh]);
 
-  // Every pick is in, but the draft is not yet marked complete: the legacy route
-  // runs the finalize heal (PR #20), so the room hands off to it, untouched.
+  // The draft's ending (U-10). The last pick's realtime insert reaches the room
+  // before the server's finalize (in that pick's own request) flips draft_status,
+  // so the room re-reads after a grace window and hands off to the legacy
+  // finalize heal (PR #20) only if the draft is STILL full and not completed.
   const handedOff = useRef(false);
+  const stuck = draftDone && room.draftStatus === 'in_progress';
+  const [fullSince, setFullSince] = useState<number | null>(null);
   useEffect(() => {
-    if (draftDone && room.draftStatus === 'in_progress' && !handedOff.current) {
+    setFullSince((t) => (stuck ? (t ?? Date.now()) : null));
+  }, [stuck]);
+  useEffect(() => {
+    if (fullSince === null || handedOff.current) return;
+    const t = setTimeout(refresh, Math.max(0, fullSince + FINALIZE_GRACE_MS - Date.now()));
+    return () => clearTimeout(t);
+  }, [fullSince, refresh]);
+  useEffect(() => {
+    if (stuck && !handedOff.current && shouldHandOffToFinalize(fullSince, Date.now())) {
       handedOff.current = true;
       router.push('/(tabs)/draft');
     }
-  }, [draftDone, room.draftStatus]);
+  }, [stuck, fullSince, room.picks]);
+  useEffect(() => {
+    if (draftDone) onEnding?.();
+  }, [draftDone, onEnding]);
+  const finished = room.draftStatus === 'completed';
+  const weekOne = useWeekOne(leagueId, myUserId, draftDone && finished);
 
   const onSelect = (r: ShapedSearchResult) => {
     if (!r.selectable) return;
@@ -161,6 +187,17 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   // UX rule 9: loading shows the room's shape; a loaded room with no order draws nothing.
   if (room.status === 'loading') return <DraftRoomSkeleton />;
   if (m === 0) return null; // honest: nothing to draw until the order is read
+  if (draftDone) {
+    return (
+      <DraftComplete
+        roster={myRosterPicks(room.picks, room.order, myUserId)}
+        caption={caption}
+        finished={finished}
+        weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null)}
+        onSeeMatchup={() => onSeeMatchup?.()}
+      />
+    );
+  }
 
   const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
@@ -233,7 +270,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       ) : null}
 
       {/* Under the search results (board key screen 4). */}
-      {!draftDone ? <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} /> : null}
+      <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} />
 
       <Card>
         <Text variant="tag" tone="secondary">Latest picks</Text>
@@ -250,18 +287,15 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       </Card>
 
       {/* Never seeded from a failed read (draftQueueRead.ts): the save replaces the whole list. */}
-      {!draftDone && room.queue.status === 'ready' ? (
+      {room.queue.status === 'ready' ? (
         <QueueEditor leagueId={leagueId} initial={room.queue.queue} onSaved={room.refresh} />
       ) : null}
-      {!draftDone && room.queue.status === 'error' ? (
+      {room.queue.status === 'error' ? (
         <Card>
           <Text variant="callout">{QUEUE_LOAD_FAILED}</Text>
           <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
         </Card>
       ) : null}
-      {/* The ending's seam (UX rule 11): DraftComplete is where the Design Lead's
-          ending goes; the finalize-heal hand-off above is unchanged. */}
-      {draftDone ? <DraftComplete symbols={mine.symbols} numRounds={rounds} /> : null}
     </View>
   );
 }

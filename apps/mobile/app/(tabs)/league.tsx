@@ -43,7 +43,7 @@ import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
@@ -76,6 +76,8 @@ export default function LeagueScreen() {
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
   // UX rule 7: your standings row, pinned at the bottom while it's below the fold.
   const [pinnedRow, setPinnedRow] = useState<StandingsRow | null>(null);
+  const [endingFor, setEndingFor] = useState<string | null>(null);
+  const onEnding = useCallback(() => setEndingFor(activeLeagueId), [activeLeagueId]);
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   // The screen is the rules' choice for the phase (lib/game/leaguePhase.ts).
   const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: !!activeLeague.previous_league_id }) : 'placeholder';
@@ -107,6 +109,19 @@ export default function LeagueScreen() {
     await refresh();
   };
   const isCommissioner = !!user?.id && activeLeague?.commissioner_id === user.id;
+
+  // U-10: the room (its ending) stays once the last pick lands, even after the
+  // server finishes the draft and the phase moves on, until "See your Week 1 matchup".
+  if ((drafting || endingFor === activeLeagueId) && activeLeagueId && activeLeague) {
+    return (
+      <LeagueDraftRoom
+        leagueId={activeLeagueId}
+        rounds={activeLeague.num_rounds ?? 6}
+        onEnding={onEnding}
+        onEndingDone={() => setEndingFor(null)}
+      />
+    );
+  }
 
   if (inSeason) {
     if (st.status === 'error') {
@@ -172,9 +187,6 @@ export default function LeagueScreen() {
   }
   if (preDraft && activeLeagueId) {
     return <LeagueLobby leagueId={activeLeagueId} />;
-  }
-  if (drafting && activeLeagueId && activeLeague) {
-    return <LeagueDraftRoom leagueId={activeLeagueId} rounds={activeLeague.num_rounds ?? 6} />;
   }
 
   return (
@@ -254,8 +266,8 @@ function LeagueRenewalScreen({ leagueId, createdAt, onScheduled }: { leagueId: s
 }
 
 /** The drafting League tab (3c): the draft room. Its own component, so its hooks run only while drafting. */
-function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: number }) {
-  const { refresh, activeLeague } = useLeagueContext();
+function LeagueDraftRoom({ leagueId, rounds, onEnding, onEndingDone }: { leagueId: string; rounds: number; onEnding: () => void; onEndingDone: () => void }) {
+  const { refresh, activeLeague, marketCalendar } = useLeagueContext();
   const { user } = useAuth();
   const { colors } = useTheme();
   return (
@@ -271,6 +283,13 @@ function LeagueDraftRoom({ leagueId, rounds }: { leagueId: string; rounds: numbe
           stakeMode={activeLeague?.stake_mode ?? null}
           budgetAmount={activeLeague?.budget_amount ?? null}
           notionalPerSlot={activeLeague?.notional_per_slot ?? null}
+          marketCalendar={marketCalendar}
+          onEnding={onEnding}
+          onSeeMatchup={() => {
+            onEndingDone();
+            void refresh();
+            router.push('/(tabs)/matchup');
+          }}
         />
       </BarsRefresh>
     </View>

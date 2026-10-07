@@ -10,8 +10,8 @@ import { YOUR_TEAM_SO_FAR, roundSlotLabel, teamSoFarCaption } from '@/lib/home/h
 // The "Your team so far · 1 of 6" grid (Phase 3b-2, board B5), extracted from
 // Home's DraftingCard unchanged so the draft room shows the SAME strip (3c-2,
 // UX rule 4). A slot per round, filled with the symbol once drafted, "Rd N"
-// while still empty. An optional line under the grid (the room's "Budget left
-// $X" in budget-cap leagues).
+// while still empty. The room passes its own title and caption (the board's
+// "Your roster · 1 of 6 · $2,000 per slot").
 
 export interface TeamSoFarGridProps {
   /** The header; Home's "Your team so far" by default (the room: "Your roster"). */
@@ -21,11 +21,9 @@ export interface TeamSoFarGridProps {
   /** Your drafted symbols, in pick order. */
   symbols: readonly string[];
   numRounds: number;
-  /** A line under the grid, e.g. "Budget left $1,240". */
-  footer?: string | null;
 }
 
-export function TeamSoFarGrid({ title, caption, symbols, numRounds, footer }: TeamSoFarGridProps) {
+export function TeamSoFarGrid({ title, caption, symbols, numRounds }: TeamSoFarGridProps) {
   const { colors } = useTheme();
   // XXXL (XL check, 2026-10-05): see styles.slotWide. Default font scale (1)
   // keeps the 3-across grid, so the default layout does not move.
@@ -54,7 +52,6 @@ export function TeamSoFarGrid({ title, caption, symbols, numRounds, footer }: Te
           ),
         )}
       </View>
-      {footer ? <Text variant="callout" style={styles.tabular}>{footer}</Text> : null}
     </Card>
   );
 }
@@ -88,8 +85,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space[1],
-  },
-  tabular: {
-    fontVariant: ['tabular-nums'],
   },
 });

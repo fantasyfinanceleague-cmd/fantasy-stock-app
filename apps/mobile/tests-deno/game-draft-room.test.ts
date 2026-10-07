@@ -200,7 +200,8 @@ Deno.test('indexPicks keeps the price as a number (or null), from a number or a 
 
 Deno.test('the room and Home show the SAME team grid; the room\'s is the board\'s roster strip, under the search (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('{!draftDone ? <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} /> : null}'), true);
+  // Not wrapped in !draftDone any more: a finished draft returns the ending first.
+  assertEquals(room.includes('<TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} />'), true);
   assertEquals(room.indexOf('<SymbolSearchField') < room.indexOf('<TeamSoFarGrid title={YOUR_ROSTER}'), true);
   assertEquals(SOURCES['app/(tabs)/league.tsx'].includes('notionalPerSlot={activeLeague?.notional_per_slot ?? null}'), true);
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
@@ -258,17 +259,7 @@ Deno.test('the room shows it from the recorded board, not from the button: no ti
   assertEquals(SOURCES['lib/game/draftRoom.ts'].includes('is yours'), false);
 });
 
-// ── UX rule 11: the draft's ending has a seam (DraftComplete) ──
-
-Deno.test('a finished draft shows DraftComplete (your roster, the existing line), and the heal hand-off stays', () => {
-  const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('{draftDone ? <DraftComplete symbols={mine.symbols} numRounds={rounds} /> : null}'), true);
-  assertEquals(room.includes("router.push('/(tabs)/draft');"), true); // the finalize heal, unchanged
-  const view = SOURCES['components/game/DraftComplete.tsx'];
-  assertEquals(view.includes('<TeamSoFarGrid symbols={symbols} numRounds={numRounds} />'), true);
-  assertEquals(view.includes("export const FINISHING_THE_DRAFT = 'Finishing the draft…';"), true);
-});
-
+// ── U-10: the draft's ending (DraftComplete): see game-draft-complete.test.ts ──
 
 // ── The audit's Rule 8 table › validate-and-record-pick (verbatim), and U-04 ──
 
