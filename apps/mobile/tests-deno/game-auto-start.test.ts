@@ -334,7 +334,8 @@ Deno.test('the lobby per phase: everyone', () => {
   assertEquals(lobbyView('no_date', false, 0), { blockers: null, deadline: false, countdown: null, memberPostponed: false, noDate: true, order: true, kick: false });
   assertEquals(lobbyView('scheduled', false, 0).countdown, 'scheduled');
   assertEquals(lobbyView('room_open', false, 0).countdown, 'room_open');
-  assertEquals(lobbyView('starting', false, 0), { blockers: null, deadline: false, countdown: 'starting', memberPostponed: false, noDate: false, order: true, kick: true });
+  assertEquals(lobbyView('starting', false, 0), { blockers: null, deadline: false, countdown: 'starting', memberPostponed: false, noDate: false, order: true, kick: false });
+  assertEquals(lobbyView('starting', true, 0), { blockers: null, deadline: false, countdown: 'starting', memberPostponed: false, noDate: false, order: true, kick: true });
   assertEquals(lobbyView('started', true, 0).countdown, 'starting');
   assertEquals(lobbyView('started', true, 0).kick, false);
 });
@@ -351,10 +352,18 @@ Deno.test('postponed: the commissioner gets the blockers card (pick a new time);
   assertEquals(lobbyView('postponed', false, 2), { blockers: null, deadline: false, countdown: null, memberPostponed: true, noDate: false, order: false, kick: false });
 });
 
-Deno.test('no phase ever shows a Start button: only "starting" asks the server, and only it', () => {
+Deno.test('no phase ever shows a Start button: only "starting" asks the server, and only on the commissioner\'s phone', () => {
   for (const p of ['no_date', 'scheduled', 'at_risk', 'room_open', 'starting', 'postponed', 'started'] as const) {
-    for (const c of [true, false]) assertEquals(lobbyView(p, c, 1).kick, p === 'starting', `${p} ${c}`);
+    for (const c of [true, false]) assertEquals(lobbyView(p, c, 1).kick, p === 'starting' && c, `${p} ${c}`);
   }
+});
+
+Deno.test('a member never sends a start (the server refuses it: 403 not_commissioner); the cron starts the draft', () => {
+  // The member's lobby at 0:00: the countdown says starting, but no request leaves the phone.
+  assertEquals(lobbyView('starting', false, 0).kick, false);
+  assertEquals(lobbyView('starting', false, 0).countdown, 'starting');
+  // The commissioner's: the instant 0:00 start (the same idempotent path the cron runs).
+  assertEquals(lobbyView('starting', true, 0).kick, true);
 });
 
 // ── Home (the same view as the lobby) ─────────────────────────────────────

@@ -439,7 +439,9 @@ export interface LobbyView {
   noDate: boolean;
   /** The order (or the waiting state) under the countdown. */
   order: boolean;
-  /** Ask the server to start (any member's phone at 0:00), then poll. */
+  /** Ask the server to start at 0:00, then poll: the COMMISSIONER's phone only (the
+   * server refuses anyone else's start, 403 not_commissioner). Members rely on the
+   * auto-start cron and the room's realtime (ruled 2026-10-07, release prep). */
   kick: boolean;
 }
 
@@ -461,7 +463,7 @@ export function lobbyView(phase: LobbyPhase, isCommissioner: boolean, fixableCou
     case 'room_open':
       return { ...none, countdown: 'room_open' };
     case 'starting':
-      return { ...none, countdown: 'starting', kick: true };
+      return { ...none, countdown: 'starting', kick: isCommissioner };
     case 'started':
       return { ...none, countdown: 'starting' }; // the League tab switches to the room on the next read
     case 'postponed':
