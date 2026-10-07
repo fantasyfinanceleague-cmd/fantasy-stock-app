@@ -738,7 +738,10 @@ A structural guard (files only). draft-control `status` returns `server_now`
 (the mobile lobby's clock offset), taken ONCE from the DB clock
 (`get_draft_clock.server_now`, edge clock as fallback) and used to judge
 `start_state`, so both describe the same instant. `resolveServerNow` itself is
-unit-tested in `functions/_shared/draft-start-policy.test.ts`.
+unit-tested in `functions/_shared/draft-start-policy.test.ts`. Also: starting a
+draft never sends a turn push (#160's `notifyNextPicker` follows recorded picks
+only). The start path imports no push code, and `start_league_draft` writes only
+`draft_started` notices, so the first picker hears "You pick 1st" once.
 
 Run: `deno test --allow-read supabase/tests/draft_control_status_wiring.test.ts`.
 

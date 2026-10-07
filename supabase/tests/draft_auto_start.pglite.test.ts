@@ -45,6 +45,11 @@ const BASE = [   // prod (timestamp) order, before the migrations under test
   // #126: league_roster_reconfirm + the REAL start gate + the kind CHECK it set.
   '20261107000000_leave_league_schema.sql',
   '20261107000006_draft_waits_for_roster_reconfirm.sql',
+  // #132 (applied): commissioner transfer, incl. its own kind CHECK, which this
+  // release's union must keep ('commissioner_transferred').
+  '20261110000000_transfer_commissioner.sql',
+  '20261110000001_leave_league_transfer_first.sql',
+  '20261110000002_notify_due_ignores_transfer_notice.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 const UNDER_TEST = [
   '20261111000000_draft_auto_start.sql',
@@ -305,10 +310,10 @@ Deno.test({
       assertEquals(r.j, { ...SQL_POLICY });
     });
 
-    await t.step('kinds: the union CHECK (draft auto-start + #67 + #94 + #126); draft_order_set is in-app only', async () => {
+    await t.step('kinds: the union CHECK (draft auto-start + #67 + #94 + #126 + #132); draft_order_set is in-app only', async () => {
       const L = await league({ minutes: 600 });
       for (const k of ['draft_room_open', 'draft_started', 'draft_at_risk', 'draft_at_risk_reminder', 'draft_postponed',
-        'draft_time_set', 'member_left',
+        'draft_time_set', 'member_left', 'commissioner_transferred',
         'renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set']) {
         await q(`insert into league_notifications (league_id, user_id, kind) values ($1, $2, $3)`, [L, MEMBER, k]);
       }

@@ -2,54 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "04e398922d9a7653556af869fe2bc6632be7f460",
-    "commitShort": "04e39892",
+    "commit": "b459a9fb25974a1424c7198cde9ae5936e760a2a",
+    "commitShort": "b459a9fb",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/draft-auto-start",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-start-policy.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-start.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.ts"
-      },
-      {
-        "code": "RM",
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql"
-      },
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql"
-      },
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20261111000002_draft_autopick_sweep_auto_start.sql"
-      },
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20261111000003_schedule_draft_order_notify.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-07T22:00:10Z",
+    "timestamp": "2026-10-07T22:02:55Z",
     "sourceHash": "sha256:4218a115ecbfd695a731536b770671b111a445950969b37d677aa5ae34c96e3a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -57,7 +21,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 2.3,
+    "ageHours": 2.4,
     "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
@@ -1776,7 +1740,7 @@
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:328",
           "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:54",
-          "supabase/migrations/20261111000000_draft_auto_start.sql:217"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:218"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 3
@@ -1790,7 +1754,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 217
+        "line": 218
       }
     },
     {
@@ -1799,7 +1763,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:288"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:289"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -1821,7 +1785,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 288
+        "line": 289
       }
     },
     {
@@ -2199,7 +2163,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:380"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:381"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -2221,7 +2185,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 380
+        "line": 381
       }
     },
     {
@@ -2278,7 +2242,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:840"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:841"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -2300,7 +2264,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 840
+        "line": 841
       }
     },
     {
@@ -2359,7 +2323,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:795"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:796"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -2381,7 +2345,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 795
+        "line": 796
       }
     },
     {
@@ -2421,7 +2385,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:336"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:337"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -2443,7 +2407,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 336
+        "line": 337
       }
     },
     {
@@ -2452,7 +2416,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:603"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:604"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -2474,7 +2438,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 603
+        "line": 604
       }
     },
     {
@@ -3829,7 +3793,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:174"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:175"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -3851,7 +3815,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 174
+        "line": 175
       }
     },
     {
@@ -4076,7 +4040,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:723"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:724"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -4098,7 +4062,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 723
+        "line": 724
       }
     },
     {
@@ -4196,7 +4160,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:530"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:531"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -4218,7 +4182,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 530
+        "line": 531
       }
     },
     {
@@ -4227,7 +4191,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:411"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:412"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -4249,7 +4213,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 411
+        "line": 412
       }
     },
     {
@@ -4620,7 +4584,7 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:633"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:634"
         ],
         "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
         "redefinitions": 1
@@ -4642,7 +4606,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 633
+        "line": 634
       }
     },
     {
@@ -9605,7 +9569,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:236"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:237"
       ]
     },
     {
@@ -9618,7 +9582,7 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:240"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:241"
       ]
     },
     {
@@ -9633,7 +9597,7 @@
       "callSites": [
         "supabase/migrations/20261013000000_draft_order_modes.sql:343",
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:69",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:232"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:233"
       ]
     },
     {
@@ -9647,7 +9611,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:71",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:234"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:235"
       ]
     },
     {
@@ -9664,8 +9628,8 @@
         "supabase/migrations/20261013000000_draft_order_modes.sql:336",
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:60",
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:62",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:223",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:225"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:224",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:226"
       ]
     },
     {
@@ -9678,7 +9642,7 @@
       "payload": "SELECT league_draft_slots (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:308"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:309"
       ]
     },
     {
@@ -9691,7 +9655,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:291"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:292"
       ]
     },
     {
@@ -9704,7 +9668,7 @@
       "payload": "SELECT league_roster_reconfirm (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:298"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:299"
       ]
     },
     {
@@ -9717,7 +9681,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:310"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:311"
       ]
     },
     {
@@ -10159,7 +10123,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:868"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:869"
       ]
     },
     {
@@ -10172,7 +10136,7 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:865"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:866"
       ]
     },
     {
@@ -10185,7 +10149,7 @@
       "payload": "SELECT league_draft_order (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:855"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:856"
       ]
     },
     {
@@ -10198,7 +10162,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:851"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:852"
       ]
     },
     {
@@ -10211,8 +10175,8 @@
       "payload": "SELECT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:859",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:869"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:860",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:870"
       ]
     },
     {
@@ -10225,7 +10189,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:870"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:871"
       ]
     },
     {
@@ -10312,7 +10276,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:805"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:806"
       ]
     },
     {
@@ -10325,8 +10289,8 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:800",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:808"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:801",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:809"
       ]
     },
     {
@@ -10339,7 +10303,7 @@
       "payload": "SELECT league_draft_order (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:810"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:811"
       ]
     },
     {
@@ -10352,8 +10316,8 @@
       "payload": "SELECT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:814",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:818"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:815",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:819"
       ]
     },
     {
@@ -10366,8 +10330,8 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:799",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:809"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:800",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:810"
       ]
     },
     {
@@ -10380,7 +10344,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:346"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:347"
       ]
     },
     {
@@ -10393,7 +10357,7 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:342"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:343"
       ]
     },
     {
@@ -10406,7 +10370,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:340"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:341"
       ]
     },
     {
@@ -10419,7 +10383,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:610"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:611"
       ]
     },
     {
@@ -10432,7 +10396,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:606"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:607"
       ]
     },
     {
@@ -11474,7 +11438,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:741"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:742"
       ]
     },
     {
@@ -11487,8 +11451,8 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:736",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:769"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:737",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:770"
       ]
     },
     {
@@ -11501,8 +11465,8 @@
       "payload": "UPDATE draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:748",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:761"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:749",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:762"
       ]
     },
     {
@@ -11515,8 +11479,8 @@
       "payload": "SELECT league_draft_order (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:753",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:771"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:754",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:772"
       ]
     },
     {
@@ -11529,7 +11493,7 @@
       "payload": "SELECT league_draft_order_meta (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:746"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:747"
       ]
     },
     {
@@ -11542,7 +11506,7 @@
       "payload": "SELECT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:775"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:776"
       ]
     },
     {
@@ -11555,8 +11519,8 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:751",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:767"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:752",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:768"
       ]
     },
     {
@@ -11569,8 +11533,8 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:735",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:770"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:736",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:771"
       ]
     },
     {
@@ -11609,7 +11573,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:542"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:543"
       ]
     },
     {
@@ -11622,7 +11586,7 @@
       "payload": "INSERT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:559"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:560"
       ]
     },
     {
@@ -11635,7 +11599,7 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:563"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:564"
       ]
     },
     {
@@ -11648,7 +11612,7 @@
       "payload": "DELETE draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:563"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:564"
       ]
     },
     {
@@ -11661,7 +11625,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:571"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:572"
       ]
     },
     {
@@ -11674,7 +11638,7 @@
       "payload": "SELECT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:573"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:574"
       ]
     },
     {
@@ -11687,7 +11651,7 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:569"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:570"
       ]
     },
     {
@@ -11700,7 +11664,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:535"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:536"
       ]
     },
     {
@@ -11713,7 +11677,7 @@
       "payload": "UPDATE leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:562"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:563"
       ]
     },
     {
@@ -11726,7 +11690,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:431"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:432"
       ]
     },
     {
@@ -11739,7 +11703,7 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:440"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:441"
       ]
     },
     {
@@ -11752,7 +11716,7 @@
       "payload": "INSERT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:455"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:456"
       ]
     },
     {
@@ -11765,7 +11729,7 @@
       "payload": "SELECT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:488"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:489"
       ]
     },
     {
@@ -11778,7 +11742,7 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:496"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:497"
       ]
     },
     {
@@ -11791,7 +11755,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:429"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:430"
       ]
     },
     {
@@ -12135,7 +12099,7 @@
       "payload": "SELECT draft_postponements (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:650"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:651"
       ]
     },
     {
@@ -12148,8 +12112,8 @@
       "payload": "SELECT draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:656",
-        "supabase/migrations/20261111000000_draft_auto_start.sql:691"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:657",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:692"
       ]
     },
     {
@@ -12162,7 +12126,7 @@
       "payload": "DELETE draft_start_watch (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:691"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:692"
       ]
     },
     {
@@ -12175,7 +12139,7 @@
       "payload": "SELECT league_draft_order (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:696"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:697"
       ]
     },
     {
@@ -12188,7 +12152,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:662"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:663"
       ]
     },
     {
@@ -12201,7 +12165,7 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:694"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:695"
       ]
     },
     {
@@ -12214,7 +12178,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:643"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:644"
       ]
     },
     {
@@ -12227,7 +12191,7 @@
       "payload": "UPDATE leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:682"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:683"
       ]
     },
     {
@@ -12816,7 +12780,7 @@
       "payload": "trigger on league_notifications",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261111000000_draft_auto_start.sql:193"
+        "supabase/migrations/20261111000000_draft_auto_start.sql:194"
       ]
     },
     {
@@ -15924,7 +15888,7 @@
       "node": "pg._draft_order_sync",
       "label": "_draft_order_sync(p_league_id uuid, p_lock boolean)",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:217",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:218",
       "outbound": [
         "tbl.draft_postponements",
         "tbl.draft_start_watch",
@@ -15938,7 +15902,7 @@
       "node": "pg._draft_start_inputs",
       "label": "_draft_start_inputs()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:288",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:289",
       "outbound": [
         "tbl.league_draft_slots",
         "tbl.league_members",
@@ -15974,7 +15938,7 @@
       "node": "pg.draft_auto_start_work_due",
       "label": "draft_auto_start_work_due()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:380",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:381",
       "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -16008,7 +15972,7 @@
       "node": "pg.draft_room_notices_due",
       "label": "draft_room_notices_due()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:795",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:796",
       "outbound": [
         "tbl.draft_postponements",
         "tbl.draft_start_watch",
@@ -16057,7 +16021,7 @@
       "node": "pg.postpone_league_draft",
       "label": "postpone_league_draft()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:530",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:531",
       "outbound": [
         "tbl.draft_postponements",
         "tbl.draft_postponements",
@@ -16075,7 +16039,7 @@
       "node": "pg.record_draft_watch",
       "label": "record_draft_watch()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:411",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:412",
       "outbound": [
         "tbl.draft_postponements",
         "tbl.draft_start_watch",
@@ -16132,7 +16096,7 @@
       "node": "pg.start_league_draft",
       "label": "start_league_draft()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:633",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:634",
       "outbound": [
         "tbl.draft_postponements",
         "tbl.draft_start_watch",

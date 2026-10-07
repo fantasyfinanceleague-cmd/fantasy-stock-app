@@ -33,7 +33,8 @@
 --       the freeze fn is server-only                                 PASS
 --   G4  draft_start_policy(): room 1h, gate 30s, reminder 2h, 55 min,
 --       quarter hours                                                PASS
---   G5  the kind CHECK admits the six new kinds and keeps #126's     PASS
+--   G5  the kind CHECK admits the six new kinds and keeps #126's and
+--       #132's (member_left, commissioner_transferred)               PASS
 --   C1  the sweep cron guards on overdue + draft_auto_start_work_due PASS
 --   C2  the notify cron guards on draft_room_notices_due(), 180000ms PASS
 --   W1  a blocked league -> the commissioner gets ONE at-risk notice PASS
@@ -124,7 +125,7 @@ begin
   out := out || format(E'G5 kind check has new kinds + member_left  %s\n',
     case when acl like '%draft_room_open%' and acl like '%draft_started%' and acl like '%draft_at_risk%'
           and acl like '%draft_at_risk_reminder%' and acl like '%draft_postponed%' and acl like '%draft_time_set%'
-          and acl like '%member_left%' then 'PASS' else 'FAIL' end);
+          and acl like '%member_left%' and acl like '%commissioner_transferred%' then 'PASS' else 'FAIL' end);
 
   -- ---- C: the crons (prod only; PGlite has no pg_cron) -------------------------
   if to_regclass('cron.job') is null then

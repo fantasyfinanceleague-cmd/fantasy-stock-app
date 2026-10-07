@@ -136,7 +136,7 @@ grant select on table public.draft_start_watch   to service_role;
 grant select on table public.draft_postponements to service_role;
 
 -- ---------------------------------------------------------------------------
--- 3. Notification kinds: the union of #67, #94, #126 and these four.
+-- 3. Notification kinds: the union of #67, #94, #126, #132 and these six.
 -- ---------------------------------------------------------------------------
 alter table public.league_notifications
   drop constraint if exists league_notifications_kind_check;
@@ -146,6 +146,7 @@ alter table public.league_notifications
     -- PR #94 (Run it back), kept so this CHECK stays a superset of its own:
     'renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set',
     'member_left',      -- #126
+    'commissioner_transferred', -- #132 (20261110000000): to the new commissioner
     -- draft auto-start (this file); delivered by draft-order-notify:
     'draft_room_open',  -- everyone: the room is open, with your position
     'draft_started',    -- everyone: the draft has started

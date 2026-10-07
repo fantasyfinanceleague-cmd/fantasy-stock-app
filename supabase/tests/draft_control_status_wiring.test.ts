@@ -20,3 +20,18 @@ Deno.test('status: server_now is in the response and start_state is judged at th
   assert(/computeStartState\([\s\S]*?,\s*now,\s*\)/.test(status), 'start_state must be judged with that same `now`');
   assert(!/new Date\(\)\s*;/.test(status.replace('new Date());', '')), 'no second clock read in the status branch');
 });
+
+Deno.test('starting a draft never sends a turn push (#160): the first picker hears only "The draft has started. You pick 1st."', async () => {
+  // #160's notifyNextPicker runs only after a RECORDED pick (commitGatedPick).
+  // The auto-start path (startDraftIfDue + start_league_draft) must not add a
+  // second push for pick 1: draft_started already tells that manager they pick 1st.
+  const start = await Deno.readTextFile(new URL('../functions/_shared/draft-start.ts', import.meta.url));
+  for (const name of ['notifyNextPicker', 'commitGatedPick', 'sendExpoPush', 'getTargetToken']) {
+    assert(!new RegExp(`\\b${name}\\b`).test(start), `draft-start.ts must not use ${name}`);
+  }
+  const sql = await Deno.readTextFile(new URL('../migrations/20261111000000_draft_auto_start.sql', import.meta.url));
+  const fn = sql.slice(sql.indexOf('create or replace function public.start_league_draft'));
+  const body = fn.slice(0, fn.indexOf('$$;'));
+  const kinds = [...body.matchAll(/'(draft_[a-z_]+)'\s*\n?\s*from public\.league_draft_order/g)].map((m) => m[1]);
+  assert(kinds.length === 1 && kinds[0] === 'draft_started', `start_league_draft writes only draft_started notices, got ${kinds}`);
+});

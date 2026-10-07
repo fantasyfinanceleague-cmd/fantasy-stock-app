@@ -267,7 +267,9 @@ Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.t
 
 ## Release (HUMAN ACTION, in order)
 
-0. **Preconditions:** `20261106000000`–`02` (auto-pick cron), `20261107000000`–`06` (#126) and `20261108000000`–`01` (#121) applied. The `AUTOPICK_CRON_LIVE.md` runbook is complete.
+0. **Preconditions** (release prep 2026-10-07: merged with main @ 0 behind; migrations re-stamped to `20261111000000`–`03`):
+   - applied in prod: `20261106000000`–`02` (auto-pick cron, #120), `20261107000000`–`06` (#126), `20261108000000`–`01` (#121) and `20261110000000`–`02` (commissioner transfer, #132). Check with `SELECT version FROM supabase_migrations.schema_migrations WHERE version >= '20261106000000' ORDER BY version;`.
+   - #160 (the server-side "your turn" push) is live. This branch carries its `_shared/draft-write.ts` unchanged, so redeploying the sweep from here keeps it.
 1. **Read-only pre-check** (run before the push, and again right before it). The backfill postpones every `not_started` league whose time has passed (silently). Any league whose time is within the next hour gets gated on the first tick: it opens its room with less than 1 h notice, or is postponed. Decide on each:
    ```sql
    SELECT l.id, l.name, l.draft_date,
@@ -278,15 +280,21 @@ Every push carries `data.screen: 'draft'` (1.1.0 routes by `screen`) and `data.t
                ELSE 'future: watched; room at T-1h, start at T' END AS on_push
      FROM leagues l WHERE l.draft_status = 'not_started' ORDER BY l.draft_date NULLS LAST;
    ```
-2. **Deploy first** (from the refreshed deploy checkout): `draft-order-notify`, then `draft-autopick-sweep`, then `draft-control`. Deploying first means the moment the crons widen, the functions understand the new work; the old functions would ignore it, which is harmless but loses notices for that window.
-   - The upload lists must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts`, `draft-control/rules.ts` (sweep and draft-control), plus `draft-order-notify/plan.ts`, `_shared/push.ts`, `_shared/cron-auth.ts`.
-   - Content check first: `grep -c watchLeague supabase/functions/draft-autopick-sweep/index.ts` ≥ 1 and `grep -c decideNotice supabase/functions/draft-order-notify/index.ts` ≥ 1.
-   - Byte-verify each with a download + diff.
-3. `supabase db push --dry-run`: exactly `20261111000000`–`03`. Then `supabase db push`, and confirm in `schema_migrations`.
-4. `docs/security/draft-auto-start-effect-test.sql`: every line PASS (24 lines; C1/C2 need pg_cron).
+2. **Deploy `draft-order-notify` first** (from the refreshed deploy checkout). Its cron isn't scheduled until the push, so the new code sits idle until then.
+   - Content check: `grep -c decideNotice supabase/functions/draft-order-notify/index.ts` ≥ 1.
+   - The upload list must include `draft-order-notify/plan.ts`, `_shared/push.ts`, `_shared/cron-auth.ts`.
+   - Byte-verify with a download + diff.
+3. **`supabase db push --dry-run`**: exactly `20261111000000`–`03`. Then **`supabase db push`**, and confirm in `schema_migrations`.
+3b. **Immediately after the push**, deploy `draft-autopick-sweep`, then `draft-control`.
+   - **Not before the push:** draft-control's `status` reads `draft_postponements` and would 500 until the table exists, and the sweep's new passes would log errors every run.
+   - Between the push and these deploys, the widened sweep cron posts to the OLD sweep, which ignores the auto-start work (harmless). So keep the gap to minutes.
+   - Content check: `grep -c watchLeague supabase/functions/draft-autopick-sweep/index.ts` ≥ 1 and `grep -c resolveServerNow supabase/functions/draft-control/index.ts` ≥ 1.
+   - Both upload lists must include `_shared/draft-start.ts`, `_shared/draft-start-policy.ts`, `draft-control/rules.ts`, `_shared/draft-write.ts` (with #160's `commitGatedPick`), `_shared/draft-feasibility.ts`, `_shared/push-copy.ts`.
+   - Byte-verify each.
+4. `docs/security/draft-auto-start-effect-test.sql`: every line PASS (24 lines; C1/C2 run for real on prod).
 5. As postgres: `SELECT exists (SELECT 1 FROM public.draft_watch_due()), exists (SELECT 1 FROM public.due_draft_starts()), public.draft_room_notices_due();` must return without error. Neither cron command is validated at schedule time.
 6. **Live test** (a throwaway league, every app closed; verify by DATA):
-   - (a) 4 members, a time ~2 h out: the room opens at T−1h (`room_opened_at`, `draft_room_open` rows settled sent / no_device), and it starts at T (`draft_started_at − draft_date` < 15 s, `draft_started` rows).
+   - (a) 4 members, a time ~2 h out: the room opens at T−1h (`room_opened_at`, `draft_room_open` rows settled sent / no_device), and it starts at T (`draft_started_at − draft_date` < 15 s, `draft_started` rows). After pick 1, the pick-2 manager gets #160's turn push; pick 1's manager gets only "The draft has started. You pick 1st." (no second push).
    - (b) 3 members, ~2 h out: an at-risk row for the commissioner within ~10 s of creation; at T−1h a postponement row, `draft_date` NULL, and `draft_postponed` rows.
 7. Re-capture `db-snapshot.json`, re-run the map, update STATUS.
 
