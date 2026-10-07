@@ -7,6 +7,7 @@
  * the app uses, so the fixture can't drift from the real response shape.
  */
 import type { LedgerActivityRow, LedgerMember, PortfolioLedger } from './portfolioLedger';
+import { shapeSearchResults, type ShapedSearchResult } from '../symbolSearch';
 
 export const STRESS_USERNAME = 'Maximilian Rodriguez'; // 20 characters
 export const STRESS_LEAGUE_NAME = 'The Extraordinarily Long Stock Contest 2'; // 40 characters
@@ -27,6 +28,57 @@ function companyName(pick: number): string {
   const base = `Company ${pick} Holdings Corporation`;
   // Every other company carries a feed suffix, which the cleaner must strip.
   return pick % 2 === 0 ? `${base} - Common Stock` : base;
+}
+
+export interface StressSearchItem {
+  symbol: string;
+  name: string;
+  price: number | null;
+  is_draftable: boolean;
+}
+
+/** Every stress-drafted symbol (S001..S096), for the stock-search fixture seam. */
+const STRESS_SEARCH_CATALOG: StressSearchItem[] = (() => {
+  const items: StressSearchItem[] = [];
+  for (let pick = 1; pick <= STRESS_MANAGERS * STRESS_ROUNDS; pick++) {
+    const sym = symbolFor(pick);
+    items.push({
+      symbol: sym,
+      name: companyName(pick),
+      price: STRESS_UNPRICED.includes(sym) ? null : Math.round(entryPrice(pick) * 1.05 * 100) / 100,
+      is_draftable: true,
+    });
+  }
+  return items;
+})();
+
+/**
+ * Stock search (3e, STEP 2): the fixture's offline replacement for the
+ * symbols-search edge function. Ranked the same order CLAUDE.md records for
+ * the live function (exact symbol, symbol starts-with, name starts-with,
+ * name contains), so the fixture can't drift from the real ordering. Every
+ * match is selectable here: ownership is never checked at search time (the
+ * sheet derives held/owned-by-other/free from the ledger, and the server's
+ * symbol_owned refusal, not a client-side filter, is what blocks a buy).
+ */
+export function filterStressSearchCatalog(query: string, limit = 8): ShapedSearchResult[] {
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+  const rank = (item: StressSearchItem): number => {
+    const sym = item.symbol.toUpperCase();
+    const name = item.name.toUpperCase();
+    if (sym === q) return 0;
+    if (sym.startsWith(q)) return 1;
+    if (name.startsWith(q)) return 2;
+    if (name.includes(q)) return 3;
+    return -1;
+  };
+  const matches = STRESS_SEARCH_CATALOG.map((item) => ({ item, r: rank(item) }))
+    .filter((x) => x.r >= 0)
+    .sort((a, b) => a.r - b.r || a.item.symbol.localeCompare(b.item.symbol))
+    .slice(0, limit)
+    .map((x) => x.item);
+  return shapeSearchResults(matches, {});
 }
 
 export interface StressMarket {

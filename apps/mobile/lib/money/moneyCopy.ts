@@ -45,6 +45,11 @@ export const COPY = {
   leagueNotFound: "This league isn't available anymore.",
   // NEW copy (Design Lead): the next step on a refusal, and the session ending.
   pickAnotherStock: 'Pick another stock',
+  // STEP 2 (new, not yet flagged to the Design Lead — no board frame exists for this screen).
+  buyAStock: 'Buy a stock',
+  stockSearchTitle: 'Buy a stock',
+  stockSearchPlaceholder: 'Search by ticker or name',
+  noMatchingStocks: 'No matching stocks found',
   goToPortfolio: 'Go to Portfolio',
   sessionEnded: 'Your session ended. Sign in again.',
   signIn: 'Sign in',

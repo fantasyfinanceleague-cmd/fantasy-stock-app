@@ -39,6 +39,7 @@ const styles = StyleSheet.create({
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
   historyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  buyLink: { minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
 });
 
 export function PortfolioScreen() {
@@ -77,6 +78,16 @@ export function PortfolioScreen() {
         {v.perSlotText ? <Text variant="caption" tone="secondary">{v.perSlotText}</Text> : null}
         {v.cashText ? <Text variant="callout">{v.cashText}</Text> : null}
         {v.unpricedNote ? <Text variant="caption" tone="secondary">{v.unpricedNote}</Text> : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={COPY.buyAStock}
+          onPress={() => router.push('/stock-search')}
+          style={({ pressed }) => [styles.buyLink, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Text variant="callout" tone="primary">{COPY.buyAStock}</Text>
+          <Icon name="chevronRight" size="callout" tone="text2" />
+        </Pressable>
 
         <Text variant="headline">{COPY.holdingsHeading}</Text>
         <View style={styles.list}>
