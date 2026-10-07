@@ -4,7 +4,7 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  CHIME_AUDIO_MODE, FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal,
+  CHIME_AUDIO_MODE, FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextAtStepStart, settleCrossedMidpoint, FLASH_TEXT_MIDPOINT, nextLastTenBuzz, nextTurnSignal,
   type TurnObservation, type TurnSignalState,
 } from '../lib/game/yourTurn.ts';
 
@@ -65,10 +65,20 @@ Deno.test('the last-10-s haptic: once per turn, inside 1..10 s, only while it\'s
   assertEquals(nextLastTenBuzz(null, at(5, 11, false)), { buzzedPick: 11, buzz: false }); // in the background: consumed
 });
 
-Deno.test('the flash text: navy as each rise starts, back as its settle starts, never on the rest card; nothing with Reduce Motion', () => {
+Deno.test('the flash text: navy as each rise starts; nothing with Reduce Motion', () => {
   // FLASH_STEPS: rise, hold, settle, rise, hold, settle.
-  assertEquals(flashTextAtStepStart(FLASH_STEPS), [true, null, false, true, null, false]);
+  assertEquals(flashTextAtStepStart(FLASH_STEPS), [true, null, null, true, null, null]);
   assertEquals(flashTextAtStepStart(flashSteps(true)), []);
+});
+
+Deno.test('B-2: the text goes back to rest as a settle crosses the fill\'s midpoint, not at its start', () => {
+  assertEquals(FLASH_TEXT_MIDPOINT, 0.5);
+  assertEquals(settleCrossedMidpoint(1, 0.9), false); // the settle has started: still navy on mostly gold
+  assertEquals(settleCrossedMidpoint(0.55, 0.45), true); // crossing down: back to rest
+  assertEquals(settleCrossedMidpoint(0.5, 0.49), true);
+  assertEquals(settleCrossedMidpoint(0.45, 0.3), false); // already below: once only
+  assertEquals(settleCrossedMidpoint(0.3, 0.7), false); // a rise never switches it back
+  assertEquals(settleCrossedMidpoint(null, 0.2), false); // the first reading
 });
 
 Deno.test('the chime: silent on the silent switch, mixed with other audio, never in the background', () => {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, View, StyleSheet } from 'react-native';
-import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
@@ -32,7 +32,7 @@ import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { ownPickClockQuiet, setForegroundQuiet } from '@/lib/foregroundQuiet';
 import { useIsFocused } from '@react-navigation/native';
 import { turnState } from '@/lib/game/draftRefusals';
-import { TURN_SIGNAL_START, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal } from '@/lib/game/yourTurn';
+import { TURN_SIGNAL_START, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal, settleCrossedMidpoint } from '@/lib/game/yourTurn';
 
 export interface DraftRoomProps {
   leagueId: string;
@@ -125,8 +125,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     playChime();
     const steps = roomOnScreen ? flashSteps(reduced) : [];
     if (steps.length === 0) return;
-    // The text follows the animation's own steps (flashTextAtStepStart): each step's end
-    // applies the next step's switch, and the last step's end returns the text to rest.
+    // The text follows the animation itself: navy as each rise starts (the step before it
+    // ends, flashTextAtStepStart), back to rest as each settle crosses the midpoint (the
+    // reaction below, B-2), and back to rest when the last step ends, whatever happened.
     const atStart = flashTextAtStepStart(steps);
     if (atStart[0] !== null) setFlashLit(atStart[0]);
     flash.value = 0;
@@ -141,6 +142,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the turn reading only; focus and Reduce Motion are read at that moment
   }, [myTurnPick, appActive, room.status]);
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+  // B-2: rest colours never sit on more than half gold.
+  useAnimatedReaction(
+    () => flash.value,
+    (level, prev) => {
+      if (settleCrossedMidpoint(prev, level)) runOnJS(setFlashLit)(false);
+    },
+  );
   // The last 10 s: one more Warning haptic, once per turn (no sound, no second flash).
   const lastTenBuzzed = useRef<number | null>(null);
   useEffect(() => {

@@ -46,6 +46,9 @@ Deno.test('the text is navy (on-live) only while the gold is up, keyed on the an
   assert(room.includes('const atStart = flashTextAtStepStart(steps);'));
   assert(room.includes('const lit = i + 1 < steps.length ? atStart[i + 1] : false;'));
   assert(room.includes('if (lit !== null) runOnJS(setFlashLit)(lit);'));
+  // B-2: back to rest at each settle's midpoint, from the fill itself (UI thread).
+  assert(room.includes('if (settleCrossedMidpoint(prev, level)) runOnJS(setFlashLit)(false);'));
+  assert(room.includes('() => flash.value,'));
   // The capture showed timers drift from the animation (holds ran ~60 ms long): no timers.
   assert(!/setTimeout\(\(\) => setFlashLit/.test(room));
   assertEquals((room.match(/colors\.onLive/g) ?? []).length, 3); // the clock, the title and flashInk, all behind flashLit

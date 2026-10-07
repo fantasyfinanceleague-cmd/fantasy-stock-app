@@ -85,20 +85,31 @@ export function nextLastTenBuzz(
   return { buzzedPick: obs.myTurnPick, buzz: obs.appActive };
 }
 
-/** When the card's text switches to `onLive` (navy, on the gold) and back during
- * the flash, per step: `true`/`false` to apply as that step STARTS, `null` to
- * leave it. Navy from the start of each rise until its settle begins, so the text
- * is never navy on the rest card (navy is unreadable on Dark's surface). The room
+/** When the card's text switches to `onLive` (navy, on the gold) during the flash,
+ * per step: `true` to apply as that step STARTS, `null` to leave it. Navy from the
+ * start of each rise (the one-frame rise edge is accepted, re-gate B-3). The room
  * applies these from the animation's own step callbacks, not from timers: the
  * simulator capture (2026-10-07) showed each hold running ~60 ms past its nominal
- * 220 ms, so JS timers turned the text navy over the rest tint before pulse 2. */
-export function flashTextAtStepStart(steps: readonly FlashStep[]): (boolean | null)[] {
+ * 220 ms, so JS timers turned the text navy over the rest tint before pulse 2.
+ * The switch BACK is not a step start: see settleCrossedMidpoint. */
+export function flashTextAtStepStart(steps: readonly FlashStep[]): (true | null)[] {
   let level = 0;
   return steps.map((s) => {
-    const change = s.to !== level ? s.to === 1 : null;
+    const rise = s.to === 1 && level === 0 ? true : null;
     level = s.to;
-    return change;
+    return rise;
   });
+}
+
+/** The fill level at which a settling flash hands the text back to its rest colours. */
+export const FLASH_TEXT_MIDPOINT = 0.5;
+
+/** Re-gate B-2: the text returns to its rest colours as each settle crosses the
+ * fill's midpoint (it used to switch at the settle's start, leaving the rest
+ * colours on half gold for a few frames). Runs on the UI thread, on the fill. */
+export function settleCrossedMidpoint(prev: number | null, level: number): boolean {
+  'worklet';
+  return prev !== null && prev >= FLASH_TEXT_MIDPOINT && level < FLASH_TEXT_MIDPOINT;
 }
 
 /** The chime's audio session (the spec): silent with the ring/silent switch on silent
