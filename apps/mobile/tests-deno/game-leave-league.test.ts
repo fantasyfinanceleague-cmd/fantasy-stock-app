@@ -237,7 +237,9 @@ Deno.test('a hidden league comes off Your leagues (source guard)', () => {
 Deno.test('the sheets: the danger button and Stay; the transfer button names the pick, disabled until one (source guard)', () => {
   const v = SOURCES['components/game/LeaveLeagueSheets.tsx'];
   assertEquals(v.includes('<Button label={LEAVE_LEAGUE} variant="destructive"'), true);
-  assertEquals(v.includes('<Button label={STAY} onPress={onStay}'), true);
+  // G-3 (pass-2 gate): Leave stays filled red; Stay is ghost, like the transfer sheet's Cancel.
+  assertEquals(v.includes('<Button label={STAY} variant="ghost" onPress={onStay}'), true);
+  assertEquals(v.includes('<Button label={TRANSFER_CANCEL} variant="ghost"'), true);
   assertEquals(v.includes('label={pickedName ? handOverLabel(pickedName) : HAND_OVER}'), true);
   assertEquals(v.includes('disabled={!picked || busy}'), true);
   assertEquals(v.includes('if (visible) setPicked(null);'), true);
