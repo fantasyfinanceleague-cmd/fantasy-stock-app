@@ -518,3 +518,54 @@ gold), and it can never collide with `you`. Keep 2 pt.
    P1). Small fix; re-capture the room's and the queue's search in Dark with results showing.
 2. **Standings block without card padding:** real, **follow-up** (G-12, P2). Doesn't block.
 3. **Create league step-1 "‹ Cancel":** real, **follow-up** (G-13, P3). Doesn't block.
+
+---
+
+## Pass 2c · 3c-2 final re-gate (2026-10-06)
+
+**Verdict: PASS. DESIGN-APPROVED `ui/mobile-league-setup` @ `fa2b160`**, on one condition: the
+branch's last commit (the re-capture of the two stale capture sets, ruling 2 below) must be
+captures-only, with no code change. If it touches code, it comes back here.
+
+### Scope examined
+
+Diff `01cc859..fa2b160` (8 commits) read in source; the 9 new or replaced captures reviewed (the
+room's search with results in Light and Dark, the queue's search in Dark, the on-clock board in
+Light and Dark, the League tab standings and Create league step 1 in Light and Dark). Same gaps as
+pass 2b: no XL/XXXL, Reduce Motion or VoiceOver captures, and no ux-reviewer run. The shared-shell
+change (`5d471fa`, BarsRefresh: iOS `automaticallyAdjustKeyboardInsets` and
+`keyboardShouldPersistTaps="handled"`) is judged from its code and these captures; both settings act
+only while the keyboard is up. The Orchestrator's checks (deno 1145/0, functions 618/0, map,
+gitleaks, mutation tests on the legacy `Colors` import and the on-clock colour) are taken as
+reported.
+
+### Items
+
+| ID | Result | Evidence |
+|---|---|---|
+| G-10 Dark search field | **fixed.** `SymbolSearchField` reads `useTheme()`; the field, the results and the dividers are themed; the results list is no longer clipped to one row by its card (`91d05d0`); a guard forbids the legacy `Colors` returning. Owned stocks show dimmed with an "Already owned" badge, so the picker can't offer a stock the server would refuse (rule 8). | `draft-room-search-results-*`, `queue-search-results-dark` |
+| G-11 on-clock outline | **fixed.** `live` at 2 pt in both themes; in Light the on-clock cell is now gold against your blue cells. | `draft-room-on-clock-*` |
+| G-12 League tab standings | **fixed.** A padded card like its neighbours. | `league-standings-card-*` |
+| G-13 Create league step 1 | **fixed.** Text-only "Cancel"; steps 2–4 keep "‹ Back", which is right for a push. | `create-league-step1-*` |
+
+### Rulings
+
+1. **Search results as an overlay near a tab's end (the worker's observation):** **follow-up,
+   not a block** (G-14, P2). The field itself stays visible above the keyboard (`5d471fa`), so the
+   player is never typing blind. The case where results can be covered is the queue's search at the
+   bottom of the League tab, which isn't the time-pressured moment: on your turn you use the room's
+   search near the top, and its results show in full (`draft-room-search-results-*`). Laying the
+   results inline is a layout change across four callers; do it as its own branch, gated.
+2. **The stale `league-finished-tab-*` and `league-season-settings-entry-*` captures:**
+   **re-capture them, don't delete them.** They are the evidence for G-6 and the League tab's
+   settings entry, and a gate record with holes is worse than an extra commit. Re-capturing as the
+   branch's last commit is fine under the condition above.
+
+### Follow-ups after 3c-2 merges
+
+| ID | What | P |
+|---|---|---|
+| G-9 | The key-screen ring clock, with its Reduce Motion fallback | P2 |
+| G-14 | Search results inline, not an overlay (all four `SymbolSearchField` callers) | P2 |
+
+Everything else found in passes 2, 2b and 2c on this branch is closed.
