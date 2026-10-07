@@ -1,0 +1,6 @@
+// FIXTURE: a forwarder with no seam gate and no `seam` in any name. Structure alone finds it.
+import { supabase } from './supabase';
+
+export async function looseRpc(name: string, args: Record<string, unknown>) {
+  return supabase.rpc(name, args);
+}

@@ -144,7 +144,7 @@ Giorgio: like fantasy football's best available. Walk the market by size and tak
 - **H1.** `db push` of `20261010000000`, from the deploy checkout only (CLAUDE.md). Then run the proacl queries at the bottom of the migration, then `docs/security/draft-pick-clock-effect-test.sql` in the SQL editor. Every line must PASS.
 - **H2.** Deploy `validate-and-record-pick` and `draft-autopick-sweep` with `--project-ref haiaaifjcclsvmkfqgmd`. Check that the upload list includes `_shared/auto-pick.ts`, `_shared/draft-write.ts` and `_shared/cron-auth.ts`, then `supabase functions download` each and diff against the commit. A no-credential POST to the sweep must return the function's own `401 {"error":"Unauthorized"}`.
 - **H3.** Confirm the `SB_SECRET_KEY_CRON` function secret and the vault `cron_apikey` exist. Both are already used by the other crons; nothing new is needed.
-- **H4.** Promote `deferred/20261010000001_schedule_draft_autopick_sweep.sql` per `supabase/migrations/deferred/README.md`, then `db push` and run the data check at the bottom of that file.
+- **H4.** Promoted as `20261106000000_schedule_draft_autopick_sweep.sql` (with the cron-log purge and the SKIP trigger). The live test, the `db push` and every verification query are in `docs/migrations/AUTOPICK_CRON_LIVE.md`; follow that runbook, not this line.
 - **H5.** Refresh `db-snapshot.json` (new grants, RLS and cron), then `node scripts/gen-architecture.mjs`. The four "ABSENT from prod snapshot" drift rows should clear.
 
 Old mobile builds keep working. Once H4 is live the server auto-picks for their users too, but the countdown and queue UI arrive only with a new build.
@@ -164,6 +164,8 @@ SELECT o.league_id, l.name, o.pick_number, o.deadline_at, now() - o.deadline_at 
 -- Expect ZERO rows. A row = that league's sweep is failing every tick: read
 -- the draft-autopick-sweep logs for its errors[] entry.
 ```
+
+**Superseded by a richer version** (2026-10-06): `docs/migrations/AUTOPICK_CRON_LIVE.md` §12 splits each overdue row into `SWEEP FAILING` (the alarm), `STALLED` (`draft_stalls` row, the commissioner is notified) and `VENDOR OUTAGE`, and adds the picks-by-source and purge checks. Use that one.
 
 One query is enough: a draft that advances always has a recent `deadline_at`, so an old deadline can only mean nothing has been written for that turn.
 

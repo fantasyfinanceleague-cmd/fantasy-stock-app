@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261010000001_schedule_draft_autopick_sweep.sql`, `20261013000001_schedule_draft_order_notify.sql` and `20261023000009_drop_start_new_league_season.sql`.
+**Currently held:** 2 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261023000009_drop_start_new_league_season.sql`.
 
 ## How to use it
 
@@ -76,88 +76,6 @@ must return zero rows) and re-run the effect-verify query above against a
 *second* fresh test league to prove drafting still works with the policies
 gone. Then move this section to *History*.
 
-### `20261010000001_schedule_draft_autopick_sweep.sql`
-
-Schedules `draft_autopick_sweep`, the pick clock's server backstop: every tick
-it posts to `draft-autopick-sweep` **only when** `public.overdue_draft_turns()`
-returns a row, and that function auto-picks every expired turn in every clocked
-live draft. This is what finishes a draft when nobody has the app open.
-
-**Where to run:** the deploy checkout only, refreshed first (see the entry
-above and CLAUDE.md).
-
-**Precondition: ALL of the following, in order.**
-1. `20261010000000_draft_pick_clock_and_queue.sql` is applied
-   (`schema_migrations`), and `overdue_draft_turns`' `proacl` shows
-   `service_role` only (the query is at the bottom of that migration).
-2. `draft-autopick-sweep` is **deployed**
-   (`supabase functions deploy draft-autopick-sweep --project-ref haiaaifjcclsvmkfqgmd`),
-   byte-verified against the commit (`supabase functions download`, then diff),
-   and a no-credential POST returns the function's own
-   `401 {"error":"Unauthorized"}`, not the gateway's generic 401.
-3. `validate-and-record-pick` with `action:'auto_pick'` is deployed. Check the
-   content first: `grep -c auto_pick supabase/functions/validate-and-record-pick/index.ts`
-   must be ≥ 1.
-4. **The pg_cron version decides the schedule literal.**
-   `SELECT extversion FROM pg_extension WHERE extname = 'pg_cron';` must be
-   ≥ 1.5 for `'10 seconds'`. On an older version, change it to `'* * * * *'`
-   before promoting (see the file header).
-5. A manual run passes: `net.http_post` to the function with the vault
-   `cron_apikey`, on a test league with a 30 s clock whose turn is overdue,
-   writes a `drafts` row with `pick_source` `auto_*` or `bot`.
-
-**Timestamp note:** if migrations newer than `20261010000001` have been
-applied before this is promoted, rename it to a fresh timestamp rather than
-passing `--include-all`.
-
-**After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_autopick_sweep';`,
-then run the data check at the bottom of the file (a test draft with every app
-closed keeps advancing, every pick ≥ `pick_seconds` apart). From then on, the
-standing stuck-draft check is the query in `docs/migrations/DRAFT_PICK_CLOCK.md`
-§Monitoring: any turn more than 2 minutes overdue means that league's sweep is
-failing. Then move this section to *History*.
-
-### `20261013000001_schedule_draft_order_notify.sql`
-
-Schedules `draft_order_notify` (every minute). It posts to `draft-order-notify`
-**only when** `public.draft_order_notify_due()` is true. That function
-finalizes every due draft order nobody has opened, which creates the
-"draft order is set" notices in the same transaction. It then delivers the
-pending pushes. The order itself never depends on this job, because every read
-finalizes lazily; the job owns timeliness and the push.
-
-**Where to run:** the deploy checkout only, refreshed first (see the entries
-above and CLAUDE.md).
-
-**Precondition: ALL of the following, in order.**
-1. `20261013000000_draft_order_modes.sql` is applied (`schema_migrations`),
-   and `docs/security/draft-order-modes-effect-test.sql` returned all PASS.
-   `draft_order_notify_due`'s and `finalize_due_draft_orders`' `proacl` show
-   `service_role` only.
-2. `draft-order-notify` is **deployed**
-   (`supabase functions deploy draft-order-notify --project-ref haiaaifjcclsvmkfqgmd`)
-   and byte-verified against the commit (`supabase functions download`, then
-   diff). The "Uploading asset" list must include `_shared/push.ts`,
-   `_shared/cron-auth.ts` and `draft-order-notify/plan.ts`. A no-credential
-   POST must return the function's own `401 {"error":"Unauthorized"}`, not the
-   gateway's generic 401.
-3. A manual run passes: `net.http_post` to the function with the vault
-   `cron_apikey`, on a TEST league with 4 members and `draft_date` 30–50
-   minutes out. It must set `league_draft_order_meta.state = 'finalized'` and
-   settle that league's `league_notifications.push_status` rows (`sent` for a
-   1.1.0 device, `no_device` otherwise).
-   `net.http_post(... timeout_milliseconds := 30000)` is already proven on
-   this `pg_net`: the applied, running `20261005000003_schedule_refresh_market_calendar.sql`
-   passes it. The manual run still exercises it before scheduling.
-
-**Timestamp note:** if migrations newer than `20261013000001` have been
-applied before this is promoted, rename it to a fresh timestamp rather than
-passing `--include-all`.
-
-**After applying:** `SELECT jobname, schedule, command FROM cron.job WHERE jobname = 'draft_order_notify';`,
-then run the data check at the bottom of the file. Then move this section to
-*History*.
-
 ### `20261023000009_drop_start_new_league_season.sql`
 
 Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
@@ -207,19 +125,12 @@ rewritten, so it is unaffected.)
 | `20260808000001_drop_broker_credentials.sql` | `quote` still read `broker_credentials`; dropping it would have broken live prices app-wide | `quote` rewired onto the app key (Workstream A); promoted and applied 2026-08-10 |
 | `20260810000007_drafts_league_id_set_not_null.sql` | Orphan `drafts` rows with NULL `league_id` would abort the push | Zero NULL rows verified in prod; promoted in `4b3eba2` and applied |
 | `20260926000001_drop_client_schedule_insert_policies.sql` | Server-side finalize (PR #14) not yet deployed and effect-verified; web schedule writers still live | Verified by two prod test drafts (test_0925; test_09_25_v2 fully on mobile, PR #20); promoted 2026-09-25 as `20261002000000_drop_client_schedule_insert_policies.sql` (closes F10, retires [I8]/[I9]) |
+| `20261013000001_schedule_draft_order_notify.sql` | `draft-order-notify` not yet deployed/effect-verified | **Promoted 2026-10-06 by draft auto-start** as `20261111000003_schedule_draft_order_notify.sql` (re-stamped; guard widened with `draft_room_notices_due()`; `timeout_milliseconds := 180000` per `20261108000000`). The "draft room is open" push rides it. Its deploy + byte-verify precondition moved into that file's header and `docs/migrations/DRAFT_AUTO_START_PLAN.md`. |
 | `20261005000003_schedule_refresh_market_calendar.sql` | `refresh-market-calendar` not yet deployed/effect-verified; scheduling the cron first would have called a function that didn't exist yet | **Promoted 2026-09-29**, timestamp unchanged (no migration newer than it was applied yet, so no rename needed). All three preconditions met: (1) `20261005000000`–`20261005000002` applied, proacl/relacl verified — `market_session_status` authenticated-only, `apply_market_calendar` service_role-only, `market_calendar`/`market_calendar_coverage` grant `authenticated=r` with no `anon`; (2) `refresh-market-calendar` deployed and byte-identical to `main`, a no-credential POST returned the function's own `401 {"error":"Unauthorized"}` (not the gateway's generic 401), and a manual run via `net.http_post` with the vault `cron_apikey` populated `market_calendar_coverage` `2026-09-22..2026-12-28` (68 sessions), `refreshed_at` 2026-09-29 01:53 UTC — `market_session_status` correctly read "closed / next open: Tue 2026-09-29 09:30"; (3) `docs/security/game-data-asks-effect-test.sql` section #7 gates the push (run after merge, before `db push`, per the Orchestrator). Pushed together with `20261005000004_backfill_missing_user_profiles.sql` in one `db push`, no `--include-all` needed. |
+| `20261010000001_schedule_draft_autopick_sweep.sql` | Live test of the sweep (precondition 5) | **Promoted as `20261106000000` (applied: PENDING the HUMAN ACTION `db push`; record the date here once it is)** (stall throttle + explicit 180000 ms timeout added), together with `20261106000001_purge_cron_run_details.sql` (new) and the SKIP trigger below, after the live test in `docs/migrations/AUTOPICK_CRON_LIVE.md`. Verification and the post-promotion data check are in that runbook. |
+| `20261101000002_drafts_refuse_new_skip.sql` | The sweep cron had to be live first (stall recovery for bots relies on it), and had to be re-stamped later than prod's latest applied migration | **Promoted as `20261106000002` (applied: PENDING `db push`)**, body unchanged, in the same release as the cron. Effect check: `docs/security/refuse-new-skip-effect-test.sql`. |
 
 Note that "held for the mobile release" migrations were not always parked here:
 `20260811000009_drop_leagues_salary_cap_limit.sql` sat in the apply path with a
 "hold" header and was applied by a later `db push`. **A header comment does not hold
 a migration — only this directory does.**
-
-## 20261101000002_drafts_refuse_new_skip.sql (draft-never-skips, 2026-10-05)
-
-Held. A BEFORE INSERT trigger refusing any new `drafts` row with symbol `SKIP`.
-Precondition (all three, in order): (1) `20261101000000` and `20261101000001` are
-applied and verified; (2) validate-and-record-pick, draft-control and
-draft-autopick-sweep from the draft-never-skips build are deployed AND
-byte-verified (the old code still writes SKIP on its skip paths and would 500
-under this trigger); (3) the auto-pick sweep cron (`20261010000001`, above) is
-promoted with 1.2.0, since stall recovery for bots relies on it.

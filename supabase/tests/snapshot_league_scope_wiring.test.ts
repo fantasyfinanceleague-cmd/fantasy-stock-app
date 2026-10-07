@@ -32,11 +32,13 @@ for (const file of FILES) {
       `${name}: scope is not re-checked in code (isInSeasonLeague)`);
   });
 
-  Deno.test(`${name}: no-leagues early return writes a terminal status`, async () => {
+  Deno.test(`${name}: no-leagues early return carries a terminal 'success' outcome`, async () => {
+    // The terminal write now happens in runJob (_shared/run-job.ts), which writes
+    // exactly one per run; the branch's job is to RETURN an outcome (work 0).
     const src = await Deno.readTextFile(file);
     assert(
-      /No active matchup leagues found'\);\s*\n\s*(\/\/[^\n]*\n\s*)*await updateJobStatus\(supabase, JOB_NAME, 'success'/.test(src),
-      `${name}: the no-leagues return does not write 'success' first (stranded 'running')`,
+      /No active matchup leagues found'\);\s*\n\s*(\/\/[^\n]*\n\s*)*return \{\s*outcome: \{ status: 'success', attempt: retryAttempt, work: 0 \}/.test(src),
+      `${name}: the no-leagues return carries no 'success' outcome (stranded 'running')`,
     );
   });
 

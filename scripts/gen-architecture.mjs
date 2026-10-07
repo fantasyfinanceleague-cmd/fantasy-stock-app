@@ -29,6 +29,7 @@ import { join, relative, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { analyzeCalls, opAfterFrom } from './arch-call-sites.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = join(ROOT, 'docs/architecture');
@@ -193,27 +194,8 @@ const RE_ENV = /(?:Deno\.env\.get|\benv)\(\s*['"]([A-Z][A-Z0-9_]*)['"]\s*\)/;
 const RE_LOCAL_IMPORT = /from\s+['"]\.\/([\w.\-]+\.ts)['"]/;
 const RE_URL = /['"`](https:\/\/([a-z0-9.\-]+)\/[^'"`\s]*)['"`]/;
 
-/**
- * After `.from('t')`, find the PostgREST verb AND, for selects, the column list.
- *
- * Columns are load-bearing, not decoration. `.from('broker_credentials').select()`
- * and `.select('key_id')` are completely different security stories — the first ships
- * encrypted secrets to the browser, the second ships an identifier. An edge that says
- * only "select" cannot tell you which one you have.
- */
-function opAfterFrom(content, endIndex) {
-  const tail = content.slice(endIndex, endIndex + 400);
-  const m = tail.match(/\.\s*(select|insert|update|upsert|delete)\b/);
-  if (!m) return { verb: 'select', columns: null };
-  const verb = m[1];
-  if (verb !== 'select') return { verb, columns: null };
-  // `.select('a, b')` -> "a, b"; `.select()` -> "*" (PostgREST's default is all columns)
-  const rest = tail.slice(m.index);
-  const quoted = rest.match(/^\.\s*select\(\s*(['"`])([\s\S]*?)\1/);
-  if (quoted) return { verb, columns: quoted[2].replace(/\s+/g, ' ').trim() };
-  if (/^\.\s*select\(\s*\)/.test(rest)) return { verb, columns: '*' };
-  return { verb, columns: null };
-}
+// opAfterFrom (the PostgREST verb and select columns after `.from('t')`) lives in
+// arch-call-sites.mjs, which the wrapper analysis shares.
 
 const VENDOR_HOSTS = {
   'data.alpaca.markets': { id: 'ext.alpaca-data', label: 'Alpaca Market Data', sublabel: 'data.alpaca.markets' },
@@ -242,7 +224,19 @@ function scanCallSites(files) {
       if (vendor) vendorCalls.push({ file: r, line, host: m[2], url: m[1] });
     }
   }
-  return { invokes, rpcs, tableOps, vendorCalls };
+
+  // Calls the literal scan cannot see: through wrapper functions (found from their
+  // DEFINITIONS), plus everything it could not attribute, REPORTED rather than dropped.
+  const seen = new Set([
+    ...invokes.map((x) => `invoke|${x.file}|${x.line}|${x.target}`),
+    ...rpcs.map((x) => `rpc|${x.file}|${x.line}|${x.target}`),
+    ...tableOps.map((x) => `table|${x.file}|${x.line}|${x.table}|${x.verb}`),
+  ]);
+  const extra = analyzeCalls(files.map((f) => ({ path: rel(f), content: read(f) })), seen);
+  invokes.push(...extra.invokes);
+  rpcs.push(...extra.rpcs);
+  tableOps.push(...extra.tableOps);
+  return { invokes, rpcs, tableOps, vendorCalls, unattributed: extra.unattributed, wrappers: extra.wrappers };
 }
 
 // ---------------------------------------------------------------------------
@@ -503,7 +497,7 @@ const FLOWS = [
     trigger: { kind: 'cron', detail: 'pg_cron `process-weekly-matchups` — Friday 21:15 UTC', cronJob: 'process-weekly-matchups' },
     steps: [
       { edge: 'e.cron.process-weekly-matchups->fn.process-week-results', detail: 'net.http_post with an apikey header read from vault secret `cron_apikey`.' },
-      { edge: 'e.fn.process-week-results->tbl.cron_job_status#upsert', detail: 'Job marked running before any work.', anchors: [['supabase/functions/process-week-results/index.ts', "updateJobStatus(supabase, JOB_NAME, 'running'"]] },
+      { edge: 'e.fn.process-week-results->tbl.cron_job_status#upsert', detail: 'Job marked running before any work, and ended in exactly one terminal status by runJob. Written through the same-day overwrite rule, so the 22:00Z / Saturday no-op heals cannot replace the 21:15Z run\'s result.', anchors: [['supabase/functions/process-week-results/index.ts', 'return await runJob<Response>({']] },
       { edge: 'e.fn.process-week-results->tbl.matchups', detail: 'Pending matchups: team1_gain IS NULL, week_end in the past, league_type=matchup. The NULL filter is what makes a re-run idempotent.', anchors: [['supabase/functions/process-week-results/index.ts', ".is('team1_gain', null)"]] },
       { edge: 'e.fn.process-week-results->mod.process-week-results/grouping', detail: 'One batch per (league_id, week_number), sorted week-ascending. Grouping by league alone was the original bug; the sort is load-bearing for week advancement.', anchors: [['supabase/functions/process-week-results/index.ts', 'groupMatchupsByLeagueWeek(pendingMatchups)'], ['supabase/functions/process-week-results/grouping.ts', 'export function groupMatchupsByLeagueWeek']] },
       { edge: 'e.fn.process-week-results->tbl.week_snapshots', detail: 'Per batch. Presence of any row sets hasSnapshots; any week_end_price sets hasWeekEndPrices.', anchors: [['supabase/functions/process-week-results/index.ts', "week_start_price, week_end_price"]] },
@@ -653,6 +647,8 @@ function build() {
       // Merge column sets across call sites: five screens reading one table may each
       // select something different, and the union is what the table actually exposes.
       if (e.columns?.length) existing.columns = [...new Set([...(existing.columns || []), ...e.columns])].sort();
+      // Which wrapper(s) the call sites went through: an edge reached only via seamRpc says so.
+      if (e.via?.length) existing.via = [...new Set([...(existing.via || []), ...e.via])].sort();
       return existing;
     }
     edges.set(e.id, { annotation: null, verified: true, ...e });
@@ -739,7 +735,7 @@ function build() {
       const from = originFor(s.file);
       if (!from) continue;
       addEdge({ id: `e.${from}->fn.${s.target}`, from, to: `fn.${s.target}`, protocol: 'https-invoke',
-        payload: `functions.invoke('${s.target}')`, callSites: [`${s.file}:${s.line}`] });
+        payload: `functions.invoke('${s.target}')`, callSites: [`${s.file}:${s.line}`], ...(s.via ? { via: [s.via] } : {}) });
       if (!nodes.has(`fn.${s.target}`)) {
         unverified.push({ scope: `e.${from}->fn.${s.target}`, claim: `edge function '${s.target}' exists`, reason: 'Invoked from code but no supabase/functions/' + s.target + '/ directory.', resolve: 'Check for a renamed or deleted function.' });
         addNode({ id: `fn.${s.target}`, label: s.target, sublabel: 'MISSING', kind: 'edge-function', source: null, verified: false });
@@ -749,11 +745,11 @@ function build() {
       const from = originFor(s.file);
       if (!from) continue;
       addEdge({ id: `e.${from}->pg.${s.target}`, from, to: `pg.${s.target}`, protocol: 'postgrest-rpc',
-        payload: `rpc('${s.target}')`, callSites: [`${s.file}:${s.line}`] });
+        payload: `rpc('${s.target}')`, callSites: [`${s.file}:${s.line}`], ...(s.via ? { via: [s.via] } : {}) });
     }
     for (const s of sites.tableOps) {
-      const from = originFor(s.file);
-      if (!from) continue;
+      const froms = [].concat(originFor(s.file) || []);
+      for (const from of froms) {
       // One edge PER VERB, not one lumped #write edge. An insert and an update to the
       // same table are different architectural facts (and different blast radii), and
       // collapsing them would silently label a table "written" by whichever verb the
@@ -762,7 +758,8 @@ function build() {
       addEdge({ id: `e.${from}->tbl.${s.table}${suffix}`, from, to: `tbl.${s.table}`, protocol: `postgrest-${s.verb}`,
         payload: `.from('${s.table}').${s.verb}(${s.columns ? `'${s.columns}'` : ''})`,
         columns: s.columns ? [s.columns] : [],
-        callSites: [`${s.file}:${s.line}`] });
+        callSites: [`${s.file}:${s.line}`], ...(s.via ? { via: [s.via] } : {}) });
+      }
     }
     for (const s of sites.vendorCalls) {
       const from = originFor(s.file);
@@ -783,7 +780,25 @@ function build() {
   addCallSiteEdges(clientSites, clientOrigin);
 
   // function origins
+  // A call site in a shared module has no function of its own. For the modules named
+  // here the site is attributed to EVERY function that imports the module, so the map
+  // keeps showing who writes the table. Without this, moving the cron_job_status writer
+  // out of a function's directory silently deleted that function's edge (and broke the
+  // weekly-scoring flow's cron_job_status step). Other _shared modules stay unattributed,
+  // as before: widening this is a deliberate act, not a side effect.
+  const SHARED_ATTRIBUTED = ['supabase/functions/_shared/job-status-io.ts'];
+  const importersOf = (sharedFile) => {
+    const base = sharedFile.split('/').pop();
+    const out = new Set();
+    for (const f of readdirSync(join(ROOT, 'supabase/functions'), { withFileTypes: true })) {
+      if (!f.isDirectory() || f.name.startsWith('_') || !nodes.has(`fn.${f.name}`)) continue;
+      const files = readdirSync(join(ROOT, `supabase/functions/${f.name}`)).filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'));
+      if (files.some((n) => readFileSync(join(ROOT, `supabase/functions/${f.name}/${n}`), 'utf8').includes(`_shared/${base}'`))) out.add(`fn.${f.name}`);
+    }
+    return [...out];
+  };
   const fnOrigin = (file) => {
+    if (SHARED_ATTRIBUTED.includes(file)) return importersOf(file);
     const m = /^supabase\/functions\/([\w-]+)\//.exec(file);
     return m && nodes.has(`fn.${m[1]}`) ? `fn.${m[1]}` : null;
   };
@@ -1063,12 +1078,40 @@ function build() {
   flows.forEach(annotate);
   const orphanAnnotations = Object.keys(annotations).filter((k) => !k.startsWith('_') && !nodes.has(k) && !edges.has(k) && !flows.some((f) => f.id === k));
 
+  // --- call-site scan: the wrappers it found, and what it could NOT attribute ---
+  const viaTag = (x) => (x.via ? ` (via ${x.via}${x.inferred ? ', inferred' : ''})` : x.inferred ? ' (inferred)' : '');
+  const callSiteScan = {
+    covers: 'Direct supabase calls with a literal name (.rpc / .functions.invoke / .from), plus calls through wrapper functions found from their DEFINITIONS (a function that forwards a parameter as the call name; a SEAM_ON stub that makes real calls; a callback wrapper whose closure makes them). Comments are ignored.',
+    wrappers: [...clientSites.wrappers.map((w) => ({ surface: 'client', ...w })), ...fnSites.wrappers.map((w) => ({ surface: 'edge-function', ...w }))]
+      .sort((a, b) => a.name.localeCompare(b.name) || a.file.localeCompare(b.file)),
+    inferred: [...clientSites.rpcs, ...clientSites.invokes, ...clientSites.tableOps, ...fnSites.rpcs, ...fnSites.invokes, ...fnSites.tableOps]
+      .filter((x) => x.inferred).map((x) => `${x.file}:${x.line} -> ${x.target ?? x.table}${x.via ? ` (via ${x.via})` : ''}`).sort(),
+    unattributed: [...clientSites.unattributed, ...fnSites.unattributed],
+    cannotSee: [
+      'a name built at runtime (reported above, never guessed)',
+      'a wrapper reached through a re-export or alias this cannot resolve by file name',
+      'object/class methods that call supabase with a name argument (reported as unattributed)',
+      'a seam stub gated by something other than SEAM_ON',
+    ],
+  };
+  if (callSiteScan.unattributed.length) {
+    unverified.push({
+      scope: 'callSiteScan', claim: 'the call-site edges are complete',
+      reason: `${callSiteScan.unattributed.length} supabase call site(s) could not be attributed to an RPC, table or function, so the edges they would draw are MISSING from this map: ` +
+        callSiteScan.unattributed.slice(0, 5).map((u) => `${u.file}:${u.line} (${u.reason})`).join('; ') + (callSiteScan.unattributed.length > 5 ? '; …' : ''),
+      resolve: 'See callSiteScan.unattributed in architecture.json. Pass the name as a string literal at the call, or add the edge by hand in annotations.json.',
+    });
+  }
+
   // --- source index + hash ---
   const sourceIndex = {
     edgeFunctions: edgeFns.map((f) => `${f.name}[${f.modules.join(',')}]`).sort(),
-    invokes: [...clientSites.invokes, ...fnSites.invokes].map((s) => `${s.file}:${s.line} -> ${s.target}`).sort(),
-    rpcs: [...clientSites.rpcs, ...fnSites.rpcs].map((s) => `${s.file}:${s.line} -> ${s.target}`).sort(),
-    tableOps: [...clientSites.tableOps, ...fnSites.tableOps].map((s) => `${s.file}:${s.line} -> ${s.table}.${s.verb}`).sort(),
+    invokes: [...clientSites.invokes, ...fnSites.invokes].map((s) => `${s.file}:${s.line} -> ${s.target}${viaTag(s)}`).sort(),
+    rpcs: [...clientSites.rpcs, ...fnSites.rpcs].map((s) => `${s.file}:${s.line} -> ${s.target}${viaTag(s)}`).sort(),
+    tableOps: [...clientSites.tableOps, ...fnSites.tableOps].map((s) => `${s.file}:${s.line} -> ${s.table}.${s.verb}${viaTag(s)}`).sort(),
+    // The blind spots are part of what the map CLAIMS, so a change in them makes it stale.
+    wrappers: callSiteScan.wrappers.map((w) => `${w.name} ${w.kind} ${w.file}`).sort(),
+    unattributed: callSiteScan.unattributed.map((u) => `${u.file}:${u.line} ${u.kind} ${u.reason}`).sort(),
     migrations: migrations.files,
     config: Object.entries(config).map(([k, v]) => `${k}=${v.verifyJwt}`).sort(),
     dbSnapshot: snapshot.hash,
@@ -1151,6 +1194,7 @@ function build() {
       flows,
       drift: driftRows,
       deadCode,
+      callSiteScan,
       unverified,
       orphanAnnotations,
       stats: {
@@ -1180,6 +1224,11 @@ if (CHECK_ONLY) {
   const prev = JSON.parse(read(OUT_JSON));
   if (prev.generated?.sourceHash === sourceHash) {
     console.log(`architecture.json is current (${sourceHash}).`);
+    // "Current" is a statement about the map matching the sources it can SEE. Say what it cannot.
+    const blind = prev.callSiteScan?.unattributed?.length ?? 0;
+    console.log(blind
+      ? `  but ${blind} supabase call site(s) could not be attributed and are NOT in the map (callSiteScan.unattributed).`
+      : '  no supabase call site went unattributed.');
     process.exit(0);
   }
   console.error('architecture.json is STALE (sourceHash mismatch)\n');
@@ -1229,6 +1278,7 @@ const s = doc.stats;
 console.log(`Wrote docs/architecture/architecture.json + architecture.html`);
 console.log(`  ${s.nodes} nodes · ${s.edges} edges · ${s.flows} flows`);
 console.log(`  ${s.drift} drift rows (${s.driftHigh} high) · ${s.unverified} unverified`);
+console.log(`  call sites: ${doc.callSiteScan.wrappers.length} wrapper(s) found · ${doc.callSiteScan.inferred.length} inferred · ${doc.callSiteScan.unattributed.length} UNATTRIBUTED${doc.callSiteScan.unattributed.length ? ' (listed in callSiteScan.unattributed)' : ''}`);
 console.log(`  db-snapshot: ${doc.dbSnapshot.present ? doc.dbSnapshot.ageDays + 'd old' : 'MISSING'}`);
 console.log(`  sourceHash: ${sourceHash}`);
 if (doc.orphanAnnotations.length) {

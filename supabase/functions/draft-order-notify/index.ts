@@ -1,19 +1,23 @@
-// draft-order-notify — "the draft order is set" delivery, CRON ONLY.
+// draft-order-notify — the draft-lifecycle push delivery, CRON ONLY.
 //
-// The draft order is finalized at the LATER of draft_date − 1h and the league
-// reaching 4 members (20261013000000_draft_order_modes.sql). Any read or write
-// finalizes lazily, so the ORDER is always right even if this never runs; what
-// this function owns is TIMELINESS and the PUSH:
-//   1. finalize_due_draft_orders() — finalize every due league nobody has
-//      opened, which (in the same SQL transaction) creates one
-//      league_notifications row per human member. Exactly once: the partial
-//      UNIQUE index makes every other finalize path a no-op.
-//   2. Deliver pending rows: claim (conditional UPDATE on the observed status +
-//      attempt count, so an overlapping run cannot double-send), read the
-//      member's CURRENT position, send via Expo, settle the status.
-// Scheduled by supabase/migrations/deferred/20261013000001_schedule_draft_order_notify.sql,
-// whose command posts only WHERE draft_order_notify_due() — an idle system
-// makes no edge calls.
+// Draft auto-start (2026-10-06, 20261111000000) made this the delivery for
+// every draft push: the room opening (T-1h, with your position), the start, a
+// postponement (everyone), and the commissioner's at-risk warning. A run:
+//   1. open_due_draft_rooms() — every league the auto-start gate cleared whose
+//      room time has come: finalize the order and write one 'draft_room_open'
+//      row per human (late joiners too). Exactly once per draft time.
+//   2. finalize_due_draft_orders() — #67's on-time finalize for everything
+//      else. Its 'draft_order_set' rows are in-app records now (push marked
+//      skipped at insert), so this sends nothing by itself.
+//   3. Deliver pending rows of DELIVERED_KINDS ('draft_time_set' only after 2
+//      quiet minutes, so a burst of edits is one push): claim (conditional UPDATE on
+//      the observed status + attempt count, so an overlapping run cannot
+//      double-send), read the CURRENT context (draft_notice_context: position,
+//      names, state), decide (plan.ts decideNotice: a notice whose event no
+//      longer holds is skipped, never sent), send via Expo, settle the status.
+// Scheduled by supabase/migrations/20261111000003_schedule_draft_order_notify.sql,
+// whose command posts only WHERE draft_order_notify_due() OR
+// draft_room_notices_due() — an idle system makes no edge calls.
 //
 // SUCCESS-SIGNAL DISCIPLINE (CLAUDE.md): top-level `ok` means ONLY "the run
 // completed". Per-row outcomes are counted separately; nothing here claims a
@@ -29,10 +33,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { isAuthorized } from '../_shared/cron-auth.ts';
 import { getTargetToken, sendExpoPush } from '../_shared/push.ts';
 import {
+  decideNotice,
+  DELIVERED_KINDS,
   type DeliveryOutcome,
-  draftOrderSetMessage,
+  fairOrder,
+  isDebouncing,
   MAX_PUSHES_PER_RUN,
   nextPushStatus,
+  type NoticeContext,
   STALE_SENDING_MS,
 } from './plan.ts';
 
@@ -43,6 +51,8 @@ interface NoticeRow {
   id: string;
   league_id: string;
   user_id: string;
+  kind: string;
+  created_at: string;
   push_status: string;
   push_attempts: number;
 }
@@ -53,9 +63,13 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_SECRET_KEY_INTERNAL')!);
 
-  // ---- 1. On-time finalize (creates the notices) ---------------------------
+  // ---- 1. Open due rooms (creates the room-open notices) ---------------------
   // Destructure-and-check: .rpc() resolves to { error } on a Postgres error.
   // A failure here does not stop delivery of notices that already exist.
+  const { data: opened, error: openErr } = await admin.rpc('open_due_draft_rooms');
+  if (openErr) console.error('open_due_draft_rooms failed', JSON.stringify(openErr));
+
+  // ---- 2. On-time finalize for everything else (#67) -------------------------
   const { data: finalized, error: finErr } = await admin.rpc('finalize_due_draft_orders');
   if (finErr) console.error('finalize_due_draft_orders failed', JSON.stringify(finErr));
 
@@ -63,67 +77,38 @@ Deno.serve(async (req: Request) => {
   const staleIso = new Date(Date.now() - STALE_SENDING_MS).toISOString();
   const { data: rows, error: selErr } = await admin
     .from('league_notifications')
-    .select('id, league_id, user_id, push_status, push_attempts')
-    .eq('kind', 'draft_order_set')
+    .select('id, league_id, user_id, kind, created_at, push_status, push_attempts')
+    .in('kind', [...DELIVERED_KINDS])
     .or(`push_status.eq.pending,and(push_status.eq.sending,push_attempted_at.lt.${staleIso})`)
     .order('created_at', { ascending: true })
-    .limit(MAX_PUSHES_PER_RUN);
+    .limit(MAX_PUSHES_PER_RUN * 4); // oldest first, then shared fairly across leagues (fairOrder)
   if (selErr) {
     console.error('notice select failed', JSON.stringify(selErr));
-    return json({ ok: false, reason: 'notice_query_failed', finalized: finalized ?? null }, 500);
+    return json({ ok: false, reason: 'notice_query_failed', opened: opened ?? null, finalized: finalized ?? null }, 500);
   }
 
   const counts: Record<string, number> = {};
   const bump = (k: string) => (counts[k] = (counts[k] ?? 0) + 1);
-  interface LeagueInfo { name: string; mode: string; draftDate: string | null; started: boolean }
-  const leagues = new Map<string, LeagueInfo | null>();
-
-  async function leagueInfo(id: string): Promise<LeagueInfo | null | undefined> {
-    if (leagues.has(id)) return leagues.get(id);
-    const { data, error } = await admin
-      .from('leagues').select('name, draft_order_mode, draft_date, draft_status').eq('id', id).maybeSingle();
-    if (error) return undefined; // lookup failed: not cached, retried next row/tick
-    const info = data
-      ? {
-        name: String(data.name ?? 'Your league'),
-        mode: String(data.draft_order_mode ?? 'random'),
-        draftDate: data.draft_date ?? null,
-        started: (data.draft_status ?? 'not_started') !== 'not_started',
-      }
-      : null;
-    leagues.set(id, info);
-    return info;
-  }
 
   async function deliver(row: NoticeRow): Promise<DeliveryOutcome> {
-    const { data: pos, error: posErr } = await admin
-      .from('league_draft_order').select('position')
-      .eq('league_id', row.league_id).eq('user_id', row.user_id).maybeSingle();
-    if (posErr) return 'lookup_failed';
-    if (!pos) return 'not_in_order';
-    const lg = await leagueInfo(row.league_id);
-    if (lg === undefined) return 'lookup_failed';
-    if (lg === null) return 'not_in_order'; // league deleted since (cascade would normally remove the row)
+    const { data: ctx, error: ctxErr } = await admin.rpc('draft_notice_context', { p_notice_id: row.id });
+    if (ctxErr) return 'lookup_failed';
+    if (!ctx) return 'not_in_order'; // league deleted since (cascade would normally remove the row)
+    const decision = decideNotice(ctx as NoticeContext);
+    if (!decision.send) return decision.outcome;
 
     const { token, enabled, lookupFailed } = await getTargetToken(admin, row.user_id);
     if (lookupFailed) return 'lookup_failed';
     if (!token || !enabled) return 'no_token';
 
-    const res = await sendExpoPush(
-      token,
-      draftOrderSetMessage({
-        leagueName: lg.name,
-        leagueId: row.league_id,
-        mode: lg.mode,
-        position: Number(pos.position),
-        draftDate: lg.draftDate,
-        draftStarted: lg.started,
-      }),
-    );
+    const res = await sendExpoPush(token, decision.message);
     return res.sent ? 'sent' : res.reason;
   }
 
-  for (const row of (rows ?? []) as NoticeRow[]) {
+  // A draft-time change waits for 2 quiet minutes (plan.ts TIME_SET_QUIET_MS):
+  // left pending and unclaimed, so a further change can still re-stamp it.
+  const now = new Date();
+  for (const row of fairOrder(((rows ?? []) as NoticeRow[]).filter((r) => !(r.push_status === 'pending' && isDebouncing(r.kind, r.created_at, now))), MAX_PUSHES_PER_RUN)) {
     const attempts = Number(row.push_attempts) + 1;
     // CLAIM: only if nobody moved the row since we read it.
     const { data: claimed, error: claimErr } = await admin
@@ -166,6 +151,8 @@ Deno.serve(async (req: Request) => {
 
   return json({
     ok: true, // the run COMPLETED — not a claim that any push was delivered
+    opened: openErr ? null : opened,
+    open_error: openErr ? 'open_due_draft_rooms_failed' : null,
     finalized: finErr ? null : finalized,
     finalize_error: finErr ? 'finalize_due_draft_orders_failed' : null,
     examined: (rows ?? []).length,

@@ -1,0 +1,4 @@
+// FIXTURE: defines its OWN seamRpc and calls it, imports nothing. It is a different function
+// from the wrapper in seamCalls.ts and must not be attributed through it.
+function seamRpc(n: string) { return n; }
+export const x = seamRpc('not_an_rpc');

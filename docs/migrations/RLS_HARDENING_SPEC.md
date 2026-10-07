@@ -131,7 +131,7 @@ B1 closed the read exposure with interim write policies. The remaining work belo
 - **`create-league`** *(not designed)* — atomic `leagues` + `league_members` self-insert. Retires `[I1]` + the now-narrowed `[I4]`.
 - **`update-league`** *(not designed)* — commissioner settings/date edits. Retires `[I2a]`.
 - **`draft-control`** *(not designed)* — draft start/complete transitions + bot member seeding. Retires `[I2b]` + `[I6]`.
-- **`leave-league`** *(not designed)* — self-removal. Retires `[I5]`.
+- **`leave-league`** *(BUILT on `feat/leave-league` 2026-10-05, not applied)*: the pre-draft leave and the post-season hide, through `leave_league` (service_role only). `20261107000004` drops `[I5]`. Plan: [`LEAVE_LEAGUE_OPTIONS.md`](LEAVE_LEAGUE_OPTIONS.md).
 - **`delete-league`** *(not designed)* — commissioner delete. Retires `[I3]`.
 - **schedule-gen (mini-project #2)** *(not started)* — move client-side matchup schedule + standings init server-side (currently any member's browser runs it). Retires `[I8]` + `[I9]`.
 

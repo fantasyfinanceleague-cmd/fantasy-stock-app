@@ -7,7 +7,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import LeagueSwitcher from '@/components/LeagueSwitcher';
-import { notifyDraftTurn } from '@/lib/notifications';
 import {
   type Category,
   fetchCategories,
@@ -568,20 +567,9 @@ export default function DraftScreen() {
           Alert.alert('Draft Complete!', 'The draft has finished. Good luck!');
         }
         await refreshLeagues();
-      } else {
-        // Notify the next player it's their turn
-        const nextPickNumber = currentPickNumber + 1;
-        const nextRound = Math.ceil(nextPickNumber / draftOrder.length);
-        const nextPickInRound = ((nextPickNumber - 1) % draftOrder.length);
-        const isNextRoundReverse = nextRound % 2 === 0;
-        const nextOrderForRound = isNextRoundReverse ? [...draftOrder].reverse() : draftOrder;
-        const nextPicker = nextOrderForRound[nextPickInRound];
-
-        // Only notify if it's a real user (not a bot) and not the current user
-        if (nextPicker && !nextPicker.startsWith('bot-') && nextPicker !== user?.id) {
-          notifyDraftTurn(nextPicker, activeLeagueId);
-        }
       }
+      // The next picker's "your turn" push is sent server-side after every
+      // recorded pick (validate-and-record-pick -> commitGatedPick).
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to submit pick');
     } finally {

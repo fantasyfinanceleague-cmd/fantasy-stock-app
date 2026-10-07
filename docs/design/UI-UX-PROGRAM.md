@@ -55,6 +55,14 @@ pbakaus/impeccable):**
    Each finding carries a drift class (missing token / one-off implementation
    / conceptual mismatch / local defect), and fixes go in triage order: broken
    tasks → missing states → drift → visual/motion → cleanup.
+6. **UX reviewer (from 2026-10-06; plan `docs/plans/2026-10-06-ux-rulebook.md`):**
+   the read-only `ux-reviewer` subagent runs the eleven rules in
+   [`UX_RULES.md`](UX_RULES.md) against the branch's screens and recordings, and
+   returns its findings table (with proposed P0–P3), the rule 8 table (refusal
+   reason → in-place message → next step) and the rule 11 table (flow → peak →
+   ending). The gate report includes that table and the Design Lead's answer to
+   EACH finding: **fixed** / **accepted with a reason** / **escalated to
+   Giorgio**. Open P0/P1 block the gate (and the 1.2.0 cut).
 Plus the DESIGN_DIRECTION §9B mechanical checks: 44 pt hit areas, the 11 pt
 floor, no glyph-icons, the §4 motion craft lines, the stress fixture, ≤ 4
 choices, and colour-only codes with a twin.

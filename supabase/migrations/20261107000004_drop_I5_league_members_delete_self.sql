@@ -1,0 +1,37 @@
+-- ============================================================================
+-- Leave league (5/7): retire [I5], the interim self-DELETE on league_members
+-- ============================================================================
+-- [I5] "league_members_delete_self" (20260712000002:34-37) let any member
+-- delete their own membership at any time: no draft guard, no commissioner
+-- hand-over, no reconfirmation. A post-draft use of it leaves a zombie team
+-- that blocks the playoff start (bracket_non_member, 20261012000001:171-174).
+--
+-- Leaving now goes through the leave-league edge function -> leave_league
+-- (20261107000001), service role only. After this file NO client can delete a
+-- membership row directly: league_members has no DELETE policy left.
+--
+-- LAYERS AFTER THIS:
+--   1. RLS: no DELETE policy -> a client DELETE matches zero rows (PostgREST
+--      returns 200 with nothing deleted -- verify by the row, not the status).
+--   2. trg_league_members_freeze_leave (PR #123, 20261104000000), if applied:
+--      refuses a user-session delete once the draft has started (a backstop
+--      for any future policy).
+--   3. leave_league's own window (locked_in) for the service-role path.
+--
+-- CLIENTS: web useLeagues.js leaveLeague moves to functions.invoke('leave-league')
+-- in the same change (web is paused). Mobile never had a leave path.
+-- DEPLOY ORDER (supabase-reviewer): push 20261107000000-06 FIRST, then deploy
+-- draft-control, then leave-league. The new draft-control reads
+-- league_roster_reconfirm on EVERY action and fails closed (500) if it cannot,
+-- so deploying it before 00 is applied breaks status/start/add_bots for every
+-- league. The gap before leave-league is deployed is harmless: web is paused and
+-- mobile has no leave path, so nobody can leave in between.
+--
+-- PROVISIONAL TIMESTAMP: see 20261107000000's header.
+--
+-- POST-PUSH EFFECT CHECK:
+--   SELECT policyname FROM pg_policies
+--    WHERE tablename = 'league_members' AND cmd = 'DELETE';   -- 0 rows
+-- ============================================================================
+
+drop policy if exists "league_members_delete_self" on public.league_members;

@@ -237,7 +237,7 @@ WHERE upper(d.symbol) = 'SKIP';
 
 1. **`db push` from the deploy checkout:** `20261101000000`, `20261101000001`. Verify with `schema_migrations` + proacl on `draft_feasibility_pool`.
 2. **Deploy** `validate-and-record-pick`, `draft-control`, `draft-autopick-sweep` (shares `_shared/draft-write.ts`). Byte-verify: the upload list includes `_shared/draft-feasibility.ts`, then download + diff.
-3. **Promote** `deferred/20261101000002` → `migrations/` → `db push` → effect test: an insert of SKIP is refused.
+3. **Promote** `deferred/20261101000002` → `migrations/` → `db push` → effect test: an insert of SKIP is refused. *(Done on the branch as `20261106000002`, released with the sweep cron; see `docs/migrations/AUTOPICK_CRON_LIVE.md`. Effect test: `docs/security/refuse-new-skip-effect-test.sql`.)*
 
 ## Residuals and follow-ups (as built, 2026-10-05)
 
