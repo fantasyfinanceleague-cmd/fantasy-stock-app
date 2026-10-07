@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { shapeSearchResults, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
+import { shapeSearchOutcome, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
 
 export interface UseSymbolSearchOptions extends ShapeSearchResultsOptions {
   /** Debounce delay in ms — matches TradeModal's original 300ms. */
@@ -82,12 +82,15 @@ export function useSymbolSearch(
         });
         if (mySeq !== requestSeqRef.current) return; // superseded — drop it
         if (invokeError) throw invokeError;
-        setResults(shapeSearchResults(data?.items || [], { ownedSymbols, allowUndraftable, ownedBadgeLabel }));
+        const outcome = shapeSearchOutcome(data?.items || [], { ownedSymbols, allowUndraftable, ownedBadgeLabel });
+        setResults(outcome.kind === 'results' ? outcome.results : []);
+        setError(outcome.kind === 'error');
       } catch (err) {
         if (mySeq !== requestSeqRef.current) return;
         console.error('Symbol search failed:', err);
-        setResults([]);
-        setError(true);
+        const outcome = shapeSearchOutcome(null);
+        setResults(outcome.kind === 'results' ? outcome.results : []);
+        setError(outcome.kind === 'error');
       } finally {
         if (mySeq === requestSeqRef.current) setLoading(false);
       }
