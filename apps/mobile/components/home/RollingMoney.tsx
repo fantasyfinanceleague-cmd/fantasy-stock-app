@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useRef } from 'react';
-import { StyleSheet, Text as RNText } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text as RNText, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { digitDiff } from '@/components/sp/logic/digits';
+import { fitScale } from '@/components/sp/logic/fitScale';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -23,6 +24,19 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // column reads as unchanged and nothing rolls — identical to "never on
 // first paint" (mount and a league switch are the same case: no prior
 // value to roll FROM).
+//
+// X-1 fix (Design Lead final check, 2026-10-07): because this draws one
+// Text per digit, it can't use RN's own `adjustsFontSizeToFit` the way a
+// single Text could -- at XL/XXXL Dynamic Type a wide value (seen:
+// $14,446,031.99 on Portfolio) ran off the container and clipped its last
+// digit. Fixed by measuring the container (outer View) and the row's own
+// natural, unscaled width (inner Animated.View -- `transform` never
+// affects layout, so its onLayout keeps reporting the TRUE natural size
+// even once scaled down), then shrinking the row by `fitScale`'s ratio,
+// anchored at the left edge (`transformOrigin`) so it still reads as the
+// same left-aligned number, just smaller. Floored at 0.7 -- if even that
+// doesn't fit, the row is left to overflow its box rather than ever clip
+// (see fitScale.ts).
 
 interface DigitColumnProps {
   char: string;
@@ -88,6 +102,8 @@ export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) 
   const prevKeyRef = useRef(rollKey);
   const keyChanged = prevKeyRef.current !== rollKey;
   const diff = digitDiff(keyChanged ? text : prevTextRef.current, text);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const [naturalWidth, setNaturalWidth] = useState<number | null>(null);
 
   useEffect(() => {
     prevTextRef.current = text;
@@ -96,29 +112,37 @@ export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) 
 
   const typeStyle = type[size];
   const textColor = color ?? colors.text;
+  const scale = fitScale(containerWidth, naturalWidth);
 
   return (
-    <Animated.View style={styles.row} accessibilityLabel={text}>
-      {diff.map((entry, i) => (
-        <DigitColumn
-          key={`${i}-${diff.length}-${rollKey}`}
-          char={entry.char}
-          changed={entry.changed}
-          fontFamily={typeStyle.fontFamily}
-          fontSize={typeStyle.fontSize}
-          lineHeight={typeStyle.lineHeight}
-          textColor={textColor}
-          reduced={reduced}
-          duration={duration.base}
-          easing={easing.settle}
-          withTiming={withTiming}
-          maxFontSizeMultiplier={typeStyle.maxScale}
-        />
-      ))}
-    </Animated.View>
+    <View style={styles.container} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <Animated.View
+        style={[styles.row, { transform: [{ scale }], transformOrigin: 'left center' }]}
+        onLayout={(e) => setNaturalWidth(e.nativeEvent.layout.width)}
+        accessibilityLabel={text}
+      >
+        {diff.map((entry, i) => (
+          <DigitColumn
+            key={`${i}-${diff.length}-${rollKey}`}
+            char={entry.char}
+            changed={entry.changed}
+            fontFamily={typeStyle.fontFamily}
+            fontSize={typeStyle.fontSize}
+            lineHeight={typeStyle.lineHeight}
+            textColor={textColor}
+            reduced={reduced}
+            duration={duration.base}
+            easing={easing.settle}
+            withTiming={withTiming}
+            maxFontSizeMultiplier={typeStyle.maxScale}
+          />
+        ))}
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexShrink: 1 },
+  container: { flexShrink: 1 },
+  row: { flexDirection: 'row' },
 });
