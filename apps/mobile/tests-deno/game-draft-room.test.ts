@@ -354,10 +354,11 @@ Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; s
 Deno.test('your turn: "You\'re on the clock" as the header in liveText, the clock in score type; off-turn unchanged (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';"), true);
-  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText} accessibilityRole="header">{headline}</Text>'), true);
+  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk} accessibilityRole="header">{headline}</Text>'), true);
   assertEquals(room.includes("variant={onTheClock ? 'score.lg' : 'headline'}"), true);
   // The last 10 s stay in loss on and off your turn (navy only under the flash's gold).
-  assertEquals(room.includes("color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text"), true);
+  assertEquals(room.includes("const clockRest = shownClock.kind === 'last10' ? colors.loss : colors.text;"), true);
+  assertEquals(room.includes('{ color: clockRest }'), true);
   // Off your turn ("{Name} is up") keeps the plain callout.
   assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
   assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);

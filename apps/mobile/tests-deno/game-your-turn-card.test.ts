@@ -39,22 +39,44 @@ Deno.test('rest: warn-tint over the surface, a 2 pt live border, the 44 pt clock
   assert(room.includes('yourTurnCard: { borderWidth: 2 },'));
   assert(room.includes('yourTurnClock: { fontSize: 44, lineHeight: 42 },'));
   assert(room.includes('yourTurnTitle: { fontSize: 30, lineHeight: 34 },'));
-  assert(room.includes('variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText}'));
+  assert(room.includes('variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}'));
+  assert(room.includes('const titleRest = colors.liveText;'));
 });
 
-Deno.test('the text is navy (on-live) only while the gold is up, keyed on the animation, not timers', () => {
+Deno.test('the text is navy (on-live) only while the gold is up, on the UI thread, in the fill\'s own frames', () => {
+  assert(room.includes('const ink = useSharedValue(0);'));
   assert(room.includes('const atStart = flashTextAtStepStart(steps);'));
-  assert(room.includes('const lit = i + 1 < steps.length ? atStart[i + 1] : false;'));
-  assert(room.includes('if (lit !== null) runOnJS(setFlashLit)(lit);'));
-  // B-2: back to rest at each settle's midpoint, from the fill itself (UI thread).
-  assert(room.includes('if (settleCrossedMidpoint(prev, level)) runOnJS(setFlashLit)(false);'));
+  // Navy as each rise starts (the previous step's end); back to rest at the last step's end regardless.
+  assert(room.includes("const riseNext = i + 1 < steps.length && atStart[i + 1] === true;"));
+  assert(room.includes('if (riseNext) ink.value = 1;'));
+  assert(room.includes('if (last) ink.value = 0;'));
+  // B-2: back to rest as each settle crosses the midpoint, from the fill itself.
+  assert(room.includes('if (settleCrossedMidpoint(prev, level)) ink.value = 0;'));
   assert(room.includes('() => flash.value,'));
-  // The capture showed timers drift from the animation (holds ran ~60 ms long): no timers.
-  assert(!/setTimeout\(\(\) => setFlashLit/.test(room));
-  assertEquals((room.match(/colors\.onLive/g) ?? []).length, 3); // the clock, the title and flashInk, all behind flashLit
-  // Every other line on the card goes navy too (the Dark capture: white and grey lines vanished on the gold).
-  assert(room.includes('const flashInk = onTheClock && flashLit ? colors.onLive : undefined;'));
-  assertEquals((room.match(/color=\{flashInk\}/g) ?? []).length, 3); // the round line, "N-second picks", waiting for prices
+  // No JS round trip (a React state switch landed ~3 frames late in the B-2 capture), no timers.
+  assert(!room.includes('runOnJS'));
+  assert(!room.includes('setFlashLit'));
+  assert(!/setTimeout\(\(\) => set/.test(room));
+});
+
+Deno.test('every line on the card takes the ink: the clock, the title, the round line, the captions', () => {
+  for (const name of ['clockInk', 'titleInk', 'bodyInk', 'captionInk']) {
+    assert(room.includes(`const ${name} = useAnimatedStyle(() => ({ color: ink.value === 1 ? onLive : `), name);
+  }
+  assert(room.includes('const onLive = colors.onLive;'));
+  assertEquals((room.match(/colors\.onLive/g) ?? []).length, 1); // only through `ink`
+  assert(room.includes('animatedStyle={onTheClock ? clockInk : undefined}'));
+  assert(room.includes('animatedStyle={titleInk}'));
+  assert(room.includes('animatedStyle={onTheClock ? bodyInk : undefined}'));
+  assertEquals((room.match(/animatedStyle=\{onTheClock \? captionInk : undefined\}/g) ?? []).length, 2); // "N-second picks", waiting for prices
+});
+
+Deno.test('the sp Text takes a UI-thread style as an opt-in (Animated.Text only when given one)', () => {
+  const text = SOURCES['components/sp/Text.tsx'];
+  assert(text.includes('animatedStyle?: AnimatedStyle<TextStyle>;'));
+  assert(text.includes('if (animatedStyle) {'));
+  assert(text.includes('style={[baseStyle, animatedStyle]}'));
+  assert(text.includes('style={baseStyle}'));
 });
 
 Deno.test('the last 10 s: one more Warning haptic, keyed on the ticking clock, no sound or flash', () => {

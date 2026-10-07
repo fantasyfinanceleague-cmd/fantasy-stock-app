@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, View, StyleSheet } from 'react-native';
-import Animated, { cancelAnimation, runOnJS, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
@@ -114,7 +114,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const myTurnPick = room.status === 'ready' && !draftDone && isMyTurn && (room.clock.kind === 'on_clock' || room.clock.kind === 'last10') ? onClockPick : null;
   const turnSignal = useRef(TURN_SIGNAL_START);
   const flash = useSharedValue(0);
-  const [flashLit, setFlashLit] = useState(false);
+  // 1 while the card's text is on-live (navy on the gold). Set only on the UI thread, in
+  // the same frame as the fill (a React state round trip landed ~3 frames late, B-2).
+  const ink = useSharedValue(0);
   useEffect(() => () => cancelAnimation(flash), [flash]);
   useEffect(() => {
     if (room.status !== 'ready') return;
@@ -125,30 +127,43 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     playChime();
     const steps = roomOnScreen ? flashSteps(reduced) : [];
     if (steps.length === 0) return;
-    // The text follows the animation itself: navy as each rise starts (the step before it
-    // ends, flashTextAtStepStart), back to rest as each settle crosses the midpoint (the
-    // reaction below, B-2), and back to rest when the last step ends, whatever happened.
+    // The text follows the animation itself, on the UI thread: navy as each rise starts (the
+    // step before it ends, flashTextAtStepStart), back to rest as each settle crosses the
+    // midpoint (the reaction below, B-2), and back to rest when the last step ends regardless.
     const atStart = flashTextAtStepStart(steps);
-    if (atStart[0] !== null) setFlashLit(atStart[0]);
+    ink.value = atStart[0] ? 1 : 0;
     flash.value = 0;
     const [first, ...rest] = steps.map((st, i) => {
-      const lit = i + 1 < steps.length ? atStart[i + 1] : false;
+      const riseNext = i + 1 < steps.length && atStart[i + 1] === true;
+      const last = i === steps.length - 1;
       return withTiming(st.to, { duration: st.ms }, () => {
         'worklet';
-        if (lit !== null) runOnJS(setFlashLit)(lit);
+        if (riseNext) ink.value = 1;
+        if (last) ink.value = 0;
       });
     });
     flash.value = withSequence(first, ...rest);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the turn reading only; focus and Reduce Motion are read at that moment
   }, [myTurnPick, appActive, room.status]);
   const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
-  // B-2: rest colours never sit on more than half gold.
+  // B-2: rest colours never sit on more than half gold, and navy never on less.
   useAnimatedReaction(
     () => flash.value,
     (level, prev) => {
-      if (settleCrossedMidpoint(prev, level)) runOnJS(setFlashLit)(false);
+      if (settleCrossedMidpoint(prev, level)) ink.value = 0;
     },
   );
+  // Each card line's colour during the flash (the spec's "text in navy"): on-live while
+  // `ink` is 1, its own rest colour otherwise. Applied only on your turn (onTheClock).
+  const onLive = colors.onLive;
+  const clockRest = shownClock.kind === 'last10' ? colors.loss : colors.text;
+  const titleRest = colors.liveText;
+  const bodyRest = colors.text;
+  const captionRest = colors.text2;
+  const clockInk = useAnimatedStyle(() => ({ color: ink.value === 1 ? onLive : clockRest }));
+  const titleInk = useAnimatedStyle(() => ({ color: ink.value === 1 ? onLive : titleRest }));
+  const bodyInk = useAnimatedStyle(() => ({ color: ink.value === 1 ? onLive : bodyRest }));
+  const captionInk = useAnimatedStyle(() => ({ color: ink.value === 1 ? onLive : captionRest }));
   // The last 10 s: one more Warning haptic, once per turn (no sound, no second flash).
   const lastTenBuzzed = useRef<number | null>(null);
   useEffect(() => {
@@ -289,9 +304,6 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
   // Your turn, really yours (not stalled, not the auto-pick running): the screen's one emphasis (G-2).
   const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';
-  // The flash: EVERY line on the card is navy (on-live) while the gold is up (the spec's
-  // "text in navy"); the clock and the title also switch their own colours below.
-  const flashInk = onTheClock && flashLit ? colors.onLive : undefined;
   const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
@@ -311,18 +323,19 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
             {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
             <Text
               variant={onTheClock ? 'score.lg' : 'headline'}
-              style={[onTheClock ? styles.yourTurnClock : null, { color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text }]}
+              style={[onTheClock ? styles.yourTurnClock : null, { color: clockRest }]}
+              animatedStyle={onTheClock ? clockInk : undefined}
             >
               {clockLabel}
             </Text>
           </View>
         ) : null}
         {onTheClock ? (
-          <Text variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText} accessibilityRole="header">{headline}</Text>
+          <Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk} accessibilityRole="header">{headline}</Text>
         ) : (
           <Text variant="callout">{headline}</Text>
         )}
-        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} color={flashInk}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
+        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} animatedStyle={onTheClock ? bodyInk : undefined}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
         {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
           <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway, lastMineAuto)}</Text>
@@ -330,9 +343,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
         ) : null}
-        <Text variant="caption" tone="secondary" color={flashInk}>{`${room.pickSeconds}-second picks`}</Text>
+        <Text variant="caption" tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{`${room.pickSeconds}-second picks`}</Text>
         {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
-        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary" color={flashInk}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
+        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
       <Card style={styles.card}>
