@@ -43,7 +43,7 @@ export function Sheet({ visible, onClose, children, dismissible = true, overlay,
   const screenHeight = Dimensions.get('window').height;
   const translateY = useSharedValue(screenHeight);
   const backdropOpacity = useSharedValue(0);
-  const { spring, duration, withSpring, withTiming, reduced } = useMotion();
+  const { spring, duration, easing, withSpring, withTiming, reduced } = useMotion();
   // Reduce Motion (M1's spec): the sheet fades in place instead of sliding up.
   const sheetOpacity = useSharedValue(reduced ? 0 : 1);
 
@@ -63,7 +63,9 @@ export function Sheet({ visible, onClose, children, dismissible = true, overlay,
           if (finished) runOnJS(setMounted)(false);
         });
       } else {
-        translateY.value = withSpring(screenHeight, spring.snappy, (finished) => {
+        // §4's exit rule: dismiss is FASTER than open — `quick` + `ease.exit`,
+        // not the same rise spring played backwards.
+        translateY.value = withTiming(screenHeight, { duration: duration.quick, easing: easing.exit }, (finished) => {
           if (finished) runOnJS(setMounted)(false);
         });
       }

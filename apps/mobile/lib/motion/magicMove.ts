@@ -56,3 +56,20 @@ export function magicMoveReducer(stage: MagicMoveStage, event: MagicMoveEvent): 
       return 'idle';
   }
 }
+
+/**
+ * startTransition: the measure-fails path (DL gate checklist), made explicit
+ * and testable. A row's measureInWindow can fail to fire, or the ref can be
+ * gone (unmounted mid-tap, a fast re-render) — either way the opener passes
+ * null here rather than a rect, and the sheet must still open in place, with
+ * no tile and no flight, never a delayed or hidden sheet. This is the single
+ * decision point: a null rect always yields no transition.
+ */
+export function startTransition(
+  symbol: string,
+  name: string | null,
+  originRect: Rect | null,
+): { symbol: string; name: string | null; fromRect: Rect } | null {
+  if (!originRect) return null;
+  return { symbol, name, fromRect: originRect };
+}

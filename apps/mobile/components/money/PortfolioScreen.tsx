@@ -15,6 +15,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { Icon } from '@/components/sp/Icon';
+import { PressableScale } from '@/components/sp/PressableScale';
 import { useRouter } from 'expo-router';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { COPY } from '@/lib/money/moneyCopy';
@@ -30,11 +31,14 @@ const styles = StyleSheet.create({
   list: { gap: 0 },
   row: {
     minHeight: 44,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  rowPressable: {
+    flex: 1,
     paddingVertical: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowLead: { flex: 1, paddingRight: 12 },
   rowTrail: { alignItems: 'flex-end' },
@@ -108,25 +112,30 @@ export function PortfolioScreen() {
           {v.rows.map((r) => (
             // M5: rows FLIP to their new positions when values change the sort (Reduce Motion: they jump).
             <Animated.View key={r.symbol} layout={reduced ? undefined : LinearTransition.duration(duration.base)}>
-            <Pressable
+            <View
               key={r.symbol}
               ref={(el) => { rowRefs.current.set(r.symbol, el); }}
-              accessibilityRole="button"
-              accessibilityLabel={`${r.symbol}, ${r.name}, ${r.quantityText} shares, ${r.valueText}${r.todayText ? `, ${r.todayText} today` : ''}`}
-              onPress={() => openRow(r.symbol, r.name)}
-              style={({ pressed }) => [styles.row, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
+              style={[styles.row, { borderBottomColor: colors.border }]}
             >
-              <View style={styles.rowLead}>
-                <Text variant="callout">{r.symbol}</Text>
-                <Text variant="caption" tone="secondary">{r.name}</Text>
-              </View>
-              <View style={styles.rowTrail}>
-                <Text variant="callout">{r.valueText}</Text>
-                <Text variant="caption" tone="secondary">
-                  {r.quantityText} sh{r.todayText ? ` · ${r.todayText}` : ''}{r.slotText ? ` · ${r.slotText}` : ''}
-                </Text>
-              </View>
-            </Pressable>
+              {/* The row's own press feedback (§4): scale 0.98 + a light haptic. */}
+              <PressableScale
+                accessibilityRole="button"
+                accessibilityLabel={`${r.symbol}, ${r.name}, ${r.quantityText} shares, ${r.valueText}${r.todayText ? `, ${r.todayText} today` : ''}`}
+                onPress={() => openRow(r.symbol, r.name)}
+                style={styles.rowPressable}
+              >
+                <View style={styles.rowLead}>
+                  <Text variant="callout">{r.symbol}</Text>
+                  <Text variant="caption" tone="secondary">{r.name}</Text>
+                </View>
+                <View style={styles.rowTrail}>
+                  <Text variant="callout">{r.valueText}</Text>
+                  <Text variant="caption" tone="secondary">
+                    {r.quantityText} sh{r.todayText ? ` · ${r.todayText}` : ''}{r.slotText ? ` · ${r.slotText}` : ''}
+                  </Text>
+                </View>
+              </PressableScale>
+            </View>
             </Animated.View>
           ))}
         </View>

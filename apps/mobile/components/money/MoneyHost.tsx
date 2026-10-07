@@ -10,7 +10,7 @@ import { Sheet, SHEET_HANDLE_AREA_HEIGHT } from '@/components/sp/Sheet';
 import { StockSheetBody } from '@/components/money/StockSheetBody';
 import { MagicMoveTile } from '@/components/money/MagicMoveTile';
 import { normalizeOpenOptions, normalizeSymbol, type OpenOptions } from '@/lib/money/stockSheetApi';
-import type { Rect } from '@/lib/motion/magicMove';
+import { startTransition, type Rect } from '@/lib/motion/magicMove';
 
 export interface StockSheetContextValue {
   /** The symbol the sheet is showing, or null when it is closed. */
@@ -39,7 +39,9 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     const o = normalizeOpenOptions(options);
     setCurrent({ symbol, originRef: o.originRef, name: o.name });
     setSheetHeight(null);
-    setTransition(o.originRect ? { symbol, name: o.name, fromRect: o.originRect } : null);
+    // The measure-fails path (DL gate checklist): no rect, no transition, the
+    // sheet still opens in place via its own normal rise.
+    setTransition(startTransition(symbol, o.name, o.originRect));
   }, []);
 
   const close = useCallback(() => {

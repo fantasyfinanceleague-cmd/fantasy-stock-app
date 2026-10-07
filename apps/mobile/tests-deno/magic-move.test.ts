@@ -42,3 +42,21 @@ Deno.test('magicMoveReducer: RESET returns to idle from any stage', () => {
   assertEquals(magicMoveReducer('flying', { type: 'RESET' }), 'idle');
   assertEquals(magicMoveReducer('handed_off', { type: 'RESET' }), 'idle');
 });
+
+// DL gate checklist: "if the measure fails or a frame drops, the sheet still opens in
+// place." startTransition is the one decision point for that -- test it directly.
+import { startTransition } from '../lib/motion/magicMove.ts';
+
+Deno.test('startTransition: a null rect (measure failed) yields no transition', () => {
+  assertEquals(startTransition('AAPL', 'Apple', null), null);
+});
+
+Deno.test('startTransition: a real rect starts the flight with the row\'s symbol and name', () => {
+  const rect = { x: 10, y: 20, width: 100, height: 40 };
+  assertEquals(startTransition('AAPL', 'Apple', rect), { symbol: 'AAPL', name: 'Apple', fromRect: rect });
+});
+
+Deno.test('startTransition: a null name (unknown company) still starts the flight', () => {
+  const rect = { x: 0, y: 0, width: 50, height: 20 };
+  assertEquals(startTransition('XYZ', null, rect), { symbol: 'XYZ', name: null, fromRect: rect });
+});
