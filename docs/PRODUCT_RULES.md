@@ -28,6 +28,9 @@ building anything, and don't reopen a rule without him.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
 - **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature. See **League size** under League lifecycle.
+- **Board review answers** (2026-10-06): "Buy a stock" (tappable-but-blocked ownership, the
+  Portfolio entry row, the search copy) and the stock chart ("A week ago" as the comparison
+  line): "fine".
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
@@ -100,6 +103,13 @@ building anything, and don't reopen a rule without him.
   - On Home, when the commissioner has no draft time set, "Set draft time" is the primary
     action and opens the picker in place ("Pick a time, and the countdown starts here."),
     with "Build your queue" secondary.
+- **Your turn in the draft room** (2026-10-06, Giorgio's board review): your turn must be
+  impossible to miss. "That top part of the screen should like flash a color when they're
+  up just to make sure that they're they really notice it", with text "that's very hard to
+  miss" (a colour change and bold), plus "a sound notification or a buzz".
+- **The draft board's look** (2026-10-06): Giorgio is "not a fan" of the current draft
+  board UI. A redesign is wanted, but later ("save that for later"), not in the current
+  pass.
 
 ## Trading
 
@@ -133,6 +143,8 @@ building anything, and don't reopen a rule without him.
     the league for that player; history is kept.
   - When someone leaves before the draft, the commissioner must reconfirm: "move forward
     with 1 less" or "invite someone new to replace".
+- **The leave sheets keep "Stay" as a button** (2026-10-06, Giorgio overruled the Design
+  Lead's G-3): "I want stay as a button." "Leave league" stays the red button.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens
