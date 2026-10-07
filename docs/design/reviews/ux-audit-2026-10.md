@@ -462,3 +462,59 @@ All **fixed**, verified in code at `5b51858` and, where a capture exists, on scr
 3. **Roster grid:** a real defect; centre the labels and trim the space. (G-5, P3.)
 4. **Finished League tab:** both real; card padding and a fixed rank-cell width. (G-6, P3.)
 5. **Member lobby no-time line:** fixture limit, accepted; no change.
+
+---
+
+## Pass 2b · 3c-2 re-gate (2026-10-06)
+
+**Verdict: BLOCK, narrowly, on one P1 (G-10, the worker's observation 1).** Every pass-2 item
+G-1 to G-8 is fixed. The block is the draft room's search field rendering light in Dark: it is
+the one input on your turn, on the Draft screen, and it breaks the "no screen mixes the two
+themes" rule (`DESIGN_DIRECTION.md` §9A). The fix is local (theme one shared component), and the
+re-gate needs only the Dark captures of the room's and the queue's search, with results open.
+Fold G-11 in at the same time (cheap). G-12 and G-13 ride as follow-ups.
+
+### Scope examined
+
+`ui/mobile-league-setup` @ `01cc859`, diff `5b51858..01cc859` (11 commits) read in source; the
+35 re-shot captures (29 replaced, 6 new) reviewed in Light and Dark. **Not examined:** XL/XXXL,
+Reduce Motion, VoiceOver (standard-text captures only); the ux-reviewer subagent (not loaded in
+this session). The Orchestrator's checks (deno 1135/0, functions 618/0, map, gitleaks, mutation
+tests on the G-1 snake and G-4) are taken as reported.
+
+### Pass 2 items
+
+| ID | Result | Evidence |
+|---|---|---|
+| G-1 manager columns, your picks | **fixed.** Initials header with "RB" in `youText`; seat *i*'s picks in column *i*, snaking L→R / R→L (round 2 reads 12…7), matching the server's turn order; your cells carry the `you` border and tint. | `draft-room-on-clock-*`, `-after-pick-*` |
+| G-2 the on-clock state stands out | **fixed.** On your turn "0:42" in score type and "You're on the clock" in `title` / `liveText`; off your turn the card is quiet. Squint test passes. | `draft-room-on-clock-*` |
+| G-3 leave sheets | **fixed.** One filled "Leave league", "Stay" as text (matches the board, `6af5ba4`). | `leave-sheet-*`, `leave-unknown-still-in-*` |
+| G-4 your own auto-pick | **fixed.** "11 AAPL · Auto-picked · from your queue"; others' still "from their queue". | `draft-room-after-auto-pick-log-*` |
+| G-5 roster grid | **fixed.** Labels centred, no dead space (room and Home). | `home-drafting-roster-grid-*` |
+| G-6 finished League tab | **fixed.** Run it back card padded; medal discs and rank numerals share one column. | `league-finished-tab-*` |
+| G-7 modal Cancel | **fixed** in League settings (text only, on the content gutter). Create league step 1 still has the old form: G-13. | `league-settings-*` |
+| G-8 transfer rows | **fixed.** Names only. | `transfer-sheet-*` |
+| G-9 ring clock | **deferred** (P2, agreed). | — |
+
+**The on-clock outline (asked: is 2 pt enough?)** Not in Light. Light's `accent` and `you` are the
+same blue (#2860F0), so on your own turn the on-clock cell is told from your other cells only by
+stroke width, which doesn't survive a glance. In Dark they differ and it reads. **Ruling (G-11):**
+the on-clock outline uses `live`, in both themes. That is the clock's own colour ("You're on the
+clock" is `liveText`), it is what key screen 4 draws (its pick-11 cell is outlined in the live
+gold), and it can never collide with `you`. Keep 2 pt.
+
+### New findings
+
+| ID | Screen | Rule | Drift class | What's wrong | Fix | P | Answer |
+|---|---|---|---|---|---|---|---|
+| G-10 | Draft room + queue search (Dark) | §9A themes | missing token | Observation 1. `components/SymbolSearchField.tsx` styles from the legacy light-only `Colors` (`inputBg`, `cardBg`, `textMuted`), so in Dark the field (and its results list, same constants) is light, inside a dark screen, on the input you use when it's your pick. | Theme it: field `inset`, text `text`, placeholder `text2`, results `surface` with `line` dividers, from `useTheme()`. The legacy `TradeModal` and `(tabs)/draft.tsx` callers are unreachable or legacy; theming the shared component fixes them too. | **P1** | escalated (fix) |
+| G-11 | Draft room board (Light) | 6 | missing token | On your own turn the on-clock cell is the same blue as your other cells (`accent` = `you` in Light). | On-clock outline in `live`, both themes (ruling above). | P2 | fold into the G-10 round |
+| G-12 | League tab standings | 5 | one-off implementation | Observation 2. The standings block renders flush, with no card padding or radius (the `sp` Card cause); every other block on the tab is a card. | Same Card container and padding as its neighbours. | P2 | follow-up |
+| G-13 | Create league, step 1 | 1 | local defect | Observation 3. "‹ Cancel": a back chevron on a modal's Cancel (G-7 covered League settings only). | Text-only "Cancel" on the content gutter, as G-7. | P3 | follow-up |
+
+### Rulings on the worker's observations
+
+1. **Unthemed search field in Dark:** a real break of §9A on the Draft screen. **Blocks** (G-10,
+   P1). Small fix; re-capture the room's and the queue's search in Dark with results showing.
+2. **Standings block without card padding:** real, **follow-up** (G-12, P2). Doesn't block.
+3. **Create league step-1 "‹ Cancel":** real, **follow-up** (G-13, P3). Doesn't block.
