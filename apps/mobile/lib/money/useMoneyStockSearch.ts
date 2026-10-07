@@ -19,6 +19,6 @@ export function useMoneyStockSearch(query: string, selectedSymbol: string): UseS
     () => (MONEY_FIXTURE_CONFIG ? filterStressSearchCatalog(query) : []),
     [query],
   );
-  if (MONEY_FIXTURE_CONFIG) return { results: fixtureResults, loading: false };
+  if (MONEY_FIXTURE_CONFIG) return { results: fixtureResults, loading: false, error: false, retry: () => {} };
   return live;
 }

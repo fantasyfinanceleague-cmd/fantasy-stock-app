@@ -21,6 +21,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
+import { LoadFailure } from '@/components/money/LoadFailure';
 import { COPY } from '@/lib/money/moneyCopy';
 import { useMoneyStockSearch } from '@/lib/money/useMoneyStockSearch';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
@@ -40,7 +41,7 @@ export function StockSearchScreen() {
   const router = useRouter();
   const { open } = useStockSheet();
   const [query, setQuery] = useState('');
-  const { results, loading } = useMoneyStockSearch(query, '');
+  const { results, loading, error, retry } = useMoneyStockSearch(query, '');
 
   function handleSelect(item: ShapedSearchResult) {
     if (!item.selectable) return;
@@ -71,25 +72,28 @@ export function StockSearchScreen() {
           autoFocus
         />
 
-        {query.length > 0 && !loading && results.length === 0 ? (
+        {/* E-1 (3e UX audit): a failed search is its own framed state, never "no matches". */}
+        {error ? (
+          <LoadFailure title={COPY.stockSearchLoadTitle} message={COPY.loadRetryMessage} onRetry={retry} />
+        ) : query.length > 0 && !loading && results.length === 0 ? (
           <View style={styles.empty}>
             <Text variant="callout" tone="secondary">{COPY.noMatchingStocks}</Text>
           </View>
-        ) : null}
-
-        <View style={styles.results}>
-          {results.map((item) => (
-            <View key={item.symbol} style={!item.selectable ? styles.disabled : undefined}>
-              <ListRow
-                title={item.symbol}
-                subtitle={item.badgeLabel ? `${item.name} · ${item.badgeLabel}` : item.name}
-                trailing={item.price != null ? <Text variant="callout">{`$${item.price.toFixed(2)}`}</Text> : undefined}
-                onPress={item.selectable ? () => handleSelect(item) : undefined}
-                hideChevron
-              />
-            </View>
-          ))}
-        </View>
+        ) : (
+          <View style={styles.results}>
+            {results.map((item) => (
+              <View key={item.symbol} style={!item.selectable ? styles.disabled : undefined}>
+                <ListRow
+                  title={item.symbol}
+                  subtitle={item.badgeLabel ? `${item.name} · ${item.badgeLabel}` : item.name}
+                  trailing={item.price != null ? <Text variant="callout">{`$${item.price.toFixed(2)}`}</Text> : undefined}
+                  onPress={item.selectable ? () => handleSelect(item) : undefined}
+                  hideChevron
+                />
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );

@@ -12,6 +12,12 @@ export interface UseSymbolSearchOptions extends ShapeSearchResultsOptions {
 export interface UseSymbolSearchResult {
   results: ShapedSearchResult[];
   loading: boolean;
+  /** True when the search itself failed (network, a thrown error) -- distinct
+   * from a clean "no matches" response (E-1, 3e UX audit): a failure must
+   * never read as "the stock doesn't exist". */
+  error: boolean;
+  /** Re-runs the same query (the failure state's Try again). */
+  retry: () => void;
 }
 
 /**
@@ -35,6 +41,9 @@ export function useSymbolSearch(
   const { ownedSymbols, allowUndraftable, ownedBadgeLabel, debounceMs = 300, limit = 8 } = opts;
   const [results, setResults] = useState<ShapedSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const retry = () => setRetryTick((t) => t + 1);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Monotonic request sequence: an in-flight search whose response arrives
   // AFTER a newer search was already issued must not overwrite the newer
@@ -51,30 +60,34 @@ export function useSymbolSearch(
       requestSeqRef.current++; // invalidate any in-flight response
       setResults([]);
       setLoading(false);
+      setError(false);
       return;
     }
     if (selectedSymbol && query.toUpperCase() === selectedSymbol.toUpperCase()) {
       requestSeqRef.current++;
       setResults([]);
       setLoading(false);
+      setError(false);
       return;
     }
 
     setLoading(true);
+    setError(false);
     const mySeq = ++requestSeqRef.current;
 
     timeoutRef.current = setTimeout(async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('symbols-search', {
+        const { data, error: invokeError } = await supabase.functions.invoke('symbols-search', {
           body: { q: query, limit, includePrices: true },
         });
         if (mySeq !== requestSeqRef.current) return; // superseded — drop it
-        if (error) throw error;
+        if (invokeError) throw invokeError;
         setResults(shapeSearchResults(data?.items || [], { ownedSymbols, allowUndraftable, ownedBadgeLabel }));
       } catch (err) {
         if (mySeq !== requestSeqRef.current) return;
         console.error('Symbol search failed:', err);
         setResults([]);
+        setError(true);
       } finally {
         if (mySeq === requestSeqRef.current) setLoading(false);
       }
@@ -86,7 +99,7 @@ export function useSymbolSearch(
         timeoutRef.current = null;
       }
     };
-  }, [query, selectedSymbol, limit, debounceMs, ownedSymbols, allowUndraftable, ownedBadgeLabel]);
+  }, [query, selectedSymbol, limit, debounceMs, ownedSymbols, allowUndraftable, ownedBadgeLabel, retryTick]);
 
-  return { results, loading };
+  return { results, loading, error, retry };
 }

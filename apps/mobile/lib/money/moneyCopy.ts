@@ -88,6 +88,7 @@ export const COPY = {
   fillsOpenSlotFallback: 'Fills your open slot',
   portfolioLoadTitle: "Your portfolio didn't load",
   stockLoadTitle: "This stock didn't load",
+  stockSearchLoadTitle: "Stocks didn't load",
   loadRetryMessage: 'Check your connection, then try again.',
   cantReach: "Couldn't reach trading. Check your connection and try again.",
   // NEW (flagged): market-data credit, one constant (wording to confirm with the provider's terms).

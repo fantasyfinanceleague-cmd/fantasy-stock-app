@@ -47,7 +47,7 @@ export default function SymbolSearchField({
   limit,
 }: SymbolSearchFieldProps) {
   const [showResults, setShowResults] = useState(false);
-  const { results, loading } = useSymbolSearch(value, selectedSymbol, {
+  const { results, loading, error, retry } = useSymbolSearch(value, selectedSymbol, {
     ownedSymbols,
     allowUndraftable,
     ownedBadgeLabel,
@@ -119,9 +119,19 @@ export default function SymbolSearchField({
         </View>
       )}
 
-      {visible && !loading && results.length === 0 && (
+      {visible && !loading && !error && results.length === 0 && (
         <View style={[styles.noResultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }]}>
           <Text style={[styles.noResultsText, { color: colors.text2 }]}>No matching stocks found</Text>
+        </View>
+      )}
+
+      {/* E-1 (3e UX audit): a failed search must never read as "no matches". */}
+      {visible && !loading && error && (
+        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+          <Text style={[styles.noResultsText, { color: colors.text2 }]}>Stocks didn't load. Check your connection, then try again.</Text>
+          <TouchableOpacity onPress={retry} style={styles.retryButton}>
+            <Text style={[styles.retryText, { color: colors.accent }]}>Try again</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -218,5 +228,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     textAlign: 'center',
+  },
+  retryButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryText: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
   },
 });
