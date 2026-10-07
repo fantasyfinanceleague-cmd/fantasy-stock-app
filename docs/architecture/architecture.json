@@ -2,22 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1f13272f9674571086e76f183a67fa51fb12f2bd",
-    "commitShort": "1f13272",
+    "commit": "767ee64b50dc1cdd34e1bce694dc69b015305aed",
+    "commitShort": "767ee64b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-06T21:58:25Z",
-    "sourceHash": "sha256:eb8dbb330d214b4c61c939fea340b8925a1b1433a8e97b16527fa59e4d5c0bd3",
+    "branch": "feat/draft-turn-push",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-write.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-write.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/send-notification/index.ts"
+      }
+    ],
+    "timestamp": "2026-10-07T06:57:15Z",
+    "sourceHash": "sha256:d5df9861d75a8d27a6969ad8beddd1582775b599f16df4ef84844cd26ea1f71e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 2.8,
-    "ageDays": 0.1,
+    "ageHours": 11.7,
+    "ageDays": 0.5,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -1104,7 +1117,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 378
+        "lines": 374
       },
       "db": null,
       "declared": null,
@@ -11758,9 +11771,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('draft-control')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:326",
-        "apps/mobile/app/(tabs)/draft.tsx:385",
-        "apps/mobile/app/(tabs)/draft.tsx:406"
+        "apps/mobile/app/(tabs)/draft.tsx:325",
+        "apps/mobile/app/(tabs)/draft.tsx:384",
+        "apps/mobile/app/(tabs)/draft.tsx:405"
       ]
     },
     {
@@ -11772,7 +11785,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:493"
+        "apps/mobile/app/(tabs)/draft.tsx:492"
       ]
     },
     {
@@ -11784,9 +11797,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:429",
-        "apps/mobile/app/(tabs)/draft.tsx:472",
-        "apps/mobile/app/(tabs)/draft.tsx:543"
+        "apps/mobile/app/(tabs)/draft.tsx:428",
+        "apps/mobile/app/(tabs)/draft.tsx:471",
+        "apps/mobile/app/(tabs)/draft.tsx:542"
       ]
     },
     {
@@ -11798,7 +11811,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_draft_order')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:216"
+        "apps/mobile/app/(tabs)/draft.tsx:215"
       ]
     },
     {
@@ -11813,7 +11826,7 @@
         "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:224"
+        "apps/mobile/app/(tabs)/draft.tsx:223"
       ]
     },
     {
@@ -11828,7 +11841,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:260"
+        "apps/mobile/app/(tabs)/draft.tsx:259"
       ]
     },
     {
@@ -11843,7 +11856,7 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:186"
+        "apps/mobile/app/(tabs)/draft.tsx:185"
       ]
     },
     {
@@ -11858,7 +11871,7 @@
         "id, username"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:196"
+        "apps/mobile/app/(tabs)/draft.tsx:195"
       ]
     },
     {
@@ -12152,18 +12165,6 @@
       ],
       "callSites": [
         "apps/mobile/lib/LeagueContext.tsx:162"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.notifications->fn.send-notification",
-      "from": "ui.notifications",
-      "to": "fn.send-notification",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('send-notification')",
-      "callSites": [
-        "apps/mobile/lib/notifications.ts:167"
       ]
     },
     {
@@ -13717,7 +13718,7 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price display for candidate picks. Advisory only.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:493"
+            "apps/mobile/app/(tabs)/draft.tsx:492"
           ]
         },
         {
@@ -13725,7 +13726,7 @@
           "edge": "e.ui.draft->fn.validate-and-record-pick",
           "detail": "The ONLY pick write path since DR-001 Phase 3: the client-INSERT policies on drafts were dropped (20260811000003).",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:429"
+            "apps/mobile/app/(tabs)/draft.tsx:428"
           ]
         },
         {
@@ -13740,7 +13741,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.drafts#insert",
           "detail": "Legality (turn, uniqueness, draftable universe, slot category/price bracket, stake budget) decided by the shared pure module; a 23505 on pick_number is a lost race and the client refetches.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:357"
+            "supabase/functions/validate-and-record-pick/index.ts:358"
           ]
         },
         {
@@ -13866,7 +13867,7 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:493",
+            "apps/mobile/app/(tabs)/draft.tsx:492",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/home/useHomeLeague.ts:561",
@@ -14277,6 +14278,20 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "fn.send-notification",
+      "label": "send-notification",
+      "kind": "edge-function",
+      "source": "supabase/functions/send-notification/index.ts:165",
+      "outbound": [
+        "pg.check_and_bump_rate_limit",
+        "tbl.league_members",
+        "tbl.leagues",
+        "tbl.push_tokens",
+        "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg._draft_order_finalize",
       "label": "_draft_order_finalize(p_league_id uuid)",
       "kind": "pg-function",
@@ -14682,11 +14697,11 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 195,
-    "edges": 455,
+    "edges": 454,
     "flows": 8,
     "drift": 31,
     "driftHigh": 4,
-    "deadCode": 32,
+    "deadCode": 33,
     "unverified": 12
   },
   "sourceIndex": {
@@ -14714,13 +14729,13 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:326 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:385 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:406 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:429 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:472 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:493 -> quote",
-      "apps/mobile/app/(tabs)/draft.tsx:543 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:325 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:384 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:405 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:428 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:471 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:492 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:542 -> validate-and-record-pick",
       "apps/mobile/app/join-league.tsx:54 -> preview-league",
       "apps/mobile/app/join-league.tsx:63 -> join-league",
       "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
@@ -14730,7 +14745,6 @@
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:561 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:578 -> historical-bars",
-      "apps/mobile/lib/notifications.ts:167 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -14752,7 +14766,7 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/draft.tsx:216 -> get_draft_order",
+      "apps/mobile/app/(tabs)/draft.tsx:215 -> get_draft_order",
       "apps/mobile/app/league-settings.tsx:174 -> start_new_league_season",
       "apps/mobile/lib/LeagueContext.tsx:156 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:161 -> market_session_status",
@@ -14770,10 +14784,10 @@
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
-      "supabase/functions/_shared/draft-write.ts:172 -> get_draft_clock",
-      "supabase/functions/_shared/draft-write.ts:239 -> finalize_league_draft",
-      "supabase/functions/_shared/draft-write.ts:266 -> draft_feasibility_pool",
-      "supabase/functions/_shared/draft-write.ts:593 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/draft-write.ts:179 -> get_draft_clock",
+      "supabase/functions/_shared/draft-write.ts:246 -> finalize_league_draft",
+      "supabase/functions/_shared/draft-write.ts:273 -> draft_feasibility_pool",
+      "supabase/functions/_shared/draft-write.ts:700 -> auto_pick_search_candidates",
       "supabase/functions/draft-autopick-sweep/index.ts:68 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:167 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:170 -> check_and_bump_rate_limit",
@@ -14803,10 +14817,10 @@
       "supabase/functions/validate-and-record-pick/index.ts:125 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/draft.tsx:186 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:196 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/draft.tsx:224 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:260 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/draft.tsx:185 -> league_members.select",
+      "apps/mobile/app/(tabs)/draft.tsx:195 -> user_profiles.select",
+      "apps/mobile/app/(tabs)/draft.tsx:223 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:259 -> league_draft_slots.select",
       "apps/mobile/app/create-league.tsx:126 -> leagues.insert",
       "apps/mobile/app/create-league.tsx:152 -> league_members.insert",
       "apps/mobile/app/league-settings.tsx:137 -> leagues.update",
@@ -14904,29 +14918,29 @@
       "supabase/functions/_shared/category-eligibility.ts:58 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:70 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:84 -> category_rules.select",
-      "supabase/functions/_shared/draft-write.ts:101 -> leagues.select",
-      "supabase/functions/_shared/draft-write.ts:106 -> league_members.select",
-      "supabase/functions/_shared/draft-write.ts:112 -> league_draft_order.select",
-      "supabase/functions/_shared/draft-write.ts:127 -> drafts.select",
-      "supabase/functions/_shared/draft-write.ts:136 -> trades.select",
-      "supabase/functions/_shared/draft-write.ts:189 -> league_draft_slots.select",
-      "supabase/functions/_shared/draft-write.ts:326 -> draft_stalls.insert",
-      "supabase/functions/_shared/draft-write.ts:343 -> draft_stalls.select",
-      "supabase/functions/_shared/draft-write.ts:346 -> draft_stalls.update",
-      "supabase/functions/_shared/draft-write.ts:407 -> draft_turn_outages.insert",
-      "supabase/functions/_shared/draft-write.ts:421 -> draft_turn_outages.update",
-      "supabase/functions/_shared/draft-write.ts:439 -> draft_stalls.insert",
-      "supabase/functions/_shared/draft-write.ts:453 -> draft_turn_outages.update",
-      "supabase/functions/_shared/draft-write.ts:464 -> draft_stalls.select",
-      "supabase/functions/_shared/draft-write.ts:495 -> drafts.insert",
-      "supabase/functions/_shared/draft-write.ts:518 -> draft_stalls.delete",
-      "supabase/functions/_shared/draft-write.ts:521 -> draft_turn_outages.delete",
-      "supabase/functions/_shared/draft-write.ts:574 -> draft_queue.select",
-      "supabase/functions/_shared/draft-write.ts:584 -> symbols.select",
-      "supabase/functions/_shared/draft-write.ts:613 -> auto_pick_price_failures.select",
-      "supabase/functions/_shared/draft-write.ts:622 -> auto_pick_price_failures.upsert",
-      "supabase/functions/_shared/draft-write.ts:627 -> auto_pick_price_failures.delete",
-      "supabase/functions/_shared/draft-write.ts:633 -> symbols.update",
+      "supabase/functions/_shared/draft-write.ts:108 -> leagues.select",
+      "supabase/functions/_shared/draft-write.ts:113 -> league_members.select",
+      "supabase/functions/_shared/draft-write.ts:119 -> league_draft_order.select",
+      "supabase/functions/_shared/draft-write.ts:134 -> drafts.select",
+      "supabase/functions/_shared/draft-write.ts:143 -> trades.select",
+      "supabase/functions/_shared/draft-write.ts:196 -> league_draft_slots.select",
+      "supabase/functions/_shared/draft-write.ts:333 -> draft_stalls.insert",
+      "supabase/functions/_shared/draft-write.ts:350 -> draft_stalls.select",
+      "supabase/functions/_shared/draft-write.ts:353 -> draft_stalls.update",
+      "supabase/functions/_shared/draft-write.ts:414 -> draft_turn_outages.insert",
+      "supabase/functions/_shared/draft-write.ts:428 -> draft_turn_outages.update",
+      "supabase/functions/_shared/draft-write.ts:446 -> draft_stalls.insert",
+      "supabase/functions/_shared/draft-write.ts:460 -> draft_turn_outages.update",
+      "supabase/functions/_shared/draft-write.ts:471 -> draft_stalls.select",
+      "supabase/functions/_shared/draft-write.ts:502 -> drafts.insert",
+      "supabase/functions/_shared/draft-write.ts:525 -> draft_stalls.delete",
+      "supabase/functions/_shared/draft-write.ts:528 -> draft_turn_outages.delete",
+      "supabase/functions/_shared/draft-write.ts:681 -> draft_queue.select",
+      "supabase/functions/_shared/draft-write.ts:691 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:720 -> auto_pick_price_failures.select",
+      "supabase/functions/_shared/draft-write.ts:729 -> auto_pick_price_failures.upsert",
+      "supabase/functions/_shared/draft-write.ts:734 -> auto_pick_price_failures.delete",
+      "supabase/functions/_shared/draft-write.ts:740 -> symbols.update",
       "supabase/functions/_shared/job-status-io.ts:149 -> cron_job_status.select",
       "supabase/functions/_shared/job-status-io.ts:198 -> cron_job_status.update",
       "supabase/functions/_shared/job-status-io.ts:99 -> cron_job_status.upsert",
