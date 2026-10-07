@@ -42,9 +42,9 @@ Deno.test('the start request: only with kick on, only when lobbyView says kick, 
 
 Deno.test("a postponed draft's new time checks its row and maps the refusals", () => {
   assertEquals(hookSrc.includes('updatedOneRow(res)'), true);
-  assertEquals(hookSrc.includes('draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED'), true);
+  assertEquals(hookSrc.includes('draftTimeRefusal(res.error) ?? (opts.firstTime ? DRAFT_TIME_NOT_SAVED : NEW_TIME_NOT_SAVED)'), true);
   // Ruling B: the sheet holds the time; "Set draft time" hands it to the save.
-  assertEquals(hookSrc.includes('const saveDraftTime = async (date: Date) => {'), true);
+  assertEquals(hookSrc.includes('const saveDraftTime = async (date: Date, opts: { firstTime?: boolean } = {}) => {'), true);
   assertEquals(blockersSrc.includes('onConfirm={(d) => void f.saveDraftTime(d)}'), true);
 });
 

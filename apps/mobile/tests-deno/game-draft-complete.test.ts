@@ -7,7 +7,7 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  DRAFT_COMPLETE_TAG, FINALIZE_GRACE_MS, SEE_WEEK_ONE_MATCHUP, YOUR_TEAM_IS_SET,
+  DRAFT_COMPLETE_TAG, FINALIZE_GRACE_MS, SEE_WEEK_ONE_MATCHUP, SEE_WEEK_ONE_MATCHUPS, YOUR_TEAM_IS_SET, matchupSegmentFromParam, weekOneIsBye,
   draftPriceLabel, myRosterPicks, rosterPickCaption, shouldHandOffToFinalize, weekOneFor, weekOneLine, weekOneRealStart,
 } from '../lib/game/draftComplete.ts';
 import { indexPicks } from '../lib/game/draftBoard.ts';
@@ -18,6 +18,7 @@ Deno.test('the board\'s copy, verbatim', () => {
   assertEquals(DRAFT_COMPLETE_TAG, 'Draft complete');
   assertEquals(YOUR_TEAM_IS_SET, 'Your team is set');
   assertEquals(SEE_WEEK_ONE_MATCHUP, 'See your Week 1 matchup');
+  assertEquals(SEE_WEEK_ONE_MATCHUPS, "See Week 1's matchups"); // a bye (ruled)
 });
 
 // finalize writes schedule.ts's nominal Tuesday 14:30Z; Week 1 really opens Monday 9:30 AM ET.
@@ -41,7 +42,27 @@ Deno.test('never the known-wrong nominal time: no calendar coverage, or no row, 
   assertEquals(weekOneLine(null, 'Gianluigi B.'), 'Week 1 starts soon. You play Gianluigi B.');
 });
 
-Deno.test('no opponent (a bye, or not read yet): the sentence ends at the time', () => {
+Deno.test('a Week 1 bye says so (ruled): "You have a bye that week."', () => {
+  const real = weekOneRealStart(NOMINAL, CAL);
+  assertEquals(weekOneLine(real, null, true), 'Week 1 starts Mon 9:30 AM ET. You have a bye that week.');
+  assertEquals(weekOneLine(null, null, true), 'Week 1 starts soon. You have a bye that week.');
+});
+
+Deno.test('a bye is a READ row with no other side; no row or not read yet is unknown, not a bye', () => {
+  assertEquals(weekOneIsBye({ opponentId: null }), true);
+  assertEquals(weekOneIsBye({ opponentId: 'a' }), false);
+  assertEquals(weekOneIsBye(null), false);
+});
+
+Deno.test('the Matchup tab\'s segment from the route: only "all" or "mine", else nothing', () => {
+  assertEquals(matchupSegmentFromParam('all'), 'all');
+  assertEquals(matchupSegmentFromParam(['all']), 'all');
+  assertEquals(matchupSegmentFromParam('mine'), 'mine');
+  assertEquals(matchupSegmentFromParam(undefined), null);
+  assertEquals(matchupSegmentFromParam('nope'), null);
+});
+
+Deno.test('not known yet (no row read): the sentence ends at the time', () => {
   const real = weekOneRealStart(NOMINAL, CAL);
   assertEquals(weekOneLine(real, null), 'Week 1 starts Mon 9:30 AM ET.');
   assertEquals(weekOneLine(real, '  '), 'Week 1 starts Mon 9:30 AM ET.');
@@ -103,14 +124,23 @@ Deno.test('the room: the ending replaces the room once every pick is in; the han
 Deno.test('the ending: "Finishing the draft…" and no button until the server has finished (source guard)', () => {
   const view = SOURCES['components/game/DraftComplete.tsx'];
   assertEquals(view.includes('{finished ? weekLine : FINISHING_THE_DRAFT}'), true);
-  assertEquals(view.includes('{finished ? <Button label={SEE_WEEK_ONE_MATCHUP} onPress={onSeeMatchup} fullWidth /> : null}'), true);
+  assertEquals(view.includes('{finished ? <Button label={bye ? SEE_WEEK_ONE_MATCHUPS : SEE_WEEK_ONE_MATCHUP} onPress={onSeeMatchup} fullWidth /> : null}'), true);
+});
+
+Deno.test('a bye opens All matchups: the room passes it, the League tab routes it, the Matchup tab applies it (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes('onSeeMatchup={() => onSeeMatchup?.({ all: weekOneIsBye(weekOne) })}'), true);
+  assertEquals(SOURCES['app/(tabs)/league.tsx'].includes("router.push(all ? { pathname: '/(tabs)/matchup', params: { segment: 'all' } } : '/(tabs)/matchup');"), true);
+  const tab = SOURCES['app/(tabs)/matchup.tsx'];
+  assertEquals(tab.includes('const s = matchupSegmentFromParam(segmentParam);'), true);
+  assertEquals(tab.includes('}, [segmentParam]);'), true); // applied on change: the tab stays mounted
 });
 
 Deno.test('the League tab keeps the ending after the phase moves on, until the matchup button (source guard)', () => {
   const tab = SOURCES['app/(tabs)/league.tsx'];
   assertEquals(tab.includes('if ((drafting || endingFor === activeLeagueId) && activeLeagueId && activeLeague) {'), true);
   assertEquals(tab.indexOf('endingFor === activeLeagueId') < tab.indexOf('if (inSeason) {'), true);
-  assertEquals(tab.includes("router.push('/(tabs)/matchup');"), true);
+  assertEquals(tab.includes(": '/(tabs)/matchup');"), true); // the button goes to the Matchup tab
 });
 
 Deno.test('Week 1 is read from matchups through the seam (source guard)', () => {

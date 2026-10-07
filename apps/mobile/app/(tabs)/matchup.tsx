@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { matchupSegmentFromParam } from '@/lib/game/draftComplete';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
 
@@ -53,6 +55,13 @@ export default function MatchupScreen() {
   const revealPlay = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
   // "My matchup" / "All matchups" are the board's labels (key screen 2).
   const [segment, setSegment] = useState<'mine' | 'all'>('mine');
+  // The draft's ending on a Week 1 bye opens All matchups (?segment=all). The tab
+  // stays mounted, so the route param is applied when it changes, not only at mount.
+  const { segment: segmentParam } = useLocalSearchParams<{ segment?: string }>();
+  useEffect(() => {
+    const s = matchupSegmentFromParam(segmentParam);
+    if (s) setSegment(s);
+  }, [segmentParam]);
   const all = useAllMatchups(activeLeagueId, m.derived?.week ?? null, m.names, segment === 'all');
   const { user } = useAuth();
   // The final lineup: the posted week's own per-stock rows, shown only when they reconcile.

@@ -255,7 +255,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
       <DraftDateSheet
         visible={picking && setsTime}
         initial={null}
-        onConfirm={(d) => void auto.fixes.saveDraftTime(d)}
+        onConfirm={(d) => void auto.fixes.saveDraftTime(d, { firstTime: true })}
         onClose={() => setPicking(false)}
       />
 

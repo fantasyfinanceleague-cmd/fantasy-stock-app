@@ -143,7 +143,17 @@ Deno.test('Home: the ruled line, primary "Set draft time" opening the sheet in p
   assertEquals(home.includes("<Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant=\"secondary\" />"), true);
   // The same sheet and the same save as a postponed draft's new time; no Set later (no time yet).
   const el = sheetElement(home);
-  assertEquals(el.includes('onConfirm={(d) => void auto.fixes.saveDraftTime(d)}'), true);
+  assertEquals(el.includes('onConfirm={(d) => void auto.fixes.saveDraftTime(d, { firstTime: true })}'), true);
   assertEquals(el.includes('onSetLater'), false);
   assertEquals(el.includes('visible={picking && setsTime}'), true);
+});
+
+Deno.test('Home\'s first-time save failure has no "new" (ruled); the postponed flow keeps it', async () => {
+  const { DRAFT_TIME_NOT_SAVED, NEW_TIME_NOT_SAVED } = await import('../lib/game/autoStart.ts');
+  assertEquals(DRAFT_TIME_NOT_SAVED, "The draft time wasn't saved. Try again.");
+  assertEquals(NEW_TIME_NOT_SAVED, "The new draft time wasn't saved. Try again.");
+  const hook = SOURCES['lib/game/useDraftAutoStart.ts'];
+  assertEquals(hook.includes('draftTimeRefusal(res.error) ?? (opts.firstTime ? DRAFT_TIME_NOT_SAVED : NEW_TIME_NOT_SAVED)'), true);
+  // The blockers card (a postponed draft) doesn't pass firstTime.
+  assertEquals(SOURCES['components/game/AutoStartBlockers.tsx'].includes('onConfirm={(d) => void f.saveDraftTime(d)}'), true);
 });

@@ -16,11 +16,11 @@ import { useDraftRoom } from '@/lib/game/useDraftRoom';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick, boardRows } from '@/lib/game/draftBoard';
-import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick } from '@/lib/game/draftRoom';
+import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
-import { FINALIZE_GRACE_MS, myRosterPicks, shouldHandOffToFinalize, weekOneLine, weekOneRealStart } from '@/lib/game/draftComplete';
+import { FINALIZE_GRACE_MS, myRosterPicks, shouldHandOffToFinalize, weekOneIsBye, weekOneLine, weekOneRealStart } from '@/lib/game/draftComplete';
 import { useWeekOne } from '@/lib/game/useWeekOne';
 import type { MarketCalendarSession } from '@/lib/time/marketWeek';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
@@ -43,8 +43,8 @@ export interface DraftRoomProps {
   marketCalendar?: MarketCalendarSession[];
   /** The last pick landed: the host keeps the room (its ending) on screen after the server finishes the draft. */
   onEnding?: () => void;
-  /** "See your Week 1 matchup". */
-  onSeeMatchup?: () => void;
+  /** "See your Week 1 matchup", or on a bye "See Week 1's matchups" (`all`: open All matchups). */
+  onSeeMatchup?: (opts: { all: boolean }) => void;
 }
 
 /** The draft room (3c, key screen 4): the clock, the snake board, the pick log,
@@ -193,8 +193,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         roster={myRosterPicks(room.picks, room.order, myUserId)}
         caption={caption}
         finished={finished}
-        weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null)}
-        onSeeMatchup={() => onSeeMatchup?.()}
+        weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null, weekOneIsBye(weekOne))}
+        bye={weekOneIsBye(weekOne)}
+        onSeeMatchup={() => onSeeMatchup?.({ all: weekOneIsBye(weekOne) })}
       />
     );
   }
@@ -203,6 +204,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
   const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick, managerName: nameOf(onClockManager), isCommissioner }) : null;
   const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;
+  const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
   const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
@@ -218,8 +220,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
         <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
-        {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway) ? (
-          <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway)}</Text>
+        {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
+          <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway, lastMineAuto)}</Text>
         ) : null}
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>

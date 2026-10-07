@@ -158,7 +158,7 @@ Deno.test('your picks, in pick order, from the snake (4 teams, you are seat 2); 
     { pick_number: 3, symbol: 'META', pick_source: 'manual', entry_price: 508 },
   ]);
   const mine = myDraftedSoFar(picks, ['a', 'me', 'c', 'd'], 'me');
-  assertEquals(mine, { symbols: ['NVDA', 'AAPL'], prices: [318.37, 211.42] });
+  assertEquals(mine, { symbols: ['NVDA', 'AAPL'], prices: [318.37, 211.42], sources: ['manual', 'auto_queue'] });
 });
 
 Deno.test('budget left: the cap minus what your picks cost', () => {
@@ -240,6 +240,14 @@ Deno.test('"You took AAPL · you\'re up in 2 picks" (Home\'s wording), singular,
   assertEquals(afterPickLine('AAPL', 0), null); // your turn: the on-clock card instead
 });
 
+Deno.test('after YOUR auto-pick (ruled): "Auto-picked AAPL for you · you\'re up in 2 picks", distinct from "You took"', () => {
+  assertEquals(afterPickLine('aapl', 2, true), "Auto-picked AAPL for you · you're up in 2 picks");
+  assertEquals(afterPickLine('AAPL', 1, true), "Auto-picked AAPL for you · you're up in 1 pick");
+  assertEquals(afterPickLine('COST', -1, true), "Auto-picked COST for you · that's your team"); // NEW form, flagged
+  assertEquals(afterPickLine('AAPL', 0, true), null);
+  assertEquals(afterPickLine('AAPL', 2, false), "You took AAPL · you're up in 2 picks");
+});
+
 Deno.test('counted on the snake, from the board as read (6 teams; you are seat 1)', () => {
   const order = ['me', 'b', 'c', 'd', 'e', 'f'];
   // Board key screen 4's shape: you took 11 (6 teams, seat 2 in round 2 = pick 11 for seat 2).
@@ -253,7 +261,8 @@ Deno.test('counted on the snake, from the board as read (6 teams; you are seat 1
 
 Deno.test('the room shows it from the recorded board, not from the button: no timer, no "is yours" (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('!isMyTurn && lastMine && afterPickLine(lastMine, picksAway)'), true);
+  assertEquals(room.includes('!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto)'), true);
+  assertEquals(room.includes('const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);'), true);
   assertEquals(room.includes('const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;'), true);
   for (const gone of ['setConfirmed', 'PICK_CONFIRMED_MS', 'pickConfirmedLine', 'is yours']) assertEquals(room.includes(gone), false, gone);
   assertEquals(SOURCES['lib/game/draftRoom.ts'].includes('is yours'), false);

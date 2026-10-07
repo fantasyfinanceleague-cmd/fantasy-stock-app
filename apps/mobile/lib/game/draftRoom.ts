@@ -80,11 +80,11 @@ export function myDraftedSoFar(
   picks: ReadonlyMap<number, { symbol: string; source: string; price?: number | null }>,
   order: readonly string[],
   userId: string,
-): { symbols: string[]; prices: (number | null)[] } {
+): { symbols: string[]; prices: (number | null)[]; sources: string[] } {
   const mine = [...picks.entries()]
     .filter(([n, p]) => order.length > 0 && managerAtPick(n, order as string[]) === userId && p.source !== 'skip')
     .sort((a, b) => a[0] - b[0]);
-  return { symbols: mine.map(([, p]) => p.symbol), prices: mine.map(([, p]) => p.price ?? null) };
+  return { symbols: mine.map(([, p]) => p.symbol), prices: mine.map(([, p]) => p.price ?? null), sources: mine.map(([, p]) => p.source) };
 }
 
 /** The budget left in a budget-cap league (UX rule 4): the cap minus what
@@ -124,11 +124,13 @@ export function rosterCaption(
  * pick: "You took AAPL · that's your team". `picksAway` is picksUntilTurn now (-1 =
  * no pick left). Null on your turn (0): the on-clock card shows instead, which is
  * the board's equivalent of the snake's "you pick again" case. */
-export function afterPickLine(symbol: string, picksAway: number): string | null {
+export function afterPickLine(symbol: string, picksAway: number, auto = false): string | null {
   const s = symbol.toUpperCase();
-  if (picksAway < 0) return `You took ${s} · that's your team`;
+  // Your pick made by auto-pick reads differently (Design Lead, ruled); the pick log keeps its source tag.
+  const lead = auto ? `Auto-picked ${s} for you` : `You took ${s}`;
+  if (picksAway < 0) return `${lead} · that's your team`; // auto: NEW form, flagged
   if (picksAway === 0) return null;
-  return `You took ${s} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`;
+  return `${lead} · you're up in ${picksAway} ${picksAway === 1 ? 'pick' : 'picks'}`;
 }
 
 /** The Draft button while the pick is on its way (UX rule 9). NEW. */

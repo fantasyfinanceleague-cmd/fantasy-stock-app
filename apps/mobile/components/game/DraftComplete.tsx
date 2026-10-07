@@ -8,7 +8,7 @@ import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { YOUR_ROSTER } from '@/lib/game/draftRoom';
 import {
-  DRAFT_COMPLETE_TAG, SEE_WEEK_ONE_MATCHUP, YOUR_TEAM_IS_SET, draftPriceLabel, rosterPickCaption, type RosterPick,
+  DRAFT_COMPLETE_TAG, SEE_WEEK_ONE_MATCHUP, SEE_WEEK_ONE_MATCHUPS, YOUR_TEAM_IS_SET, draftPriceLabel, rosterPickCaption, type RosterPick,
 } from '@/lib/game/draftComplete';
 
 // 3c-2, U-10: the draft's designed ending (board #game "Draft complete"), in the
@@ -25,12 +25,14 @@ export interface DraftCompleteProps {
   finished: boolean;
   /** "Week 1 starts Mon 9:30 AM ET. You play {opponent}" (weekOneLine). */
   weekLine: string;
+  /** A Week 1 bye: the button opens All matchups ("See Week 1's matchups"). */
+  bye: boolean;
   onSeeMatchup: () => void;
 }
 
 export const FINISHING_THE_DRAFT = 'Finishing the draft…'; // existing copy
 
-export function DraftComplete({ roster, caption, finished, weekLine, onSeeMatchup }: DraftCompleteProps) {
+export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeMatchup }: DraftCompleteProps) {
   const { colors } = useTheme();
   return (
     <View style={styles.stack}>
@@ -68,7 +70,7 @@ export function DraftComplete({ roster, caption, finished, weekLine, onSeeMatchu
         </Card>
       </View>
 
-      {finished ? <Button label={SEE_WEEK_ONE_MATCHUP} onPress={onSeeMatchup} fullWidth /> : null}
+      {finished ? <Button label={bye ? SEE_WEEK_ONE_MATCHUPS : SEE_WEEK_ONE_MATCHUP} onPress={onSeeMatchup} fullWidth /> : null}
     </View>
   );
 }

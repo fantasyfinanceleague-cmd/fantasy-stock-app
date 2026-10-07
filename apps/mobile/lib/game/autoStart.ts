@@ -311,6 +311,8 @@ export const RECONFIRM_NOT_SAVED = "Your choice wasn't saved. Try again.";
 export const DRAFT_STATUS_LOAD_FAILED = "The draft lobby didn't load.";
 /** The new time didn't save, for a reason other than the three draft-time refusals. NEW copy. */
 export const NEW_TIME_NOT_SAVED = "The new draft time wasn't saved. Try again.";
+/** A first draft time (Home's no-time card) didn't save. "new" stays in the postponed flow only (Design Lead, ruled). */
+export const DRAFT_TIME_NOT_SAVED = "The draft time wasn't saved. Try again.";
 
 /** The time the postponed league wasn't ready at: the room-open time (stage
  * room_open, or unknown), the draft time itself for a stage-start postponement. */

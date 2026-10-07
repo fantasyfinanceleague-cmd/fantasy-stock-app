@@ -21,14 +21,28 @@ import { managerAtPick } from './draftBoard';
 export const DRAFT_COMPLETE_TAG = 'Draft complete'; // board
 export const YOUR_TEAM_IS_SET = 'Your team is set'; // board
 export const SEE_WEEK_ONE_MATCHUP = 'See your Week 1 matchup'; // board
+/** A Week 1 bye: there's no matchup of yours, so the button opens All matchups (Design Lead, ruled). */
+export const SEE_WEEK_ONE_MATCHUPS = "See Week 1's matchups";
 
-/** "Week 1 starts Mon 9:30 AM ET. You play Gianluigi B." (board). With no
- * opponent (a bye, or the schedule not read yet) the sentence ends at the time
- * (NEW, flagged). */
-export function weekOneLine(realStartIso: string | null, opponent: string | null | undefined): string {
+/** "Week 1 starts Mon 9:30 AM ET. You play Gianluigi B." (board). A bye:
+ * "… You have a bye that week." (ruled). Not known yet (the schedule not read):
+ * the sentence ends at the time (ruled). */
+export function weekOneLine(realStartIso: string | null, opponent: string | null | undefined, bye = false): string {
   const label = nextWeekStartsLabel(1, realStartIso);
+  if (bye) return `${label}. You have a bye that week.`;
   const opp = opponent?.trim();
   return opp ? `${label}. You play ${opp}` : `${label}.`;
+}
+
+/** A bye is a READ Week 1 row with no other side; no row (or not read yet) is unknown, not a bye. */
+export function weekOneIsBye(game: { opponentId: string | null } | null): boolean {
+  return game !== null && game.opponentId === null;
+}
+
+/** The Matchup tab's segment from the route (the ending's bye button opens All matchups). */
+export function matchupSegmentFromParam(param: string | string[] | undefined): 'mine' | 'all' | null {
+  const v = Array.isArray(param) ? param[0] : param;
+  return v === 'all' ? 'all' : v === 'mine' ? 'mine' : null;
 }
 
 /** Week 1's real open: the nominal week_start resolved through the market

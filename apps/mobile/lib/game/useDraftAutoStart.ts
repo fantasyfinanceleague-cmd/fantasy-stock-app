@@ -24,6 +24,7 @@ import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
 import { draftDateForSave, updatedOneRow } from './draftDateSave';
 import { readFunctionRefusal } from '../functionRefusal';
 import {
+  DRAFT_TIME_NOT_SAVED,
   NEW_TIME_NOT_SAVED,
   confirmRosterRefusal,
   draftTimeRefusal,
@@ -136,7 +137,8 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     setPickingTime(true);
   };
   const closePicker = () => setPickingTime(false);
-  const saveDraftTime = async (date: Date) => {
+  // `firstTime`: Home's no-time card (its failure line has no "new"); otherwise a postponed draft's new time.
+  const saveDraftTime = async (date: Date, opts: { firstTime?: boolean } = {}) => {
     setPickingTime(false);
     const value = draftDateForSave(false, date);
     if (!value.ok) {
@@ -147,7 +149,7 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     const res = await seamUpdateLeague(leagueId, { draft_date: value.value });
     setBusy(false);
     if (res.error || !updatedOneRow(res)) {
-      setFixError(draftTimeRefusal(res.error) ?? NEW_TIME_NOT_SAVED);
+      setFixError(draftTimeRefusal(res.error) ?? (opts.firstTime ? DRAFT_TIME_NOT_SAVED : NEW_TIME_NOT_SAVED));
       return;
     }
     setFixError(null);

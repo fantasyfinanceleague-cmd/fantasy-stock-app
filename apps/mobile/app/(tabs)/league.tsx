@@ -298,10 +298,11 @@ function LeagueDraftRoom({ leagueId, rounds, onEnding, onEndingDone }: { leagueI
           notionalPerSlot={activeLeague?.notional_per_slot ?? null}
           marketCalendar={marketCalendar}
           onEnding={onEnding}
-          onSeeMatchup={() => {
+          onSeeMatchup={({ all }) => {
             onEndingDone();
             void refresh();
-            router.push('/(tabs)/matchup');
+            // A Week 1 bye has no matchup of yours: All matchups (Design Lead, ruled).
+            router.push(all ? { pathname: '/(tabs)/matchup', params: { segment: 'all' } } : '/(tabs)/matchup');
           }}
         />
       </BarsRefresh>
