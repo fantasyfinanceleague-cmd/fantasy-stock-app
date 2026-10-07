@@ -2,35 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "60ec299c496cdcc5add574389e63f95829118247",
-    "commitShort": "60ec299",
+    "commit": "c92b791e5fadf35df0158a4cb3b4f1f2f39b7c55",
+    "commitShort": "c92b791e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-league-setup",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamFixtures.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/useSymbolSearch.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/symbol-search-theme.test.ts"
-      }
-    ],
-    "timestamp": "2026-10-07T04:47:50Z",
-    "sourceHash": "sha256:6174916239170bb5acb420c992848cdab0935904fdad120c714bde837ab2c086",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-07T07:43:07Z",
+    "sourceHash": "sha256:bb10c5cb2c977bf2fc952b5ecdafb576a04b577d688cb88c31fa8b0450152e8b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 155.9,
-    "ageDays": 6.5,
+    "ageHours": 158.8,
+    "ageDays": 6.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -10074,7 +10061,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:66"
+        "apps/mobile/lib/game/seamCalls.ts:68"
       ]
     },
     {
@@ -10087,7 +10074,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:60"
+        "apps/mobile/lib/game/seamCalls.ts:62"
       ]
     },
     {
@@ -10100,7 +10087,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:39"
+        "apps/mobile/lib/game/seamCalls.ts:41"
       ]
     },
     {
@@ -13181,9 +13168,9 @@
       "apps/mobile/lib/categoryData.ts:65 -> categories.select",
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
-      "apps/mobile/lib/game/seamCalls.ts:39 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:60 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:66 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:41 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:62 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:68 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:39 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:52 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:62 -> trades.select",
