@@ -176,7 +176,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </Text>
         ) : null}
 
-        {!postponed && !roomOpen && !loading && !waiting && finalizeAt ? (
+        {/* No draft time: no order time either (two sources disagreeing show neither). */}
+        {!postponed && !roomOpen && !view?.noDate && !loading && !waiting && finalizeAt ? (
           <View style={styles.orderRow}>
             <View style={[styles.dot, { backgroundColor: colors.liveText }]} />
             <Text variant="callout">{orderSetLine(finalizeAt)}</Text>

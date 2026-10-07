@@ -34,8 +34,10 @@ Deno.test("once the room is open the button is \"Go to the draft room\" (to the 
   assertEquals(homeSrc.includes("router.push('/(tabs)/league')"), true);
 });
 
-Deno.test('the room-opens line shows only before the room opens', () => {
-  assertEquals(homeSrc.includes('!postponed && !roomOpen && !loading && !waiting && finalizeAt'), true);
+Deno.test('the room-opens line shows only before the room opens, and never with no draft time', () => {
+  // No draft time means no order time: if the status says no time while the order read
+  // still carries one (two sources disagreeing), the card shows neither (capture pass).
+  assertEquals(homeSrc.includes('!postponed && !roomOpen && !view?.noDate && !loading && !waiting && finalizeAt'), true);
 });
 
 Deno.test("members' postponed copy is Home's (no \"and on your Home\")", () => {
