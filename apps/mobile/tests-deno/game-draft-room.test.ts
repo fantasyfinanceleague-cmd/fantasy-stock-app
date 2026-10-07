@@ -344,3 +344,17 @@ Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; s
   assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
   assertEquals(SOURCES['components/game/DraftComplete.tsx'].includes('hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
 });
+
+// ── G-2 (pass-2 gate, rule 6): on your turn the clock card's one emphasis ──
+
+Deno.test('your turn: "You\'re on the clock" in title + liveText, the clock in score type; off-turn unchanged (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && room.clock.kind !== 'auto_picking';"), true);
+  assertEquals(room.includes('<Text variant="title" color={colors.liveText} accessibilityRole="header">{headline}</Text>'), true);
+  assertEquals(room.includes("variant={onTheClock ? 'score.md' : 'headline'}"), true);
+  // The last 10 s stay in loss on and off your turn.
+  assertEquals(room.includes("style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}"), true);
+  // Off your turn ("{Name} is up") keeps the plain callout.
+  assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
+  assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);
+});

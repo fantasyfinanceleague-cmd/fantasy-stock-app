@@ -205,6 +205,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick, managerName: nameOf(onClockManager), isCommissioner }) : null;
   const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;
   const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
+  // Your turn, really yours (not stalled, not the auto-pick running): the screen's one emphasis (G-2).
+  const onTheClock = isMyTurn && !stalled && room.clock.kind !== 'auto_picking';
   const headline = stalled ? (stalled.label ?? '') : room.clock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
@@ -213,11 +215,16 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={styles.clockRow}>
           {room.clock.kind === 'last10' ? <LiveDot size={8} /> : null}
-          <Text variant="headline" style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}>
+          {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
+          <Text variant={onTheClock ? 'score.md' : 'headline'} style={{ color: room.clock.kind === 'last10' ? colors.loss : colors.text }}>
             {pickClockLabel(room.clock)}
           </Text>
         </View>
-        <Text variant="callout" style={isMyTurn ? { fontWeight: '700' } : undefined}>{headline}</Text>
+        {onTheClock ? (
+          <Text variant="title" color={colors.liveText} accessibilityRole="header">{headline}</Text>
+        ) : (
+          <Text variant="callout">{headline}</Text>
+        )}
         <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
         {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
