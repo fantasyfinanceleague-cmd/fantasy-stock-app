@@ -144,5 +144,12 @@ export function RollingMoney({ text, size, color, rollKey }: RollingMoneyProps) 
 
 const styles = StyleSheet.create({
   container: { flexShrink: 1 },
-  row: { flexDirection: 'row' },
+  // `alignSelf: 'flex-start'` is load-bearing: without it, the row inherits
+  // its column parent's default `alignItems: 'stretch'` and gets stretched
+  // to the CONTAINER's width -- so its onLayout would report the stretched
+  // width, not its own content's true natural width, and fitScale would
+  // always compute ~1 (nothing ever shrinks, verified live on device: the
+  // XL Portfolio value kept rendering at full size and running off-screen
+  // with this missing).
+  row: { flexDirection: 'row', alignSelf: 'flex-start' },
 });
