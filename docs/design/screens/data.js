@@ -375,8 +375,11 @@
     const r = PORTFOLIO_LIVE.rows.find((x) => x.t === 'NVDA');
     return {
       ...r,
-      dayPoints: [306.68, 307.9, 309.4, 308.7, 311.2, 313.05, 312.4, 314.9, 316.2, 315.6, 317.1, 318.37],
-      range: ['1D', '1W', '1M', '3M', '1Y'],
+      // 1W of daily closes (Giorgio: ranges 1W / 1M / 3M / 1Y, 1W default, no 1D;
+      // the price history is daily bars only). A week ago .. Tue are SAMPLE closes;
+      // Wed = prev (306.68) and Thu = the live price (318.37) are derived.
+      weekPoints: [301.85, 303.4, 300.95, 304.1, 306.68, 318.37],
+      range: ['1W', '1M', '3M', '1Y'],
       ownership: 'Drafted by you · Round 1, pick 2',
     };
   })();
