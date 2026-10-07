@@ -269,3 +269,10 @@ Deno.test('opens label: no next open means no label, never a guessed time', () =
   assertEquals(marketOpensLabel(null), null);
   assertEquals(marketOpensLabel('garbage'), null);
 });
+
+Deno.test('outcome: a 2xx { ok: false } with no reason string is unconfirmed, not a silent refusal', async () => {
+  // readFunctionRefusal (PR #143) synthesizes reason:'unhandled' here, same as a server-sent
+  // reason:'unhandled' — so this now lands on network (check your history), not a generic refusal.
+  const out = await readRecordTradeOutcome({ data: { ok: false }, error: null });
+  assertEquals(out, { kind: 'network' });
+});

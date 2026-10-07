@@ -1,4 +1,5 @@
 import { parseSlotShape, type SlotShape } from './tierContract';
+import { functionOk, readFunctionRefusal } from '../functionRefusal';
 /**
  * recordTradeOutcome: turns one record-trade call into a single outcome the
  * screens can act on. supabase-js resolves every result as { data, error }
@@ -38,23 +39,30 @@ function refusedFrom(body: RecordTradeBody, reason: string): RecordTradeOutcome 
   return out;
 }
 
+/**
+ * On readFunctionRefusal (lifted from this file, PR #143): it reads the same
+ * { data, error } shape and the same Response-on-context path, so this keeps
+ * only the trade-specific mapping on top. One narrow case changed: a 2xx
+ * { ok: false } with no reason string used to fall to a generic refusal; it
+ * now reads as 'unhandled' the same way a server-sent reason:'unhandled'
+ * does, so it lands on network (unconfirmed) instead — a stricter default,
+ * since the body is malformed and the outcome is genuinely unknown.
+ */
 export async function readRecordTradeOutcome(result: { data: unknown; error: unknown }): Promise<RecordTradeOutcome> {
-  if (!result.error) {
-    const body = (result.data ?? null) as RecordTradeBody | null;
-    if (body && body.ok === true) return { kind: 'ok', trade: body.trade };
-    if (body && body.ok === false && typeof body.reason === 'string') return refusedFrom(body, body.reason);
+  const r = await readFunctionRefusal(result.data, result.error);
+  if (r.transport) return { kind: 'network' };
+
+  if (functionOk(r)) {
+    const body = r.body as RecordTradeBody;
+    if (body.ok === true) return { kind: 'ok', trade: body.trade };
     return { kind: 'refused', reason: 'unhandled' };
   }
 
-  const ctx = (result.error as { context?: unknown } | null)?.context as
-    | { status?: number; json?: () => Promise<unknown> }
-    | undefined;
-  if (!ctx || typeof ctx.json !== 'function') return { kind: 'network' };
-
-  const body = (await ctx.json().catch(() => null)) as RecordTradeBody | null;
-  if (!body || typeof body.reason !== 'string') return { kind: 'network' };
-  // A 5xx that isn't the calendar's 503 is a server fault: it may have written. Unconfirmed.
-  const serverFault = typeof ctx.status === 'number' && ctx.status >= 500 && body.reason !== 'calendar_unavailable';
-  if (serverFault) return { kind: 'network' };
-  return refusedFrom(body, body.reason);
+  const reason = r.reason as string;
+  const body = r.body as RecordTradeBody;
+  // A non-2xx 5xx that isn't the calendar's 503 is a server fault: it may have written. Unconfirmed.
+  if (typeof r.status === 'number' && r.status >= 500 && reason !== 'calendar_unavailable') {
+    return { kind: 'network' };
+  }
+  return refusedFrom(body, reason);
 }
