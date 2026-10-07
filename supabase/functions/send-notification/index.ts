@@ -1,6 +1,5 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { draftTurnMessage } from '../_shared/push-copy.ts';
 
 /**
  * send-notification — server-side push dispatch (scan findings F7 + F8, spec L2).
@@ -67,17 +66,23 @@ function json(body: unknown, status = 200) {
  * THE CLOSED SET. Adding a notification means adding an entry HERE, server-side —
  * that is the point. `build` receives only server-verified values.
  *
- * Inventory as of 2026-07-30 (grep of every notify* caller in the repo):
- *   draft_turn      — LIVE, but NO CLIENT CALLER since 2026-10-06: the turn push
- *                     is now sent server-side after every recorded pick
- *                     (_shared/draft-write.ts notifyNextPicker), and the legacy
- *                     draft.tsx -> notifyDraftTurn call was removed. Per the rule
- *                     below, this entry is still callable by any leaguemate.
+ * THE SET IS EMPTY (2026-10-06), so every request is refused 'unknown
+ * notification type' and this function is inert until a new type is added.
+ *
+ * Inventory as of 2026-10-06 (grep of every notify* caller in the repo):
+ *   draft_turn      — REMOVED 2026-10-06. The turn push is now sent SERVER-side
+ *                     after every recorded pick (_shared/draft-write.ts
+ *                     notifyNextPicker; copy in _shared/push-copy.ts), and the
+ *                     client caller (draft.tsx -> notifyDraftTurn) is gone. Left
+ *                     here it would be a callerless "your turn" spam template.
+ *                     App 1.1.0 still calls it from the legacy draft screen; that
+ *                     call is fire-and-forget and only console-logs a refusal, so
+ *                     those users get exactly ONE push (the server's), not two.
  *   matchup_result  — DESIGNED, NOT BUILT. Named in the notification_log schema
  *                     comment (migration 20260122000000) but never implemented.
  *   league_invite   — DESIGNED, NOT BUILT. Same.
- * The latter two are deliberately NOT in the map (removed 2026-09-24, security
- * review): an entry is callable by ANY authenticated leaguemate the moment it
+ * None of these is in the map (draft_turn removed 2026-10-06, the other two
+ * 2026-09-24, security review): an entry is callable by ANY authenticated leaguemate the moment it
  * exists — "no caller yet" in our code is not "inert" — so an unbuilt type is
  * just a free spam template. Add each one together with its real caller, and
  * decide then who may trigger it (matchup_result is naturally a server/cron
@@ -87,13 +92,7 @@ function json(body: unknown, status = 200) {
 const NOTIFICATION_TYPES: Record<
   string,
   { build: (ctx: { leagueName: string }) => { title: string; body: string; data: Record<string, unknown> } }
-> = {
-  draft_turn: {
-    // Reproduces the pre-existing copy verbatim so the cutover is invisible to users.
-    // Shared with the server-side turn push in _shared/draft-write.ts.
-    build: ({ leagueName }) => draftTurnMessage(leagueName),
-  },
-};
+> = {};
 
 // Fail-open rate limit, same shape as preview-league / join-league.
 async function rateLimitOk(admin: any, userId: string, ip: string): Promise<boolean> {

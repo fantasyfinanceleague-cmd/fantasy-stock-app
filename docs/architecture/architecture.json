@@ -2,22 +2,14 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "b2cfbd096264b3c7d144098e8ff701e7a6519536",
-    "commitShort": "b2cfbd09",
+    "commit": "767ee64b50dc1cdd34e1bce694dc69b015305aed",
+    "commitShort": "767ee64b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/draft-turn-push",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "??",
         "path": "supabase/functions/_shared/draft-write.test.ts"
       },
       {
@@ -25,20 +17,12 @@
         "path": "supabase/functions/_shared/draft-write.ts"
       },
       {
-        "code": "??",
-        "path": "supabase/functions/_shared/push-copy.ts"
-      },
-      {
         "code": "M",
         "path": "supabase/functions/send-notification/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
       }
     ],
-    "timestamp": "2026-10-07T06:54:20Z",
-    "sourceHash": "sha256:15f5db158664e760efb133fe533079a59979aa5f970cd5f583cc60443938f925",
+    "timestamp": "2026-10-07T06:57:15Z",
+    "sourceHash": "sha256:d5df9861d75a8d27a6969ad8beddd1582775b599f16df4ef84844cd26ea1f71e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -946,7 +930,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 272
+        "lines": 271
       },
       "db": null,
       "declared": null,
@@ -959,7 +943,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/send-notification/index.ts",
-        "line": 166
+        "line": 165
       }
     },
     {
@@ -8240,8 +8224,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/send-notification/index.ts:102",
-        "supabase/functions/send-notification/index.ts:105"
+        "supabase/functions/send-notification/index.ts:101",
+        "supabase/functions/send-notification/index.ts:104"
       ]
     },
     {
@@ -8256,8 +8240,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:215",
-        "supabase/functions/send-notification/index.ts:221"
+        "supabase/functions/send-notification/index.ts:214",
+        "supabase/functions/send-notification/index.ts:220"
       ]
     },
     {
@@ -8272,7 +8256,7 @@
         "name"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:230"
+        "supabase/functions/send-notification/index.ts:229"
       ]
     },
     {
@@ -8287,7 +8271,7 @@
         "token"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:154"
+        "supabase/functions/send-notification/index.ts:153"
       ]
     },
     {
@@ -8303,8 +8287,8 @@
         "notifications_enabled"
       ],
       "callSites": [
-        "supabase/functions/send-notification/index.ts:149",
-        "supabase/functions/send-notification/index.ts:160"
+        "supabase/functions/send-notification/index.ts:148",
+        "supabase/functions/send-notification/index.ts:159"
       ]
     },
     {
@@ -14297,7 +14281,7 @@
       "node": "fn.send-notification",
       "label": "send-notification",
       "kind": "edge-function",
-      "source": "supabase/functions/send-notification/index.ts:166",
+      "source": "supabase/functions/send-notification/index.ts:165",
       "outbound": [
         "pg.check_and_bump_rate_limit",
         "tbl.league_members",
@@ -14803,7 +14787,7 @@
       "supabase/functions/_shared/draft-write.ts:179 -> get_draft_clock",
       "supabase/functions/_shared/draft-write.ts:246 -> finalize_league_draft",
       "supabase/functions/_shared/draft-write.ts:273 -> draft_feasibility_pool",
-      "supabase/functions/_shared/draft-write.ts:701 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/draft-write.ts:700 -> auto_pick_search_candidates",
       "supabase/functions/draft-autopick-sweep/index.ts:68 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:167 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:170 -> check_and_bump_rate_limit",
@@ -14825,8 +14809,8 @@
       "supabase/functions/record-trade/index.ts:166 -> check_and_bump_rate_limit",
       "supabase/functions/record-trade/index.ts:454 -> record_trade_atomic",
       "supabase/functions/refresh-market-calendar/index.ts:166 -> apply_market_calendar",
-      "supabase/functions/send-notification/index.ts:102 -> check_and_bump_rate_limit",
-      "supabase/functions/send-notification/index.ts:105 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:101 -> check_and_bump_rate_limit",
+      "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:126 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:143 -> schedule_snapshot_retry",
       "supabase/functions/validate-and-record-pick/index.ts:122 -> check_and_bump_rate_limit",
@@ -14951,12 +14935,12 @@
       "supabase/functions/_shared/draft-write.ts:502 -> drafts.insert",
       "supabase/functions/_shared/draft-write.ts:525 -> draft_stalls.delete",
       "supabase/functions/_shared/draft-write.ts:528 -> draft_turn_outages.delete",
-      "supabase/functions/_shared/draft-write.ts:682 -> draft_queue.select",
-      "supabase/functions/_shared/draft-write.ts:692 -> symbols.select",
-      "supabase/functions/_shared/draft-write.ts:721 -> auto_pick_price_failures.select",
-      "supabase/functions/_shared/draft-write.ts:730 -> auto_pick_price_failures.upsert",
-      "supabase/functions/_shared/draft-write.ts:735 -> auto_pick_price_failures.delete",
-      "supabase/functions/_shared/draft-write.ts:741 -> symbols.update",
+      "supabase/functions/_shared/draft-write.ts:681 -> draft_queue.select",
+      "supabase/functions/_shared/draft-write.ts:691 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:720 -> auto_pick_price_failures.select",
+      "supabase/functions/_shared/draft-write.ts:729 -> auto_pick_price_failures.upsert",
+      "supabase/functions/_shared/draft-write.ts:734 -> auto_pick_price_failures.delete",
+      "supabase/functions/_shared/draft-write.ts:740 -> symbols.update",
       "supabase/functions/_shared/job-status-io.ts:149 -> cron_job_status.select",
       "supabase/functions/_shared/job-status-io.ts:198 -> cron_job_status.update",
       "supabase/functions/_shared/job-status-io.ts:99 -> cron_job_status.upsert",
@@ -15018,12 +15002,12 @@
       "supabase/functions/record-trade/index.ts:336 -> league_members.select",
       "supabase/functions/record-trade/index.ts:413 -> symbols.select",
       "supabase/functions/refresh-symbols/index.ts:171 -> symbols.upsert",
-      "supabase/functions/send-notification/index.ts:149 -> user_profiles.select",
-      "supabase/functions/send-notification/index.ts:154 -> push_tokens.select",
-      "supabase/functions/send-notification/index.ts:160 -> user_profiles.select",
-      "supabase/functions/send-notification/index.ts:215 -> league_members.select",
-      "supabase/functions/send-notification/index.ts:221 -> league_members.select",
-      "supabase/functions/send-notification/index.ts:230 -> leagues.select",
+      "supabase/functions/send-notification/index.ts:148 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:153 -> push_tokens.select",
+      "supabase/functions/send-notification/index.ts:159 -> user_profiles.select",
+      "supabase/functions/send-notification/index.ts:214 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:220 -> league_members.select",
+      "supabase/functions/send-notification/index.ts:229 -> leagues.select",
       "supabase/functions/snapshot-week-end/index.ts:270 -> trades.select",
       "supabase/functions/snapshot-week-end/index.ts:297 -> matchups.select",
       "supabase/functions/snapshot-week-end/index.ts:393 -> leagues.select",
