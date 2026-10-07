@@ -68,8 +68,10 @@ export function LeaveLeagueSheet({ visible, copy, busy, error, onLeave, onStay }
           </View>
           {error ? <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
           <Button label={LEAVE_LEAGUE} variant="destructive" onPress={onLeave} status={busy ? 'loading' : 'idle'} disabled={busy} fullWidth />
-          {/* G-3: one filled action per sheet; the safe choice is never a second primary. */}
-          <Button label={STAY} variant="ghost" onPress={onStay} disabled={busy} fullWidth />
+          {/* Giorgio, board review 2026-10-06 (overrules G-3): "I want stay as a button." A real
+              full-width Button, secondary (outlined) until the Design Lead sets the style; Leave
+              league stays the one filled (red) action. */}
+          <Button label={STAY} variant="secondary" onPress={onStay} disabled={busy} fullWidth />
         </View>
       ) : null}
     </Sheet>
