@@ -45,3 +45,10 @@ Captured with the `search_fail` / `search_delay` dev fixture scenarios
 | File(s) | Proves |
 |---|---|
 | `portfolio-buyrow-standard-light.png`, `…-standard-dark.png`, `…-xl-light.png` | Re-capture after the row was added (`19e2ba46`): the "Buy a stock" row sits under the slots summary, above Holdings, in Light, Dark and XL text. Predates C-9 (the search-icon tile and accent title, queued) — shown for context, not current. |
+
+## C-4 / C-6 / C-9 — the stock sheet's position card, rolling money, board defects
+
+| File(s) | Proves |
+|---|---|
+| `portfolio-c9-buyrow-c6-rolling-standard-light.png` | C-9: the "Buy a stock" row with its accent-tint search-icon tile and accent, bold title (`7d02b3e`). C-6: the "since the draft" gain line rolls (shown green, the correct gain tone) alongside the header value. |
+| `stock-sheet-c4-position-c9-close-standard-light.png` | C-4: the "Your position" card (Shares, Avg entry, Value, Gain, the latter in gain colour) on a held, priced stock (`5851741`). C-9: the sheet closes with the × icon, not "Done" text. |
