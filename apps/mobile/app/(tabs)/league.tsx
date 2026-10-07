@@ -3,7 +3,7 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
 import { router } from 'expo-router';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
@@ -139,7 +139,7 @@ export default function LeagueScreen() {
           {st.status === 'ready' ? (
             <View style={styles.stack}>
               {phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
-                <Card>
+                <Card style={styles.strip}>
                   <Text variant="headline">You're the commissioner</Text>
                   <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
                   <Button label="Run it back" onPress={() => void runItBack()} />
@@ -427,6 +427,8 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
+  // G-6: the sp Card has no padding or radius of its own (the Run it back strip).
+  strip: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   queueFailed: { borderRadius: 14, padding: space[5], gap: space[3], alignItems: 'flex-start' },
   // UX rule 7: your row, pinned over the bottom of the standings (same row component).
   pinned: { position: 'absolute', left: space[6], right: space[6], bottom: space[3] },

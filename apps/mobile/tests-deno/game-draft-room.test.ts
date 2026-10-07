@@ -382,3 +382,15 @@ Deno.test('the roster grid\'s tiles are a centred 44 pt row, no fixed ratio (sou
   assertEquals(grid.includes('minHeight: 44,'), true);
   assertEquals(grid.includes("alignItems: 'center',\n    justifyContent: 'center',"), true);
 });
+
+// ── G-6 (pass-2 gate): the finished League tab ──
+
+Deno.test('standings: one fixed-width rank cell for disc and numeral; the Run it back strip is padded (source guard)', () => {
+  const table = SOURCES['components/game/StandingsTable.tsx'];
+  assertEquals(table.includes('<View style={styles.rankCell}>'), true);
+  assertEquals(table.includes("rankCell: { width: 28, alignItems: 'center' },"), true);
+  assertEquals(table.includes("minWidth: 24, textAlign: 'right'"), false);
+  const tab = SOURCES['app/(tabs)/league.tsx'];
+  assertEquals(tab.includes('<Card style={styles.strip}>'), true);
+  assertEquals(tab.includes('strip: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
+});

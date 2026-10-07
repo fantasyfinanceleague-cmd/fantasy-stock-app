@@ -35,13 +35,16 @@ export function StandingsRowView({ r, seasonComplete }: { r: StandingsRow; seaso
   const move = moveA11y(r.move);
   return (
     <View style={[styles.row, r.isYou ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${r.rank}, ${r.name}, ${r.record}, season gain ${formatMoney(r.seasonGain, { sign: 'always' })}${move ? `, ${move}` : ''}`}>
-      {medal ? (
-        <View style={[styles.disc, { backgroundColor: colors[medal.fill] }]}>
-          <Text variant="caption" style={[styles.discNumeral, { color: colors.onMedal }]}>{r.rank}</Text>
-        </View>
-      ) : (
-        <Text variant="callout" style={styles.rank}>{r.rank}</Text>
-      )}
+      {/* G-6: one fixed-width rank cell, so medal rows 1–3 line up with 4 onwards. */}
+      <View style={styles.rankCell}>
+        {medal ? (
+          <View style={[styles.disc, { backgroundColor: colors[medal.fill] }]}>
+            <Text variant="caption" style={[styles.discNumeral, { color: colors.onMedal }]}>{r.rank}</Text>
+          </View>
+        ) : (
+          <Text variant="callout" style={styles.rank}>{r.rank}</Text>
+        )}
+      </View>
       <View style={styles.moveCell}>
         {r.move === null ? null : r.move > 0 ? (
           <View style={styles.moveRow}>
@@ -127,7 +130,8 @@ export function StandingsTable({ rows, caption, seasonComplete, onPinChange }: S
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
-  rank: { minWidth: 24, textAlign: 'right' },
+  rankCell: { width: 28, alignItems: 'center' },
+  rank: { textAlign: 'center' },
   disc: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   discNumeral: { fontSize: 11, fontWeight: '800' },
   moveCell: { minWidth: 30 },
