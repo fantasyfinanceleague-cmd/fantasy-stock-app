@@ -488,7 +488,7 @@ tests on the G-1 snake and G-4) are taken as reported.
 |---|---|---|
 | G-1 manager columns, your picks | **fixed.** Initials header with "RB" in `youText`; seat *i*'s picks in column *i*, snaking L→R / R→L (round 2 reads 12…7), matching the server's turn order; your cells carry the `you` border and tint. | `draft-room-on-clock-*`, `-after-pick-*` |
 | G-2 the on-clock state stands out | **fixed.** On your turn "0:42" in score type and "You're on the clock" in `title` / `liveText`; off your turn the card is quiet. Squint test passes. | `draft-room-on-clock-*` |
-| G-3 leave sheets | **fixed.** One filled "Leave league", "Stay" as text (matches the board, `6af5ba4`). | `leave-sheet-*`, `leave-unknown-still-in-*` |
+| G-3 leave sheets | **fixed** as ruled then; **overruled by Giorgio** on 2026-10-06 ("I want stay as a button"): "Stay" is a full-width secondary (outlined) button under the red "Leave league" (board `ac74345`). 3c-2 rebuilds it. | `leave-sheet-*`, `leave-unknown-still-in-*` |
 | G-4 your own auto-pick | **fixed.** "11 AAPL · Auto-picked · from your queue"; others' still "from their queue". | `draft-room-after-auto-pick-log-*` |
 | G-5 roster grid | **fixed.** Labels centred, no dead space (room and Home). | `home-drafting-roster-grid-*` |
 | G-6 finished League tab | **fixed.** Run it back card padded; medal discs and rank numerals share one column. | `league-finished-tab-*` |
@@ -567,6 +567,7 @@ reported.
 |---|---|---|
 | G-9 | The key-screen ring clock, with its Reduce Motion fallback | P2 |
 | G-14 | Search results inline, not an overlay (all four `SymbolSearchField` callers) | P2 |
+| G-15 | **Draft board redesign** (Giorgio, 2026-10-06: "not a fan" of the current draft board UI; "save that for later"). Not started; the next design pass on the draft room takes it, with G-9's ring clock. | P2 |
 
 Everything else found in passes 2, 2b and 2c on this branch is closed.
 
@@ -634,3 +635,38 @@ chart's dashed reference line is the range's first close.
   +$4.83 · +1.60%". The date has no year unless it isn't this year ("Oct 1, 2025"). The last
   point reads "Today · {price} · {change} · {%}". No "since …" text: the reference line's label
   already says what the change is against.
+
+---
+
+## Decided after pass 2 (2026-10-06)
+
+### Giorgio overrules G-3
+
+"I want stay as a button." The leave sheets keep "Leave league" as the filled red button; "Stay" is
+a real button under it, the secondary (outlined) style, full width (board `#call-leave`,
+`ac74345`). **Process, from here on:** a Design Lead ruling that changes the look or feel of an
+approved frame, rather than fixing a defect, goes to the Orchestrator flagged **"Giorgio's call"**
+and to Giorgio as an A/B mockup before anyone builds it. G-3 was relayed as polish; it should
+have been a call.
+
+### Your turn must be unmissable (Giorgio; spec by the Design Lead)
+
+Giorgio's words: the top of the screen should "flash a color when they're up just to make sure
+that they're they really notice it", with text "that's very hard to miss", and "a sound
+notification or a buzz". Board: `#your-turn` (before, the flash, at rest, Reduce Motion), `ac74345`.
+
+| Part | Spec |
+|---|---|
+| Trigger | The moment the server's clock makes it your turn; once per turn. A re-opened or refreshed room that is already on your turn doesn't replay it. |
+| Flash | The clock card fills with `live` gold, text in navy. Two flashes, then rest: on 90 ms (`instant`), hold 220 ms, settle to the rest state 160 ms (`quick`), on 90 ms, hold 220 ms, settle 160 ms. About 0.95 s; two flashes inside one second (under WCAG 2.3.1's three-per-second limit). One-shot, never a loop (§4), and it never blocks input. |
+| New token | `on-live`: #0D1B2E in both themes. 5.1:1 on Light `live` (#C07E00), 11.0:1 on Dark `live` (#FFC53D); add the pair to the contrast table (§9A). |
+| At rest (the whole turn) | `warn-tint` fill, 2 pt `live` border; the clock in score type, 44 pt; "You're on the clock" at 30 pt, weight 900, `liveText`: the largest text on the screen. |
+| Haptic | `Haptics.notificationAsync(NotificationFeedbackType.Warning)`, with the first flash. |
+| Sound | One short chime (under 0.5 s), with the first flash. Respects the silent switch (`playsInSilentModeIOS: false`) and mixes with other audio, never stopping it. |
+| Where | The haptic and the chime fire whenever the app is in front. The flash shows when the draft room is on screen; elsewhere, Home's drafting card already says it's your turn. |
+| Last 10 s | One more Warning haptic at 10 s left. No sound and no second flash: the clock turning `loss` red is the visual. |
+| Reduce Motion | No flash. The card switches straight to its rest state, with no fade. The haptic and the chime stay (they aren't motion). |
+
+**A consequence for U-14** (no foreground banners while your clock runs): it should hold only
+while the draft room is on screen. If the player is elsewhere in the app when the turn starts, the
+your-turn push banner should show; the haptic and chime fire either way.
