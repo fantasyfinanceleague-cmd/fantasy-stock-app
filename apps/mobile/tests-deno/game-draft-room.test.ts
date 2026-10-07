@@ -334,3 +334,13 @@ Deno.test('rule 8: every line is a whole sentence, with no em dash and no placeh
 Deno.test('no names known: the manager falls back, never an empty possessive', () => {
   assertEquals(pickRefusalView('not_your_turn', null, { stock: 'AAPL', manager: '' }).line, "It's another manager's pick now.");
 });
+
+// ── Capture pass: the sp Card has no padding or radius of its own ──
+
+Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; source guard)', () => {
+  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx', 'components/game/DraftComplete.tsx']) {
+    assertEquals(SOURCES[p].includes('<Card>'), false, p);
+  }
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
+  assertEquals(SOURCES['components/game/DraftComplete.tsx'].includes('hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
+});

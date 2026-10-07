@@ -7,7 +7,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
 import { seamInvoke } from '@/lib/game/seamCalls';
@@ -178,7 +178,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   if (room.status === 'error') {
     return (
-      <Card>
+      <Card style={styles.card}>
         <Text variant="callout">{DRAFT_ROOM_LOAD_FAILED}</Text>
         <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
       </Card>
@@ -209,7 +209,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   return (
     <View style={styles.stack}>
-      <Card>
+      <Card style={styles.card}>
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={styles.clockRow}>
           {room.clock.kind === 'last10' ? <LiveDot size={8} /> : null}
@@ -231,7 +231,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary">{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
-      <Card>
+      <Card style={styles.card}>
         {rows.map((row, ri) => (
           <View key={ri} style={styles.boardRow}>
             {row.map((cell) => {
@@ -250,7 +250,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       </Card>
 
       {isMyTurn ? (
-        <Card>
+        <Card style={styles.card}>
           <SymbolSearchField
             value={search}
             onChangeText={(t) => {
@@ -274,7 +274,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       {/* Under the search results (board key screen 4). */}
       <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} />
 
-      <Card>
+      <Card style={styles.card}>
         <Text variant="tag" tone="secondary">Latest picks</Text>
         {log.map(([pick, p]) => {
           const row = pickRowView({ symbol: p.symbol, source: p.source });
@@ -293,7 +293,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         <QueueEditor leagueId={leagueId} initial={room.queue.queue} onSaved={room.refresh} />
       ) : null}
       {room.queue.status === 'error' ? (
-        <Card>
+        <Card style={styles.card}>
           <Text variant="callout">{QUEUE_LOAD_FAILED}</Text>
           <Button label="Try again" variant="secondary" size="sm" onPress={room.refresh} />
         </Card>
@@ -303,6 +303,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   refusal: { gap: space[1] },
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },

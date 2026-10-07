@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, View } from 'react-native';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
@@ -49,7 +49,7 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
           <Text variant="headline">{YOUR_ROSTER}</Text>
           <Text variant="caption" tone="secondary">{caption}</Text>
         </View>
-        <Card>
+        <Card style={styles.rows}>
           {roster.map((r, i) => {
             const price = draftPriceLabel(r.price);
             return (
@@ -76,8 +76,10 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
+  rows: { borderRadius: radius.lg, paddingHorizontal: space[5] },
   stack: { gap: space[4] },
-  hero: { gap: space[2] },
+  hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   section: { gap: space[2] },
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3], minHeight: 44 },

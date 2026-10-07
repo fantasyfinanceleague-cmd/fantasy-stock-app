@@ -6,7 +6,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
@@ -47,7 +47,7 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
   };
 
   return (
-    <Card>
+    <Card style={styles.card}>
       <Text variant="tag" tone="secondary">{`Your queue · ${queue.length} of ${QUEUE_MAX}`}</Text>
       <Text variant="caption" tone="secondary">If you step away, we'll auto-pick from your queue when your time runs out. You can come back any time.</Text>
       {queue.map((sym, i) => (
@@ -76,6 +76,8 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[1], minHeight: 44 },
   sym: { flex: 1, fontWeight: '600' },
   // Each icon button reaches 44 pt (the craft floor).
