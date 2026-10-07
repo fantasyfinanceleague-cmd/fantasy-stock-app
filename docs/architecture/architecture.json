@@ -2,58 +2,34 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "85a79a4eb1eb071c0bc334448ad1a249cad71e44",
-    "commitShort": "85a79a4e",
+    "commit": "6bf3c7abd4b37a50178c5a74df7a35bf61295930",
+    "commitShort": "6bf3c7ab",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/foreground-quiet",
+    "branch": "docs/db-snapshot-2026-10-07",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-write.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-write.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/push-copy.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/send-notification/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
+        "path": "docs/architecture/db-snapshot.json"
       }
     ],
-    "timestamp": "2026-10-07T19:18:26Z",
-    "sourceHash": "sha256:045912558910274884869b67e47e797b59f06deeef1cca2db1f5ffc055b509d3",
+    "timestamp": "2026-10-07T19:43:34Z",
+    "sourceHash": "sha256:193a8f762d07b02a4641abbb7afc9064155390230dbad9980ea9032fac00ccd6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 24.1,
-    "ageDays": 1,
+    "capturedAt": "2026-10-07T19:41:46Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
+    "hash": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 63,
+      "functions": 66,
       "tables": 33,
       "cronJobs": 11
     }
@@ -1782,7 +1758,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261110000000_transfer_commissioner.sql:86"
@@ -1790,20 +1784,12 @@
         "latestDefinition": "supabase/migrations/20261110000000_transfer_commissioner.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._league_membership_window",
-      "label": "_league_membership_window()",
-      "sublabel": "not in snapshot",
+      "label": "_league_membership_window(p_league_id uuid)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
@@ -2208,7 +2194,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261110000000_transfer_commissioner.sql:193"
@@ -2216,20 +2220,12 @@
         "latestDefinition": "supabase/migrations/20261110000000_transfer_commissioner.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.enforce_commissioner_change_via_transfer",
       "label": "enforce_commissioner_change_via_transfer()",
-      "sublabel": "not in snapshot",
+      "sublabel": "owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
@@ -4357,7 +4353,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261110000000_transfer_commissioner.sql:117"
@@ -4365,20 +4386,12 @@
         "latestDefinition": "supabase/migrations/20261110000000_transfer_commissioner.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.transfer_commissioner",
-      "label": "transfer_commissioner()",
-      "sublabel": "not in snapshot",
+      "label": "transfer_commissioner(p_league_id uuid, p_user_id text, p_new_commissioner text)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
@@ -13953,36 +13966,6 @@
   ],
   "drift": [
     {
-      "node": "pg._league_membership_window",
-      "label": "_league_membership_window()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.enforce_commissioner_change_via_transfer",
-      "label": "enforce_commissioner_change_via_transfer()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.transfer_commissioner",
-      "label": "transfer_commissioner()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -14388,7 +14371,7 @@
     },
     {
       "node": "pg._league_membership_window",
-      "label": "_league_membership_window()",
+      "label": "_league_membership_window(p_league_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261110000000_transfer_commissioner.sql:86",
       "outbound": [
@@ -14638,24 +14621,6 @@
   },
   "unverified": [
     {
-      "scope": "pg._league_membership_window",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.transfer_commissioner",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.enforce_commissioner_change_via_transfer",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -14715,10 +14680,10 @@
     "nodes": 195,
     "edges": 454,
     "flows": 8,
-    "drift": 31,
-    "driftHigh": 4,
+    "drift": 28,
+    "driftHigh": 1,
     "deadCode": 33,
-    "unverified": 12
+    "unverified": 9
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -15211,6 +15176,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c"
+    "dbSnapshot": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b"
   }
 }
