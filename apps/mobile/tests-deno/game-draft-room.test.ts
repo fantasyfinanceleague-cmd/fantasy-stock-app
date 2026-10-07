@@ -394,3 +394,10 @@ Deno.test('standings: one fixed-width rank cell for disc and numeral; the Run it
   assertEquals(tab.includes('<Card style={styles.strip}>'), true);
   assertEquals(tab.includes('strip: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
 });
+
+Deno.test('the League tab standings block is a padded card (G-12; source guard)', () => {
+  const table = SOURCES['components/game/StandingsTable.tsx'];
+  assertEquals(table.includes('<Card style={styles.card}>'), true);
+  assertEquals(table.includes('card: { borderRadius: radius.lg, padding: space[5] },'), true);
+  assertEquals(table.includes('<Card>'), false);
+});

@@ -6,7 +6,7 @@ import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { moveA11y, shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
 
@@ -116,7 +116,8 @@ export function StandingsTable({ rows, caption, seasonComplete, onPinChange }: S
 
   return (
     <View ref={cardRef} collapsable={false}>
-      <Card>
+      {/* G-12: the sp Card has no padding or radius of its own (as for the room's cards). */}
+      <Card style={styles.card}>
         {rows.map((r) => (
           <View key={r.userId} ref={r.isYou ? yourRef : undefined} collapsable={false}>
             <StandingsRowView r={r} seasonComplete={seasonComplete} />
@@ -129,6 +130,7 @@ export function StandingsTable({ rows, caption, seasonComplete, onPinChange }: S
 }
 
 const styles = StyleSheet.create({
+  card: { borderRadius: radius.lg, padding: space[5] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
   rankCell: { width: 28, alignItems: 'center' },
   rank: { textAlign: 'center' },
