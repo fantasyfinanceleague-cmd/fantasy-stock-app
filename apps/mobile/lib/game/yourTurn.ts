@@ -84,3 +84,18 @@ export function nextLastTenBuzz(
   if (obs.secondsLeft > LAST_TEN_SECONDS || obs.secondsLeft <= 0) return { buzzedPick, buzz: false };
   return { buzzedPick: obs.myTurnPick, buzz: obs.appActive };
 }
+
+/** When the card's text switches to `onLive` (navy, on the gold) and back during
+ * the flash: navy from the start of each rise until its settle begins, so the
+ * text is never navy on the rest card (navy is unreadable on Dark's surface). */
+export function flashTextSchedule(steps: readonly FlashStep[]): { atMs: number; onLive: boolean }[] {
+  const out: { atMs: number; onLive: boolean }[] = [];
+  let at = 0;
+  let level = 0;
+  for (const s of steps) {
+    if (s.to !== level) out.push({ atMs: at, onLive: s.to === 1 });
+    level = s.to;
+    at += s.ms;
+  }
+  return out;
+}

@@ -4,7 +4,7 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, nextLastTenBuzz, nextTurnSignal,
+  FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal,
   type TurnObservation, type TurnSignalState,
 } from '../lib/game/yourTurn.ts';
 
@@ -63,4 +63,16 @@ Deno.test('the last-10-s haptic: once per turn, inside 1..10 s, only while it\'s
   assertEquals(nextLastTenBuzz(null, at(0)).buzz, false); // time's up: the auto-pick runs
   assertEquals(nextLastTenBuzz(null, at(null)).buzz, false); // no clock
   assertEquals(nextLastTenBuzz(null, at(5, 11, false)), { buzzedPick: 11, buzz: false }); // in the background: consumed
+});
+
+Deno.test('the flash text: navy from each rise until its settle, never on the rest card; nothing with Reduce Motion', () => {
+  assertEquals(flashTextSchedule(FLASH_STEPS), [
+    { atMs: 0, onLive: true },
+    { atMs: 310, onLive: false },
+    { atMs: 470, onLive: true },
+    { atMs: 780, onLive: false },
+  ]);
+  const last = flashTextSchedule(FLASH_STEPS).at(-1);
+  assertEquals(last?.onLive, false);
+  assertEquals(flashTextSchedule(flashSteps(true)), []);
 });

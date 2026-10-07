@@ -347,13 +347,15 @@ Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; s
 
 // ── G-2 (pass-2 gate, rule 6): on your turn the clock card's one emphasis ──
 
-Deno.test('your turn: "You\'re on the clock" in title + liveText, the clock in score type; off-turn unchanged (source guard)', () => {
+// The your-turn spec (board #your-turn ac74345) grew G-2's emphasis: display at 30 pt and
+// score.lg at 44 pt (game-your-turn-card.test.ts pins the rest of the card).
+Deno.test('your turn: "You\'re on the clock" as the header in liveText, the clock in score type; off-turn unchanged (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';"), true);
-  assertEquals(room.includes('<Text variant="title" color={colors.liveText} accessibilityRole="header">{headline}</Text>'), true);
-  assertEquals(room.includes("variant={onTheClock ? 'score.md' : 'headline'}"), true);
-  // The last 10 s stay in loss on and off your turn.
-  assertEquals(room.includes("style={{ color: shownClock.kind === 'last10' ? colors.loss : colors.text }}"), true);
+  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText} accessibilityRole="header">{headline}</Text>'), true);
+  assertEquals(room.includes("variant={onTheClock ? 'score.lg' : 'headline'}"), true);
+  // The last 10 s stay in loss on and off your turn (navy only under the flash's gold).
+  assertEquals(room.includes("color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text"), true);
   // Off your turn ("{Name} is up") keeps the plain callout.
   assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
   assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);

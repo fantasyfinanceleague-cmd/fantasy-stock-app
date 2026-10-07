@@ -1,12 +1,15 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { AppState, View, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
 import { radius, space } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +31,7 @@ import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { ownPickClockQuiet, setForegroundQuiet } from '@/lib/foregroundQuiet';
 import { useIsFocused } from '@react-navigation/native';
 import { turnState } from '@/lib/game/draftRefusals';
+import { TURN_SIGNAL_START, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal } from '@/lib/game/yourTurn';
 
 export interface DraftRoomProps {
   leagueId: string;
@@ -94,6 +98,47 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     setForegroundQuiet('own_pick_clock', quiet);
     return () => setForegroundQuiet('own_pick_clock', false);
   }, [quiet]);
+
+  // Your turn, unmissable (lib/game/yourTurn; the Design Lead's spec). The signal keys on
+  // the server's reading (room.clock), once per turn; the first reading only records, so a
+  // re-opened room doesn't replay it. The haptic fires whenever the app is in front; the
+  // flash only while the room is on screen, and never with Reduce Motion.
+  const { reduced } = useMotion();
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => setAppActive(next === 'active'));
+    return () => sub.remove();
+  }, []);
+  const myTurnPick = room.status === 'ready' && !draftDone && isMyTurn && (room.clock.kind === 'on_clock' || room.clock.kind === 'last10') ? onClockPick : null;
+  const turnSignal = useRef(TURN_SIGNAL_START);
+  const flash = useSharedValue(0);
+  const [flashLit, setFlashLit] = useState(false);
+  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => flashTimers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    if (room.status !== 'ready') return;
+    const next = nextTurnSignal(turnSignal.current, { myTurnPick, appActive });
+    turnSignal.current = next.state;
+    if (!next.fire) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    const steps = roomOnScreen ? flashSteps(reduced) : [];
+    if (steps.length === 0) return;
+    flashTimers.current.forEach(clearTimeout);
+    flashTimers.current = flashTextSchedule(steps).map((t) => setTimeout(() => setFlashLit(t.onLive), t.atMs));
+    flashTimers.current.push(setTimeout(() => setFlashLit(false), flashDurationMs(steps)));
+    flash.value = 0;
+    const [first, ...rest] = steps.map((st) => withTiming(st.to, { duration: st.ms }));
+    flash.value = withSequence(first, ...rest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the turn reading only; focus and Reduce Motion are read at that moment
+  }, [myTurnPick, appActive, room.status]);
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+  // The last 10 s: one more Warning haptic, once per turn (no sound, no second flash).
+  const lastTenBuzzed = useRef<number | null>(null);
+  useEffect(() => {
+    const r = nextLastTenBuzz(lastTenBuzzed.current, { myTurnPick, secondsLeft: shownClock.secondsLeft, appActive });
+    lastTenBuzzed.current = r.buzzedPick;
+    if (r.buzz) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+  }, [myTurnPick, shownClock.secondsLeft, appActive]);
 
   // UX rule 9: "Checking…" clears once the re-read board arrives (it speaks for itself).
   useEffect(() => {
@@ -231,17 +276,25 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   return (
     <View style={styles.stack}>
-      <Card style={styles.card}>
+      {/* Your turn at rest (the spec): warn-tint over the surface, a 2 pt live border, the
+          44 pt clock, and "You're on the clock" as the largest text on screen. The flash is
+          a live-gold layer over the tint, under the text; it never takes a touch. */}
+      <Card style={[styles.card, onTheClock ? [styles.yourTurnCard, { borderColor: colors.live }] : null]}>
+        {onTheClock ? <View testID="your-turn-tint" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.warnTint }]} /> : null}
+        {onTheClock ? <Animated.View testID="your-turn-flash" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.live }, flashStyle]} /> : null}
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={styles.clockRow}>
           {shownClock.kind === 'last10' ? <LiveDot size={8} /> : null}
           {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
-          <Text variant={onTheClock ? 'score.md' : 'headline'} style={{ color: shownClock.kind === 'last10' ? colors.loss : colors.text }}>
+          <Text
+            variant={onTheClock ? 'score.lg' : 'headline'}
+            style={[onTheClock ? styles.yourTurnClock : null, { color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text }]}
+          >
             {pickClockLabel(shownClock)}
           </Text>
         </View>
         {onTheClock ? (
-          <Text variant="title" color={colors.liveText} accessibilityRole="header">{headline}</Text>
+          <Text variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText} accessibilityRole="header">{headline}</Text>
         ) : (
           <Text variant="callout">{headline}</Text>
         )}
@@ -357,6 +410,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
+  // Your turn at rest: the 2 pt live border (colour set inline); the clock at 44 pt in score
+  // type; the title at 30 pt in ExtraBold (no 900 normal-width face is loaded; flagged).
+  yourTurnCard: { borderWidth: 2 },
+  yourTurnClock: { fontSize: 44, lineHeight: 42 },
+  yourTurnTitle: { fontSize: 30, lineHeight: 34 },
   // The sp Card clips (overflow hidden), which cut the search's dropdown off at the card edge;
   // a search card lets it overflow, above the cards that follow it.
   searchCard: { overflow: 'visible', zIndex: 10 },
