@@ -4,7 +4,7 @@
  */
 import { assertEquals } from 'jsr:@std/assert';
 import {
-  CHIME_AUDIO_MODE, FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal,
+  CHIME_AUDIO_MODE, FLASH_STEPS, TURN_SIGNAL_START, flashCount, flashDurationMs, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal,
   type TurnObservation, type TurnSignalState,
 } from '../lib/game/yourTurn.ts';
 
@@ -65,16 +65,10 @@ Deno.test('the last-10-s haptic: once per turn, inside 1..10 s, only while it\'s
   assertEquals(nextLastTenBuzz(null, at(5, 11, false)), { buzzedPick: 11, buzz: false }); // in the background: consumed
 });
 
-Deno.test('the flash text: navy from each rise until its settle, never on the rest card; nothing with Reduce Motion', () => {
-  assertEquals(flashTextSchedule(FLASH_STEPS), [
-    { atMs: 0, onLive: true },
-    { atMs: 310, onLive: false },
-    { atMs: 470, onLive: true },
-    { atMs: 780, onLive: false },
-  ]);
-  const last = flashTextSchedule(FLASH_STEPS).at(-1);
-  assertEquals(last?.onLive, false);
-  assertEquals(flashTextSchedule(flashSteps(true)), []);
+Deno.test('the flash text: navy as each rise starts, back as its settle starts, never on the rest card; nothing with Reduce Motion', () => {
+  // FLASH_STEPS: rise, hold, settle, rise, hold, settle.
+  assertEquals(flashTextAtStepStart(FLASH_STEPS), [true, null, false, true, null, false]);
+  assertEquals(flashTextAtStepStart(flashSteps(true)), []);
 });
 
 Deno.test('the chime: silent on the silent switch, mixed with other audio, never in the background', () => {

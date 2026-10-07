@@ -86,18 +86,19 @@ export function nextLastTenBuzz(
 }
 
 /** When the card's text switches to `onLive` (navy, on the gold) and back during
- * the flash: navy from the start of each rise until its settle begins, so the
- * text is never navy on the rest card (navy is unreadable on Dark's surface). */
-export function flashTextSchedule(steps: readonly FlashStep[]): { atMs: number; onLive: boolean }[] {
-  const out: { atMs: number; onLive: boolean }[] = [];
-  let at = 0;
+ * the flash, per step: `true`/`false` to apply as that step STARTS, `null` to
+ * leave it. Navy from the start of each rise until its settle begins, so the text
+ * is never navy on the rest card (navy is unreadable on Dark's surface). The room
+ * applies these from the animation's own step callbacks, not from timers: the
+ * simulator capture (2026-10-07) showed each hold running ~60 ms past its nominal
+ * 220 ms, so JS timers turned the text navy over the rest tint before pulse 2. */
+export function flashTextAtStepStart(steps: readonly FlashStep[]): (boolean | null)[] {
   let level = 0;
-  for (const s of steps) {
-    if (s.to !== level) out.push({ atMs: at, onLive: s.to === 1 });
+  return steps.map((s) => {
+    const change = s.to !== level ? s.to === 1 : null;
     level = s.to;
-    at += s.ms;
-  }
-  return out;
+    return change;
+  });
 }
 
 /** The chime's audio session (the spec): silent with the ring/silent switch on silent

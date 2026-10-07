@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, View, StyleSheet } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
@@ -32,7 +32,7 @@ import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { ownPickClockQuiet, setForegroundQuiet } from '@/lib/foregroundQuiet';
 import { useIsFocused } from '@react-navigation/native';
 import { turnState } from '@/lib/game/draftRefusals';
-import { TURN_SIGNAL_START, flashDurationMs, flashSteps, flashTextSchedule, nextLastTenBuzz, nextTurnSignal } from '@/lib/game/yourTurn';
+import { TURN_SIGNAL_START, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal } from '@/lib/game/yourTurn';
 
 export interface DraftRoomProps {
   leagueId: string;
@@ -115,8 +115,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const turnSignal = useRef(TURN_SIGNAL_START);
   const flash = useSharedValue(0);
   const [flashLit, setFlashLit] = useState(false);
-  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => () => flashTimers.current.forEach(clearTimeout), []);
+  useEffect(() => () => cancelAnimation(flash), [flash]);
   useEffect(() => {
     if (room.status !== 'ready') return;
     const next = nextTurnSignal(turnSignal.current, { myTurnPick, appActive });
@@ -126,11 +125,18 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     playChime();
     const steps = roomOnScreen ? flashSteps(reduced) : [];
     if (steps.length === 0) return;
-    flashTimers.current.forEach(clearTimeout);
-    flashTimers.current = flashTextSchedule(steps).map((t) => setTimeout(() => setFlashLit(t.onLive), t.atMs));
-    flashTimers.current.push(setTimeout(() => setFlashLit(false), flashDurationMs(steps)));
+    // The text follows the animation's own steps (flashTextAtStepStart): each step's end
+    // applies the next step's switch, and the last step's end returns the text to rest.
+    const atStart = flashTextAtStepStart(steps);
+    if (atStart[0] !== null) setFlashLit(atStart[0]);
     flash.value = 0;
-    const [first, ...rest] = steps.map((st) => withTiming(st.to, { duration: st.ms }));
+    const [first, ...rest] = steps.map((st, i) => {
+      const lit = i + 1 < steps.length ? atStart[i + 1] : false;
+      return withTiming(st.to, { duration: st.ms }, () => {
+        'worklet';
+        if (lit !== null) runOnJS(setFlashLit)(lit);
+      });
+    });
     flash.value = withSequence(first, ...rest);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the turn reading only; focus and Reduce Motion are read at that moment
   }, [myTurnPick, appActive, room.status]);
@@ -275,6 +281,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
   // Your turn, really yours (not stalled, not the auto-pick running): the screen's one emphasis (G-2).
   const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';
+  // The flash: EVERY line on the card is navy (on-live) while the gold is up (the spec's
+  // "text in navy"); the clock and the title also switch their own colours below.
+  const flashInk = onTheClock && flashLit ? colors.onLive : undefined;
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
@@ -301,7 +310,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         ) : (
           <Text variant="callout">{headline}</Text>
         )}
-        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
+        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} color={flashInk}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
         {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
           <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway, lastMineAuto)}</Text>
@@ -309,9 +318,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
         ) : null}
-        <Text variant="caption" tone="secondary">{`${room.pickSeconds}-second picks`}</Text>
+        <Text variant="caption" tone="secondary" color={flashInk}>{`${room.pickSeconds}-second picks`}</Text>
         {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
-        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary">{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
+        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary" color={flashInk}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
       <Card style={styles.card}>

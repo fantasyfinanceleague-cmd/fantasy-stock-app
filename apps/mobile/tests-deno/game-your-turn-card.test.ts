@@ -42,10 +42,16 @@ Deno.test('rest: warn-tint over the surface, a 2 pt live border, the 44 pt clock
   assert(room.includes('variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText}'));
 });
 
-Deno.test('the text is navy (on-live) only while the gold is up', () => {
-  assert(room.includes('flashTextSchedule(steps).map((t) => setTimeout(() => setFlashLit(t.onLive), t.atMs))'));
-  assert(room.includes('setTimeout(() => setFlashLit(false), flashDurationMs(steps))'));
-  assertEquals((room.match(/colors\.onLive/g) ?? []).length, 2); // the clock and the title, both behind flashLit
+Deno.test('the text is navy (on-live) only while the gold is up, keyed on the animation, not timers', () => {
+  assert(room.includes('const atStart = flashTextAtStepStart(steps);'));
+  assert(room.includes('const lit = i + 1 < steps.length ? atStart[i + 1] : false;'));
+  assert(room.includes('if (lit !== null) runOnJS(setFlashLit)(lit);'));
+  // The capture showed timers drift from the animation (holds ran ~60 ms long): no timers.
+  assert(!/setTimeout\(\(\) => setFlashLit/.test(room));
+  assertEquals((room.match(/colors\.onLive/g) ?? []).length, 3); // the clock, the title and flashInk, all behind flashLit
+  // Every other line on the card goes navy too (the Dark capture: white and grey lines vanished on the gold).
+  assert(room.includes('const flashInk = onTheClock && flashLit ? colors.onLive : undefined;'));
+  assertEquals((room.match(/color=\{flashInk\}/g) ?? []).length, 3); // the round line, "N-second picks", waiting for prices
 });
 
 Deno.test('the last 10 s: one more Warning haptic, keyed on the ticking clock, no sound or flash', () => {
