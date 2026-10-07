@@ -8,8 +8,8 @@
 import { assertEquals } from 'jsr:@std/assert';
 import {
   COMMISSIONER_ROW, COMMISSIONER_YOU, HAND_OVER, LEAVE_COMMISSIONER_FIRST, LEAVE_LEAGUE, LEAVE_LOCKED_LINE, LEAVE_REFUSAL_REASONS,
-  MEMBER_LINE, STAY, TRANSFER_TITLE, WHO_TAKES_OVER,
-  handOverLabel, leaveOutcome, leaveRowView, leaveSheetCopy, leaveWindow, orderAtLabel, orderSetAtMs, transferAllowed, transferCandidates,
+  LEAVE_UNCONFIRMED, LEAVE_UNTIL_NO_TIME, MEMBER_LINE, STAY, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER,
+  handOverLabel, leaveOutcome, leaveRecheck, transferUnknownLine, leaveRowView, leaveSheetCopy, leaveWindow, orderAtLabel, orderSetAtMs, transferAllowed, transferCandidates,
 } from '../lib/game/leaveLeague.ts';
 import { leaveLeagueFixture } from '../lib/game/seamFixtures.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
@@ -29,8 +29,11 @@ Deno.test('the board\'s copy, verbatim', () => {
   assertEquals(LEAVE_COMMISSIONER_FIRST, 'Make someone else commissioner first.');
   assertEquals(WHO_TAKES_OVER, 'Who takes over as commissioner?');
   assertEquals(MEMBER_LINE, 'Member');
-  // NEW (flagged): the transfer sheet has no frame.
+  // The transfer sheet (Design Lead, ruled).
   assertEquals(TRANSFER_TITLE, 'Make someone else commissioner');
+  assertEquals(TRANSFER_NOTE, 'The new commissioner takes over right away. You stay in the league.');
+  assertEquals(LEAVE_UNTIL_NO_TIME, 'You can leave until an hour before the draft.');
+  assertEquals(LEAVE_UNCONFIRMED, "We couldn't confirm that. Check your connection, then try again.");
   assertEquals(handOverLabel('Paolo M.'), 'Hand over to Paolo M.');
   assertEquals(HAND_OVER, 'Hand over');
 });
@@ -64,7 +67,7 @@ Deno.test('the order time: an hour before the draft, "Sat 6:00 PM ET"', () => {
 
 Deno.test('the row: open says until when (board "Before the lock")', () => {
   assertEquals(leaveRowView('before_draft', false, DRAFT), { enabled: true, sub: 'You can leave until Sat 6:00 PM ET, when the draft order is set.' });
-  assertEquals(leaveRowView('before_draft', false, null), { enabled: true, sub: null }); // no draft time: no "until" (flagged)
+  assertEquals(leaveRowView('before_draft', false, null), { enabled: true, sub: 'You can leave until an hour before the draft.' }); // ruled
   assertEquals(leaveRowView('after_season', false, DRAFT), { enabled: true, sub: null });
 });
 
@@ -140,12 +143,35 @@ Deno.test('the Rule 8 table, verbatim', () => {
   assertEquals(LEAVE_REFUSAL_REASONS.length, 9);
 });
 
-Deno.test('never a guessed success: no answer, a server fault, an unknown status or reason', () => {
-  const generic = { kind: 'refused' as const, reason: null, line: "That didn't go through." };
-  assertEquals(leaveOutcome({ transport: true }), generic);
-  assertEquals(ok({ ok: true }), generic);
-  assertEquals(ok({ ok: true, status: 'mystery' }), generic);
-  assertEquals(refused('unhandled', 500), { kind: 'refused', reason: 'unhandled', line: "That didn't go through." });
+Deno.test('never a guessed outcome: no answer, a server fault, or an unknown status is UNKNOWN', () => {
+  assertEquals(leaveOutcome({ transport: true }), { kind: 'unknown' });
+  assertEquals(ok({ ok: true }), { kind: 'unknown' });
+  assertEquals(ok({ ok: true, status: 'mystery' }), { kind: 'unknown' });
+  assertEquals(refused('unhandled', 500), { kind: 'unknown' });
+  assertEquals(refused('mystery', 503), { kind: 'unknown' });
+  // A client bug (the audit) is a known refusal, not unknown.
+  assertEquals(refused('mystery'), { kind: 'refused', reason: 'mystery', line: "That didn't go through." });
+});
+
+Deno.test('a leave\'s unknown outcome re-reads your membership (ruled): still in, gone, or unconfirmed', () => {
+  // Still a member: nothing happened.
+  assertEquals(leaveRecheck({ error: null, data: [{ hidden_at: null }] }, 'Serie A Traders'), {
+    kind: 'refused', reason: null, line: "You're still in Serie A Traders. Try again.",
+  });
+  // Gone: the leave went through (your own row is always readable, so no row means left).
+  assertEquals(leaveRecheck({ error: null, data: [] }, 'Serie A Traders'), { kind: 'left' });
+  // A finished league you hid: the row stays, hidden.
+  assertEquals(leaveRecheck({ error: null, data: [{ hidden_at: '2026-12-20T10:00:00Z' }] }, 'Stock Scudetto'), { kind: 'hidden' });
+  // The re-read failed.
+  assertEquals(leaveRecheck({ error: { message: 'network' }, data: null }, 'Serie A Traders'), { kind: 'refused', reason: null, line: LEAVE_UNCONFIRMED });
+  assertEquals(leaveRecheck({ error: null, data: null }, 'Serie A Traders'), { kind: 'refused', reason: null, line: LEAVE_UNCONFIRMED });
+});
+
+Deno.test('a transfer\'s unknown outcome keeps "That didn\'t go through." and refreshes (source guard)', () => {
+  assertEquals(transferUnknownLine(), "That didn't go through.");
+  const s = SOURCES['app/league-settings.tsx'];
+  assertEquals(s.includes("out.kind === 'unknown' ? transferUnknownLine() : null"), true);
+  assertEquals(s.includes("if (out.kind === 'unknown') void refresh();"), true);
 });
 
 // ── The transfer picker ──
@@ -189,6 +215,10 @@ Deno.test('League settings: the real row, the sheets, a member view, the Commiss
   assertEquals(s.includes('accessibilityState={{ disabled: true }}'), false); // the placement-only row is gone
   const hook = SOURCES['lib/game/useLeaveLeague.ts'];
   assertEquals(hook.includes("const outcome = leaveOutcome(await readFunctionRefusal(data, error));"), true);
+  // The re-read: only on an unknown outcome, your own row, then leaveRecheck.
+  assertEquals(hook.includes("if (first.kind !== 'unknown' || !leagueId) return first;"), true);
+  assertEquals(hook.includes(".select('hidden_at').eq('league_id', leagueId).eq('user_id', me)"), true);
+  assertEquals(hook.includes('return leaveRecheck({ error: read.error, data: read.data }, leagueName);'), true);
   assertEquals(hook.includes("call({ league_id: leagueId, action: 'transfer', new_commissioner_id: newCommissionerId })"), true);
 });
 
@@ -211,4 +241,29 @@ Deno.test('the sheets: the danger button and Stay; the transfer button names the
   assertEquals(v.includes('label={pickedName ? handOverLabel(pickedName) : HAND_OVER}'), true);
   assertEquals(v.includes('disabled={!picked || busy}'), true);
   assertEquals(v.includes('if (visible) setPicked(null);'), true);
+});
+
+Deno.test('a member\'s League settings: ONLY Invite code (with Share), the Commissioner\'s name, Leave league (ruled; source guard)', () => {
+  const s = SOURCES['app/league-settings.tsx'];
+  const start = s.indexOf('if (league && !isCommissioner && leaveOn) {');
+  const member = s.slice(start, s.indexOf('if (!league || !isCommissioner) {', start));
+  assertEquals(start > 0, true);
+  // What it has.
+  assertEquals(member.includes('>Invite code</Text>'), true);
+  assertEquals(member.includes('<Button label="Share"'), true);
+  assertEquals(member.includes('<SettingRow label={COMMISSIONER_ROW} value={commissionerName} />'), true);
+  assertEquals(member.includes('{leaveBlock}'), true);
+  // No commissioner controls, not even disabled ones.
+  for (const c of ['<Field', '<SegmentedControl', '<Stepper', '<SlotBuilder', '<SwitchRow', '<ChoiceRow', '<DraftDateSheet', 'Save changes', 'footer=', '{transferSheet}', 'COMMISSIONER_YOU', 'onPress={transferAllowed', 'LockNote']) {
+    assertEquals(member.includes(c), false, c);
+  }
+  // The shared leave block carries no transfer sheet; that's the commissioner's alone.
+  const block = s.slice(s.indexOf('const leaveBlock = '), s.indexOf('const transferSheet = '));
+  assertEquals(block.includes('TransferCommissionerSheet'), false);
+  assertEquals(s.includes('const transferSheet = leaveOn && league && isCommissioner ? ('), true);
+});
+
+Deno.test('the transfer sheet shows the ruled line under its title (source guard)', () => {
+  const v = SOURCES['components/game/LeaveLeagueSheets.tsx'];
+  assertEquals(v.includes('{TRANSFER_TITLE}</Text>\n        <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>'), true);
 });

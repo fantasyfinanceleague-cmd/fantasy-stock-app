@@ -27,8 +27,9 @@ export const LEAVE_LOCKED_LINE = 'Teams are locked in from an hour before the dr
 export const LEAVE_COMMISSIONER_FIRST = 'Make someone else commissioner first.'; // board
 export const WHO_TAKES_OVER = 'Who takes over as commissioner?'; // board (Q4 frame)
 export const MEMBER_LINE = 'Member'; // board (Q4 frame)
-/** The transfer sheet's title. NEW (the board draws the row, not the sheet). */
+/** The transfer sheet's title and the line under it (Design Lead, ruled). */
 export const TRANSFER_TITLE = 'Make someone else commissioner';
+export const TRANSFER_NOTE = 'The new commissioner takes over right away. You stay in the league.';
 /** The transfer button once a manager is picked. NEW (the board's "Leave and hand over to {name}", minus the leave). */
 export function handOverLabel(name: string): string {
   return `Hand over to ${name}`;
@@ -77,16 +78,18 @@ export interface LeaveRowView {
   sub: string | null;
 }
 
+/** Open, before the draft, with no draft time yet (Design Lead, ruled). */
+export const LEAVE_UNTIL_NO_TIME = 'You can leave until an hour before the draft.';
+
 /** The League settings row. Locked comes first (the same line for members and
  * the commissioner), then the commissioner's transfer-first, then open. Open
- * before the draft says until when; with no draft time there is no "until"
- * (NEW case, flagged: the board's frame always has a time). */
+ * before the draft says until when. */
 export function leaveRowView(window: LeaveWindow, isCommissioner: boolean, draftDate: string | null | undefined): LeaveRowView {
   if (window === 'locked_order_set' || window === 'locked_season') return { enabled: false, sub: LEAVE_LOCKED_LINE };
   if (isCommissioner) return { enabled: false, sub: LEAVE_COMMISSIONER_FIRST };
   if (window === 'before_draft') {
     const at = orderSetAtMs(draftDate);
-    return { enabled: true, sub: at !== null ? `You can leave until ${orderAtLabel(at)}, when the draft order is set.` : null };
+    return { enabled: true, sub: at !== null ? `You can leave until ${orderAtLabel(at)}, when the draft order is set.` : LEAVE_UNTIL_NO_TIME };
   }
   return { enabled: true, sub: null };
 }
@@ -126,6 +129,8 @@ export type LeaveOutcome =
   | { kind: 'left' }
   | { kind: 'hidden' }
   | { kind: 'transferred' }
+  /** No answer, a server fault, or a status we don't know: the outcome is unknown. */
+  | { kind: 'unknown' }
   | { kind: 'refused'; reason: string | null; line: string };
 
 const DIDNT_GO_THROUGH = "That didn't go through.";
@@ -142,20 +147,47 @@ const REFUSAL_LINES: Record<string, string> = {
 };
 export const LEAVE_REFUSAL_REASONS: readonly string[] = Object.keys(REFUSAL_LINES);
 
-/** What a leave or transfer call came to. No answer, a server fault, or an
- * unknown status is "That didn't go through." (NEW for these cases: the audit
- * lists it for client bugs), never a guessed success. */
+/** What a leave or transfer call came to. No answer, a server fault (5xx,
+ * 'unhandled'), or a status we don't know is UNKNOWN, never a guessed success
+ * or failure: a leave re-reads your membership (leaveRecheck); a transfer says
+ * "That didn't go through." (transferLine). */
 export function leaveOutcome(r: FunctionRefusal): LeaveOutcome {
-  if (r.transport) return { kind: 'refused', reason: null, line: DIDNT_GO_THROUGH };
+  if (r.transport) return { kind: 'unknown' };
   if (r.reason === null) {
     const status = r.body.status;
     if (status === 'left') return { kind: 'left' };
     if (status === 'hidden') return { kind: 'hidden' };
     if (status === 'transferred') return { kind: 'transferred' };
-    return { kind: 'refused', reason: null, line: DIDNT_GO_THROUGH };
+    return { kind: 'unknown' };
   }
   if (r.status === 401) return { kind: 'refused', reason: r.reason, line: REFUSAL_LINES.not_authenticated };
+  if (r.reason === 'unhandled' || (r.status !== null && r.status >= 500)) return { kind: 'unknown' };
   return { kind: 'refused', reason: r.reason, line: REFUSAL_LINES[r.reason] ?? DIDNT_GO_THROUGH };
+}
+
+/** A transfer's unknown outcome: the title either moved or it didn't, and the
+ * refreshed screen shows which; the line asks for nothing destructive. */
+export function transferUnknownLine(): string {
+  return DIDNT_GO_THROUGH;
+}
+
+/** The re-read could not confirm (Design Lead, ruled). */
+export const LEAVE_UNCONFIRMED = "We couldn't confirm that. Check your connection, then try again.";
+
+/** After a leave's UNKNOWN outcome, your own membership row decides (Design
+ * Lead, ruled: leave is destructive, so never guess). You can always read your
+ * own row (league_members_select_members: user_id = auth.uid()). No row: you
+ * left. A hidden row: a finished league you hid. A shown row: still in. A
+ * failed read: unconfirmed. */
+export function leaveRecheck(
+  read: { error: unknown; data: { hidden_at: string | null }[] | null },
+  leagueName: string,
+): LeaveOutcome {
+  if (read.error || !read.data) return { kind: 'refused', reason: null, line: LEAVE_UNCONFIRMED };
+  const row = read.data[0];
+  if (!row) return { kind: 'left' };
+  if (row.hidden_at) return { kind: 'hidden' };
+  return { kind: 'refused', reason: null, line: `You're still in ${leagueName}. Try again.` };
 }
 
 // ── The transfer picker ────────────────────────────────────────────────────

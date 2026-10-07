@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { readFunctionRefusal } from '../functionRefusal';
 import { seamInvoke, seamRpc, seamTable } from './seamCalls';
-import { leaveOutcome, type LeaveOutcome } from './leaveLeague';
+import { leaveOutcome, leaveRecheck, type LeaveOutcome } from './leaveLeague';
 
 export interface LeagueName {
   user_id: string;
@@ -17,7 +17,7 @@ export interface LeagueName {
   is_bot?: boolean | null;
 }
 
-export function useLeaveLeague(leagueId: string | null, enabled: boolean) {
+export function useLeaveLeague(leagueId: string | null, enabled: boolean, me: string, leagueName: string) {
   const [names, setNames] = useState<LeagueName[]>([]);
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -47,7 +47,18 @@ export function useLeaveLeague(leagueId: string | null, enabled: boolean) {
     return outcome;
   }, []);
 
-  const leave = useCallback(() => call({ league_id: leagueId, action: 'leave' }), [call, leagueId]);
+  // Leave is destructive: an UNKNOWN outcome re-reads your own membership row
+  // before saying anything (Design Lead, ruled). Busy covers the re-read too.
+  const leave = useCallback(async (): Promise<LeaveOutcome> => {
+    const first = await call({ league_id: leagueId, action: 'leave' });
+    if (first.kind !== 'unknown' || !leagueId) return first;
+    setBusy(true);
+    const read = await seamTable<{ hidden_at: string | null }>('league_members_me', () =>
+      supabase.from('league_members').select('hidden_at').eq('league_id', leagueId).eq('user_id', me),
+    );
+    setBusy(false);
+    return leaveRecheck({ error: read.error, data: read.data }, leagueName);
+  }, [call, leagueId, me, leagueName]);
   const transfer = useCallback(
     (newCommissionerId: string) => call({ league_id: leagueId, action: 'transfer', new_commissioner_id: newCommissionerId }),
     [call, leagueId],

@@ -4,7 +4,7 @@
 // starts", so this is composed from those steps plus the Season 2 review's
 // card-of-rows vocabulary (RibReview). handleSave, the save-outcome rules
 // (lib/game/settingsSave) and the seam writes are unchanged.
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Share, StyleSheet, View } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
@@ -26,6 +26,7 @@ import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import {
   COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates,
+  transferUnknownLine,
 } from '@/lib/game/leaveLeague';
 import { useLeaveLeague } from '@/lib/game/useLeaveLeague';
 import { COMMISSIONER_FALLBACK } from '@/lib/game/autoStart';
@@ -124,7 +125,7 @@ export default function LeagueSettingsScreen() {
   // Leaving and the commissioner's transfer (item 13). The server decides; the
   // window here only shapes the row and the sheet.
   const leaveOn = LEAVE_LEAGUE_ON && !!league;
-  const leaving = useLeaveLeague(league?.id ?? null, leaveOn);
+  const leaving = useLeaveLeague(league?.id ?? null, leaveOn, user?.id ?? '', league?.name ?? '');
   const membershipWindow = leaveWindow({ seasonStatus: league?.season_status, draftStatus: league?.draft_status, draftDate: league?.draft_date }, Date.now());
   const commissionerName = leaving.names.find((n) => n.user_id === league?.commissioner_id)?.display_name?.trim() || COMMISSIONER_FALLBACK;
   const [leaveOpen, setLeaveOpen] = useState(false);
@@ -139,6 +140,7 @@ export default function LeagueSettingsScreen() {
       router.replace('/(tabs)');
       return;
     }
+    // A leave's unknown outcome was re-read (useLeaveLeague), so here it is left, hidden or a line.
     setLeaveError(out.kind === 'refused' ? out.line : null);
   };
   const onTransfer = async (userId: string) => {
@@ -148,7 +150,8 @@ export default function LeagueSettingsScreen() {
       await refresh(); // you're a member now: the screen re-renders as a member's, Leave league open
       return;
     }
-    setLeaveError(out.kind === 'refused' ? out.line : null);
+    setLeaveError(out.kind === 'refused' ? out.line : out.kind === 'unknown' ? transferUnknownLine() : null);
+    if (out.kind === 'unknown') void refresh(); // the title moved or it didn't: the screen shows which
   };
   const leaveBlock = leaveOn && league ? (
     <>
@@ -167,8 +170,13 @@ export default function LeagueSettingsScreen() {
         onLeave={() => void onLeave()}
         onStay={() => setLeaveOpen(false)}
       />
+    </>
+  ) : null;
+  // The commissioner's view only: a member's screen has no commissioner controls at all.
+  const transferSheet = leaveOn && league && isCommissioner ? (
+    <>
       <TransferCommissionerSheet
-        visible={transferOpen && isCommissioner}
+        visible={transferOpen}
         candidates={transferCandidates(leaving.memberIds, leaving.names, user?.id ?? '')}
         busy={leaving.busy}
         error={leaveError}
@@ -277,12 +285,21 @@ export default function LeagueSettingsScreen() {
     }
   };
 
-  // A member (leave flow on): the board's member League settings, read-only, with Leave league.
+  // A member (leave flow on), Design Lead ruling: ONLY Invite code (with Share), the
+  // Commissioner's name (read-only) and Leave league. No commissioner controls, not
+  // even disabled ones.
   if (league && !isCommissioner && leaveOn) {
+    const code = league.invite_code;
     return (
       <SetupScaffold back={{ label: 'Cancel', onPress: handleClose }} title="League settings">
         <SetupCard>
-          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          <View style={styles.inviteRow}>
+            <View style={styles.grow}>
+              <Text variant="callout" style={styles.key}>Invite code</Text>
+              <Text variant="callout" color={colors.accent} style={styles.bold}>{code}</Text>
+            </View>
+            <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: `Join my league with code ${code}` })} />
+          </View>
           <RowDivider />
           <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
         </SetupCard>
@@ -521,6 +538,7 @@ export default function LeagueSettingsScreen() {
       </View>
 
       {leaveBlock}
+      {transferSheet}
 
       <DraftDateSheet
         visible={showDatePicker && !isLocked && !dateLocked}
@@ -556,6 +574,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'baseline',
     gap: space[2],
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    paddingVertical: space[3],
+    minHeight: 44,
+  },
+  grow: {
+    flex: 1,
   },
   key: {
     fontFamily: typeFontFamily.semiBold,

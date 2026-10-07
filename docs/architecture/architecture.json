@@ -2,27 +2,47 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "d5d5f3e53cb3ca0bd43b8c2ef2390a0f381263d3",
-    "commitShort": "d5d5f3e",
+    "commit": "7bd56e9166c25dcea666ecf4653bcca31b4973ab",
+    "commitShort": "7bd56e9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-league-setup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-complete.test.ts"
+        "path": "apps/mobile/app/league-settings.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/LeaveLeagueSheets.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/leaveLeague.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamTables.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/useLeaveLeague.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-leave-league.test.ts"
       }
     ],
-    "timestamp": "2026-10-07T00:24:37Z",
-    "sourceHash": "sha256:4091d0f5afb91d19042729c8909e1ab025930eacd5e6bcfb76aac3586595a8fa",
+    "timestamp": "2026-10-07T03:24:29Z",
+    "sourceHash": "sha256:b9a63877741968b9f7ae925b5c7565b0faccef47c6e592bcfe3968cb1bc2a49e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-09-30T16:53:15Z",
-    "ageHours": 151.5,
-    "ageDays": 6.3,
+    "ageHours": 154.5,
+    "ageDays": 6.4,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8e08382dfe9edf557c6371cfc39da9fb788590ad82209f15e2e74a7c90dcfc6b",
@@ -10239,10 +10259,12 @@
       "protocol": "postgrest-select",
       "payload": ".from('league_members').select('user_id')",
       "columns": [
+        "hidden_at",
         "user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:30"
+        "apps/mobile/lib/game/useLeaveLeague.ts:30",
+        "apps/mobile/lib/game/useLeaveLeague.ts:57"
       ]
     },
     {
@@ -13184,6 +13206,7 @@
       "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
       "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
       "apps/mobile/lib/game/useLeaveLeague.ts:30 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:57 -> league_members.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",

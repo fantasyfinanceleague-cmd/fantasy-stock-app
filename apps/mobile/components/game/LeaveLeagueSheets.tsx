@@ -9,7 +9,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ChoiceRow, RowDivider, SetupCard } from '@/components/game/SetupRows';
 import {
-  HAND_OVER, LEAVE_LEAGUE, MEMBER_LINE, STAY, TRANSFER_CANCEL, TRANSFER_TITLE, WHO_TAKES_OVER, handOverLabel,
+  HAND_OVER, LEAVE_LEAGUE, MEMBER_LINE, STAY, TRANSFER_CANCEL, TRANSFER_NOTE, TRANSFER_TITLE, WHO_TAKES_OVER, handOverLabel,
   type LeaveRowView, type LeaveSheetCopy, type TransferCandidate,
 } from '@/lib/game/leaveLeague';
 
@@ -96,6 +96,7 @@ export function TransferCommissionerSheet({ visible, candidates, busy, error, on
     <Sheet visible={visible} onClose={onClose}>
       <View style={styles.body}>
         <Text variant="title" accessibilityRole="header">{TRANSFER_TITLE}</Text>
+        <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>
         <Text variant="tag" tone="secondary">{WHO_TAKES_OVER}</Text>
         <SetupCard>
           <View accessibilityRole="radiogroup">
