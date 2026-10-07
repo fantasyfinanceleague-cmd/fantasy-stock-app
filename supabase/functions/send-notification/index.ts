@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { draftTurnMessage } from '../_shared/push-copy.ts';
 
 /**
  * send-notification — server-side push dispatch (scan findings F7 + F8, spec L2).
@@ -67,8 +68,11 @@ function json(body: unknown, status = 200) {
  * that is the point. `build` receives only server-verified values.
  *
  * Inventory as of 2026-07-30 (grep of every notify* caller in the repo):
- *   draft_turn      — LIVE. Sole notification the app actually sends today
- *                     (apps/mobile/app/(tabs)/draft.tsx -> notifyDraftTurn).
+ *   draft_turn      — LIVE, but NO CLIENT CALLER since 2026-10-06: the turn push
+ *                     is now sent server-side after every recorded pick
+ *                     (_shared/draft-write.ts notifyNextPicker), and the legacy
+ *                     draft.tsx -> notifyDraftTurn call was removed. Per the rule
+ *                     below, this entry is still callable by any leaguemate.
  *   matchup_result  — DESIGNED, NOT BUILT. Named in the notification_log schema
  *                     comment (migration 20260122000000) but never implemented.
  *   league_invite   — DESIGNED, NOT BUILT. Same.
@@ -86,11 +90,8 @@ const NOTIFICATION_TYPES: Record<
 > = {
   draft_turn: {
     // Reproduces the pre-existing copy verbatim so the cutover is invisible to users.
-    build: ({ leagueName }) => ({
-      title: "It's Your Turn! 🏈",
-      body: `Time to make your pick in ${leagueName}`,
-      data: { type: 'draft_turn', screen: 'draft' },
-    }),
+    // Shared with the server-side turn push in _shared/draft-write.ts.
+    build: ({ leagueName }) => draftTurnMessage(leagueName),
   },
 };
 

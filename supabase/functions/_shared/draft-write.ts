@@ -24,6 +24,11 @@
  * 23505 -> 'pick_conflict'; the loser writes nothing and the caller re-derives
  * legality from fresh state. That is how a manual pick at 59.9s and an
  * auto-pick at 60s produce exactly ONE row: the first committed insert wins.
+ *
+ * YOUR-TURN PUSH (2026-10-06): commitGatedPick is the one post-insert step for
+ * every pick (manual, bot, queue, best available; client or sweep). After a
+ * recorded pick that leaves the draft open, it pushes the NEXT picker
+ * (notifyNextPicker). A push failure is logged and never fails the pick.
  */
 import { fetchFillPrice } from './alpaca-price.ts';
 import { fetchEligibleCategoryIdsBatch } from './category-eligibility.ts';
@@ -31,6 +36,7 @@ import { buildFinalizeArgs, planSeason, readFinalizeResult } from './schedule.ts
 import type { BotSymbolCandidate } from './bot-pick.ts';
 import type { GatedPick } from './pick-gate.ts';
 import { getTargetToken, sendExpoPush } from './push.ts';
+import { draftTurnMessage } from './push-copy.ts';
 import {
   demandVector,
   type FeasibilityState,
@@ -53,6 +59,7 @@ import {
 import {
   checkStoredOrder,
   currentTurn,
+  type TurnState,
   type DraftOrderRow,
   type LeagueRules,
   leagueOwnedSymbols,
@@ -80,7 +87,7 @@ export interface DraftContext {
 }
 
 export const LEAGUE_COLUMNS =
-  'id, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days, playoff_teams';
+  'id, name, commissioner_id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable, league_type, num_weeks, duration_days, playoff_teams';
 
 export type LoadResult =
   | { ok: true; ctx: DraftContext }
@@ -524,6 +531,104 @@ export async function insertGatedPick(admin: Admin, pick: GatedPick, pickSource:
 }
 
 // ---------------------------------------------------------------------------
+// After the write: finalize, or push the next picker
+// ---------------------------------------------------------------------------
+
+/** The push I/O, injectable so the turn push is hermetically testable. */
+export interface TurnPushPorts {
+  getTargetToken: typeof getTargetToken;
+  sendExpoPush: typeof sendExpoPush;
+}
+export const REAL_TURN_PUSH: TurnPushPorts = { getTargetToken, sendExpoPush };
+
+export type TurnPushOutcome =
+  | 'sent'
+  | 'draft_complete'
+  | 'same_picker'
+  | 'bot'
+  | 'no_token'
+  | 'disabled'
+  | 'lookup_failed'
+  | 'send_failed'
+  | 'error';
+
+/** Who picks after pick `pickNumber` was recorded: the same snake math as the
+ * turn check (currentTurn over pickNumber picks made). Null = draft complete. */
+export function nextTurnAfter(pickNumber: number, order: string[], numRounds: number): TurnState | null {
+  return currentTurn(pickNumber, order, numRounds);
+}
+
+/**
+ * Push "It's your turn" to whoever picks after `filled`. NEVER throws and never
+ * reports into the pick result: the pick is already committed, and a push is
+ * best effort on top of it (the room's realtime update is the other signal).
+ *
+ * Skipped, not failed: draft complete; a snake turnaround where the manager
+ * who just picked MANUALLY picks again (they are in the room; the legacy
+ * client skipped the same case); bots (no device; `bot-` ids are not uuids,
+ * so a token lookup would only log an error). An AUTO pick followed by the
+ * same manager's turn still pushes: their clock just ran out, so they are away.
+ */
+export async function notifyNextPicker(
+  admin: Admin,
+  ctx: DraftContext,
+  filled: { pickNumber: number; pickerId: string },
+  pickSource: PickSource,
+  push: TurnPushPorts = REAL_TURN_PUSH,
+): Promise<TurnPushOutcome> {
+  const leagueId = String(ctx.league.id);
+  try {
+    const next = nextTurnAfter(filled.pickNumber, ctx.order, ctx.numRounds);
+    if (!next) return 'draft_complete';
+    if (pickSource === 'manual' && next.pickerId === filled.pickerId) return 'same_picker';
+    if (next.pickerId.startsWith('bot-')) return 'bot';
+    const target = await push.getTargetToken(admin, next.pickerId);
+    if (target.lookupFailed) {
+      console.error('[turn-push] token lookup failed', leagueId, next.pickNumber);
+      return 'lookup_failed';
+    }
+    if (!target.token) return 'no_token';
+    if (!target.enabled) return 'disabled';
+    // League name from the leagues row loadDraftContext read: never caller input.
+    const sent = await push.sendExpoPush(target.token, draftTurnMessage(String(ctx.league.name)));
+    if (!sent.sent) {
+      console.error('[turn-push] push not sent', leagueId, next.pickNumber, sent.reason);
+      return 'send_failed';
+    }
+    return 'sent';
+  } catch (e) {
+    console.error('[turn-push] failed', leagueId, filled.pickNumber, String(e));
+    return 'error';
+  }
+}
+
+export type CommitResult =
+  // deno-lint-ignore no-explicit-any
+  | { ok: true; row: any; complete: boolean; statusError: string | null; turnPush: TurnPushOutcome | null }
+  | { ok: false; reason: 'pick_conflict' | 'unhandled' };
+
+/**
+ * Write a gated pick, then EITHER finalize (it was the last pick) OR push the
+ * next picker. The single post-pick path for the manual route and autoPickTurn,
+ * so every recorded pick (human or auto, client or sweep) is followed by the
+ * same step. A race loser wrote nothing and pushes nobody.
+ */
+export async function commitGatedPick(
+  admin: Admin,
+  ctx: DraftContext,
+  pick: GatedPick,
+  pickSource: PickSource,
+  push: TurnPushPorts = REAL_TURN_PUSH,
+): Promise<CommitResult> {
+  const ins = await insertGatedPick(admin, pick, pickSource);
+  if (!ins.ok) return ins;
+  const complete = pick.pickNumber >= ctx.order.length * ctx.numRounds;
+  const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.order) : null;
+  const turnPush = complete ? null : await notifyNextPicker(admin, ctx, pick, pickSource, push);
+  return { ok: true, row: ins.row, complete, statusError, turnPush };
+}
+
+// ---------------------------------------------------------------------------
 // Auto-pick (bots, and humans whose clock ran out)
 // ---------------------------------------------------------------------------
 
@@ -531,6 +636,9 @@ export interface AutoPickDeps {
   alpacaKey: string;
   alpacaSecret: string;
   strategy?: BestAvailableStrategy;
+  /** Test seams: the search's I/O and the turn push. Default to the real ones. */
+  ports?: AutoPickPorts;
+  turnPush?: TurnPushPorts;
 }
 
 export type AutoPickResult =
@@ -675,7 +783,7 @@ export async function autoPickTurn(
         picks: ctx.picks,
         trades: ctx.trades,
       },
-      supabaseAutoPickPorts(admin, String(ctx.league.id), deps),
+      deps.ports ?? supabaseAutoPickPorts(admin, String(ctx.league.id), deps),
       expectedPickNumber,
       strategy,
     );
@@ -708,12 +816,10 @@ export async function autoPickTurn(
       return { ok: false, reason: 'stalled' };
     }
     case 'pick': {
-      const ins = await insertGatedPick(admin, choice.gated, choice.source);
-      if (!ins.ok) return { ok: false, reason: ins.reason };
-      const complete = choice.gated.pickNumber >= ctx.order.length * ctx.numRounds;
-      const statusError = complete ? await finalizeDraft(admin, ctx.league, ctx.order) : null;
-      console.log('auto-pick', ctx.league.id, choice.gated.pickNumber, choice.source, choice.gated.symbol, choice.attempts, strategy.id);
-      return { ok: true, pick: ins.row, pickSource: choice.source, complete, statusError, priceSource: choice.priceSource };
+      const res = await commitGatedPick(admin, ctx, choice.gated, choice.source, deps.turnPush);
+      if (!res.ok) return { ok: false, reason: res.reason };
+      console.log('auto-pick', ctx.league.id, choice.gated.pickNumber, choice.source, choice.gated.symbol, choice.attempts, strategy.id, res.turnPush);
+      return { ok: true, pick: res.row, pickSource: choice.source, complete: res.complete, statusError: res.statusError, priceSource: choice.priceSource };
     }
   }
 }
