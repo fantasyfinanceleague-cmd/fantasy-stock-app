@@ -5,7 +5,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertAlmostEquals, assertEquals } from 'jsr:@std/assert';
-import { buildChartGeometry, partialLinePath } from '../lib/home/chartGeometry.ts';
+import { buildChartGeometry, partialLinePath } from '../lib/chart/chartGeometry.ts';
 
 Deno.test('lineLength: one point has no length', () => {
   assertEquals(buildChartGeometry([5], 300, 100, {}).lineLength, 0);
