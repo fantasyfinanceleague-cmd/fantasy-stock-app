@@ -2,27 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6bf3c7abd4b37a50178c5a74df7a35bf61295930",
-    "commitShort": "6bf3c7ab",
+    "commit": "b459a9fb25974a1424c7198cde9ae5936e760a2a",
+    "commitShort": "b459a9fb",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "docs/db-snapshot-2026-10-07",
+    "branch": "feat/draft-auto-start",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql"
       }
     ],
-    "timestamp": "2026-10-07T19:43:34Z",
-    "sourceHash": "sha256:193a8f762d07b02a4641abbb7afc9064155390230dbad9980ea9032fac00ccd6",
+    "timestamp": "2026-10-07T22:02:55Z",
+    "sourceHash": "sha256:4218a115ecbfd695a731536b770671b111a445950969b37d677aa5ae34c96e3a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 2.4,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b",
@@ -80,7 +80,8 @@
       "declared": {
         "schedule": "10 seconds",
         "definedIn": [
-          "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql:61"
+          "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql:61",
+          "supabase/migrations/20261111000002_draft_autopick_sweep_auto_start.sql:39"
         ]
       },
       "drift": [],
@@ -91,8 +92,8 @@
       "sublabel": "10 seconds",
       "kind": "cron-job",
       "source": {
-        "path": "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql",
-        "line": 61
+        "path": "supabase/migrations/20261111000002_draft_autopick_sweep_auto_start.sql",
+        "line": 39
       }
     },
     {
@@ -459,7 +460,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 132
+        "lines": 214
       },
       "db": null,
       "declared": null,
@@ -472,7 +473,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-autopick-sweep/index.ts",
-        "line": 55
+        "line": 80
       }
     },
     {
@@ -493,7 +494,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 434
+        "lines": 394
       },
       "db": null,
       "declared": null,
@@ -506,7 +507,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-control/index.ts",
-        "line": 179
+        "line": 132
       }
     },
     {
@@ -525,7 +526,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 175
+        "lines": 162
       },
       "db": null,
       "declared": null,
@@ -538,7 +539,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-order-notify/index.ts",
-        "line": 50
+        "line": 60
       }
     },
     {
@@ -1738,10 +1739,11 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261013000000_draft_order_modes.sql:328",
-          "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:54"
+          "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:54",
+          "supabase/migrations/20261111000000_draft_auto_start.sql:218"
         ],
-        "latestDefinition": "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql",
-        "redefinitions": 2
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 3
       },
       "drift": [],
       "annotation": null,
@@ -1751,8 +1753,39 @@
       "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql",
-        "line": 54
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 218
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:289"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._draft_start_inputs",
+      "label": "_draft_start_inputs()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 289
       }
     },
     {
@@ -1794,6 +1827,37 @@
       "source": {
         "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
         "line": 86
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000001_draft_status_server_only.sql:225"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.after_leagues_draft_date_change",
+      "label": "after_leagues_draft_date_change()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "line": 225
       }
     },
     {
@@ -2096,6 +2160,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:381"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.draft_auto_start_work_due",
+      "label": "draft_auto_start_work_due()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 381
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": false,
         "searchPath": "public, pg_temp",
@@ -2139,6 +2234,37 @@
       "source": {
         "path": "supabase/migrations/20261101000000_draft_feasibility_pool.sql",
         "line": 39
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:841"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.draft_notice_context",
+      "label": "draft_notice_context()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 841
       }
     },
     {
@@ -2189,6 +2315,130 @@
       "source": {
         "path": "supabase/migrations/20261110000002_notify_due_ignores_transfer_notice.sql",
         "line": 25
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:796"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.draft_room_notices_due",
+      "label": "draft_room_notices_due()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 796
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:69"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.draft_start_policy",
+      "label": "draft_start_policy()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 69
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:337"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.draft_watch_due",
+      "label": "draft_watch_due()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 337
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:604"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.due_draft_starts",
+      "label": "due_draft_starts()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 604
       }
     },
     {
@@ -2530,10 +2780,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:252"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:252",
+          "supabase/migrations/20261111000001_draft_status_server_only.sql:46"
         ],
-        "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -2543,8 +2794,8 @@
       "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 252
+        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "line": 46
       }
     },
     {
@@ -2586,6 +2837,68 @@
       "source": {
         "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
         "line": 537
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000001_draft_status_server_only.sql:167"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.enforce_leagues_draft_time",
+      "label": "enforce_leagues_draft_time()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "line": 167
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000001_draft_status_server_only.sql:121"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.enforce_leagues_insert_not_started",
+      "label": "enforce_leagues_insert_not_started()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql",
+        "line": 121
       }
     },
     {
@@ -3477,6 +3790,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:175"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.league_notifications_order_set_in_app",
+      "label": "league_notifications_order_set_in_app()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 175
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": false,
         "searchPath": "public, pg_temp",
@@ -3693,6 +4037,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:724"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.open_due_draft_rooms",
+      "label": "open_due_draft_rooms()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 724
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": false,
         "searchPath": "public, pg_temp",
@@ -3777,6 +4152,68 @@
       "source": {
         "path": "supabase/migrations/20261004000000_participant_display_names.sql",
         "line": 87
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:531"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.postpone_league_draft",
+      "label": "postpone_league_draft()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 531
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:412"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.record_draft_watch",
+      "label": "record_draft_watch()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 412
       }
     },
     {
@@ -4139,6 +4576,37 @@
       "source": {
         "path": "supabase/migrations/20261007000000_username_write_path.sql",
         "line": 98
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql:634"
+        ],
+        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.start_league_draft",
+      "label": "start_league_draft()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 634
       }
     },
     {
@@ -4947,6 +5415,28 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.draft_postponements",
+      "label": "draft_postponements",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 113
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "rlsEnabled": true,
         "rlsForced": false,
@@ -5129,6 +5619,28 @@
       "source": {
         "path": "supabase/migrations/20261101000001_draft_stalls.sql",
         "line": 22
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261111000000_draft_auto_start.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.draft_start_watch",
+      "label": "draft_start_watch",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
+        "line": 95
       }
     },
     {
@@ -5505,7 +6017,8 @@
         "touchedBy": [
           "supabase/migrations/20261013000000_draft_order_modes.sql",
           "supabase/migrations/20261107000000_leave_league_schema.sql",
-          "supabase/migrations/20261110000000_transfer_commissioner.sql"
+          "supabase/migrations/20261110000000_transfer_commissioner.sql",
+          "supabase/migrations/20261111000000_draft_auto_start.sql"
         ],
         "rlsEnabled": true
       },
@@ -7032,7 +7545,7 @@
       "protocol": "pg-net-http",
       "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
-        "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql:61"
+        "supabase/migrations/20261111000002_draft_autopick_sweep_auto_start.sql:39"
       ]
     },
     {
@@ -7146,13 +7659,37 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.draft-autopick-sweep->pg.draft_watch_due",
+      "from": "fn.draft-autopick-sweep",
+      "to": "pg.draft_watch_due",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('draft_watch_due')",
+      "callSites": [
+        "supabase/functions/draft-autopick-sweep/index.ts:121"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-autopick-sweep->pg.due_draft_starts",
+      "from": "fn.draft-autopick-sweep",
+      "to": "pg.due_draft_starts",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('due_draft_starts')",
+      "callSites": [
+        "supabase/functions/draft-autopick-sweep/index.ts:104"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.draft-autopick-sweep->pg.overdue_draft_turns",
       "from": "fn.draft-autopick-sweep",
       "to": "pg.overdue_draft_turns",
       "protocol": "postgrest-rpc",
       "payload": "rpc('overdue_draft_turns')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:68"
+        "supabase/functions/draft-autopick-sweep/index.ts:144"
       ]
     },
     {
@@ -7176,8 +7713,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/draft-control/index.ts:167",
-        "supabase/functions/draft-control/index.ts:170"
+        "supabase/functions/draft-control/index.ts:120",
+        "supabase/functions/draft-control/index.ts:123"
       ]
     },
     {
@@ -7189,7 +7726,22 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('confirm_league_roster')",
       "callSites": [
-        "supabase/functions/draft-control/index.ts:336"
+        "supabase/functions/draft-control/index.ts:318"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.draft-control->tbl.draft_postponements",
+      "from": "fn.draft-control",
+      "to": "tbl.draft_postponements",
+      "protocol": "postgrest-select",
+      "payload": ".from('draft_postponements').select('postponed_from, stage, reason')",
+      "columns": [
+        "postponed_from, stage, reason"
+      ],
+      "callSites": [
+        "supabase/functions/draft-control/index.ts:214"
       ]
     },
     {
@@ -7204,7 +7756,7 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:227"
+        "supabase/functions/draft-control/index.ts:180"
       ]
     },
     {
@@ -7217,7 +7769,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:365"
+        "supabase/functions/draft-control/index.ts:347"
       ]
     },
     {
@@ -7232,7 +7784,7 @@
         "departed, members_before, choice"
       ],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:238"
+        "supabase/functions/draft-control/index.ts:191"
       ]
     },
     {
@@ -7242,27 +7794,10 @@
       "from": "fn.draft-control",
       "to": "tbl.leagues",
       "protocol": "postgrest-select",
-      "payload": ".from('leagues').select('id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams, num_rounds, budget_amount, allow_undraftable')",
-      "columns": [
-        "draft_status",
-        "id, commissioner_id, draft_status, stake_mode, draft_date, num_participants, league_type, playoff_teams, num_rounds, budget_amount, allow_undraftable"
-      ],
-      "callSites": [
-        "supabase/functions/draft-control/index.ts:219",
-        "supabase/functions/draft-control/index.ts:418"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.draft-control->tbl.leagues#update",
-      "from": "fn.draft-control",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-update",
-      "payload": ".from('leagues').update()",
+      "payload": ".from('leagues').select()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-control/index.ts:398"
+        "supabase/functions/draft-control/index.ts:172"
       ]
     },
     {
@@ -7280,28 +7815,37 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.draft-order-notify->pg.draft_notice_context",
+      "from": "fn.draft-order-notify",
+      "to": "pg.draft_notice_context",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('draft_notice_context')",
+      "callSites": [
+        "supabase/functions/draft-order-notify/index.ts:94"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.draft-order-notify->pg.finalize_due_draft_orders",
       "from": "fn.draft-order-notify",
       "to": "pg.finalize_due_draft_orders",
       "protocol": "postgrest-rpc",
       "payload": "rpc('finalize_due_draft_orders')",
       "callSites": [
-        "supabase/functions/draft-order-notify/index.ts:59"
+        "supabase/functions/draft-order-notify/index.ts:73"
       ]
     },
     {
       "annotation": null,
       "verified": true,
-      "id": "e.fn.draft-order-notify->tbl.league_draft_order",
+      "id": "e.fn.draft-order-notify->pg.open_due_draft_rooms",
       "from": "fn.draft-order-notify",
-      "to": "tbl.league_draft_order",
-      "protocol": "postgrest-select",
-      "payload": ".from('league_draft_order').select('position')",
-      "columns": [
-        "position"
-      ],
+      "to": "pg.open_due_draft_rooms",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('open_due_draft_rooms')",
       "callSites": [
-        "supabase/functions/draft-order-notify/index.ts:100"
+        "supabase/functions/draft-order-notify/index.ts:69"
       ]
     },
     {
@@ -7311,12 +7855,12 @@
       "from": "fn.draft-order-notify",
       "to": "tbl.league_notifications",
       "protocol": "postgrest-select",
-      "payload": ".from('league_notifications').select('id, league_id, user_id, push_status, push_attempts')",
+      "payload": ".from('league_notifications').select('id, league_id, user_id, kind, created_at, push_status, push_attempts')",
       "columns": [
-        "id, league_id, user_id, push_status, push_attempts"
+        "id, league_id, user_id, kind, created_at, push_status, push_attempts"
       ],
       "callSites": [
-        "supabase/functions/draft-order-notify/index.ts:65"
+        "supabase/functions/draft-order-notify/index.ts:79"
       ]
     },
     {
@@ -7329,23 +7873,8 @@
       "payload": ".from('league_notifications').update()",
       "columns": [],
       "callSites": [
-        "supabase/functions/draft-order-notify/index.ts:130",
-        "supabase/functions/draft-order-notify/index.ts:151"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.draft-order-notify->tbl.leagues",
-      "from": "fn.draft-order-notify",
-      "to": "tbl.leagues",
-      "protocol": "postgrest-select",
-      "payload": ".from('leagues').select('name, draft_order_mode, draft_date, draft_status')",
-      "columns": [
-        "name, draft_order_mode, draft_date, draft_status"
-      ],
-      "callSites": [
-        "supabase/functions/draft-order-notify/index.ts:84"
+        "supabase/functions/draft-order-notify/index.ts:115",
+        "supabase/functions/draft-order-notify/index.ts:136"
       ]
     },
     {
@@ -9033,6 +9562,32 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg._draft_order_sync->tbl.draft_postponements",
+      "from": "pg._draft_order_sync",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:237"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._draft_order_sync->tbl.draft_start_watch",
+      "from": "pg._draft_order_sync",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:241"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg._draft_order_sync->tbl.league_members",
       "from": "pg._draft_order_sync",
       "to": "tbl.league_members",
@@ -9041,7 +9596,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261013000000_draft_order_modes.sql:343",
-        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:69"
+        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:69",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:233"
       ]
     },
     {
@@ -9054,7 +9610,8 @@
       "payload": "SELECT league_roster_reconfirm (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:71"
+        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:71",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:235"
       ]
     },
     {
@@ -9070,7 +9627,61 @@
         "supabase/migrations/20261013000000_draft_order_modes.sql:334",
         "supabase/migrations/20261013000000_draft_order_modes.sql:336",
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:60",
-        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:62"
+        "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:62",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:224",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:226"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._draft_start_inputs->tbl.league_draft_slots",
+      "from": "pg._draft_start_inputs",
+      "to": "tbl.league_draft_slots",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_slots (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:309"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._draft_start_inputs->tbl.league_members",
+      "from": "pg._draft_start_inputs",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:292"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._draft_start_inputs->tbl.league_roster_reconfirm",
+      "from": "pg._draft_start_inputs",
+      "to": "tbl.league_roster_reconfirm",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_roster_reconfirm (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:299"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._draft_start_inputs->tbl.leagues",
+      "from": "pg._draft_start_inputs",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:311"
       ]
     },
     {
@@ -9097,6 +9708,86 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:92"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.draft_postponements",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:230"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.draft_postponements#delete",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:230"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.draft_start_watch",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:231",
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:243"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.draft_start_watch#delete",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:231",
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:243"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.league_members",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:235"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.after_leagues_draft_date_change->tbl.league_notifications#insert",
+      "from": "pg.after_leagues_draft_date_change",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:233"
       ]
     },
     {
@@ -9425,6 +10116,85 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.draft_postponements",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:869"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.draft_start_watch",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:866"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.league_draft_order",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:856"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.league_members",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:852"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.league_notifications",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:860",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:870"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_notice_context->tbl.leagues",
+      "from": "pg.draft_notice_context",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:871"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.draft_order_notify_due->tbl.league_draft_order_meta",
       "from": "pg.draft_order_notify_due",
       "to": "tbl.league_draft_order_meta",
@@ -9494,6 +10264,139 @@
         "supabase/migrations/20261013000000_draft_order_modes.sql:947",
         "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:115",
         "supabase/migrations/20261110000002_notify_due_ignores_transfer_notice.sql:28"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_room_notices_due->tbl.draft_postponements",
+      "from": "pg.draft_room_notices_due",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:806"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_room_notices_due->tbl.draft_start_watch",
+      "from": "pg.draft_room_notices_due",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:801",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:809"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_room_notices_due->tbl.league_draft_order",
+      "from": "pg.draft_room_notices_due",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:811"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_room_notices_due->tbl.league_notifications",
+      "from": "pg.draft_room_notices_due",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:815",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:819"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_room_notices_due->tbl.leagues",
+      "from": "pg.draft_room_notices_due",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:800",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:810"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_watch_due->tbl.draft_postponements",
+      "from": "pg.draft_watch_due",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:347"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_watch_due->tbl.draft_start_watch",
+      "from": "pg.draft_watch_due",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:343"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.draft_watch_due->tbl.leagues",
+      "from": "pg.draft_watch_due",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:341"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.due_draft_starts->tbl.draft_postponements",
+      "from": "pg.due_draft_starts",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:611"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.due_draft_starts->tbl.leagues",
+      "from": "pg.due_draft_starts",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:607"
       ]
     },
     {
@@ -9625,6 +10528,19 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261013000000_draft_order_modes.sql:585"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.enforce_leagues_draft_time->tbl.draft_postponements",
+      "from": "pg.enforce_leagues_draft_time",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:181"
       ]
     },
     {
@@ -10515,6 +11431,115 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.draft_postponements",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:742"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.draft_start_watch",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:737",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:770"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.draft_start_watch#update",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:749",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:762"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.league_draft_order",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:754",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:772"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.league_draft_order_meta",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.league_draft_order_meta",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order_meta (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:747"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.league_notifications",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:776"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.league_notifications#insert",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:752",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:768"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.open_due_draft_rooms->tbl.leagues",
+      "from": "pg.open_due_draft_rooms",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:736",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:771"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.overdue_draft_turns->tbl.leagues",
       "from": "pg.overdue_draft_turns",
       "to": "tbl.leagues",
@@ -10536,6 +11561,201 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261004000000_participant_display_names.sql:142"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.draft_postponements",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:543"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.draft_postponements#insert",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:560"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.draft_start_watch",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:564"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.draft_start_watch#delete",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:564"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.league_members",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:572"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.league_notifications",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:574"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.league_notifications#insert",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:570"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.leagues",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:536"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.postpone_league_draft->tbl.leagues#update",
+      "from": "pg.postpone_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:563"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.draft_postponements",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:432"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.draft_start_watch",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:441"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.draft_start_watch#insert",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:456"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.league_notifications",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:489"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.league_notifications#insert",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:497"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.record_draft_watch->tbl.leagues",
+      "from": "pg.record_draft_watch",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:430"
       ]
     },
     {
@@ -10867,6 +12087,111 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261007000000_username_write_path.sql:134"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.draft_postponements",
+      "from": "pg.start_league_draft",
+      "to": "tbl.draft_postponements",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_postponements (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:651"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.draft_start_watch",
+      "from": "pg.start_league_draft",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:657",
+        "supabase/migrations/20261111000000_draft_auto_start.sql:692"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.draft_start_watch#delete",
+      "from": "pg.start_league_draft",
+      "to": "tbl.draft_start_watch",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE draft_start_watch (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:692"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.league_draft_order",
+      "from": "pg.start_league_draft",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:697"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.league_members",
+      "from": "pg.start_league_draft",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:663"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.league_notifications#insert",
+      "from": "pg.start_league_draft",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:695"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.leagues",
+      "from": "pg.start_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:644"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.start_league_draft->tbl.leagues#update",
+      "from": "pg.start_league_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:683"
       ]
     },
     {
@@ -11448,6 +12773,19 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.tbl.league_notifications->pg.league_notifications_order_set_in_app",
+      "from": "tbl.league_notifications",
+      "to": "pg.league_notifications_order_set_in_app",
+      "protocol": "pg-trigger",
+      "payload": "trigger on league_notifications",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000000_draft_auto_start.sql:194"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.tbl.league_roster_reconfirm->pg.is_member#rls",
       "from": "tbl.league_roster_reconfirm",
       "to": "pg.is_member",
@@ -11469,6 +12807,19 @@
       "derivedFrom": "db-snapshot",
       "callSites": [
         "db-snapshot.json · policy league_standings_select_members"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.leagues->pg.after_leagues_draft_date_change",
+      "from": "tbl.leagues",
+      "to": "pg.after_leagues_draft_date_change",
+      "protocol": "pg-trigger",
+      "payload": "trigger on leagues",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:257"
       ]
     },
     {
@@ -11521,6 +12872,32 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261013000000_draft_order_modes.sql:596"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.leagues->pg.enforce_leagues_draft_time",
+      "from": "tbl.leagues",
+      "to": "pg.enforce_leagues_draft_time",
+      "protocol": "pg-trigger",
+      "payload": "trigger on leagues",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:209"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.tbl.leagues->pg.enforce_leagues_insert_not_started",
+      "from": "tbl.leagues",
+      "to": "pg.enforce_leagues_insert_not_started",
+      "protocol": "pg-trigger",
+      "payload": "trigger on leagues",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261111000001_draft_status_server_only.sql:144"
       ]
     },
     {
@@ -13966,6 +15343,156 @@
   ],
   "drift": [
     {
+      "node": "pg._draft_start_inputs",
+      "label": "_draft_start_inputs()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.after_leagues_draft_date_change",
+      "label": "after_leagues_draft_date_change()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.draft_auto_start_work_due",
+      "label": "draft_auto_start_work_due()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.draft_notice_context",
+      "label": "draft_notice_context()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.draft_room_notices_due",
+      "label": "draft_room_notices_due()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.draft_start_policy",
+      "label": "draft_start_policy()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.draft_watch_due",
+      "label": "draft_watch_due()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.due_draft_starts",
+      "label": "due_draft_starts()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.enforce_leagues_draft_time",
+      "label": "enforce_leagues_draft_time()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.enforce_leagues_insert_not_started",
+      "label": "enforce_leagues_insert_not_started()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.league_notifications_order_set_in_app",
+      "label": "league_notifications_order_set_in_app()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.open_due_draft_rooms",
+      "label": "open_due_draft_rooms()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.postpone_league_draft",
+      "label": "postpone_league_draft()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.record_draft_watch",
+      "label": "record_draft_watch()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.start_league_draft",
+      "label": "start_league_draft()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.symbols",
       "label": "symbols",
       "groupKey": "public-role-policies-ungated",
@@ -14251,14 +15778,14 @@
       "node": "fn.draft-order-notify",
       "label": "draft-order-notify",
       "kind": "edge-function",
-      "source": "supabase/functions/draft-order-notify/index.ts:50",
+      "source": "supabase/functions/draft-order-notify/index.ts:60",
       "outbound": [
         "mod.draft-order-notify/plan",
+        "pg.draft_notice_context",
         "pg.finalize_due_draft_orders",
-        "tbl.league_draft_order",
+        "pg.open_due_draft_rooms",
         "tbl.league_notifications",
-        "tbl.league_notifications",
-        "tbl.leagues"
+        "tbl.league_notifications"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -14361,8 +15888,23 @@
       "node": "pg._draft_order_sync",
       "label": "_draft_order_sync(p_league_id uuid, p_lock boolean)",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql:54",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:218",
       "outbound": [
+        "tbl.draft_postponements",
+        "tbl.draft_start_watch",
+        "tbl.league_members",
+        "tbl.league_roster_reconfirm",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg._draft_start_inputs",
+      "label": "_draft_start_inputs()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:289",
+      "outbound": [
+        "tbl.league_draft_slots",
         "tbl.league_members",
         "tbl.league_roster_reconfirm",
         "tbl.leagues"
@@ -14393,6 +15935,14 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.draft_auto_start_work_due",
+      "label": "draft_auto_start_work_due()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:381",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.draft_feasibility_pool",
       "label": "draft_feasibility_pool(p_types jsonb, p_draftable_only boolean, p_exclude text[], p_depth integer)",
       "kind": "pg-function",
@@ -14419,6 +15969,28 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.draft_room_notices_due",
+      "label": "draft_room_notices_due()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:796",
+      "outbound": [
+        "tbl.draft_postponements",
+        "tbl.draft_start_watch",
+        "tbl.league_draft_order",
+        "tbl.league_notifications",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.draft_start_policy",
+      "label": "draft_start_policy()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:69",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.finalize_league_draft",
       "label": "finalize_league_draft(p_league_id uuid, p_member_ids text[], p_league_start timestamp with time zone, p_league_end timestamp with time zone, p_matchups jsonb)",
       "kind": "pg-function",
@@ -14442,6 +16014,39 @@
       "source": "supabase/migrations/20261004000000_participant_display_names.sql:87",
       "outbound": [
         "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.postpone_league_draft",
+      "label": "postpone_league_draft()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:531",
+      "outbound": [
+        "tbl.draft_postponements",
+        "tbl.draft_postponements",
+        "tbl.draft_start_watch",
+        "tbl.draft_start_watch",
+        "tbl.league_members",
+        "tbl.league_notifications",
+        "tbl.league_notifications",
+        "tbl.leagues",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.record_draft_watch",
+      "label": "record_draft_watch()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:412",
+      "outbound": [
+        "tbl.draft_postponements",
+        "tbl.draft_start_watch",
+        "tbl.draft_start_watch",
+        "tbl.league_notifications",
+        "tbl.league_notifications",
+        "tbl.leagues"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -14484,6 +16089,23 @@
         "tbl.league_members",
         "tbl.leagues",
         "tbl.symbols"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.start_league_draft",
+      "label": "start_league_draft()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:634",
+      "outbound": [
+        "tbl.draft_postponements",
+        "tbl.draft_start_watch",
+        "tbl.draft_start_watch",
+        "tbl.league_draft_order",
+        "tbl.league_members",
+        "tbl.league_notifications",
+        "tbl.leagues",
+        "tbl.leagues"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -14621,6 +16243,96 @@
   },
   "unverified": [
     {
+      "scope": "pg.draft_start_policy",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.league_notifications_order_set_in_app",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._draft_start_inputs",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.draft_watch_due",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.draft_auto_start_work_due",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.record_draft_watch",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.postpone_league_draft",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.due_draft_starts",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.start_league_draft",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.open_due_draft_rooms",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.draft_room_notices_due",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.draft_notice_context",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.enforce_leagues_insert_not_started",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.enforce_leagues_draft_time",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.after_leagues_draft_date_change",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -14628,6 +16340,18 @@
     },
     {
       "scope": "tbl.notification_log",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.draft_start_watch",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.draft_postponements",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -14677,13 +16401,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 195,
-    "edges": 454,
+    "nodes": 212,
+    "edges": 520,
     "flows": 8,
-    "drift": 28,
-    "driftHigh": 1,
-    "deadCode": 33,
-    "unverified": 9
+    "drift": 43,
+    "driftHigh": 16,
+    "deadCode": 40,
+    "unverified": 26
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -14765,15 +16489,22 @@
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
+      "supabase/functions/_shared/draft-start.ts:224 -> postpone_league_draft",
+      "supabase/functions/_shared/draft-start.ts:300 -> start_league_draft",
+      "supabase/functions/_shared/draft-start.ts:389 -> record_draft_watch",
       "supabase/functions/_shared/draft-write.ts:179 -> get_draft_clock",
       "supabase/functions/_shared/draft-write.ts:246 -> finalize_league_draft",
       "supabase/functions/_shared/draft-write.ts:273 -> draft_feasibility_pool",
       "supabase/functions/_shared/draft-write.ts:700 -> auto_pick_search_candidates",
-      "supabase/functions/draft-autopick-sweep/index.ts:68 -> overdue_draft_turns",
-      "supabase/functions/draft-control/index.ts:167 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-control/index.ts:170 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-control/index.ts:336 -> confirm_league_roster",
-      "supabase/functions/draft-order-notify/index.ts:59 -> finalize_due_draft_orders",
+      "supabase/functions/draft-autopick-sweep/index.ts:104 -> due_draft_starts",
+      "supabase/functions/draft-autopick-sweep/index.ts:121 -> draft_watch_due",
+      "supabase/functions/draft-autopick-sweep/index.ts:144 -> overdue_draft_turns",
+      "supabase/functions/draft-control/index.ts:120 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-control/index.ts:123 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-control/index.ts:318 -> confirm_league_roster",
+      "supabase/functions/draft-order-notify/index.ts:69 -> open_due_draft_rooms",
+      "supabase/functions/draft-order-notify/index.ts:73 -> finalize_due_draft_orders",
+      "supabase/functions/draft-order-notify/index.ts:94 -> draft_notice_context",
       "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
       "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
@@ -14899,6 +16630,10 @@
       "supabase/functions/_shared/category-eligibility.ts:58 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:70 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:84 -> category_rules.select",
+      "supabase/functions/_shared/draft-start.ts:182 -> leagues.select",
+      "supabase/functions/_shared/draft-start.ts:186 -> league_members.select",
+      "supabase/functions/_shared/draft-start.ts:189 -> league_roster_reconfirm.select",
+      "supabase/functions/_shared/draft-start.ts:192 -> draft_postponements.select",
       "supabase/functions/_shared/draft-write.ts:108 -> leagues.select",
       "supabase/functions/_shared/draft-write.ts:113 -> league_members.select",
       "supabase/functions/_shared/draft-write.ts:119 -> league_draft_order.select",
@@ -14928,17 +16663,14 @@
       "supabase/functions/_shared/push.ts:49 -> user_profiles.select",
       "supabase/functions/_shared/push.ts:54 -> push_tokens.select",
       "supabase/functions/_shared/push.ts:60 -> user_profiles.select",
-      "supabase/functions/draft-control/index.ts:219 -> leagues.select",
-      "supabase/functions/draft-control/index.ts:227 -> league_members.select",
-      "supabase/functions/draft-control/index.ts:238 -> league_roster_reconfirm.select",
-      "supabase/functions/draft-control/index.ts:365 -> league_members.insert",
-      "supabase/functions/draft-control/index.ts:398 -> leagues.update",
-      "supabase/functions/draft-control/index.ts:418 -> leagues.select",
-      "supabase/functions/draft-order-notify/index.ts:100 -> league_draft_order.select",
-      "supabase/functions/draft-order-notify/index.ts:130 -> league_notifications.update",
-      "supabase/functions/draft-order-notify/index.ts:151 -> league_notifications.update",
-      "supabase/functions/draft-order-notify/index.ts:65 -> league_notifications.select",
-      "supabase/functions/draft-order-notify/index.ts:84 -> leagues.select",
+      "supabase/functions/draft-control/index.ts:172 -> leagues.select",
+      "supabase/functions/draft-control/index.ts:180 -> league_members.select",
+      "supabase/functions/draft-control/index.ts:191 -> league_roster_reconfirm.select",
+      "supabase/functions/draft-control/index.ts:214 -> draft_postponements.select",
+      "supabase/functions/draft-control/index.ts:347 -> league_members.insert",
+      "supabase/functions/draft-order-notify/index.ts:115 -> league_notifications.update",
+      "supabase/functions/draft-order-notify/index.ts:136 -> league_notifications.update",
+      "supabase/functions/draft-order-notify/index.ts:79 -> league_notifications.select",
       "supabase/functions/enrich-symbols/index.ts:183 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:196 -> symbols.select",
       "supabase/functions/enrich-symbols/index.ts:211 -> category_rules.select",
@@ -15151,7 +16883,11 @@
       "20261108000001_schedule_snapshot_retry_timeout.sql",
       "20261110000000_transfer_commissioner.sql",
       "20261110000001_leave_league_transfer_first.sql",
-      "20261110000002_notify_due_ignores_transfer_notice.sql"
+      "20261110000002_notify_due_ignores_transfer_notice.sql",
+      "20261111000000_draft_auto_start.sql",
+      "20261111000001_draft_status_server_only.sql",
+      "20261111000002_draft_autopick_sweep_auto_start.sql",
+      "20261111000003_schedule_draft_order_notify.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
