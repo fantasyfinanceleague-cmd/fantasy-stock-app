@@ -8,10 +8,19 @@
  * unmounts — rendered via Sheet's `overlay` slot, inside the same Modal, or
  * a sibling overlay outside it would paint in the wrong native window.
  *
- * Reduce Motion: no flight. The sheet fades in place (Sheet.tsx); this tile
- * hands off immediately rather than animating a move.
+ * Reduce Motion: this tile is never created (MoneyHost's startTransition,
+ * M1-b) -- the sheet's own fade covers the transition instead.
+ *
+ * M1-a (DL robustness check): two failure modes could otherwise leave the
+ * tile stuck over the sheet -- onSheetLayout never firing (toRect stays
+ * null), or the spring being interrupted (a fast re-render, a quick
+ * close/reopen). Both are handled: the spring hands off on completion OR
+ * interruption, and a safety timeout (duration.slow -- the "input never
+ * blocked longer than slow" rule) hands off regardless, from mount, whether
+ * toRect ever arrives or not. lib/motion/magicMove.ts's hasTimedOut models
+ * the same "elapsed >= timeoutMs" decision this timer realizes.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
@@ -31,18 +40,28 @@ export interface MagicMoveTileProps {
 
 export function MagicMoveTile({ symbol, name, fromRect, toRect, onArrived }: MagicMoveTileProps) {
   const { colors } = useTheme();
-  const { reduced, spring, withSpring } = useMotion();
+  const { spring, duration, withSpring } = useMotion();
   const progress = useSharedValue(0);
+  const handedOffRef = useRef(false);
+
+  function handOff() {
+    if (handedOffRef.current) return;
+    handedOffRef.current = true;
+    onArrived();
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(handOff, duration.slow);
+    return () => clearTimeout(timer);
+    // Runs once per mount: this tile exists for exactly one flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!toRect) return;
-    if (reduced) {
-      progress.value = 1;
-      onArrived();
-      return;
-    }
-    progress.value = withSpring(1, spring.snappy, (finished) => {
-      if (finished) runOnJS(onArrived)();
+    progress.value = withSpring(1, spring.snappy, () => {
+      // Completion OR interruption both hand off -- see the M1-a note above.
+      runOnJS(handOff)();
     });
     // Fires once, the moment the header's rect becomes known -- a single flight per open.
     // eslint-disable-next-line react-hooks/exhaustive-deps

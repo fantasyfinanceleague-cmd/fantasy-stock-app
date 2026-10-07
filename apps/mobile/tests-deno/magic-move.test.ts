@@ -37,6 +37,12 @@ Deno.test('magicMoveReducer: arrival hands off only while flying', () => {
   assertEquals(magicMoveReducer('handed_off', { type: 'ARRIVED' }), 'handed_off');
 });
 
+Deno.test('magicMoveReducer: a timeout hands off only while flying, same as arrival', () => {
+  assertEquals(magicMoveReducer('flying', { type: 'TIMEOUT' }), 'handed_off');
+  assertEquals(magicMoveReducer('idle', { type: 'TIMEOUT' }), 'idle');
+  assertEquals(magicMoveReducer('handed_off', { type: 'TIMEOUT' }), 'handed_off');
+});
+
 Deno.test('magicMoveReducer: RESET returns to idle from any stage', () => {
   assertEquals(magicMoveReducer('idle', { type: 'RESET' }), 'idle');
   assertEquals(magicMoveReducer('flying', { type: 'RESET' }), 'idle');
@@ -45,18 +51,34 @@ Deno.test('magicMoveReducer: RESET returns to idle from any stage', () => {
 
 // DL gate checklist: "if the measure fails or a frame drops, the sheet still opens in
 // place." startTransition is the one decision point for that -- test it directly.
-import { startTransition } from '../lib/motion/magicMove.ts';
+import { hasTimedOut, startTransition } from '../lib/motion/magicMove.ts';
 
 Deno.test('startTransition: a null rect (measure failed) yields no transition', () => {
-  assertEquals(startTransition('AAPL', 'Apple', null), null);
+  assertEquals(startTransition('AAPL', 'Apple', null, false), null);
 });
 
 Deno.test('startTransition: a real rect starts the flight with the row\'s symbol and name', () => {
   const rect = { x: 10, y: 20, width: 100, height: 40 };
-  assertEquals(startTransition('AAPL', 'Apple', rect), { symbol: 'AAPL', name: 'Apple', fromRect: rect });
+  assertEquals(startTransition('AAPL', 'Apple', rect, false), { symbol: 'AAPL', name: 'Apple', fromRect: rect });
 });
 
 Deno.test('startTransition: a null name (unknown company) still starts the flight', () => {
   const rect = { x: 0, y: 0, width: 50, height: 20 };
-  assertEquals(startTransition('XYZ', null, rect), { symbol: 'XYZ', name: null, fromRect: rect });
+  assertEquals(startTransition('XYZ', null, rect, false), { symbol: 'XYZ', name: null, fromRect: rect });
+});
+
+// M1-b (DL robustness check): under Reduce Motion the tile must never be created at
+// all -- it would otherwise sit still at the row's rect, then jump, a visible flash.
+Deno.test('startTransition: Reduce Motion never starts a flight, rect or not', () => {
+  const rect = { x: 10, y: 20, width: 100, height: 40 };
+  assertEquals(startTransition('AAPL', 'Apple', rect, true), null);
+  assertEquals(startTransition('AAPL', 'Apple', null, true), null);
+});
+
+// M1-a (DL robustness check): "input never blocked longer than slow (380ms)".
+Deno.test('hasTimedOut: true once elapsed reaches the timeout, never before', () => {
+  assertEquals(hasTimedOut(0, 380), false);
+  assertEquals(hasTimedOut(379, 380), false);
+  assertEquals(hasTimedOut(380, 380), true);
+  assertEquals(hasTimedOut(500, 380), true);
 });

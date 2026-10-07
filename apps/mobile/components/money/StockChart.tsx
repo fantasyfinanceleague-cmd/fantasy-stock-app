@@ -6,7 +6,7 @@
  * of $0 (chartGeometry's "zero" math is reused unchanged by feeding it
  * `close - prevClose` deltas) and ranges instead of a fixed week window.
  *
- * D1 (Giorgio, standing): ranges are 1W/1M/3M/1Y, default 1W, NO 1D --
+ * Giorgio's chart-ranges ruling (A): ranges are 1W/1M/3M/1Y, default 1W, NO 1D --
  * overrides the older board mock and spec text, which both still show 1D.
  *
  * M2 motion: the line draws in on the FIRST bars load only (`feature`,

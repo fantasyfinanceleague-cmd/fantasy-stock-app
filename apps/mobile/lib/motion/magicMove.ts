@@ -42,15 +42,20 @@ export type MagicMoveStage = 'idle' | 'flying' | 'handed_off';
 export type MagicMoveEvent =
   | { type: 'ROW_TAPPED' }
   | { type: 'ARRIVED' }
+  /** The safety timeout fired (M1-a, DL robustness check): toRect never arrived,
+   * or the flight animation never reported completion. Same destination as
+   * ARRIVED -- the tile has waited long enough and hands off regardless. */
+  | { type: 'TIMEOUT' }
   | { type: 'RESET' };
 
-/** idle -ROW_TAPPED-> flying -ARRIVED-> handed_off; RESET returns to idle
- * from any stage (the sheet closed, or a different row opened mid-flight). */
+/** idle -ROW_TAPPED-> flying -(ARRIVED|TIMEOUT)-> handed_off; RESET returns to
+ * idle from any stage (the sheet closed, or a different row opened mid-flight). */
 export function magicMoveReducer(stage: MagicMoveStage, event: MagicMoveEvent): MagicMoveStage {
   switch (event.type) {
     case 'ROW_TAPPED':
       return stage === 'idle' ? 'flying' : stage;
     case 'ARRIVED':
+    case 'TIMEOUT':
       return stage === 'flying' ? 'handed_off' : stage;
     case 'RESET':
       return 'idle';
@@ -62,14 +67,26 @@ export function magicMoveReducer(stage: MagicMoveStage, event: MagicMoveEvent): 
  * and testable. A row's measureInWindow can fail to fire, or the ref can be
  * gone (unmounted mid-tap, a fast re-render) — either way the opener passes
  * null here rather than a rect, and the sheet must still open in place, with
- * no tile and no flight, never a delayed or hidden sheet. This is the single
- * decision point: a null rect always yields no transition.
+ * no tile and no flight, never a delayed or hidden sheet. Reduce Motion (M1-b,
+ * DL robustness check) is the same kind of decision: no tile is ever created,
+ * since the sheet's own fade already covers the transition and a tile that
+ * sits still at the row's rect until toRect arrives would flash and jump.
+ * This is the single decision point: a null rect, or Reduce Motion, always
+ * yields no transition.
  */
 export function startTransition(
   symbol: string,
   name: string | null,
   originRect: Rect | null,
+  reduced: boolean,
 ): { symbol: string; name: string | null; fromRect: Rect } | null {
-  if (!originRect) return null;
+  if (reduced || !originRect) return null;
   return { symbol, name, fromRect: originRect };
+}
+
+/** The safety timeout (M1-a): has `elapsedMs` since the tile mounted reached
+ * `timeoutMs` (duration.slow — the "never block input longer than slow" rule)
+ * without the flight reporting ARRIVED? If so, the caller hands off anyway. */
+export function hasTimedOut(elapsedMs: number, timeoutMs: number): boolean {
+  return elapsedMs >= timeoutMs;
 }

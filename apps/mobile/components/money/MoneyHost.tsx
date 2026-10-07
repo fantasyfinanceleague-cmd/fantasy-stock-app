@@ -7,6 +7,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState, type 
 import { Dimensions } from 'react-native';
 
 import { Sheet, SHEET_HANDLE_AREA_HEIGHT } from '@/components/sp/Sheet';
+import { useMotion } from '@/components/sp/motion';
 import { StockSheetBody } from '@/components/money/StockSheetBody';
 import { MagicMoveTile } from '@/components/money/MagicMoveTile';
 import { normalizeOpenOptions, normalizeSymbol, type OpenOptions } from '@/lib/money/stockSheetApi';
@@ -32,6 +33,7 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
   // (measureInWindow, the opener's job); sheetHeight arrives once the risen sheet lays out.
   const [transition, setTransition] = useState<{ symbol: string; name: string | null; fromRect: Rect } | null>(null);
   const [sheetHeight, setSheetHeight] = useState<number | null>(null);
+  const { reduced } = useMotion();
 
   const open = useCallback((raw: string, options?: string | null | OpenOptions) => {
     const symbol = normalizeSymbol(raw);
@@ -39,10 +41,11 @@ export function MoneyHostProvider({ children }: { children: ReactNode }) {
     const o = normalizeOpenOptions(options);
     setCurrent({ symbol, originRef: o.originRef, name: o.name });
     setSheetHeight(null);
-    // The measure-fails path (DL gate checklist): no rect, no transition, the
-    // sheet still opens in place via its own normal rise.
-    setTransition(startTransition(symbol, o.name, o.originRect));
-  }, []);
+    // The measure-fails path and Reduce Motion (DL robustness checks, M1-b for the
+    // latter): either way, no rect, no transition -- the sheet still opens in place
+    // via its own normal rise or fade.
+    setTransition(startTransition(symbol, o.name, o.originRect, reduced));
+  }, [reduced]);
 
   const close = useCallback(() => {
     setCurrent(null);

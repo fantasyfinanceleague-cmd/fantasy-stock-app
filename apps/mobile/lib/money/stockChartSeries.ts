@@ -1,6 +1,6 @@
 /**
  * stockChartSeries: the pure data behind the stock sheet's chart (3e, M2).
- * Ranges are daily bars only (D1, Giorgio's standing ruling, 2026-09-30:
+ * Ranges are daily bars only (Giorgio's chart-ranges ruling (A), 2026-09-30:
  * 1W/1M/3M/1Y, 1W default, NO 1D — overrides the older board mock and spec
  * text, which both still show 1D). A range reads real bars only: this never
  * synthesizes a point for a day with no bar (a closed market, a feed gap).

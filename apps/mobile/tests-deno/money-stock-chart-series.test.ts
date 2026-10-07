@@ -1,6 +1,6 @@
 /**
  * Hermetic tests for lib/money/stockChartSeries.ts (3e, M2 live chart).
- * D1 standing ruling: 1W/1M/3M/1Y, 1W default, NO 1D.
+ * Giorgio's chart-ranges ruling (A): 1W/1M/3M/1Y, 1W default, NO 1D.
  * Run with: cd apps/mobile/tests-deno && deno test .
  */
 import { assertEquals } from 'jsr:@std/assert';
@@ -14,7 +14,7 @@ import {
   type DailyBar,
 } from '../lib/money/stockChartSeries.ts';
 
-Deno.test('D1: the ranges are 1W/1M/3M/1Y in that order, default 1W, no 1D', () => {
+Deno.test("Giorgio's ruling (A): the ranges are 1W/1M/3M/1Y in that order, default 1W, no 1D", () => {
   assertEquals(CHART_RANGES, ['1W', '1M', '3M', '1Y']);
   assertEquals(DEFAULT_CHART_RANGE, '1W');
   assertEquals(CHART_RANGES.includes('1D' as never), false);
