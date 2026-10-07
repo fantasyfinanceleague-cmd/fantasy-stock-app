@@ -61,6 +61,32 @@ correction, `f6e0ab2b`) for the code and its Deno tests.
 | `home-hero-million-xl-light.png` | Home's hero (the same `RollingMoney`) at XL with a value of $1,000,000 or more (`$1,234,567.80`, the `xl_million` DEV fixture) — the Design Lead asked for this case specifically, since a fix proven only on Portfolio wouldn't prove the shared component. |
 | `search-ownership-standard-light.png`, `…-dark.png` | Re-capture at default text size, unrelated to X-1 — confirms C-2 (own-line ownership text) still holds after the merge brought in main's changes since `ui/mobile-money` diverged. |
 
+### A follow-up bug the first re-capture surfaced: the scoreboard overlap
+
+The `home-hero-million-xl-light.png` capture above showed a SECOND, separate
+bug below the hero: Home's "This week" card (`ThisWeekCard.tsx`) had its two
+`ScoreDigits` values ("You" / the opponent) overlapping mid-row at $1M+.
+Despite looking like the same shape of bug, it was NOT RollingMoney/X-1 —
+`ThisWeekCard` uses `ScoreDigits` (`components/sp/game/ScoreDigits.tsx`), a
+sibling component with its own `adjustsFontSizeToFit`-based shrink. Two
+layered fixes were needed (`fix/rolling-money-fit`): `ThisWeekCard`'s
+`scoreCell` was missing `minWidth: 0` (a flex item's minimum width defaults
+to its content's intrinsic size, not 0, so `flex: 1` alone never actually
+split the row 50/50), and even after that, `ScoreDigits`' own digit columns
+had no `flexShrink` of their own, so a correctly-bounded row still let its
+children overflow past it. RollingMoney itself also gained an alignment-aware
+`align` prop (left/right/center) as general hardening, proactively, in case
+a future screen puts it in an opposing-pair layout — not the cause here, but
+cheap to have ready. Every other Home/Matchup/Portfolio surface pairing two
+rolling values was grepped and checked: HomeHero's and Portfolio's pairs sit
+in `flexWrap: 'wrap'` rows (wrap, never overlap) and `Scoreboard.tsx` stacks
+teams in separate rows entirely — both already safe.
+
+| File(s) | Proves |
+|---|---|
+| `home-scoreboard-million-xl-light.png`, `…-xl-dark.png` | Re-capture after both fixes, at XL text, Light and Dark: "You" and "Gianluigi B."'s scores ($82,210.20 / $11,503.30) sit cleanly side by side, the opponent's hugging its own right edge, never overlapping. |
+| `home-scoreboard-million-standard-light.png` | The same screen at default text size — confirms the fix doesn't depend on XL to hold, and nothing regressed at normal size. |
+
 ## C-3 — review-sell panel re-capture
 
 | File(s) | Proves |
