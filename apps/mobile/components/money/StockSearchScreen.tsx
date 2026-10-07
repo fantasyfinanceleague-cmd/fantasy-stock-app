@@ -135,12 +135,20 @@ export function StockSearchScreen() {
             {results.map((item) => {
               // E-3: not in the league's list wins over ownership (it can't be owned if it
               // was never draftable); otherwise show who owns it, or nothing when it's free.
-              const suffix = !item.selectable ? COPY.notInLeagueList : ownershipFor(item.symbol).text;
+              // C-2 (Design Lead gate): the status is its OWN line, never joined onto the
+              // company name and truncated with it -- "Owned by {name}" must never become
+              // "Owned by Ma…" -- and "You own this" carries the `mine` flag's own colour.
+              const suffix = !item.selectable ? { text: COPY.notInLeagueList, mine: false } : ownershipFor(item.symbol);
               return (
                 <View key={item.symbol} style={!item.selectable ? styles.disabled : undefined}>
                   <ListRow
                     title={item.symbol}
-                    subtitle={suffix ? `${item.name} · ${suffix}` : item.name}
+                    subtitle={item.name}
+                    subtitle2={suffix.text ? (
+                      <Text variant="callout" color={suffix.mine ? colors.youText : undefined} tone={suffix.mine ? undefined : 'secondary'}>
+                        {suffix.text}
+                      </Text>
+                    ) : undefined}
                     trailing={item.price != null ? <Text variant="callout">{formatMoney(item.price)}</Text> : undefined}
                     onPress={item.selectable ? () => handleSelect(item) : undefined}
                     hideChevron

@@ -16,13 +16,17 @@ export interface ListRowProps {
   leading?: ReactNode;
   title: string;
   subtitle?: string;
+  /** A second line under `subtitle`, e.g. an ownership or status note that
+   * needs its own colour or must never truncate — the caller renders its own
+   * <Text>, so it controls both. */
+  subtitle2?: ReactNode;
   trailing?: ReactNode;
   onPress?: () => void;
   /** Hides the trailing chevron even when `onPress` is set. */
   hideChevron?: boolean;
 }
 
-export function ListRow({ leading, title, subtitle, trailing, onPress, hideChevron }: ListRowProps) {
+export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron }: ListRowProps) {
   const { colors } = useTheme();
   const chevronColor = colors.text2;
   const dividerColor = colors.line;
@@ -39,6 +43,7 @@ export function ListRow({ leading, title, subtitle, trailing, onPress, hideChevr
             {subtitle}
           </Text>
         ) : null}
+        {subtitle2 ?? null}
       </View>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {onPress && !hideChevron ? <Ionicons name="chevron-forward" size={18} color={chevronColor} /> : null}
