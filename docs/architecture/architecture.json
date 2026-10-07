@@ -2,22 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1f13272f9674571086e76f183a67fa51fb12f2bd",
-    "commitShort": "1f13272",
+    "commit": "b2cfbd096264b3c7d144098e8ff701e7a6519536",
+    "commitShort": "b2cfbd09",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-06T21:58:25Z",
-    "sourceHash": "sha256:eb8dbb330d214b4c61c939fea340b8925a1b1433a8e97b16527fa59e4d5c0bd3",
+    "branch": "chore/foreground-quiet",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/foregroundQuiet.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/notifications.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/foreground-quiet-lib.test.ts"
+      }
+    ],
+    "timestamp": "2026-10-07T17:15:16Z",
+    "sourceHash": "sha256:c87343acdfe420a0d3d86622441ebe9bb01c690984eec7dfce23f678c3ced5e9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 2.8,
-    "ageDays": 0.1,
+    "ageHours": 22,
+    "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -12163,7 +12176,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('send-notification')",
       "callSites": [
-        "apps/mobile/lib/notifications.ts:167"
+        "apps/mobile/lib/notifications.ts:164"
       ]
     },
     {
@@ -12176,7 +12189,7 @@
       "payload": ".from('push_tokens').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:94"
+        "apps/mobile/lib/notifications.ts:91"
       ]
     },
     {
@@ -12189,7 +12202,7 @@
       "payload": ".from('push_tokens').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:67"
+        "apps/mobile/lib/notifications.ts:64"
       ]
     },
     {
@@ -12202,8 +12215,8 @@
       "payload": ".from('user_profiles').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:72",
-        "apps/mobile/lib/notifications.ts:97"
+        "apps/mobile/lib/notifications.ts:69",
+        "apps/mobile/lib/notifications.ts:94"
       ]
     },
     {
@@ -14730,7 +14743,7 @@
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:561 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:578 -> historical-bars",
-      "apps/mobile/lib/notifications.ts:167 -> send-notification",
+      "apps/mobile/lib/notifications.ts:164 -> send-notification",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -14838,10 +14851,10 @@
       "apps/mobile/lib/categoryData.ts:83 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:94 -> symbols.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
-      "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
-      "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
-      "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
+      "apps/mobile/lib/notifications.ts:69 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:91 -> push_tokens.delete",
+      "apps/mobile/lib/notifications.ts:94 -> user_profiles.update",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
