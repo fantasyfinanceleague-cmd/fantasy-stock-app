@@ -2029,8 +2029,14 @@
   //   Scudetto on Tuesday of Week 6;
   //   playoffs: Francesco T. left in Week 9 and still finished 4th (Season 1).
   // ═════════════════════════════════════════════════════════════════════
+  // G-3 (Design Lead, 2026-10-06): a leave sheet IS the confirmation, so its one filled
+  // button names the action (filled loss-fill, the token's stated role); Stay is a text
+  // button, like the transfer sheet's Cancel. One filled action per sheet.
   const DangerBtn = ({ children, off }) => (
-    <span className="ks-btn ks-btn--secondary" style={{ color: 'var(--c-danger)', opacity: off ? 0.45 : 1 }}>{children}</span>
+    <span className="ks-btn ks-btn--sell" style={{ opacity: off ? 0.45 : 1 }}>{children}</span>
+  );
+  const StayBtn = () => (
+    <span className="ks-callout" style={{ fontWeight: 700, textAlign: 'center', minHeight: 44, display: 'grid', placeItems: 'center' }}>Stay</span>
   );
   const LeaveRow = ({ off, sub }) => (
     <Card><ul className="ks-rows">
@@ -2075,7 +2081,7 @@
           <span className="ks-title">Leave {name}?</span>
           <Bullets items={items} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={name} chip={pre ? null : <Chip kind="live">Week 6</Chip>} />
@@ -2103,7 +2109,7 @@
             <Alert>Marco R. becomes commissioner: they've been in the league longest. We'll let them know.</Alert>
           )}
           <DangerBtn>{q4 === 'B' ? 'Leave and hand over to Marco R.' : 'Leave league'}</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head name={K.SERIE_A.name} chip={null} />
@@ -2403,7 +2409,7 @@
           <span className="ks-title">Leave {K.LEAGUE.name}?</span>
           <Bullets items={['It comes off your Home and Your leagues.', 'Season 1 stays in the league’s History, with your record in it.']} />
           <DangerBtn>Leave league</DangerBtn>
-          <span className="ks-btn">Stay</span>
+          <StayBtn />
         </Sheet>
       }>
         <Head chip={<span className="ks-chip ks-chip--final">Final</span>} />
