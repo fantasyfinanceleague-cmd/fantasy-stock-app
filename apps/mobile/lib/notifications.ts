@@ -2,16 +2,13 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { foregroundPresentation, foregroundQuiet } from './foregroundQuiet';
 
 // Configure how notifications are displayed when app is in foreground
+// Foreground banners stay quiet while the app already shows what they'd say
+// (your pick clock in the draft room; 3e's trade review): lib/foregroundQuiet.ts.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => foregroundPresentation(foregroundQuiet()),
 });
 
 /**

@@ -2,14 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "767ee64b50dc1cdd34e1bce694dc69b015305aed",
-    "commitShort": "767ee64b",
+    "commit": "85a79a4eb1eb071c0bc334448ad1a249cad71e44",
+    "commitShort": "85a79a4e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/draft-turn-push",
+    "branch": "chore/foreground-quiet",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/app/(tabs)/draft.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/notifications.ts"
+      },
+      {
+        "code": "A",
         "path": "supabase/functions/_shared/draft-write.test.ts"
       },
       {
@@ -17,20 +25,28 @@
         "path": "supabase/functions/_shared/draft-write.ts"
       },
       {
+        "code": "A",
+        "path": "supabase/functions/_shared/push-copy.ts"
+      },
+      {
         "code": "M",
         "path": "supabase/functions/send-notification/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/validate-and-record-pick/index.ts"
       }
     ],
-    "timestamp": "2026-10-07T06:57:15Z",
-    "sourceHash": "sha256:d5df9861d75a8d27a6969ad8beddd1582775b599f16df4ef84844cd26ea1f71e",
+    "timestamp": "2026-10-07T19:18:26Z",
+    "sourceHash": "sha256:045912558910274884869b67e47e797b59f06deeef1cca2db1f5ffc055b509d3",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-06T19:12:57Z",
-    "ageHours": 11.7,
-    "ageDays": 0.5,
+    "ageHours": 24.1,
+    "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:be9c8b3930bebef14a7ab20269e4bed6bdc22782c00084eb7d978383d1a6671c",
@@ -12177,7 +12193,7 @@
       "payload": ".from('push_tokens').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:94"
+        "apps/mobile/lib/notifications.ts:91"
       ]
     },
     {
@@ -12190,7 +12206,7 @@
       "payload": ".from('push_tokens').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:67"
+        "apps/mobile/lib/notifications.ts:64"
       ]
     },
     {
@@ -12203,8 +12219,8 @@
       "payload": ".from('user_profiles').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:72",
-        "apps/mobile/lib/notifications.ts:97"
+        "apps/mobile/lib/notifications.ts:69",
+        "apps/mobile/lib/notifications.ts:94"
       ]
     },
     {
@@ -14852,10 +14868,10 @@
       "apps/mobile/lib/categoryData.ts:83 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:94 -> symbols.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
-      "apps/mobile/lib/notifications.ts:67 -> push_tokens.upsert",
-      "apps/mobile/lib/notifications.ts:72 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:94 -> push_tokens.delete",
-      "apps/mobile/lib/notifications.ts:97 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
+      "apps/mobile/lib/notifications.ts:69 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:91 -> push_tokens.delete",
+      "apps/mobile/lib/notifications.ts:94 -> user_profiles.update",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
