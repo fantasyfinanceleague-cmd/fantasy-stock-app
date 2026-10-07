@@ -291,6 +291,40 @@ Design Lead rulings; new copy, so Giorgio may still overrule.
   must not repeat an adjacent one. The header keeps the League tab's own phase chip. I'll
   drop the chip from the board frame (board item).
 
+### Rulings, 3c-2 round 2 (2026-10-06)
+
+New copy from `ui/mobile-league-setup` @ `7bd56e9`. Design Lead rulings.
+
+- **Transfer sheet:** "Make someone else commissioner" (title), "Hand over" (disabled until
+  a manager is picked), "Hand over to {Name}" once picked, "Cancel": approved. Add one line
+  under the title so the consequence is said before the tap (rule 1): "The new commissioner
+  takes over right away. You stay in the league."
+- **Leave, no draft time:** not a missing line. Without a time the window is still known:
+  "You can leave until an hour before the draft."
+- **Leave, season number unknown:** "Your season stays in the league's History…" without the
+  number: approved.
+- **Leave, network / server / unknown error:** not "That didn't go through." Leaving is
+  destructive and the outcome is unknown, so re-read the membership first (verify the
+  effect): still a member → "You're still in {League}. Try again."; gone → the normal "left"
+  state; re-read fails → "We couldn't confirm that. Check your connection, then try again."
+- **Draft complete, calendar doesn't cover Week 1:** "Week 1 starts soon." approved.
+- **Draft complete, a Week 1 bye:** don't drop the opponent silently. "Week 1 starts Mon 9:30
+  AM ET. You have a bye that week." (a notice, not an explanation, per the bye rule). The
+  button becomes "See Week 1's matchups" (All matchups), since there is no matchup of yours.
+- **Home, first draft time save failed:** "The draft time wasn't saved. Try again." The
+  postponed flow keeps "The new draft time wasn't saved. Try again."
+- **Queue refusals:** "{A} can't be queued. Remove it and try again." and "{A}, {B} and {C}
+  can't be queued. Remove them and try again." approved.
+- **Pick fallbacks:** "It's another manager's pick now." and "That stock…" forms (no symbol
+  known) approved.
+- **After your own auto-pick:** a distinct line, not "You took X". The player didn't pick it,
+  and the auto-pick rule is a departure that gets explained where it happens (rule 1):
+  "Auto-picked {SYMBOL} for you · you're up in {N} picks". The pick log keeps its source
+  ("from your queue" / "best available").
+- **Members' League settings row** (Invite code, Commissioner, Leave league; reachability
+  fix): fine for the gate. Members see only those three rows, with no commissioner controls
+  shown, not even disabled ones; Commissioner is a read-only name; the invite code has Share.
+
 ### Backlog (1.3)
 
 P2/P3 items marked **backlog** above, unless a worker picks one up cheaply on the way past:
