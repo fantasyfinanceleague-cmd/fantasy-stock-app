@@ -274,6 +274,8 @@ Deno.test('League settings is a modal: its Cancel is text only, no back chevron 
   assertEquals(s.includes("back={{ label: 'Cancel', onPress: handleClose }}"), false);
   assertEquals((s.match(/back=\{\{ label: 'Cancel', onPress: handleClose, modal: true \}\}/g) ?? []).length >= 3, true);
   assertEquals(SOURCES['components/game/SetupScaffold.tsx'].includes('{back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}'), true);
+  // Text only, it aligns to the 24 pt content gutter.
+  assertEquals(SOURCES['components/game/SetupScaffold.tsx'].includes('style={[styles.back, back.modal ? styles.backModal : null]}'), true);
 });
 
 Deno.test('the transfer rows carry only the name (G-8; source guard)', () => {

@@ -38,7 +38,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
       <View style={{ height: insets.top }} />
       <View style={styles.topRow}>
         {back ? (
-          <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
+          <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={[styles.back, back.modal ? styles.backModal : null]} hitSlop={8}>
             {back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}
             <Text variant="callout" tone="secondary">
               {back.label}
@@ -98,6 +98,10 @@ const styles = StyleSheet.create({
     gap: space[1],
     minHeight: 44,
     paddingHorizontal: space[5],
+  },
+  // A text-only Cancel sits on the content gutter (the chevron's glyph inset no longer offsets it).
+  backModal: {
+    paddingHorizontal: space[6],
   },
   tabular: {
     fontVariant: ['tabular-nums'],
