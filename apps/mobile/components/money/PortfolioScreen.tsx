@@ -6,7 +6,7 @@
  * Not yet built: the trade-history link, the Cash row for per-slot sales (it
  * needs the open-proceeds read), and the value-roll and reorder motion.
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 
@@ -49,6 +49,20 @@ export function PortfolioScreen() {
   const router = useRouter();
   const { activeLeague } = useLeagueContext();
   const { reduced, duration } = useMotion();
+  // M1: each row's native view, measured at tap time (measureInWindow) for the
+  // row->header flying tile. A ref per symbol, since the list re-sorts (M5).
+  const rowRefs = useRef<Map<string, View | null>>(new Map());
+
+  function openRow(symbol: string, name: string) {
+    const el = rowRefs.current.get(symbol);
+    if (el) {
+      el.measureInWindow((x, y, width, height) => {
+        open(symbol, { name, originRef: symbol, originRect: { x, y, width, height } });
+      });
+    } else {
+      open(symbol, { name, originRef: symbol });
+    }
+  }
 
   let body: React.ReactNode;
   if (data.status === 'loading') {
@@ -96,9 +110,10 @@ export function PortfolioScreen() {
             <Animated.View key={r.symbol} layout={reduced ? undefined : LinearTransition.duration(duration.base)}>
             <Pressable
               key={r.symbol}
+              ref={(el) => { rowRefs.current.set(r.symbol, el); }}
               accessibilityRole="button"
               accessibilityLabel={`${r.symbol}, ${r.name}, ${r.quantityText} shares, ${r.valueText}${r.todayText ? `, ${r.todayText} today` : ''}`}
-              onPress={() => open(r.symbol, { name: r.name, originRef: r.symbol })}
+              onPress={() => openRow(r.symbol, r.name)}
               style={({ pressed }) => [styles.row, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
             >
               <View style={styles.rowLead}>

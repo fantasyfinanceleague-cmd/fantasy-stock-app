@@ -23,19 +23,23 @@ export interface OpenOptions {
   name?: string | null;
   /** Where the sheet was opened from (a row id), so the caller can restore focus. */
   originRef?: string | null;
+  /** M1: the tapped row's measured screen rect (measureInWindow), for the
+   * row->header flying tile. Omitted, the sheet just rises with no tile. */
+  originRect?: { x: number; y: number; width: number; height: number } | null;
 }
 
 export interface NormalizedOpenOptions {
   name: string | null;
   originRef: string | null;
+  originRect: { x: number; y: number; width: number; height: number } | null;
 }
 
 /** The second argument of open(): a legacy origin-ref string, an options object, or nothing. */
 export function normalizeOpenOptions(arg?: string | null | OpenOptions): NormalizedOpenOptions {
-  if (arg == null) return { name: null, originRef: null };
-  if (typeof arg === 'string') return { name: null, originRef: arg || null };
+  if (arg == null) return { name: null, originRef: null, originRect: null };
+  if (typeof arg === 'string') return { name: null, originRef: arg || null, originRect: null };
   const name = typeof arg.name === 'string' && arg.name.trim() ? arg.name.trim() : null;
-  return { name, originRef: arg.originRef ?? null };
+  return { name, originRef: arg.originRef ?? null, originRect: arg.originRect ?? null };
 }
 
 /** The name the sheet shows, and where it came from. A name the opener passed

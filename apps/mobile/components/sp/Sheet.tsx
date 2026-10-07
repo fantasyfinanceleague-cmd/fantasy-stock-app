@@ -20,28 +20,53 @@ export interface SheetProps {
   children: ReactNode;
   /** False locks every dismiss path (swipe, backdrop, Android back): used while a trade submit is in flight. */
   dismissible?: boolean;
+  /** Renders on top of the backdrop AND the sheet, inside the same Modal (a
+   * separate overlay outside this Modal would render in the wrong native
+   * window and never visually align). M1's flying row->header tile uses this. */
+  overlay?: ReactNode;
+  /** The sheet's own rendered height, reported once laid out (content-driven,
+   * so it isn't known up front) -- M1 uses it to compute the header's resting
+   * screen position without waiting for the rise animation to finish. */
+  onSheetLayout?: (height: number) => void;
 }
 
 const DISMISS_DISTANCE = 120;
 const DISMISS_VELOCITY = 0.8;
+/** The grab-handle row's rendered height (paddingVertical * 2 + the handle's own
+ * height) — every sheet's content starts this far below the sheet's own top edge.
+ * M1 uses it to place the header's resting rect without an extra measurement. */
+export const SHEET_HANDLE_AREA_HEIGHT = space[3] * 2 + 4;
 
-export function Sheet({ visible, onClose, children, dismissible = true }: SheetProps) {
+export function Sheet({ visible, onClose, children, dismissible = true, overlay, onSheetLayout }: SheetProps) {
   const { colors, elevation } = useTheme();
   const [mounted, setMounted] = useState(visible);
   const screenHeight = Dimensions.get('window').height;
   const translateY = useSharedValue(screenHeight);
   const backdropOpacity = useSharedValue(0);
-  const { spring, duration, withSpring, withTiming } = useMotion();
+  const { spring, duration, withSpring, withTiming, reduced } = useMotion();
+  // Reduce Motion (M1's spec): the sheet fades in place instead of sliding up.
+  const sheetOpacity = useSharedValue(reduced ? 0 : 1);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      translateY.value = withSpring(0, spring.snappy);
+      if (reduced) {
+        translateY.value = 0;
+        sheetOpacity.value = withTiming(1, { duration: duration.base });
+      } else {
+        translateY.value = withSpring(0, spring.snappy);
+      }
       backdropOpacity.value = withTiming(1, { duration: duration.base, reduceMotion: ReduceMotion.System });
     } else if (mounted) {
-      translateY.value = withSpring(screenHeight, spring.snappy, (finished) => {
-        if (finished) runOnJS(setMounted)(false);
-      });
+      if (reduced) {
+        sheetOpacity.value = withTiming(0, { duration: duration.quick }, (finished) => {
+          if (finished) runOnJS(setMounted)(false);
+        });
+      } else {
+        translateY.value = withSpring(screenHeight, spring.snappy, (finished) => {
+          if (finished) runOnJS(setMounted)(false);
+        });
+      }
       backdropOpacity.value = withTiming(0, { duration: duration.quick, reduceMotion: ReduceMotion.System });
     }
     // mounted deliberately excluded: it's the effect's OWN state, re-running
@@ -72,7 +97,7 @@ export function Sheet({ visible, onClose, children, dismissible = true }: SheetP
     })
   ).current;
 
-  const sheetAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }));
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }], opacity: sheetOpacity.value }));
   const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
   if (!mounted) return null;
@@ -81,12 +106,16 @@ export function Sheet({ visible, onClose, children, dismissible = true }: SheetP
     <Modal transparent visible={mounted} animationType="none" onRequestClose={dismiss} statusBarTranslucent>
       <View style={styles.container}>
         <Animated.View style={[styles.backdrop, { backgroundColor: colors.scrim }, backdropAnimatedStyle]} onTouchEnd={dismiss} />
-        <Animated.View style={[styles.sheet, { backgroundColor: colors.surface }, elevation.sheet, sheetAnimatedStyle]}>
+        <Animated.View
+          style={[styles.sheet, { backgroundColor: colors.surface }, elevation.sheet, sheetAnimatedStyle]}
+          onLayout={onSheetLayout ? (e) => onSheetLayout(e.nativeEvent.layout.height) : undefined}
+        >
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
           </View>
           {children}
         </Animated.View>
+        {overlay}
       </View>
     </Modal>
   );
