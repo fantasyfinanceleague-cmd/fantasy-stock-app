@@ -10,6 +10,7 @@ import {
   DEFAULT_CHART_RANGE,
   deltaSeries,
   rangeLookbackDays,
+  referenceLine,
   stockScrubLabel,
   type DailyBar,
 } from '../lib/money/stockChartSeries.ts';
@@ -66,15 +67,78 @@ Deno.test('deltaSeries: an empty series stays empty', () => {
   assertEquals(deltaSeries([], 100), []);
 });
 
-Deno.test('stockScrubLabel: a readable date and the bar\'s own price, never a delta', () => {
-  const label = stockScrubLabel({ date: '2026-10-05', close: 353.85 });
-  assertEquals(label.primary, 'Mon, Oct 5');
-  assertEquals(label.money, '$353.85');
+// Design Lead ruling, 2026-10-06: the reference line is the range's FIRST close, not
+// the previous close; "A week ago $X" etc., unless the history itself starts later
+// than the range (a newly listed stock), which gets its own date instead.
+const FULL_HISTORY: DailyBar[] = [
+  { date: '2025-10-01', close: 90 },
+  { date: '2026-09-01', close: 100 },
+  { date: '2026-09-20', close: 110 },
+  { date: '2026-10-01', close: 120 },
+  { date: '2026-10-05', close: 130 },
+];
+
+Deno.test('referenceLine: full history, 1W names the period, baseline is the first bar in range', () => {
+  const r = referenceLine(FULL_HISTORY, '1W', NOW);
+  assertEquals(r, { baseline: 120, text: 'A week ago $120.00' });
+});
+
+Deno.test('referenceLine: one label per range, all four periods', () => {
+  assertEquals(referenceLine(FULL_HISTORY, '1M', NOW)?.text, 'A month ago $110.00');
+  assertEquals(referenceLine(FULL_HISTORY, '3M', NOW)?.text, '3 months ago $100.00');
+  // 2025-10-01 falls OUTSIDE 1Y's own 366-day window from 2026-10-05, so 1Y's baseline
+  // is the earliest bar actually inside it (2026-09-01), not the full history's first bar.
+  assertEquals(referenceLine(FULL_HISTORY, '1Y', NOW)?.text, 'A year ago $100.00');
+});
+
+Deno.test('referenceLine: short history (a newly listed stock) names the bar\'s own date, never the range', () => {
+  // The whole history starts 2026-09-20: inside 1W's 7-day window (full coverage there),
+  // but later than 1Y's ~366-day cutoff (short history for 1Y).
+  const shortHistory: DailyBar[] = [
+    { date: '2026-09-20', close: 105 },
+    { date: '2026-10-01', close: 120 },
+    { date: '2026-10-05', close: 130 },
+  ];
+  assertEquals(referenceLine(shortHistory, '1Y', NOW), { baseline: 105, text: 'Sep 20 close $105.00' });
+  // Not the short-history case for 1W: there IS a bar before its cutoff, so "A week ago" stands.
+  assertEquals(referenceLine(shortHistory, '1W', NOW)?.text, 'A week ago $120.00');
+});
+
+Deno.test('referenceLine: no bars in range at all returns null', () => {
+  assertEquals(referenceLine([], '1W', NOW), null);
+});
+
+Deno.test('stockScrubLabel: date, price, and the change vs the range baseline, signed', () => {
+  const label = stockScrubLabel({ date: '2026-10-01', close: 306.68 }, 301.85, false, NOW);
+  assertEquals(label.primary, 'Thu, Oct 1');
+  assertEquals(label.price, '$306.68');
+  assertEquals(label.money, '+$4.83');
+  assertEquals(label.percent, '+1.60%');
+  assertEquals(label.gain, true);
+});
+
+Deno.test('stockScrubLabel: a loss is signed negative and gain is false', () => {
+  const label = stockScrubLabel({ date: '2026-10-01', close: 95 }, 100, false, NOW);
+  assertEquals(label.money.startsWith('−'), true); // the shared formatter's minus sign
+  assertEquals(label.percent, '−5.00%');
+  assertEquals(label.gain, false);
+});
+
+Deno.test('stockScrubLabel: the latest point in the range reads "Today", not its date', () => {
+  const label = stockScrubLabel({ date: '2026-10-05', close: 130 }, 120, true, NOW);
+  assertEquals(label.primary, 'Today');
+});
+
+Deno.test('stockScrubLabel: no year for a bar from the current year', () => {
+  assertEquals(stockScrubLabel({ date: '2026-10-01', close: 1 }, 1, false, NOW).primary, 'Thu, Oct 1');
+});
+
+Deno.test('stockScrubLabel: a year shown, no weekday, for a bar from a different year', () => {
+  assertEquals(stockScrubLabel({ date: '2025-10-01', close: 1 }, 1, false, NOW).primary, 'Oct 1, 2025');
 });
 
 Deno.test('stockScrubLabel: an unparsable date falls back to the raw string', () => {
-  const label = stockScrubLabel({ date: 'not-a-date', close: 10 });
-  assertEquals(label.primary, 'not-a-date');
+  assertEquals(stockScrubLabel({ date: 'not-a-date', close: 10 }, 10, false, NOW).primary, 'not-a-date');
 });
 
 // Fixture seam (lib/money/stressFixture.ts stressChartBars): 3e's chart data,
