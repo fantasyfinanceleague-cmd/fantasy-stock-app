@@ -93,7 +93,9 @@ import { SOURCES } from './sourceManifest.generated.ts';
 
 Deno.test('the draft room renders the clock through pickClockLabel, never a hand-built "0:" (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('{pickClockLabel(shownClock)}'), true); // the live (ticking) clock
+  // The live (ticking) clock, computed once and rendered (B-4: the row only when there is one).
+  assertEquals(room.includes('const clockLabel = pickClockLabel(shownClock);'), true);
+  assertEquals(room.includes('{clockLabel}'), true);
   assertEquals(room.includes('`0:${'), false);
 });
 

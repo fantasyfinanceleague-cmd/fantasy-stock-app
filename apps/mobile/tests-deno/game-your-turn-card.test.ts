@@ -84,3 +84,9 @@ Deno.test('the chime logs its evidence in dev only (a simulator recording has no
   const chime = SOURCES['lib/game/useTurnChime.ts'];
   assert(chime.includes("if (__DEV__) setTimeout(() => console.info(`[your-turn] chime ${player.playing ? 'playing' : 'NOT playing'}"));
 });
+
+Deno.test('B-4: no clock (auto-picking, idle) draws no clock row, never an empty gap', () => {
+  assert(room.includes('const clockLabel = pickClockLabel(shownClock);'));
+  assert(room.includes('{clockLabel ? (\n          <View style={styles.clockRow}>'));
+  assertEquals((room.match(/pickClockLabel\(/g) ?? []).length, 1); // the row and its text share one label
+});

@@ -292,6 +292,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   // The flash: EVERY line on the card is navy (on-live) while the gold is up (the spec's
   // "text in navy"); the clock and the title also switch their own colours below.
   const flashInk = onTheClock && flashLit ? colors.onLive : undefined;
+  const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
@@ -303,16 +304,19 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {onTheClock ? <View testID="your-turn-tint" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.warnTint }]} /> : null}
         {onTheClock ? <Animated.View testID="your-turn-flash" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.live }, flashStyle]} /> : null}
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
-        <View style={styles.clockRow}>
-          {shownClock.kind === 'last10' ? <LiveDot size={8} /> : null}
-          {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
-          <Text
-            variant={onTheClock ? 'score.lg' : 'headline'}
-            style={[onTheClock ? styles.yourTurnClock : null, { color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text }]}
-          >
-            {pickClockLabel(shownClock)}
-          </Text>
-        </View>
+        {/* B-4: no clock (auto-picking, idle) draws no clock row, never an empty gap. */}
+        {clockLabel ? (
+          <View style={styles.clockRow}>
+            {shownClock.kind === 'last10' ? <LiveDot size={8} /> : null}
+            {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
+            <Text
+              variant={onTheClock ? 'score.lg' : 'headline'}
+              style={[onTheClock ? styles.yourTurnClock : null, { color: onTheClock && flashLit ? colors.onLive : shownClock.kind === 'last10' ? colors.loss : colors.text }]}
+            >
+              {clockLabel}
+            </Text>
+          </View>
+        ) : null}
         {onTheClock ? (
           <Text variant="display" style={styles.yourTurnTitle} color={flashLit ? colors.onLive : colors.liveText} accessibilityRole="header">{headline}</Text>
         ) : (
