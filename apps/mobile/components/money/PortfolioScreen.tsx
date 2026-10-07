@@ -100,17 +100,18 @@ export function PortfolioScreen() {
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={v.cashText ? `${COPY.buyAStock}, ${v.cashText}` : COPY.buyAStock}
+          accessibilityLabel={v.buyRowText ? `${COPY.buyAStock}, ${v.buyRowText}` : COPY.buyAStock}
           onPress={() => router.push('/stock-search')}
           style={({ pressed }) => [styles.buyLink, { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 }]}
         >
           <View style={styles.rowLead}>
             <Text variant="callout" tone="primary">{COPY.buyAStock}</Text>
-            {/* E-4: budget_cap/price_tiers leagues repeat the header's own cash
-                figure here — the same uninvested cash the value already counts,
-                not a separate number. fixed_notional has no single cash figure
-                (see the per-slot note above), so this stays blank there. */}
-            {v.cashText ? <Text variant="caption" tone="secondary">{v.cashText}</Text> : null}
+            {/* E-4 (Design Lead verbatim): per open sale (fixed_notional) or per
+                open slot (price_tiers), or the budget left (budget_cap) — never
+                a total, since one buy spends exactly one sale's cash or fills
+                exactly one slot. buyRowLine composes this from the same preview
+                + ledger reads the screen already fetches. */}
+            {v.buyRowText ? <Text variant="caption" tone="secondary">{v.buyRowText}</Text> : null}
           </View>
           <Icon name="chevronRight" size="callout" tone="text2" />
         </Pressable>

@@ -17,11 +17,13 @@ import { buildPortfolioView, type PortfolioView, type ViewHolding } from './port
 import { usePortfolioLedger } from './usePortfolioLedger';
 import { fetchPreview } from './recordTrade';
 import { previewBody } from './tradeBodies';
-import { slotLabelsBySymbol } from './tierContract';
+import { slotLabelFor, slotLabelsBySymbol } from './tierContract';
 import { categoryNameOf, loadCategoryNames } from './categoryNames';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME } from './stressFixture';
 import { FIXTURE_LEAGUE_ID, fixtureLeague } from './fixtureMode';
+import { userCashSpentFromLedger } from './budgetFigures';
+import type { BuyRowInput } from './buyRowLine';
 
 export interface PortfolioData {
   status: 'loading' | 'ready' | 'error';
@@ -49,6 +51,7 @@ export function usePortfolioData(): PortfolioData {
   const stakeMode = fixtureSettings ? fixtureSettings.stake_mode : (activeLeague?.stake_mode ?? null);
   const notional = fixtureSettings ? fixtureSettings.notional_per_slot : (activeLeague?.notional_per_slot ?? null);
   const numRounds = fixtureSettings ? fixtureSettings.num_rounds : (activeLeague?.num_rounds ?? null);
+  const budgetAmount = fixtureSettings ? fixtureSettings.budget_amount : (activeLeague?.budget_amount ?? null);
   const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
   const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);
@@ -114,16 +117,31 @@ export function usePortfolioData(): PortfolioData {
       if (cancelled) return;
 
       // The slot labels come from the server's preview (the caller's slot map), not from the ledger.
+      // E-4: the same preview also carries fixed_notional's open sale proceeds (sources) and
+      // price_tiers' open slots (slots) -- the "Buy a stock" row's second line, no extra request.
       let slotLabels: Record<string, string> = {};
+      let sales: BuyRowInput['sales'] = [];
+      let openSlotLabels: string[] = [];
       if (!market && leagueId) {
         requests += 1;
         const preview = await fetchPreview(previewBody(leagueId));
         if (preview) {
           await loadCategoryNames();
           slotLabels = slotLabelsBySymbol(preview.slots, categoryNameOf);
+          sales = preview.sources.map((s) => ({ symbol: s.symbol, amount: s.amount }));
+          openSlotLabels = (preview.slots ?? [])
+            .filter((s) => s.open > 0)
+            .map((s) => slotLabelFor(s, categoryNameOf))
+            .filter((l): l is string => l != null);
         }
       }
       if (cancelled) return;
+
+      // budget_cap's "budget left": the league's own budget_amount minus cash spent, from the
+      // ledger alone (same formula the budget review already shows) -- no extra request either.
+      const cashSpent = userCashSpentFromLedger(ledger, callerId);
+      const budgetLeft = budgetAmount == null ? null : Math.round((budgetAmount - cashSpent) * 100) / 100;
+      const rosterFull = holdings.length >= numRounds;
 
       const price = (sym: string) => prices[sym] ?? null;
       const summary = portfolioSummary({
@@ -153,6 +171,7 @@ export function usePortfolioData(): PortfolioData {
         perSlotNotional: notional,
         stakeMode,
         slotLabels,
+        buyRow: { stakeMode, sales, budgetLeft, rosterFull, openSlotLabels },
       });
 
       if (__DEV__) {

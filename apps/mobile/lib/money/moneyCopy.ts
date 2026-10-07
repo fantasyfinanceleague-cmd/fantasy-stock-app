@@ -135,4 +135,17 @@ export const COPY = {
   includesDraftPicks: 'Includes your draft picks',
   // Board pattern, verbatim: "Trading opens Mon 9:30 AM ET."
   tradingOpens: (when: string) => `Trading opens ${when}.`,
+  // E-4 (3e UX audit, board #buy-a-stock, Design Lead verbatim, 2026-10-06): the
+  // "Buy a stock" row's second line -- per sale/slot, never a total, since one buy
+  // spends exactly one sale's cash or fills exactly one slot.
+  oneSaleReady: (amount: string, symbol: string) => `${amount} from your ${symbol} sale is ready to invest.`,
+  twoSalesReady: (amountA: string, symbolA: string, amountB: string, symbolB: string) =>
+    `${amountA} from ${symbolA} and ${amountB} from ${symbolB} are ready to invest.`,
+  manySalesReady: (n: number) => `Cash from ${n} sales is ready to invest. You'll pick which one pays.`,
+  everySlotInvested: 'Every slot is invested. Sell a holding to free one.',
+  budgetLeftToSpend: (amount: string) => `${amount} of your budget is left to spend.`,
+  oneSlotOpen: (label: string) => `Your ${label} is open.`,
+  twoSlotsOpen: (labelA: string, labelB: string) => `Your ${labelA} and ${labelB} slots are open.`,
+  manySlotsOpen: (n: number) => `${n} of your slots are open.`,
+  everySlotFilled: 'Every slot is filled. Sell a holding to free one.',
 };

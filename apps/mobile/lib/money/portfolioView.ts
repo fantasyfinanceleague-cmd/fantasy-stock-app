@@ -16,6 +16,7 @@ import { cleanCompanyName } from './cleanCompanyName';
 import { formatShares } from './formatShares';
 import { COPY } from './moneyCopy';
 import { unpricedNote } from '../plCoverage';
+import { buyRowLine, type BuyRowInput } from './buyRowLine';
 
 export interface ViewHolding {
   symbol: string;
@@ -37,6 +38,11 @@ export interface PortfolioViewInput {
   /** fixed_notional leagues show the slot language; others don't. */
   perSlotNotional: number | null;
   stakeMode: 'fixed_notional' | 'budget_cap' | 'price_tiers' | null;
+  /** The "Buy a stock" row's second line (E-4): per sale/slot, already composed
+   * from the preview + ledger reads the hook makes anyway. Omitted entirely by
+   * playerPortfolio (another manager's view carries no trade action, so there
+   * is no row to caption). */
+  buyRow?: BuyRowInput;
 }
 
 export interface HoldingRow {
@@ -63,6 +69,7 @@ export interface PortfolioView {
   slotsText: string | null;
   perSlotText: string | null;
   cashText: string | null;
+  buyRowText: string | null;
   unpricedNote: string | null;
   rows: HoldingRow[];
   creditText: string;
@@ -127,6 +134,7 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
     slotsText: fixed ? COPY.slotsInvested(held.length, i.numRounds) : null,
     perSlotText: fixed && i.perSlotNotional != null ? COPY.perSlotAtDraft(formatMoney(i.perSlotNotional)) : null,
     cashText: !fixed && Math.abs(i.cash) >= 0.005 ? `${COPY.cashFromSales} ${formatMoney(i.cash)}` : null,
+    buyRowText: i.buyRow ? buyRowLine(i.buyRow)?.text ?? null : null,
     unpricedNote: unpricedNote(held.filter((h) => h.price == null).length),
     rows,
     creditText: COPY.alpacaCredit,
