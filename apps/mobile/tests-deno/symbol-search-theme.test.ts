@@ -59,3 +59,10 @@ Deno.test('the room\'s and the queue\'s search cards let the dropdown overflow, 
     assertEquals(src.slice(card, at).includes('styles.searchCard'), true, p);
   }
 });
+
+Deno.test('the tab scroll view lifts a focused field above the keyboard and lets a result tap select (source guard)', () => {
+  const bars = SOURCES['components/shell/BarsRefresh.tsx'];
+  assertEquals(bars.includes('automaticallyAdjustKeyboardInsets'), true);
+  // Both the iOS and the Android scroll views pass taps through while the keyboard is up.
+  assertEquals((bars.match(/keyboardShouldPersistTaps="handled"/g) ?? []).length, 2);
+});

@@ -69,6 +69,7 @@ export function BarsRefresh({ onRefresh, children, contentContainerStyle }: Bars
         <ScrollFoldContext.Provider value={fold.value}>
           <ScrollView
             contentContainerStyle={contentContainerStyle}
+            keyboardShouldPersistTaps="handled"
             onScroll={fold.emit}
             scrollEventThrottle={16}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={run} colors={[colors.accent]} tintColor={colors.accent} />}
@@ -159,6 +160,11 @@ function IosBarsRefresh({
       ref={scrollRef}
       onScroll={onScroll}
       scrollEventThrottle={16}
+      // A field near the end of a tab (the draft queue's search) scrolls above the
+      // keyboard, and a tap on a search result selects it rather than only
+      // dismissing the keyboard. Both act only while the keyboard is up.
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
       contentInset={{ top: refreshing ? HEADER : 0 }}
       contentContainerStyle={contentContainerStyle}
       accessibilityState={{ busy: refreshing }}
