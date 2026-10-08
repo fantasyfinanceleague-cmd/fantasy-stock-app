@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import Svg, { ClipPath, Defs, Line, Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
-import { runOnJS } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
+import { GestureDetector } from 'react-native-gesture-handler';
 
 import { space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
@@ -13,7 +11,9 @@ import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
 import { CHART_ZERO_LABEL, seasonScrubLabel } from '@/lib/home/homeCopy';
 import { LiveDot } from '@/components/sp/game/LiveDot';
-import { buildChartGeometry, nearestPointIndex, partialLinePath } from '@/lib/home/chartGeometry';
+import { buildChartGeometry, partialLinePath } from '@/lib/chart/chartGeometry';
+import { useChartScrub } from '@/lib/chart/useChartScrub';
+import { useDrawIn } from '@/lib/chart/useDrawIn';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
 
 // Height the scrub label needs at the top edge (S1): a point above this line
@@ -56,12 +56,6 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const [width, setWidth] = useState(0);
-  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
-  const lastHapticIndex = useRef<number | null>(null);
-  const skippedFirstDraw = useRef(false);
-  // H2 draw-in progress, 0..1, driven by a JS frame loop below. SVG dash props
-  // are ignored on device (2026-10-05), so the line itself is built up to this.
-  const [drawProgress, setDrawProgress] = useState(reduced || skipEntrance ? 1 : 0);
 
   const series = points.map((p) => p.gain);
   // x-extent is exactly the real points on screen -- through the CURRENT
@@ -69,76 +63,24 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   // future Friday (Design Lead ruling, 2026-09-30, board convention).
   const positions = points.map((p) => p.dayIndex);
   const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, {}, positions) : null;
-
+  const lineLength = geometry?.lineLength ?? 0;
 
   // H2: the line draws in on first view, and again after a window or series
-  // change. Progress steps on a JS frame loop over `feature` duration (ease-out),
-  // and the line is built up to that fraction. Reduce Motion: drawn at once.
-  const currentKey = series.join(',');
-  const lineLength = geometry?.lineLength ?? 0;
-  useEffect(() => {
-    if (reduced) {
-      setDrawProgress(1);
-      return;
-    }
-    // Wait for layout: a draw that starts at length 0 would finish unseen.
-    if (lineLength <= 0) return;
-    if (!skippedFirstDraw.current) {
-      // The first effective run of this mount: a league-switch mount
-      // (skipEntrance) is shown already drawn; later runs draw in as usual.
-      skippedFirstDraw.current = true;
-      if (skipEntrance) {
-        setDrawProgress(1);
-        return;
-      }
-    }
-    let raf = 0;
-    const start = Date.now();
-    const total = Math.max(duration.feature, 1);
-    setDrawProgress(0);
-    const tick = () => {
-      const t = Math.min(1, (Date.now() - start) / total);
-      setDrawProgress(1 - Math.pow(1 - t, 3));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new series draws in; skipEntrance is read once per mount and duration is stable per render.
-  }, [currentKey, reduced, lineLength > 0]);
+  // change (lib/chart/useDrawIn, shared with 3e's stock chart, M2).
+  const drawProgress = useDrawIn({
+    key: series.join(','),
+    lineLength,
+    reduced,
+    durationMs: duration.feature,
+    skipFirst: skipEntrance,
+  });
 
   function handleLayout(e: LayoutChangeEvent) {
     setWidth(e.nativeEvent.layout.width);
   }
 
-  function updateScrub(x: number) {
-    if (!geometry) return;
-    const idx = nearestPointIndex(geometry.points, x);
-    if (idx !== scrubIndex) {
-      setScrubIndex(idx);
-      onScrubIndex?.(idx);
-      if (!reduced && idx !== lastHapticIndex.current) {
-        Haptics.selectionAsync().catch(() => {});
-      }
-      lastHapticIndex.current = idx;
-    }
-  }
-
-  function endScrub() {
-    setScrubIndex(null);
-    onScrubIndex?.(null);
-    lastHapticIndex.current = null;
-  }
-
-  // Reanimated auto-workletizes these callbacks and runs them on the UI
-  // thread; `updateScrub`/`endScrub` call `setState` and `Haptics`, plain
-  // JS that must run on the JS thread — found in code review (2026-09-29)
-  // as a likely crash on the first long-press. `runOnJS` is what
-  // LeagueSheet.tsx / OnboardingPager.tsx already use for the same reason.
-  const pan = Gesture.Pan()
-    .activateAfterLongPress(120)
-    .onUpdate((e) => runOnJS(updateScrub)(e.x))
-    .onEnd(() => runOnJS(endScrub)())
-    .onFinalize(() => runOnJS(endScrub)());
+  // The scrub gesture (lib/chart/useChartScrub, shared with 3e's stock chart, M2).
+  const { scrubIndex, pan } = useChartScrub(geometry, reduced, onScrubIndex);
 
   const scrubPoint = geometry && scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubValue = scrubIndex != null ? points[scrubIndex] : null;

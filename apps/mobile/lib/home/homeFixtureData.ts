@@ -146,3 +146,27 @@ export const XL_ROBERTO_WEEKS: { week: number; gain: number; result: 'W' | 'L' }
   { week: 5, gain: 3380.22, result: 'W' },
 ];
 
+// ── XL MILLION capture (X-1 fix re-capture, 2026-10-07, Design Lead final
+// check): the Design Lead's block was Portfolio's RollingMoney clipping a
+// wide value at XL text; the same fix needed re-proving on Home's hero
+// with a value of $1,000,000 or more, since it's the same shared
+// component. Rather than inventing new numbers, this is the XL league
+// above scaled ×10 on share count only (every price unchanged) -- every
+// total scales ×10 too, and stays provably consistent with the pinned
+// $123,456.78 fixture (tests-deno/home-fixture-xl.test.ts) instead of
+// being a second, independent set of numbers to keep honest.
+const MILLION_SCALE = 10;
+function scaleHoldingsForMillion(rows: HoldingRow[]): HoldingRow[] {
+  return rows.map((h) => ({ ...h, qty: fixtureQty(h) * MILLION_SCALE }));
+}
+
+/** 5 slots × $200,000 = $1,000,000 stake. */
+export const XL_MILLION_LEAGUE = { notionalPerSlot: XL_LEAGUE.notionalPerSlot * MILLION_SCALE, numRounds: XL_LEAGUE.numRounds };
+export const XL_MILLION_ROBERTO_HOLDINGS: HoldingRow[] = scaleHoldingsForMillion(XL_ROBERTO_HOLDINGS);
+export const XL_MILLION_GIANLUIGI_HOLDINGS: HoldingRow[] = scaleHoldingsForMillion(XL_GIANLUIGI_HOLDINGS);
+/** Scored weeks 1-5, ×10: sums to +$152,357.60. */
+export const XL_MILLION_ROBERTO_WEEKS: { week: number; gain: number; result: 'W' | 'L' }[] = XL_ROBERTO_WEEKS.map((w) => ({
+  ...w,
+  gain: Math.round(w.gain * MILLION_SCALE * 100) / 100,
+}));
+

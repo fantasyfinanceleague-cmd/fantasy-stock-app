@@ -42,6 +42,10 @@ import {
   XL_ROBERTO_HOLDINGS,
   XL_GIANLUIGI_HOLDINGS,
   XL_ROBERTO_WEEKS,
+  XL_MILLION_LEAGUE,
+  XL_MILLION_ROBERTO_HOLDINGS,
+  XL_MILLION_GIANLUIGI_HOLDINGS,
+  XL_MILLION_ROBERTO_WEEKS,
   FIXTURE_LEAGUE,
   FIXTURE_WEEK6_START,
   FIXTURE_WEEK6_END,
@@ -117,11 +121,15 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
 } {
   // XL capture (2026-10-05): its own $100k roster, weeks and league; every
-  // other fixture keeps the board sample exactly as before.
-  const isXL = fixture === 'xl_large_numbers';
-  const robRows = isXL ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
-  const giaRows = isXL ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
-  const robWeeks = isXL ? XL_ROBERTO_WEEKS : ROBERTO_WEEKS;
+  // other fixture keeps the board sample exactly as before. XL million
+  // (2026-10-07, X-1 re-capture): the same roster ×10 -- see
+  // homeFixtureData.ts's own doc on why it's derived, not independent.
+  const isXLLarge = fixture === 'xl_large_numbers';
+  const isXLMillion = fixture === 'xl_million';
+  const isXL = isXLLarge || isXLMillion;
+  const robRows = isXLMillion ? XL_MILLION_ROBERTO_HOLDINGS : isXLLarge ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
+  const giaRows = isXLMillion ? XL_MILLION_GIANLUIGI_HOLDINGS : isXLLarge ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
+  const robWeeks = isXLMillion ? XL_MILLION_ROBERTO_WEEKS : isXLLarge ? XL_ROBERTO_WEEKS : ROBERTO_WEEKS;
   const myDrafts = robRows.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
   const mySnapshots = robRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
   const oppSnapshots = giaRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
@@ -356,7 +364,8 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     myUserId: 'roberto', draftStatus, leagueStartDate,
     seasonStatus, currentWeek, numWeeks: regularSeasonComplete ? playoffNumWeeks : FIXTURE_LEAGUE.numWeeks,
     playoffTeams: FIXTURE_LEAGUE.playoffTeams, stakeMode: FIXTURE_LEAGUE.stakeMode,
-    notionalPerSlot: isXL ? XL_LEAGUE.notionalPerSlot : FIXTURE_LEAGUE.notionalPerSlot, numRounds: isXL ? XL_LEAGUE.numRounds : FIXTURE_LEAGUE.numRounds,
+    notionalPerSlot: isXLMillion ? XL_MILLION_LEAGUE.notionalPerSlot : isXLLarge ? XL_LEAGUE.notionalPerSlot : FIXTURE_LEAGUE.notionalPerSlot,
+    numRounds: isXLMillion ? XL_MILLION_LEAGUE.numRounds : isXLLarge ? XL_LEAGUE.numRounds : FIXTURE_LEAGUE.numRounds,
     draftOrderWaiting: fixture === 'pre_draft_waiting',
   };
 

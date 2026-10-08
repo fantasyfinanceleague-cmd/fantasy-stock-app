@@ -24,6 +24,7 @@ import { parseRecoveryLink } from '@/lib/recoveryLink';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
+import { MoneyHostProvider } from '@/components/money/MoneyHost';
 import { useMotion } from '@/components/sp/motion';
 import { takeSignInIntent } from '@/lib/shell/signInTransition';
 import { useOnboardingSeen } from '@/lib/shell/firstRun';
@@ -258,6 +259,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={statusBarStyle} />
         <LeagueProvider>
+          <MoneyHostProvider>
           {/* The league sheet and S3's flying label are drawn in a layer above
               the Stack (components/shell/ShellOverlay.tsx explains why). */}
           <ShellOverlayProvider>
@@ -315,6 +317,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
               <Stack.Screen name="reset-password" options={HIDDEN_HEADER_FULLSCREEN} />
             </Stack>
           </ShellOverlayProvider>
+          </MoneyHostProvider>
         </LeagueProvider>
       </NavigationThemeProvider>
     </ThemeDipProvider>

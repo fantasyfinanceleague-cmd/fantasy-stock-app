@@ -4,7 +4,7 @@
  *   deno test apps/mobile/tests-deno/
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { parseQuotePrice, shapeSearchResults } from '../lib/symbolSearch.ts';
+import { parseQuotePrice, shapeSearchOutcome, shapeSearchResults } from '../lib/symbolSearch.ts';
 
 Deno.test('parseQuotePrice: prefers data.price', () => {
   assertEquals(parseQuotePrice({ price: 123.45 }), 123.45);
@@ -80,4 +80,26 @@ Deno.test('shapeSearchResults: preserves input order and all fields', () => {
   assertEquals(shaped.map((s) => s.symbol), ['AAPL', 'BAC']);
   assertEquals(shaped[0].price, 250);
   assertEquals(shaped[0].name, 'Apple Inc.');
+});
+
+// E-1, 3e UX audit: a thrown search must surface as `error`, not a clean
+// empty list — the two look identical on screen (no results shown) but must
+// be told apart, since a failure read as "no matches" tells the user the
+// stock doesn't exist. useSymbolSearch's catch block has no items array, so
+// it signals failure with `null`; a real empty response passes `[]`.
+Deno.test('shapeSearchOutcome: a thrown search (null items) is `error`, not an empty result list', () => {
+  const outcome = shapeSearchOutcome(null);
+  assertEquals(outcome.kind, 'error');
+  assertEquals('results' in outcome, false);
+});
+
+Deno.test('shapeSearchOutcome: a clean no-match response ([]) is `results`, not `error`', () => {
+  const outcome = shapeSearchOutcome([]);
+  assertEquals(outcome, { kind: 'results', results: [] });
+});
+
+Deno.test('shapeSearchOutcome: a real response shapes through shapeSearchResults unchanged', () => {
+  const outcome = shapeSearchOutcome([AAPL, BAC], { ownedSymbols: new Set(['BAC']) });
+  assertEquals(outcome.kind, 'results');
+  assertEquals(outcome.kind === 'results' && outcome.results, shapeSearchResults([AAPL, BAC], { ownedSymbols: new Set(['BAC']) }));
 });

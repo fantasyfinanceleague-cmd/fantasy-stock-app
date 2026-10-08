@@ -20,6 +20,7 @@
 export {
   ROBERTO_WEEKS, ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, fixtureQty, fixtureScoredWeeks,
   XL_LEAGUE, XL_ROBERTO_HOLDINGS, XL_GIANLUIGI_HOLDINGS, XL_ROBERTO_WEEKS,
+  XL_MILLION_LEAGUE, XL_MILLION_ROBERTO_HOLDINGS, XL_MILLION_GIANLUIGI_HOLDINGS, XL_MILLION_ROBERTO_WEEKS,
   fixtureSnapshots, fixturePrice, fixtureDraftRows,
   FIXTURE_LEAGUE, FIXTURE_OPPONENT_NAME, FIXTURE_MY_NAME,
   FIXTURE_WEEK6_START, FIXTURE_WEEK6_END,
@@ -49,12 +50,17 @@ export type HomeFixture =
   /** XL capture (17e, 2026-10-05): a dedicated $100,000-stake league, live
    * like live_open, whose hero reads $123,456.78 / +$23,456.78. Its own
    * holdings (homeFixtureData.ts); the standard states never touch them. */
-  | 'xl_large_numbers';
+  | 'xl_large_numbers'
+  /** X-1 fix re-capture (17e, 2026-10-07): the same XL league, ×10 on
+   * share count only, so the hero reads $1,234,567.80 / +$234,567.80 --
+   * the ≥$1,000,000 case the Design Lead's final check asked for, proving
+   * RollingMoney's fit-to-container fix on Home too, not just Portfolio. */
+  | 'xl_million';
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
   'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'complete_runner_up', 'bye',
-  'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip', 'xl_large_numbers',
+  'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip', 'xl_large_numbers', 'xl_million',
 ];
 
 /** True for either drafting-family fixture — the states 6/7 group in

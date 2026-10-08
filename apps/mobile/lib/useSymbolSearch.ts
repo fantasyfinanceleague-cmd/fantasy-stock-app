@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SEAM_ON } from '@/lib/game/devSeam';
 import { invokeFixtureFor } from '@/lib/game/seamFixtures';
-import { shapeSearchResults, type RawSearchItem, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
+import { shapeSearchOutcome, type RawSearchItem, type ShapedSearchResult, type ShapeSearchResultsOptions } from '@/lib/symbolSearch';
 
 export interface UseSymbolSearchOptions extends ShapeSearchResultsOptions {
   /** Debounce delay in ms — matches TradeModal's original 300ms. */
@@ -14,6 +14,12 @@ export interface UseSymbolSearchOptions extends ShapeSearchResultsOptions {
 export interface UseSymbolSearchResult {
   results: ShapedSearchResult[];
   loading: boolean;
+  /** True when the search itself failed (network, a thrown error) -- distinct
+   * from a clean "no matches" response (E-1, 3e UX audit): a failure must
+   * never read as "the stock doesn't exist". */
+  error: boolean;
+  /** Re-runs the same query (the failure state's Try again). */
+  retry: () => void;
 }
 
 /**
@@ -37,6 +43,9 @@ export function useSymbolSearch(
   const { ownedSymbols, allowUndraftable, ownedBadgeLabel, debounceMs = 300, limit = 8 } = opts;
   const [results, setResults] = useState<ShapedSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const retry = () => setRetryTick((t) => t + 1);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Monotonic request sequence: an in-flight search whose response arrives
   // AFTER a newer search was already issued must not overwrite the newer
@@ -53,16 +62,19 @@ export function useSymbolSearch(
       requestSeqRef.current++; // invalidate any in-flight response
       setResults([]);
       setLoading(false);
+      setError(false);
       return;
     }
     if (selectedSymbol && query.toUpperCase() === selectedSymbol.toUpperCase()) {
       requestSeqRef.current++;
       setResults([]);
       setLoading(false);
+      setError(false);
       return;
     }
 
     setLoading(true);
+    setError(false);
     const mySeq = ++requestSeqRef.current;
 
     timeoutRef.current = setTimeout(async () => {
@@ -70,15 +82,19 @@ export function useSymbolSearch(
         const body = { q: query, limit, includePrices: true };
         // DEV capture seam (off outside a dev build): sample results, no real call.
         const fixture = SEAM_ON ? invokeFixtureFor('symbols-search', body) : null;
-        const { data, error } = fixture ?? (await supabase.functions.invoke('symbols-search', { body }));
+        const { data, error: invokeError } = fixture ?? (await supabase.functions.invoke('symbols-search', { body }));
         if (mySeq !== requestSeqRef.current) return; // superseded — drop it
-        if (error) throw error;
+        if (invokeError) throw invokeError;
         const items = (data as { items?: RawSearchItem[] } | null)?.items || [];
-        setResults(shapeSearchResults(items, { ownedSymbols, allowUndraftable, ownedBadgeLabel }));
+        const outcome = shapeSearchOutcome(items, { ownedSymbols, allowUndraftable, ownedBadgeLabel });
+        setResults(outcome.kind === 'results' ? outcome.results : []);
+        setError(outcome.kind === 'error');
       } catch (err) {
         if (mySeq !== requestSeqRef.current) return;
         console.error('Symbol search failed:', err);
-        setResults([]);
+        const outcome = shapeSearchOutcome(null);
+        setResults(outcome.kind === 'results' ? outcome.results : []);
+        setError(outcome.kind === 'error');
       } finally {
         if (mySeq === requestSeqRef.current) setLoading(false);
       }
@@ -90,7 +106,7 @@ export function useSymbolSearch(
         timeoutRef.current = null;
       }
     };
-  }, [query, selectedSymbol, limit, debounceMs, ownedSymbols, allowUndraftable, ownedBadgeLabel]);
+  }, [query, selectedSymbol, limit, debounceMs, ownedSymbols, allowUndraftable, ownedBadgeLabel, retryTick]);
 
-  return { results, loading };
+  return { results, loading, error, retry };
 }
