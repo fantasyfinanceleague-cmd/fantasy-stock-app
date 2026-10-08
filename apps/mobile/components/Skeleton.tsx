@@ -2,6 +2,8 @@
 import { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { useMotion } from '@/components/sp/motion';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -11,9 +13,17 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = '100%' as const, height = 20, borderRadius = 4, style }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  // 3c-2: the theme's border colour (works in Dark), and still under Reduce
+  // Motion (DESIGN_DIRECTION §9B): the pulse is skipped, a steady block remains.
+  const { colors } = useTheme();
+  const { reduced } = useMotion();
+  const opacity = useRef(new Animated.Value(reduced ? 0.45 : 0.3)).current;
 
   useEffect(() => {
+    if (reduced) {
+      opacity.setValue(0.45);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -30,13 +40,14 @@ export function Skeleton({ width = '100%' as const, height = 20, borderRadius = 
     );
     animation.start();
     return () => animation.stop();
-  }, [opacity]);
+  }, [opacity, reduced]);
 
   return (
     <Animated.View
       style={[
         styles.skeleton,
         {
+          backgroundColor: colors.border,
           width,
           height,
           borderRadius,

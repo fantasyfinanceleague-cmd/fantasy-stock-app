@@ -28,10 +28,14 @@ import { USERNAME_RE } from './usernameRules';
  * onboarding   — like signed-out, but onboarding is shown on every launch
  * drafting     — signed in, in one league whose draft is in progress (the
  *                League tab's "Go to the draft room" state)
+ * leagues-member — `leagues`, but Paolo M. (the seam's 'paolo') is every
+ *                league's commissioner, so you are a member; and Serie A
+ *                Traders' draft is three days out, so its leave window is
+ *                open (the member's League settings and leave sheets, item 13)
  */
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting';
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting' | 'leagues-member';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting', 'leagues-member'];
 
 /** Fixtures that start signed out. */
 export function fixtureStartsSignedOut(f: ShellFixture): boolean {
@@ -54,7 +58,8 @@ if (SHELL_FIXTURE) {
   console.warn(`[dev] SHELL FIXTURE "${SHELL_FIXTURE}" — fake session and leagues, no Supabase reads or writes for them.`);
 }
 
-export const FIXTURE_USER_ID = '00000000-0000-4000-8000-00000000f1c5';
+import { FIXTURE_USER_ID } from './fixtureIds';
+export { FIXTURE_USER_ID };
 export const FIXTURE_EMAIL = 'roberto@example.com';
 /** DEV-only XXXL capture seams (carry-overs 1-2, 2026-10-05): a long fixture
  * email and league name, so the email wrap and the league-pill wrap can be
@@ -127,19 +132,24 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
     };
   }
 
+  // leagues-member: someone else is commissioner; the pre-draft league's draft is ahead (23:00Z, three days out).
+  const member = fixture === 'leagues-member';
+  const memberOver: Partial<League> = member ? { commissioner_id: 'paolo' } : {};
+  const memberDraft = new Date(Math.floor((Date.now() + 3 * DAY) / DAY) * DAY + 23 * 60 * 60 * 1000).toISOString();
   const leagues = [
-    league({ id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto' }),
-    league({ id: 'fx-friday', name: 'Friday Night Stocks', num_participants: 8, current_week: 2 }),
+    league({ id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto', ...memberOver }),
+    league({ id: 'fx-friday', name: 'Friday Night Stocks', num_participants: 8, current_week: 2, ...memberOver }),
     league({
       id: 'fx-seriea',
       name: 'Serie A Traders',
       num_participants: 8,
       draft_status: 'not_started',
-      draft_date: '2026-10-03T23:00:00Z', // the board's "Draft Sat 7:00 PM" (ET)
+      draft_date: member ? memberDraft : '2026-10-03T23:00:00Z', // the board's "Draft Sat 7:00 PM" (ET)
       league_start_date: null,
       current_week: 1,
+      ...memberOver,
     }),
-    league({ id: 'fx-summer', name: 'Summer Cup', num_participants: 8, season_status: 'completed', current_week: 14, num_weeks: 14 }),
+    league({ id: 'fx-summer', name: 'Summer Cup', num_participants: 8, season_status: 'completed', current_week: 14, num_weeks: 14, ...memberOver }),
   ];
 
   const byId = new Map(leagues.map((l) => [l.id, l]));

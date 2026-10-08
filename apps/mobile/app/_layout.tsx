@@ -16,6 +16,7 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LeagueProvider } from '@/lib/LeagueContext';
+import { notificationRoute } from '@/lib/shell/notificationRoute';
 import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
@@ -216,14 +217,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
         const data = response.notification.request.content.data;
         console.log('Notification tapped, data:', data);
 
-        // Navigate based on notification type
-        if (data?.screen === 'draft') {
-          router.push('/(tabs)/draft');
-        } else if (data?.screen === 'matchup') {
-          router.push('/(tabs)/matchup');
-        } else if (data?.screen === 'leaderboard' || data?.screen === 'league') {
-          router.push('/(tabs)/league');
-        }
+        // Navigate based on notification type. Draft pushes open the League
+        // tab (lobby or room by phase), never the legacy (tabs)/draft route.
+        const target = notificationRoute(data);
+        if (target) router.push(target);
       }
     );
 

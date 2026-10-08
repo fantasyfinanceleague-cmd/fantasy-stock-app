@@ -1,0 +1,122 @@
+/**
+ * Your turn, unmissable (3c-2; Giorgio's board review 2026-10-06, the Design
+ * Lead's spec: board #your-turn ac74345, audit "Your turn must be unmissable"
+ * afb9336). Pure rules, so Deno tests them; the draft room wires them.
+ *
+ * - The SIGNAL fires once per turn, the moment the server's clock makes it your
+ *   turn. The first reading after the room mounts only records where things
+ *   stand, so a re-opened or refreshed room that is already on your turn doesn't
+ *   replay it. While the app isn't in front the turn is consumed silently (the
+ *   push banner covers it).
+ * - The FLASH: the clock card fills with live gold, two pulses then rest; one-shot,
+ *   never a loop, never blocks input; none with Reduce Motion (straight to rest).
+ * - At 10 s left, one more Warning haptic (no sound, no second flash), once per turn.
+ */
+
+/** What the room knows right now: your turn's overall pick number, or null when it isn't your turn. */
+export interface TurnObservation {
+  myTurnPick: number | null;
+  appActive: boolean;
+}
+
+export interface TurnSignalState {
+  /** False until the first reading after mount (that reading never fires). */
+  initialized: boolean;
+  /** The pick whose turn has already been signalled (or seen at mount). */
+  seenPick: number | null;
+}
+
+export const TURN_SIGNAL_START: TurnSignalState = { initialized: false, seenPick: null };
+
+/** `fire`: play the haptic + chime (and the flash, when the room is on screen). */
+export function nextTurnSignal(prev: TurnSignalState, obs: TurnObservation): { state: TurnSignalState; fire: boolean } {
+  if (!prev.initialized) return { state: { initialized: true, seenPick: obs.myTurnPick }, fire: false };
+  if (obs.myTurnPick === null || obs.myTurnPick === prev.seenPick) return { state: prev, fire: false };
+  // A new turn: consume it either way; announce it only while the app is in front.
+  return { state: { initialized: true, seenPick: obs.myTurnPick }, fire: obs.appActive };
+}
+
+/** One step of the flash: animate the card's gold fill to `to` (0 rest, 1 gold) over `ms`. */
+export interface FlashStep {
+  to: 0 | 1;
+  ms: number;
+}
+
+/** The spec's timeline: on 90 ms (`instant`), hold 220 ms, settle 160 ms (`quick`), twice. */
+export const FLASH_STEPS: readonly FlashStep[] = [
+  { to: 1, ms: 90 },
+  { to: 1, ms: 220 },
+  { to: 0, ms: 160 },
+  { to: 1, ms: 90 },
+  { to: 1, ms: 220 },
+  { to: 0, ms: 160 },
+];
+
+/** The flash for this run: none with Reduce Motion (the card goes straight to its rest state). */
+export function flashSteps(reduced: boolean): readonly FlashStep[] {
+  return reduced ? [] : FLASH_STEPS;
+}
+
+export function flashDurationMs(steps: readonly FlashStep[]): number {
+  return steps.reduce((sum, s) => sum + s.ms, 0);
+}
+
+/** Pulses per second never reach WCAG 2.3.1's three-flash limit. */
+export function flashCount(steps: readonly FlashStep[]): number {
+  let count = 0;
+  let level = 0;
+  for (const s of steps) {
+    if (s.to === 1 && level === 0) count++;
+    level = s.to;
+  }
+  return count;
+}
+
+export const LAST_TEN_SECONDS = 10;
+
+/** The last-10-s Warning haptic: once per turn, while it's your turn and 1..10 s remain. */
+export function nextLastTenBuzz(
+  buzzedPick: number | null,
+  obs: { myTurnPick: number | null; secondsLeft: number | null; appActive: boolean },
+): { buzzedPick: number | null; buzz: boolean } {
+  if (obs.myTurnPick === null || obs.secondsLeft === null) return { buzzedPick, buzz: false };
+  if (buzzedPick === obs.myTurnPick) return { buzzedPick, buzz: false };
+  if (obs.secondsLeft > LAST_TEN_SECONDS || obs.secondsLeft <= 0) return { buzzedPick, buzz: false };
+  return { buzzedPick: obs.myTurnPick, buzz: obs.appActive };
+}
+
+/** When the card's text switches to `onLive` (navy, on the gold) during the flash,
+ * per step: `true` to apply as that step STARTS, `null` to leave it. Navy from the
+ * start of each rise (the one-frame rise edge is accepted, re-gate B-3). The room
+ * applies these from the animation's own step callbacks, not from timers: the
+ * simulator capture (2026-10-07) showed each hold running ~60 ms past its nominal
+ * 220 ms, so JS timers turned the text navy over the rest tint before pulse 2.
+ * The switch BACK is not a step start: see settleCrossedMidpoint. */
+export function flashTextAtStepStart(steps: readonly FlashStep[]): (true | null)[] {
+  let level = 0;
+  return steps.map((s) => {
+    const rise = s.to === 1 && level === 0 ? true : null;
+    level = s.to;
+    return rise;
+  });
+}
+
+/** The fill level at which a settling flash hands the text back to its rest colours. */
+export const FLASH_TEXT_MIDPOINT = 0.5;
+
+/** Re-gate B-2: the text returns to its rest colours as each settle crosses the
+ * fill's midpoint (it used to switch at the settle's start, leaving the rest
+ * colours on half gold for a few frames). Runs on the UI thread, on the fill. */
+export function settleCrossedMidpoint(prev: number | null, level: number): boolean {
+  'worklet';
+  return prev !== null && prev >= FLASH_TEXT_MIDPOINT && level < FLASH_TEXT_MIDPOINT;
+}
+
+/** The chime's audio session (the spec): silent with the ring/silent switch on silent
+ * (playsInSilentMode false), mixed with whatever else is playing (never pauses or
+ * ducks the player's music or podcast), and never kept alive in the background. */
+export const CHIME_AUDIO_MODE = {
+  playsInSilentMode: false,
+  interruptionMode: 'mixWithOthers',
+  shouldPlayInBackground: false,
+} as const;

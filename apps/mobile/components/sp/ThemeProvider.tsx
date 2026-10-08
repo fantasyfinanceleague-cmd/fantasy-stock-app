@@ -56,11 +56,14 @@ import { resolveTheme } from '@/components/sp/logic/theme';
 // Phase 3b-1 (ui/mobile-shell-3b1): now null. The shell — tab bar, headers,
 // league pill and sheet, auth, onboarding, username, profile, appearance and
 // the placeholder tabs — reads useTheme() itself, so System/Light/Dark apply
-// for real. Known remainder, owned by later phases: create-league,
-// join-league, league-settings, player-portfolio, trade-history and the
-// draft room are still light-only legacy screens and will render light
-// inside a Dark app until 3c/3e rebuild them. Keep resolveTheme's forced
-// path (and sp-theme.test.ts) for any future release that needs it again.
+// for real. 3c-2 rebuilt create-league and league-settings on sp, and 3c's
+// draft room (components/game/DraftRoom) reads the theme too. Known remainder
+// (screens still importing the legacy constants/Colors, as of 3c-2):
+// join-league and +not-found (3f), player-portfolio and trade-history (3e),
+// and the legacy hidden (tabs)/draft route, kept only for the finalize heal.
+// These render light inside a Dark app until they're rebuilt. Keep
+// resolveTheme's forced path (and sp-theme.test.ts) for any future release
+// that needs it again.
 export const THEME_FORCED: ThemeMode | null = null;
 
 export type ThemePreference = 'system' | ThemeMode;

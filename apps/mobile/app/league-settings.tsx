@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView, Switch } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// League settings (3c-2). No frame of its own: the board says the Create
+// league Draft and Season controls "appear in League settings until the draft
+// starts", so this is composed from those steps plus the Season 2 review's
+// card-of-rows vocabulary (RibReview). handleSave, the save-outcome rules
+// (lib/game/settingsSave) and the seam writes are unchanged.
+import { Alert, Share, StyleSheet, View } from 'react-native';
 import { useState, useEffect } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
-import { useLeagueContext, League } from '@/lib/LeagueContext';
-import { supabase } from '@/lib/supabase';
+import { useLeagueContext } from '@/lib/LeagueContext';
 import { validateLeagueName } from '@/lib/contentModeration';
 import SlotBuilder from '@/components/SlotBuilder';
 import {
@@ -20,21 +20,48 @@ import {
   STAKE_MODE_OPTIONS,
   fetchCategories,
   loadLeagueSlots,
-  saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
-import { Button, Card } from '@/components/ui';
+import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
+import { settingsSaveOutcome } from '@/lib/game/settingsSave';
+import {
+  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates,
+  transferUnknownLine,
+} from '@/lib/game/leaveLeague';
+import { useLeaveLeague } from '@/lib/game/useLeaveLeague';
+import { COMMISSIONER_FALLBACK } from '@/lib/game/autoStart';
+import { LeaveLeagueRow, LeaveLeagueSheet, TransferCommissionerSheet } from '@/components/game/LeaveLeagueSheets';
+import { DEFAULT_PICK_SECONDS, PICK_SECONDS_OPTIONS, pickClockLocked, pickSecondsCaption } from '@/lib/game/createLeagueSetup';
+import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
+import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
+import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
+import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { draftDateForSave, updatedOneRow } from '@/lib/game/draftDateSave';
+import { DATE_LOCKED_AFTER_ROOM, draftTimeLocked, draftTimeRefusal } from '@/lib/game/autoStart';
+import { useDraftStatus } from '@/lib/game/useDraftStatus';
+import { space, typeFontFamily } from '@/constants/tokens';
+import { Button } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { Field } from '@/components/shell/Field';
+import { SetupScaffold } from '@/components/game/SetupScaffold';
+import { Stepper } from '@/components/game/Stepper';
+import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import { ChoiceRow, LockNote, RowDivider, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
-const ACCENT = Colors.primary;
-const ACCENT_BG = Colors.primaryBg;
+/** The leave flow's kill switch (item 13; board #call-leave). On: members reach League settings too (Invite
+ * code, Commissioner, Leave league), the commissioner gets the Commissioner row's transfer, and the Leave row
+ * is real. Off: exactly the commissioner-only screen as before. */
+const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
 
 export default function LeagueSettingsScreen() {
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { user } = useAuth();
-  const { leagues, refresh } = useLeagueContext();
+  const { leagues, refresh, homeSummaryByLeague } = useLeagueContext();
   const { leagueId } = useLocalSearchParams<{ leagueId: string }>();
 
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -56,7 +83,12 @@ export default function LeagueSettingsScreen() {
   useEffect(() => { fetchCategories().then(setCategories); }, []);
   const [numParticipants, setNumParticipants] = useState(8);
   const [numRounds, setNumRounds] = useState(6);
-  const [startingNewSeason, setStartingNewSeason] = useState(false);
+  const [pickSeconds, setPickSeconds] = useState(DEFAULT_PICK_SECONDS);
+  // Validation is inline (Design Lead ruling), never an Alert: the name under
+  // its field, price tiers with no slot under Roster slots, slot errors on the slots.
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
 
   // Initialize form with league data
   useEffect(() => {
@@ -71,6 +103,7 @@ export default function LeagueSettingsScreen() {
       loadLeagueSlots(league.id).then(setSlots);
       setNumParticipants(league.num_participants);
       setNumRounds(league.num_rounds);
+      setPickSeconds(league.pick_seconds ?? DEFAULT_PICK_SECONDS);
     }
   }, [league]);
 
@@ -84,33 +117,102 @@ export default function LeagueSettingsScreen() {
   // Check if settings are locked (draft started or completed)
   const isLocked = league?.draft_status === 'in_progress' || league?.draft_status === 'completed';
 
+  // Auto-start: the draft time can't change once the room opens (T−1h), until
+  // the draft starts, except when postponed. From the server's start_state.
+  const draftStatus = useDraftStatus(league?.id ?? null, !!league && isCommissioner && !isLocked, 0);
+  const dateLocked = !isLocked && draftTimeLocked(draftStatus.startState);
+
+  // Leaving and the commissioner's transfer (item 13). The server decides; the
+  // window here only shapes the row and the sheet.
+  const leaveOn = LEAVE_LEAGUE_ON && !!league;
+  const leaving = useLeaveLeague(league?.id ?? null, leaveOn, user?.id ?? '', league?.name ?? '');
+  const membershipWindow = leaveWindow({ seasonStatus: league?.season_status, draftStatus: league?.draft_status, draftDate: league?.draft_date }, Date.now());
+  const commissionerName = leaving.names.find((n) => n.user_id === league?.commissioner_id)?.display_name?.trim() || COMMISSIONER_FALLBACK;
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const onLeave = async () => {
+    const out = await leaving.leave();
+    if (out.kind === 'left' || out.kind === 'hidden') {
+      setLeaveOpen(false);
+      await refresh();
+      // The league is gone from your leagues (left) or hidden: Home, with the next league.
+      router.replace('/(tabs)');
+      return;
+    }
+    // A leave's unknown outcome was re-read (useLeaveLeague), so here it is left, hidden or a line.
+    setLeaveError(out.kind === 'refused' ? out.line : null);
+  };
+  const onTransfer = async (userId: string) => {
+    const out = await leaving.transfer(userId);
+    if (out.kind === 'transferred') {
+      setTransferOpen(false);
+      await refresh(); // you're a member now: the screen re-renders as a member's, Leave league open
+      return;
+    }
+    setLeaveError(out.kind === 'refused' ? out.line : out.kind === 'unknown' ? transferUnknownLine() : null);
+    if (out.kind === 'unknown') void refresh(); // the title moved or it didn't: the screen shows which
+  };
+  const leaveBlock = leaveOn && league ? (
+    <>
+      <LeaveLeagueRow
+        view={leaveRowView(membershipWindow, isCommissioner, league.draft_date)}
+        onPress={() => {
+          setLeaveError(null);
+          setLeaveOpen(true);
+        }}
+      />
+      <LeaveLeagueSheet
+        visible={leaveOpen}
+        copy={leaveSheetCopy(membershipWindow, { leagueName: league.name, commissionerName, seasonNumber: homeSummaryByLeague.get(league.id)?.season_number ?? null, draftDate: league.draft_date })}
+        busy={leaving.busy}
+        error={leaveError}
+        onLeave={() => void onLeave()}
+        onStay={() => setLeaveOpen(false)}
+      />
+    </>
+  ) : null;
+  // The commissioner's view only: a member's screen has no commissioner controls at all.
+  const transferSheet = leaveOn && league && isCommissioner ? (
+    <>
+      <TransferCommissionerSheet
+        visible={transferOpen}
+        candidates={transferCandidates(leaving.memberIds, leaving.names, user?.id ?? '')}
+        busy={leaving.busy}
+        error={leaveError}
+        onTransfer={(id) => void onTransfer(id)}
+        onClose={() => setTransferOpen(false)}
+      />
+    </>
+  ) : null;
+
   const handleSave = async () => {
     if (!league || !user?.id) return;
 
-    // Validate name
+    // Validate name (inline: blank, then moderation on the trimmed name)
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      Alert.alert('Error', 'Please enter a league name');
-      return;
-    }
+    const nameProblem = leagueNameError(name, validateLeagueName);
+    setNameError(nameProblem);
+    if (nameProblem) return;
 
-    const contentCheck = validateLeagueName(trimmedName);
-    if (!contentCheck.isValid) {
-      Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
-      return;
-    }
+    // Never send draft_date: undefined (a live 1.1.0 bug: the screen said
+    // Success while the date stayed NULL). Set later is null; a chosen date must have a value.
+    const draftDateValue = draftDateForSave(draftDateTBD, draftDate);
+    setDateError(draftDateValue.ok ? null : draftDateValue.error);
+    if (!draftDateValue.ok) return;
 
     setSaving(true);
 
     try {
       if (stakeMode === 'price_tiers' && slots.length === 0) {
-        Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
+        setSlotsError(PRICE_TIERS_NEED_A_SLOT);
         setSaving(false);
         return;
       }
+      setSlotsError(null);
+      // Slot errors already show on the slots themselves (SlotBuilder).
       const slotErrors = validateSlotConfig(slots, numRounds);
       if (slotErrors.length > 0) {
-        Alert.alert('Fix roster slots', slotErrors[0]);
         setSaving(false);
         return;
       }
@@ -120,10 +222,12 @@ export default function LeagueSettingsScreen() {
       // didn't pick. budget_mode / salary_cap_limit: retired, never written.
       const patch: Record<string, unknown> = {
         name: trimmedName,
-        draft_date: draftDateTBD ? null : draftDate?.toISOString(),
+        draft_date: draftDateValue.value,
         num_participants: numParticipants,
         num_rounds: numRounds,
         allow_undraftable: allowUndraftable,
+        // Frozen once the draft starts (trg_leagues_pick_clock): written only before then.
+        ...(isLocked ? {} : { pick_seconds: pickSeconds }),
       };
       if (stakeMode) {
         patch.stake_mode = stakeMode;
@@ -133,15 +237,39 @@ export default function LeagueSettingsScreen() {
         }
       }
 
-      const { error } = await supabase
-        .from('leagues')
-        .update(patch)
-        .eq('id', league.id);
-
-      if (error) throw error;
+      // Order: the league row first. It carries the rules freeze, so a refusal
+      // here writes nothing. The roster second: if it is refused after the league
+      // row landed, the outcome says PARTLY saved rather than a raw error.
+      const res = await seamUpdateLeague(league.id, patch);
+      if (res.error) {
+        // A draft-time refusal (not a quarter hour, under an hour out, or the room
+        // is open) shows inline under the date, never as a raw error.
+        const refusal = draftTimeRefusal(res.error);
+        if (refusal) {
+          setDateError(refusal);
+          return;
+        }
+        const outcome = settingsSaveOutcome({ patchError: res.error, slotsError: null });
+        Alert.alert(outcome.title ?? 'Not saved', outcome.message ?? '');
+        return;
+      }
+      // An update that matched no row (RLS, a stale league) resolves with no
+      // error: that is "Not saved", never a success (CLAUDE.md, false success).
+      if (!updatedOneRow(res)) {
+        Alert.alert('Not saved', "Your settings didn't save. Try again.");
+        return;
+      }
 
       if (!isLocked) {
-        await saveLeagueSlots(league.id, slots);
+        try {
+          await seamSaveLeagueSlots(league.id, slots);
+        } catch (slotErr) {
+          console.error('Roster save refused after the league row landed:', slotErr);
+          const outcome = settingsSaveOutcome({ patchError: null, slotsError: slotErr as { message?: string } });
+          await refresh();
+          Alert.alert(outcome.title ?? 'Partly saved', outcome.message ?? '');
+          return;
+        }
       }
 
       await refresh();
@@ -151,756 +279,330 @@ export default function LeagueSettingsScreen() {
       ]);
     } catch (error: any) {
       console.error('Failed to update league:', error);
-      Alert.alert('Error', error.message || 'Failed to update settings');
+      Alert.alert('Not saved', "Your settings didn't save. Try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleStartNewSeason = async () => {
-    if (!league || !user?.id) return;
-
-    Alert.alert(
-      'Start New Season',
-      'This will:\n\n• Reset all standings to 0-0\n• Generate a new matchup schedule\n• Keep all current league members\n\nAre you sure you want to start a new season?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start Season',
-          style: 'default',
-          onPress: async () => {
-            setStartingNewSeason(true);
-            try {
-              const { error } = await supabase.rpc('start_new_league_season', {
-                p_league_id: league.id,
-              });
-
-              if (error) throw error;
-
-              await refresh();
-
-              Alert.alert(
-                'New Season Started!',
-                'The league has been reset for a new season. Good luck!',
-                [{ text: 'OK', onPress: () => router.dismiss() }]
-              );
-            } catch (error: any) {
-              console.error('Failed to start new season:', error);
-              Alert.alert('Error', error.message || 'Failed to start new season');
-            } finally {
-              setStartingNewSeason(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  if (!league) {
+  // A member (leave flow on), Design Lead ruling: ONLY Invite code (with Share), the
+  // Commissioner's name (read-only) and Leave league. No commissioner controls, not
+  // even disabled ones.
+  if (league && !isCommissioner && leaveOn) {
+    const code = league.invite_code;
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-            <Ionicons name="close" size={28} color={Colors.textMuted} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>League Settings</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.centerContent}>
-          <Text style={styles.errorText}>League not found</Text>
-        </View>
-      </View>
+      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
+        <SetupCard>
+          <View style={styles.inviteRow}>
+            <View style={styles.grow}>
+              <Text variant="callout" style={styles.key}>Invite code</Text>
+              <Text variant="callout" color={colors.accent} style={styles.bold}>{code}</Text>
+            </View>
+            <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: `Join my league with code ${code}` })} />
+          </View>
+          <RowDivider />
+          <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
+        </SetupCard>
+        {leaveBlock}
+      </SetupScaffold>
     );
   }
 
-  if (!isCommissioner) {
+  if (!league || !isCommissioner) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-            <Ionicons name="close" size={28} color={Colors.textMuted} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>League Settings</Text>
-          <View style={styles.headerSpacer} />
+      <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
+        <View style={styles.center}>
+          {league ? <Icon name="lock" size="title" tone="text2" /> : null}
+          <Text variant="body" tone="secondary" style={styles.centerText}>
+            {league ? 'Only the commissioner can edit settings' : 'League not found'}
+          </Text>
         </View>
-        <View style={styles.centerContent}>
-          <Ionicons name="lock-closed" size={48} color={Colors.textMuted} />
-          <Text style={styles.errorText}>Only the commissioner can edit settings</Text>
-        </View>
-      </View>
+      </SetupScaffold>
     );
   }
+
+  const clockLocked = pickClockLocked(league?.draft_status ?? 'not_started');
+  const draftDateValue = draftDateTBD
+    ? 'TBD'
+    : draftDate
+      ? draftDateTimeLabel(draftDate.toISOString()) ?? 'Pick a draft time'
+      : 'Pick a draft time';
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-          <Ionicons name="close" size={28} color={Colors.textMuted} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>League Settings</Text>
-        <View style={styles.headerSpacer} />
+    <SetupScaffold
+      back={{ label: 'Cancel', onPress: handleClose, modal: true }}
+      title="League settings"
+      footer={!isLocked ? <Button label="Save changes" onPress={handleSave} status={saving ? 'loading' : 'idle'} /> : undefined}
+    >
+      {isLocked ? <LockNote text={SETTINGS_LOCKED} /> : null}
+
+      {/* sp Field has no disabled look of its own; dim it while locked, as before. */}
+      <View style={isLocked && styles.dim}>
+        <Field
+          label="League name"
+          value={name}
+          onChangeText={(text) => {
+            setName(text);
+            if (nameError) setNameError(null);
+          }}
+          error={nameError}
+          placeholder="League name"
+          editable={!isLocked}
+        />
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.content}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Lock Warning */}
-          {isLocked && (
-            <View style={styles.lockWarning}>
-              <Ionicons name="lock-closed" size={18} color={Colors.warning} />
-              <Text style={styles.lockWarningText}>
-                {league.draft_status === 'completed'
-                  ? 'Draft completed - settings are locked'
-                  : 'Draft in progress - settings are locked'}
-              </Text>
-            </View>
+      {/* Draft: the Create league Draft step's controls (board). */}
+      <View style={styles.section}>
+        <Text variant="headline" accessibilityRole="header">Draft</Text>
+        <SetupCard style={styles.cardStack}>
+          <View style={styles.spread}>
+            <Text variant="callout" style={styles.key}>Pick clock</Text>
+            <Text variant="callout" style={[styles.bold, styles.tabular]}>{`${pickSeconds} seconds`}</Text>
+          </View>
+          {/* Frozen once the draft starts (trg_leagues_pick_clock). */}
+          {clockLocked ? (
+            <Text variant="caption" tone="secondary">{`${pickSeconds} seconds per pick. The draft has started, so this is set.`}</Text>
+          ) : (
+            <>
+              <SegmentedControl
+                options={PICK_SECONDS_OPTIONS.map((o) => ({ label: o.label, value: String(o.value) }))}
+                value={String(pickSeconds)}
+                onChange={(v) => setPickSeconds(Number(v))}
+              />
+              <Text variant="caption" tone="secondary">{pickSecondsCaption(pickSeconds)}</Text>
+            </>
           )}
+        </SetupCard>
+        <SetupCard>
+          <SettingRow
+            label="Draft time"
+            value={draftDateValue}
+            valueColor={draftDateTBD ? colors.warnText : undefined}
+            sub={dateLocked ? DATE_LOCKED_AFTER_ROOM : undefined}
+            disabled={isLocked || dateLocked}
+            onPress={isLocked || dateLocked ? undefined : () => {
+              // Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).
+              setDateError(null);
+              setShowDatePicker(true);
+            }}
+          />
+          <RowDivider />
+          <View style={styles.block}>
+            <Stepper
+              label="Rounds"
+              sub="One per roster slot"
+              value={numRounds}
+              onStep={(d) => setNumRounds(stepWithin(numRounds, d, 1, 12))}
+              canDecrement={numRounds > 1}
+              canIncrement={numRounds < 12}
+              disabled={isLocked}
+            />
+          </View>
+        </SetupCard>
+      </View>
 
-          {/* League Name */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>League Name</Text>
-            <TextInput
-              style={[styles.textInput, isLocked && styles.inputDisabled]}
-              value={name}
-              onChangeText={setName}
-              placeholder="League name"
-              placeholderTextColor={Colors.textDark}
+      {dateError ? (
+        <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+          {dateError}
+        </Text>
+      ) : null}
+
+      {/* Teams: bounds = DB CHECK leagues_num_participants_range (4-16). */}
+      <SetupCard style={styles.cardStack}>
+        <Stepper
+          label="Teams"
+          value={numParticipants}
+          onStep={(d) => setNumParticipants(stepWithin(numParticipants, d, 4, 16))}
+          canDecrement={numParticipants > 4}
+          canIncrement={numParticipants < 16}
+          disabled={isLocked}
+        />
+      </SetupCard>
+
+      {/* Stakes (Phase 4). */}
+      <View style={styles.section}>
+        <Text variant="headline" accessibilityRole="header">Stakes</Text>
+        {stakeMode === '' ? (
+          <WarnNote alert title="This league has no stake mode yet — drafting is blocked until you choose one." />
+        ) : null}
+        <SetupCard>
+          {STAKE_MODE_OPTIONS.map((opt, i) => (
+            <View key={opt.value}>
+              {i > 0 ? <RowDivider /> : null}
+              <ChoiceRow
+                title={opt.label}
+                help={opt.help}
+                selected={stakeMode === opt.value}
+                onPress={() => {
+                  if (isLocked) return;
+                  setStakeMode(opt.value);
+                  setSlotsError(null);
+                }}
+                disabled={isLocked}
+              />
+            </View>
+          ))}
+        </SetupCard>
+        {stakeMode === 'fixed_notional' ? (
+          <View style={isLocked && styles.dim}>
+            <Field
+              label="Stake per slot ($)"
+              value={notionalPerSlot}
+              onChangeText={(text) => setNotionalPerSlot(text.replace(/[^0-9]/g, ''))}
+              keyboardType="numeric"
+              placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
               editable={!isLocked}
             />
           </View>
-
-          {/* Draft Date */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Draft Date</Text>
-
-            <TouchableOpacity
-              style={[styles.radioOption, draftDateTBD && styles.radioOptionSelected, isLocked && styles.inputDisabled]}
-              onPress={() => !isLocked && setDraftDateTBD(true)}
-              disabled={isLocked}
-            >
-              <View style={styles.radio}>
-                {draftDateTBD && <View style={styles.radioInner} />}
-              </View>
-              <Text style={[styles.radioText, draftDateTBD && styles.radioTextSelected]}>
-                TBD - Set later
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.radioOption, !draftDateTBD && styles.radioOptionSelected, isLocked && styles.inputDisabled]}
-              onPress={() => {
-                if (isLocked) return;
-                setDraftDateTBD(false);
-                setShowDatePicker(true);
-              }}
-              disabled={isLocked}
-            >
-              <View style={styles.radio}>
-                {!draftDateTBD && <View style={styles.radioInner} />}
-              </View>
-              <Ionicons name="calendar" size={18} color={!draftDateTBD ? ACCENT : Colors.textMuted} />
-              <Text style={[styles.radioText, !draftDateTBD && styles.radioTextSelected]}>
-                {draftDate
-                  ? draftDate.toLocaleString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })
-                  : 'Pick a date & time'}
-              </Text>
-            </TouchableOpacity>
-
-            {showDatePicker && !draftDateTBD && !isLocked && (
-              <>
-                <DateTimePicker
-                  value={draftDate || new Date()}
-                  mode="datetime"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="light"
-                  onChange={(event, selectedDate) => {
-                    if (Platform.OS !== 'ios') setShowDatePicker(false);
-                    if (selectedDate) setDraftDate(selectedDate);
-                  }}
-                  minimumDate={new Date()}
-                />
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity style={styles.datePickerDone} onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.datePickerDoneText}>Done</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+        ) : null}
+        {stakeMode === 'budget_cap' ? (
+          <View style={isLocked && styles.dim}>
+            <Field
+              label="Budget cap ($)"
+              value={budgetCap}
+              onChangeText={(text) => setBudgetCap(text.replace(/[^0-9]/g, ''))}
+              keyboardType="numeric"
+              placeholder={String(DEFAULT_BUDGET_CAP)}
+              editable={!isLocked}
+            />
           </View>
+        ) : null}
+        <SetupCard>
+          <SwitchRow
+            label="Allow non-draftable stocks (full universe)"
+            sub="Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps."
+            value={allowUndraftable}
+            onValueChange={setAllowUndraftable}
+            disabled={isLocked}
+          />
+        </SetupCard>
+      </View>
 
-          {/* Stake Mode (Phase 4) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Stake Mode</Text>
+      {/* Roster slots (Phase 4). */}
+      <View style={styles.section}>
+        <Text variant="headline" accessibilityRole="header">Roster slots</Text>
+        <Text variant="caption" tone="secondary">
+          {rosterSlotsCaption(stakeMode)}
+        </Text>
+        {slotsError ? (
+          <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+            {slotsError}
+          </Text>
+        ) : null}
+        <SlotBuilder
+          slots={slots}
+          onChange={(next) => {
+            setSlots(next);
+            setSlotsError(null);
+          }}
+          categories={categories}
+          leagueSize={numParticipants}
+          numRounds={numRounds}
+          disabled={isLocked}
+        />
+      </View>
 
-            {stakeMode === '' && (
-              <Text style={styles.stakeMissingBanner}>
-                This league has no stake mode yet — drafting is blocked until you choose one.
-              </Text>
-            )}
-
-            {STAKE_MODE_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                style={[styles.modeCard, styles.stakeModeCard, stakeMode === opt.value && styles.modeCardSelected, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setStakeMode(opt.value)}
-                disabled={isLocked}
-              >
-                <Ionicons
-                  name={opt.icon as keyof typeof Ionicons.glyphMap}
-                  size={22}
-                  color={stakeMode === opt.value ? ACCENT : Colors.textMuted}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.modeCardText, stakeMode === opt.value && styles.modeCardTextSelected]}>
-                    {opt.label}
-                  </Text>
-                  <Text style={styles.stakeHelpText}>{opt.help}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-
-            {stakeMode === 'fixed_notional' && (
-              <View style={styles.budgetInputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
-                <TextInput
-                  style={[styles.budgetInput, isLocked && styles.inputDisabled]}
-                  value={notionalPerSlot}
-                  onChangeText={(text) => setNotionalPerSlot(text.replace(/[^0-9]/g, ''))}
-                  keyboardType="numeric"
-                  placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
-                  placeholderTextColor={Colors.textDark}
-                  editable={!isLocked}
-                />
-              </View>
-            )}
-            {stakeMode === 'budget_cap' && (
-              <View style={styles.budgetInputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
-                <TextInput
-                  style={[styles.budgetInput, isLocked && styles.inputDisabled]}
-                  value={budgetCap}
-                  onChangeText={(text) => setBudgetCap(text.replace(/[^0-9]/g, ''))}
-                  keyboardType="numeric"
-                  placeholder={String(DEFAULT_BUDGET_CAP)}
-                  placeholderTextColor={Colors.textDark}
-                  editable={!isLocked}
-                />
-              </View>
-            )}
-
-            <View style={styles.undraftableRow}>
-              <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
-              <Switch
-                value={allowUndraftable}
-                onValueChange={setAllowUndraftable}
-                disabled={isLocked}
-                trackColor={{ false: Colors.border, true: ACCENT }}
+      {/* League info (read-only). */}
+      <View style={styles.section}>
+        <Text variant="headline" accessibilityRole="header">League info</Text>
+        <SetupCard>
+          <SettingRow label="Type" value={league.league_type === 'matchup' ? 'Matchup' : 'Duration'} />
+          <RowDivider />
+          <SettingRow
+            label={league.league_type === 'matchup' ? 'Season' : 'Duration'}
+            value={league.league_type === 'matchup' ? `${league.num_weeks} weeks` : `${league.duration_days} days`}
+          />
+          {league.league_type === 'matchup' ? (
+            <>
+              <RowDivider />
+              <SettingRow label="Playoff teams" value={String(league.playoff_teams)} />
+            </>
+          ) : null}
+          <RowDivider />
+          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          {leaveOn ? (
+            <>
+              <RowDivider />
+              {/* Q4 = A: transfer first, from the Commissioner row (only when the title can change hands). */}
+              <SettingRow
+                label={COMMISSIONER_ROW}
+                value={COMMISSIONER_YOU}
+                onPress={transferAllowed(membershipWindow) ? () => {
+                  setLeaveError(null);
+                  setTransferOpen(true);
+                } : undefined}
               />
-            </View>
-            <Text style={styles.stakeHelpText}>
-              Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
-            </Text>
-          </View>
+            </>
+          ) : null}
+        </SetupCard>
+      </View>
 
-          {/* Roster Slots (Phase 4) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>
-              Roster Slots{stakeMode === 'price_tiers' ? ' (required — price brackets)' : ' (optional — category slots)'}
-            </Text>
-            <SlotBuilder
-              slots={slots}
-              onChange={setSlots}
-              categories={categories}
-              leagueSize={numParticipants}
-              numRounds={numRounds}
-              disabled={isLocked}
-            />
-          </View>
+      {leaveBlock}
+      {transferSheet}
 
-          {/* Number of Teams */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Number of Teams</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={[styles.stepperBtn, isLocked && styles.inputDisabled]}
-                // bounds = DB CHECK leagues_num_participants_range (4-16)
-                onPress={() => !isLocked && setNumParticipants(Math.max(4, numParticipants - 1))}
-                disabled={isLocked}
-              >
-                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.stepperValue}>
-                <Text style={styles.stepperValueText}>{numParticipants}</Text>
-                <Text style={styles.stepperValueLabel}>teams</Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.stepperBtn, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setNumParticipants(Math.min(16, numParticipants + 1))}
-                disabled={isLocked}
-              >
-                <Ionicons name="add" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Stocks Per Team */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Stocks Per Team</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={[styles.stepperBtn, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setNumRounds(Math.max(1, numRounds - 1))}
-                disabled={isLocked}
-              >
-                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.stepperValue}>
-                <Text style={styles.stepperValueText}>{numRounds}</Text>
-                <Text style={styles.stepperValueLabel}>stocks</Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.stepperBtn, isLocked && styles.inputDisabled]}
-                onPress={() => !isLocked && setNumRounds(Math.min(12, numRounds + 1))}
-                disabled={isLocked}
-              >
-                <Ionicons name="add" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* League Info (Read-only) */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>League Info</Text>
-            <Card style={styles.infoCardOuter}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Type</Text>
-                <Text style={styles.infoValue}>
-                  {league.league_type === 'matchup' ? 'Matchup' : 'Duration'}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>
-                  {league.league_type === 'matchup' ? 'Season' : 'Duration'}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {league.league_type === 'matchup'
-                    ? `${league.num_weeks} weeks`
-                    : `${league.duration_days} days`}
-                </Text>
-              </View>
-              {league.league_type === 'matchup' && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Playoff Teams</Text>
-                  <Text style={styles.infoValue}>{league.playoff_teams}</Text>
-                </View>
-              )}
-              <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.infoLabel}>Invite Code</Text>
-                <Text style={[styles.infoValue, { color: ACCENT }]}>{league.invite_code}</Text>
-              </View>
-            </Card>
-          </View>
-
-          {/* Start New Season - Only show when season is completed */}
-          {league.season_status === 'completed' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Season Complete</Text>
-              <View style={styles.seasonCompleteCard}>
-                <View style={styles.seasonCompleteHeader}>
-                  <Ionicons name="trophy" size={24} color={Colors.gold} />
-                  <Text style={styles.seasonCompleteText}>
-                    The current season has ended. Start a new season to reset standings and begin a new competition with the same members.
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.newSeasonButton, startingNewSeason && styles.newSeasonButtonDisabled]}
-                  onPress={handleStartNewSeason}
-                  disabled={startingNewSeason}
-                >
-                  {startingNewSeason ? (
-                    <ActivityIndicator color={Colors.white} />
-                  ) : (
-                    <>
-                      <Ionicons name="refresh" size={20} color={Colors.white} />
-                      <Text style={styles.newSeasonButtonText}>Start New Season</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
-
-        {/* Save Button */}
-        {!isLocked && (
-          <View style={styles.footer}>
-            <Button
-              title="Save Changes"
-              onPress={handleSave}
-              variant="success"
-              loading={saving}
-              style={styles.saveButton}
-            />
-          </View>
-        )}
-      </KeyboardAvoidingView>
-    </View>
+      <DraftDateSheet
+        visible={showDatePicker && !isLocked && !dateLocked}
+        initial={draftDate}
+        onConfirm={(d) => {
+          setDraftDateTBD(false);
+          setDraftDate(d);
+        }}
+        onSetLater={() => {
+          setDraftDateTBD(true);
+          setDateError(null);
+        }}
+        onClose={() => setShowDatePicker(false)}
+      />
+    </SetupScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    minHeight: 52,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-  content: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-
-  // Lock warning
-  lockWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.warningBg,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 8,
-  },
-  lockWarningText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.warning,
-  },
-
-  // Sections
   section: {
-    marginBottom: 24,
+    gap: space[3],
   },
-  sectionLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    marginBottom: 12,
+  cardStack: {
+    paddingVertical: space[5],
+    gap: space[4],
   },
-
-  // Text input
-  textInput: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  block: {
+    paddingVertical: space[4],
   },
-  inputDisabled: {
+  spread: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: space[2],
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    paddingVertical: space[3],
+    minHeight: 44,
+  },
+  grow: {
+    flex: 1,
+  },
+  key: {
+    fontFamily: typeFontFamily.semiBold,
+  },
+  bold: {
+    fontFamily: typeFontFamily.bold,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
+  dim: {
     opacity: 0.5,
   },
-
-  // Radio options
-  radioOption: {
-    flexDirection: 'row',
+  center: {
     alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: 12,
+    gap: space[4],
+    paddingTop: space[9],
   },
-  radioOptionSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ACCENT,
-  },
-  radioText: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-  radioTextSelected: {
-    color: Colors.textPrimary,
-  },
-
-  // Date picker
-  datePickerDone: {
-    alignItems: 'flex-end',
-    paddingVertical: 8,
-  },
-  datePickerDoneText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: ACCENT,
-  },
-
-  // Mode cards
-  cardRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modeCard: {
-    flex: 1,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  modeCardSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  modeCardText: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textMuted,
-  },
-  modeCardTextSelected: {
-    color: ACCENT,
-  },
-
-  // Budget input
-  budgetInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginTop: 12,
-  },
-  currencySymbol: {
-    fontSize: 20,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textMuted,
-    marginRight: 4,
-  },
-  budgetInput: {
-    flex: 1,
-    fontSize: 20,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-    paddingVertical: 14,
-  },
-
-  // Stepper
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 12,
-  },
-  stepperBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    alignItems: 'center',
-    marginHorizontal: 32,
-    minWidth: 60,
-  },
-  stepperValueText: {
-    fontSize: 32,
-    fontFamily: 'Inter_700Bold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-  stepperValueLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textMuted,
-  },
-
-  // Info card
-  infoCardOuter: {},
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-
-  // Footer
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  saveButton: {
-    borderRadius: 30,
-  },
-
-  // New Season section
-  seasonCompleteCard: {
-    backgroundColor: Colors.goldBg,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.gold,
-  },
-  seasonCompleteHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 16,
-  },
-  seasonCompleteText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
-  newSeasonButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.gold,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  newSeasonButtonDisabled: {
-    opacity: 0.6,
-  },
-  newSeasonButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-  // Phase 4 stake-mode UI
-  stakeModeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    width: '100%',
-    marginBottom: 8,
-  },
-  stakeHelpText: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  stakeMissingBanner: {
-    color: Colors.error,
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    backgroundColor: Colors.errorBg,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  undraftableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 12,
-  },
-  undraftableLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
+  centerText: {
+    textAlign: 'center',
   },
 });
