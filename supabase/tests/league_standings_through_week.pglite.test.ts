@@ -4,7 +4,7 @@
  * Run instructions: supabase/tests/README.md.
  *
  * Loaded VERBATIM: the 1-arg ranking (20261011000000) and the through-week
- * overload (20261030000000). Standings are DERIVED from matchups in this test
+ * overload (20261112000000). Standings are DERIVED from matchups in this test
  * the way process-week-results writes them (bye = points_for only; playoff
  * rows add nothing), so the one-arg and through-latest answers must agree by
  * construction, and this checks the algorithm, not hand-typed numbers.
@@ -100,7 +100,7 @@ Deno.test({
     await db.exec(await mig('20261011000000_league_standings_ranked.sql'));
     const oneArgAclBefore = (await q(`select proacl::text acl from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and proname = 'league_standings_ranked'`))[0].acl;
-    await db.exec(await mig('20261030000000_league_standings_ranked_through_week.sql'));
+    await db.exec(await mig('20261112000000_league_standings_ranked_through_week.sql'));
     await db.exec(RLS);
 
     const [{ id: lg }] = await q(`insert into leagues (name) values ('t') returning id`);
@@ -262,7 +262,7 @@ async function freshDb() {
   const db = new PGlite();
   await db.exec(SCHEMA);
   await db.exec(await mig('20261011000000_league_standings_ranked.sql'));
-  await db.exec(await mig('20261030000000_league_standings_ranked_through_week.sql'));
+  await db.exec(await mig('20261112000000_league_standings_ranked_through_week.sql'));
   return db;
 }
 

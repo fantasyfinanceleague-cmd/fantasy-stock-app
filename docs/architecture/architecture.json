@@ -2,398 +2,26 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c3abe630764c4f28f66f537d718c3ef8ba256a92",
-    "commitShort": "c3abe630",
+    "commit": "3d083fa33e7800f3ca6a9e43d48df97939bf3d21",
+    "commitShort": "3d083fa3",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "ui/mobile-league-setup",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/+not-found.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/app/modal.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/EditScreenInfo.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/RollingMoney.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/join/AlertCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/game/ScoreDigits.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/sp/logic/fitScale.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/join/devFixture.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/join/joinFixtureGate.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/join/joinPreview.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/fit-scale.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/foreground-quiet-lib.test.ts"
-      },
-      {
-        "code": "AA",
-        "path": "apps/mobile/tests-deno/function-refusal.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/join-fixture.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/join-preview.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/release-routes.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/score-digits-column-shrink.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/symbol-search-field-theme.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/this-week-card-score-overlap.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/hooks/useLeagues.js"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/pages/Leagues.jsx"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      },
-      {
-        "code": "M",
-        "path": "scripts/gen-architecture.mjs"
-      },
-      {
-        "code": "M",
-        "path": "supabase/config.toml"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-start-policy.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-start-policy.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-start.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-start.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-validation.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/draft-write.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-write.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/job-status-io.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/job-status-io.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/job-status.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/push-copy.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/run-job.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/run-job.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-autopick-sweep/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/rules.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-control/rules.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/leave-league/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/leave-league/logic.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/leave-league/logic.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/preview-league/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/preview-league/shape.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/preview-league/shape.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/process-week-results/job-status.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/record-trade/commit.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/record-trade/commit.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/record-trade/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/refresh-market-calendar/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/refresh-market-calendar/run.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/refresh-market-calendar/run.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/send-notification/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-end/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/snapshot-week-start/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/validate-and-record-pick/index.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261102000000_record_trade_atomic.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261103000000_trades_slot_id.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261106000000_schedule_draft_autopick_sweep.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261106000001_purge_cron_run_details.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261106000002_drafts_refuse_new_skip.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000000_leave_league_schema.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000001_leave_league_rpc.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000002_confirm_league_roster_rpc.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000003_get_home_summary_skip_hidden.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000004_drop_I5_league_members_delete_self.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261107000006_draft_waits_for_roster_reconfirm.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261108000000_cron_explicit_timeouts.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261108000001_schedule_snapshot_retry_timeout.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261110000000_transfer_commissioner.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261110000001_leave_league_transfer_first.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261110000002_notify_due_ignores_transfer_notice.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261111000000_draft_auto_start.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261111000001_draft_status_server_only.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261111000002_draft_autopick_sweep_auto_start.sql"
-      },
-      {
-        "code": "A",
-        "path": "supabase/migrations/20261111000003_schedule_draft_order_notify.sql"
-      },
-      {
-        "code": "D",
-        "path": "supabase/migrations/deferred/20261010000001_schedule_draft_autopick_sweep.sql"
-      },
-      {
-        "code": "D",
-        "path": "supabase/migrations/deferred/20261013000001_schedule_draft_order_notify.sql"
-      },
-      {
-        "code": "D",
-        "path": "supabase/migrations/deferred/20261101000002_drafts_refuse_new_skip.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "code": "R",
+        "path": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql"
       }
     ],
-    "timestamp": "2026-10-07T23:27:01Z",
-    "sourceHash": "sha256:32fed09a58f148398bfa9622b8764c03a29a0238c1806d2b417aa540b15e38d0",
+    "timestamp": "2026-10-08T00:02:55Z",
+    "sourceHash": "sha256:8165a046502c461eb6f634fa6fd3ab0afb6247d7579cf71a6d0845926340298e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 3.8,
+    "ageHours": 4.4,
     "ageDays": 0.2,
     "staleAfterDays": 14,
     "stale": false,
@@ -2207,9 +1835,9 @@
       "db": null,
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:138"
+          "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:138"
         ],
-        "latestDefinition": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "latestDefinition": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql",
         "redefinitions": 1
       },
       "drift": [
@@ -2228,7 +1856,7 @@
       "sublabel": "not in snapshot",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "path": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql",
         "line": 138
       }
     },
@@ -4260,9 +3888,9 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261011000000_league_standings_ranked.sql:98",
-          "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:291"
+          "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:291"
         ],
-        "latestDefinition": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "latestDefinition": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql",
         "redefinitions": 2
       },
       "drift": [
@@ -4281,7 +3909,7 @@
       "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql",
+        "path": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql",
         "line": 291
       }
     },
@@ -11957,7 +11585,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261011000000_league_standings_ranked.sql:201",
-        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:352"
+        "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:352"
       ]
     },
     {
@@ -11973,7 +11601,7 @@
         "supabase/migrations/20261011000000_league_standings_ranked.sql:125",
         "supabase/migrations/20261011000000_league_standings_ranked.sql:200",
         "supabase/migrations/20261011000000_league_standings_ranked.sql:226",
-        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:351"
+        "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:351"
       ]
     },
     {
@@ -11988,8 +11616,8 @@
       "callSites": [
         "supabase/migrations/20261011000000_league_standings_ranked.sql:149",
         "supabase/migrations/20261011000000_league_standings_ranked.sql:172",
-        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:309",
-        "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:376"
+        "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:309",
+        "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:376"
       ]
     },
     {
@@ -17281,7 +16909,7 @@
       "node": "pg._league_standings_rank_core",
       "label": "_league_standings_rank_core()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261030000000_league_standings_ranked_through_week.sql:138",
+      "source": "supabase/migrations/20261112000000_league_standings_ranked_through_week.sql:138",
       "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -17667,12 +17295,6 @@
   },
   "unverified": [
     {
-      "scope": "pg._league_standings_rank_core",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "pg.draft_start_policy",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
@@ -17758,6 +17380,12 @@
     },
     {
       "scope": "pg.after_leagues_draft_date_change",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._league_standings_rank_core",
       "claim": "function exists in prod",
       "reason": "Present in migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
@@ -18358,7 +17986,6 @@
       "20261023000000_lock_start_new_league_season.sql",
       "20261028000002_snapshot_week_end_heal_cron.sql",
       "20261029000000_get_home_league_rpc.sql",
-      "20261030000000_league_standings_ranked_through_week.sql",
       "20261101000000_draft_feasibility_pool.sql",
       "20261101000001_draft_stalls.sql",
       "20261101000003_draft_price_outages.sql",
@@ -18383,7 +18010,8 @@
       "20261111000000_draft_auto_start.sql",
       "20261111000001_draft_status_server_only.sql",
       "20261111000002_draft_autopick_sweep_auto_start.sql",
-      "20261111000003_schedule_draft_order_notify.sql"
+      "20261111000003_schedule_draft_order_notify.sql",
+      "20261112000000_league_standings_ranked_through_week.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",

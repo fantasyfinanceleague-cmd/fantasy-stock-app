@@ -72,7 +72,7 @@ It covers:
 ## league_standings_through_week.pglite.test.ts
 
 What it does:
-- Loads `20261011000000` (the 1-arg ranking) and then `20261030000000` (the
+- Loads `20261011000000` (the 1-arg ranking) and then `20261112000000` (the
   through-week overload) **verbatim**, on the real `is_member()` helper and the
   league-wide SELECT policies from production.
 - Derives `league_standings` from `matchups` the way process-week-results

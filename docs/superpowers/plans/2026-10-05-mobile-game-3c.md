@@ -143,7 +143,7 @@ The shared `get_home_summary`, `market_session_status` and `market_calendar` (Le
 ## 7. Open decisions (need an answer before "go", or before the step that needs them)
 
 - **D1 (backend, blocks the ▲/▼ in step 4):** there is no last-week order. Options:
-  - (a) A new overload `league_standings_ranked(p_league_id, p_through_week)` that ranks from scored regular-season `matchups` ≤ week with the SAME keys. A PGlite test asserts that through the latest scored week it equals the 1-arg version. The migration goes in `20261030000000` (provisional).
+  - (a) A new overload `league_standings_ranked(p_league_id, p_through_week)` that ranks from scored regular-season `matchups` ≤ week with the SAME keys. A PGlite test asserts that through the latest scored week it equals the 1-arg version. The migration goes in `20261112000000` (re-stamped at release, 2026-10-07).
   - (b) A new `league_standings_movement(p_league_id)` returning `{user_id, rank, prev_rank}`, where `rank` comes from the existing RPC verbatim.
   - **Recommend (a).** Who authors it: me (drafted via supabase-migration-writer) or a backend worker?
 - **D2:** should "All matchups · League" score the other games live (4 requests on first tap, the same `liveWeekScore`)? Recommend yes; otherwise they'd show only after Friday.
