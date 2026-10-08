@@ -55,3 +55,20 @@ Deno.test('a network error (no Response in context) is transport', async () => {
   assertEquals(await readFunctionRefusal(null, { message: 'x' }), { transport: true });
   assertEquals(await readFunctionRefusal(undefined, new Error('offline')), { transport: true });
 });
+
+// ── Every draft-control / validate-and-record-pick call reads through it ──
+
+import { SOURCES } from './sourceManifest.generated.ts';
+
+Deno.test('the draft screens read every function result through readFunctionRefusal (source guard)', () => {
+  for (const [path, fns] of [
+    ['components/game/DraftRoom.tsx', ['validate-and-record-pick']],
+    ['lib/game/useDraftAutoStart.ts', ['draft-control']],
+    ['lib/game/useDraftStatus.ts', ['draft-control']],
+  ] as const) {
+    const src = SOURCES[path];
+    const calls = fns.reduce((n, fn) => n + (src.match(new RegExp(`seamInvoke\\('${fn}'`, 'g')) ?? []).length, 0);
+    const reads = (src.match(/readFunctionRefusal\(/g) ?? []).length;
+    assertEquals(calls > 0 && reads >= calls, true, `${path}: ${calls} calls, ${reads} reads`);
+  }
+});

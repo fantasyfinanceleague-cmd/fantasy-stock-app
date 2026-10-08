@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles`/`cardShadow` are declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, Dimensions, KeyboardAvoidingView, ScrollView, Switch } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// Create league (3c-2): the board's four steps — League, Season, Draft,
+// Stakes ("Create league · Season" / "· Draft step"; League and Stakes have
+// no frame and are composed from the same vocabulary). The step machine and
+// its gates live in lib/game/createLeagueSteps.ts; handleCreate and every
+// write below are unchanged from the nine-step screen this replaces.
+import { Alert, Share, StyleSheet, View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
-import { supabase } from '@/lib/supabase';
 import { validateLeagueName } from '@/lib/contentModeration';
 import { generateInviteCode } from '@/lib/inviteCode';
 import SlotBuilder from '@/components/SlotBuilder';
@@ -21,19 +21,69 @@ import {
   DEFAULT_NOTIONAL_PER_SLOT,
   STAKE_MODE_OPTIONS,
   fetchCategories,
-  saveLeagueSlots,
   validateSlotConfig,
 } from '@/lib/categoryData';
-import { Button, Card } from '@/components/ui';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-// App accent colors (matching existing color scheme)
-const ACCENT = Colors.primary; // #3b82f6 - Blue
-const ACCENT_BG = Colors.primaryBg; // rgba(59, 130, 246, 0.2)
-const ACCENT_LIGHT = Colors.primaryLight; // #60a5fa
-
-type Step = 'welcome' | 'name' | 'type' | 'size' | 'stake' | 'slots' | 'duration' | 'matchup' | 'draft';
+import { seamInsertLeague, seamInsertMember, seamSaveLeagueSlots } from '@/lib/game/seamCalls';
+import {
+  DRAFT_ORDER_OPTIONS,
+  IF_TIME_RUNS_OUT_COPY,
+  type DraftOrderMode,
+  DEFAULT_PICK_SECONDS,
+  PICK_SECONDS_OPTIONS,
+  draftOrderCaption,
+  pickSecondsCaption,
+} from '@/lib/game/createLeagueSetup';
+import {
+  BUDGET_PRESETS,
+  CREATE_ROUNDS_BOUNDS,
+  DRAFT_DATE_LATER,
+  CREATE_STEPS,
+  CREATE_STEP_COPY,
+  DURATION_OPTIONS,
+  MANAGER_SIZES,
+  type CreateStep,
+  byeExpectedCopy,
+  leagueNameError,
+  nextStep,
+  playoffTeamsSub,
+  prevStep,
+  roundRobinCaption,
+  seasonCheckCaption,
+  stakesStepError,
+  stepManagers,
+  stepNumber,
+  stepWeeks,
+  stepWithin,
+  weeksShown,
+} from '@/lib/game/createLeagueSteps';
+import { byeNoticeCopy } from '@/lib/game/draftLobby';
+import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
+import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
+import { draftDateForSave } from '@/lib/game/draftDateSave';
+import { draftTimeRefusal } from '@/lib/game/autoStart';
+import { stakesLine } from '@/lib/stakesLine';
+import { INVITE_CODE_LABEL } from '@/lib/home/homeCopy';
+import {
+  CREATED_LINE,
+  CREATED_NO_DATE,
+  CREATE_FAILED,
+  GO_TO_LEAGUE,
+  SLOTS_NOT_SAVED,
+  createdTitle,
+  createdWithoutDate,
+  inviteShareMessage,
+} from '@/lib/game/createLeagueDone';
+import { space, typeFontFamily } from '@/constants/tokens';
+import { Button } from '@/components/sp/Button';
+import { Chip } from '@/components/sp/Chip';
+import { SegmentedControl } from '@/components/sp/SegmentedControl';
+import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
+import { Field } from '@/components/shell/Field';
+import { SetupScaffold } from '@/components/game/SetupScaffold';
+import { Stepper } from '@/components/game/Stepper';
+import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 interface WizardState {
   name: string;
@@ -50,16 +100,29 @@ interface WizardState {
   numRounds: number;
   draftDate: Date | null;
   draftDateTBD: boolean;
+  draftOrder: DraftOrderMode;
+  pickSeconds: number;
 }
 
+const TYPE_OPTIONS: { value: WizardState['type']; label: string; help: string }[] = [
+  { value: 'matchup', label: 'Matchup', help: 'Weekly head-to-head battles with playoffs at the end.' },
+  { value: 'duration', label: 'Duration', help: 'Best portfolio gains at the end wins it all.' },
+];
+
 export default function CreateLeagueWizard() {
-  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const { refresh, setActiveLeagueId } = useLeagueContext();
 
-  const [step, setStep] = useState<Step>('welcome');
+  const [step, setStep] = useState<CreateStep>('league');
   const [creating, setCreating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // The done screen (Design Lead ruling), in place of the old "League Created!" Alert.
+  const [created, setCreated] = useState<{ name: string; inviteCode: string; noDate: boolean } | null>(null);
+  // Inline, under the Draft date row: a chosen date with no value (draftDateForSave).
+  const [dateError, setDateError] = useState<string | null>(null);
+  // Inline, under the name field (Design Lead ruling), never an Alert.
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
   useEffect(() => { fetchCategories().then(setCategories); }, []);
@@ -79,38 +142,38 @@ export default function CreateLeagueWizard() {
     numRounds: 6,
     draftDate: null,
     draftDateTBD: true, // Default to TBD
+    draftOrder: 'random',
+    pickSeconds: DEFAULT_PICK_SECONDS,
   });
+  const patch = (p: Partial<WizardState>) => setState((s) => ({ ...s, ...p }));
 
   const minWeeks = state.size - 1;
   // Flexible playoffs (Giorgio, 2026-09-29): any P from 2 up to the league
   // size, equal included. Clamped like numWeeks, so shrinking the league never
   // leaves a stale P above it.
   const playoffTeams = Math.min(Math.max(state.playoffTeams, 2), state.size);
+  // The weeks the insert writes (max(numWeeks, minWeeks), below), shown as such.
+  const shownWeeks = weeksShown(state.numWeeks, state.size);
 
-  // Navigation helpers
   const goBack = () => {
-    switch (step) {
-      case 'welcome':
-        router.dismiss();
-        break;
-      case 'name': setStep('welcome'); break;
-      case 'type': setStep('name'); break;
-      case 'size': setStep('type'); break;
-      case 'stake': setStep('size'); break;
-      case 'slots': setStep('stake'); break;
-      case 'duration': setStep(state.stakeMode === 'price_tiers' ? 'slots' : 'stake'); break;
-      case 'matchup': setStep(state.stakeMode === 'price_tiers' ? 'slots' : 'stake'); break;
-      case 'draft': setStep(state.type === 'duration' ? 'duration' : 'matchup'); break;
-    }
-  };
-
-  const handleClose = () => {
-    router.dismiss();
+    const prev = prevStep(step);
+    if (prev) setStep(prev);
+    else router.dismiss();
   };
 
   const handleCreate = async () => {
     if (!user?.id) {
-      Alert.alert('Error', 'You must be logged in to create a league');
+      // Unreachable behind the auth gate; logged, never shown (Design Lead ruling).
+      console.error('Create league: no signed-in user');
+      return;
+    }
+
+    // Never send draft_date: undefined (a live 1.1.0 bug): Set later is null, a
+    // chosen date must have a value.
+    const draftDateValue = draftDateForSave(state.draftDateTBD, state.draftDate);
+    if (!draftDateValue.ok) {
+      setDateError(draftDateValue.error);
+      setStep('draft');
       return;
     }
 
@@ -122,9 +185,7 @@ export default function CreateLeagueWizard() {
       // written (DB default applies); salary_cap_limit is retired — drop
       // migration authored on this branch. budget_amount only means anything
       // in budget_cap mode.
-      const { data: league, error: leagueError } = await supabase
-        .from('leagues')
-        .insert({
+      const { data: league, error: leagueError } = await seamInsertLeague({
           name: state.name.trim(),
           commissioner_id: user.id,
           invite_code: generateInviteCode(),
@@ -141,1218 +202,466 @@ export default function CreateLeagueWizard() {
           num_weeks: effectiveWeeks,
           playoff_teams: state.type === 'matchup' ? playoffTeams : null,
           draft_status: 'not_started',
-          draft_date: state.draftDateTBD ? null : state.draftDate?.toISOString(),
-        })
-        .select()
-        .single();
+          draft_order_mode: state.draftOrder,
+          pick_seconds: state.pickSeconds,
+          draft_date: draftDateValue.value,
+      });
 
       if (leagueError) throw leagueError;
 
-      const { error: memberError } = await supabase
-        .from('league_members')
-        .insert({
-          league_id: league.id,
-          user_id: user.id,
-          role: 'commissioner',
-        });
+      const { error: memberError } = await seamInsertMember({
+        league_id: league.id,
+        user_id: user.id,
+        role: 'commissioner',
+      });
 
       if (memberError) throw memberError;
 
       if (state.slots.length > 0) {
         try {
-          await saveLeagueSlots(league.id, state.slots);
+          await seamSaveLeagueSlots(league.id, state.slots);
         } catch (slotErr) {
           console.error('Slot save failed:', slotErr);
-          Alert.alert('Heads up', 'League created, but roster slots failed to save — edit them in League Settings.');
+          Alert.alert(SLOTS_NOT_SAVED.title, SLOTS_NOT_SAVED.message);
         }
       }
 
       await refresh();
       setActiveLeagueId(league.id);
 
-      const tbdMessage = state.draftDateTBD
-        ? '\n\nRemember to set a draft date before starting the draft!'
-        : '';
-
-      Alert.alert(
-        'League Created!',
-        `"${state.name}" is ready!\n\nInvite Code: ${league.invite_code}${tbdMessage}`,
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
-      );
+      setCreated({
+        name: state.name,
+        inviteCode: league.invite_code,
+        noDate: createdWithoutDate(state.draftDateTBD, state.draftDate),
+      });
     } catch (error: any) {
+      // The raw message is logged, never shown (Design Lead ruling).
       console.error('Failed to create league:', error);
-      Alert.alert('Error', error.message || 'Failed to create league');
+      // A draft-time refusal (trg_leagues_draft_time: not a quarter hour, under
+      // an hour out) goes back to the Draft step, inline under the date.
+      const refusal = draftTimeRefusal(error);
+      if (refusal) {
+        setDateError(refusal);
+        setStep('draft');
+        return;
+      }
+      Alert.alert(CREATE_FAILED.title, CREATE_FAILED.message);
     } finally {
       setCreating(false);
     }
   };
 
+  const slotErrors = validateSlotConfig(state.slots, state.numRounds);
+
   const goNext = () => {
-    switch (step) {
-      case 'welcome': setStep('name'); break;
-      case 'name':
-        if (!state.name.trim()) {
-          Alert.alert('Required', 'Please enter a league name');
-          return;
-        }
-        const contentCheck = validateLeagueName(state.name.trim());
-        if (!contentCheck.isValid) {
-          Alert.alert('Error', contentCheck.reason || 'League name is not allowed');
-          return;
-        }
-        setStep('type');
-        break;
-      case 'type': setStep('size'); break;
-      case 'size': setStep('stake'); break;
-      case 'stake':
-        // Price tiers NEED slot brackets (they are the anti-skew mechanism);
-        // other modes go straight on — category slots stay optional via
-        // league settings.
-        setStep(state.stakeMode === 'price_tiers' ? 'slots' : (state.type === 'duration' ? 'duration' : 'matchup'));
-        break;
-      case 'slots': {
-        if (state.slots.length === 0) {
-          Alert.alert('Add a slot', 'Price tiers need at least one slot with a price bracket.');
-          break;
-        }
-        const slotErrors = validateSlotConfig(state.slots, state.numRounds);
-        if (slotErrors.length > 0) {
-          Alert.alert('Fix roster slots', slotErrors[0]);
-          break;
-        }
-        setStep(state.type === 'duration' ? 'duration' : 'matchup');
-        break;
-      }
-      case 'duration': setStep('draft'); break;
-      case 'matchup': setStep('draft'); break;
-      case 'draft': handleCreate(); break;
+    if (step === 'league') {
+      const error = leagueNameError(state.name, validateLeagueName);
+      setNameError(error);
+      if (error) return;
     }
+    if (step === 'draft') {
+      const date = draftDateForSave(state.draftDateTBD, state.draftDate);
+      setDateError(date.ok ? null : date.error);
+      if (!date.ok) return;
+    }
+    if (step === 'stakes') {
+      // Price tiers NEED slot price ranges (they are the anti-skew mechanism);
+      // other modes go straight on — category slots stay optional via
+      // league settings. The reasons show inline (Roster slots, the slots).
+      if (stakesStepError(state.stakeMode, state.slots.length, slotErrors)) return;
+      handleCreate();
+      return;
+    }
+    const next = nextStep(step);
+    if (next) setStep(next);
   };
 
-  // Render each step
-  const renderWelcome = () => (
-    <View style={styles.welcomeContainer}>
-      <View style={styles.heroSection}>
-        <Text style={styles.heroIcon}>📈</Text>
-        <Text style={styles.heroTitle}>FANTASY</Text>
-        <Text style={styles.heroTitleBold}>STOCK LEAGUE</Text>
-        <Text style={styles.heroSubtitle}>Build your portfolio. Beat your friends.</Text>
-      </View>
+  const draftDateValue = state.draftDateTBD
+    ? 'TBD'
+    : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'Pick a draft time';
 
-      <View style={styles.welcomeButtons}>
-        <Button
-          title="Create League"
-          onPress={() => setStep('name')}
-          variant="primary"
-          icon={<Ionicons name="add-circle-outline" size={20} color={Colors.white} />}
-          style={styles.welcomePrimaryButton}
-        />
-
-        <Button
-          title="Join a League"
-          onPress={() => {
-            router.dismiss();
-            setTimeout(() => router.push('/join-league'), 100);
-          }}
-          variant="ghost"
-          icon={<Ionicons name="search-outline" size={20} color={ACCENT} />}
-          style={styles.welcomeSecondaryButton}
-        />
+  // ── Step 1 · League ───────────────────────────────────────────────────
+  const renderLeague = () => (
+    <>
+      <Field
+        label="League name"
+        value={state.name}
+        onChangeText={(text) => {
+          patch({ name: text });
+          if (nameError) setNameError(null);
+        }}
+        error={nameError}
+        placeholder="Give your league a name"
+        autoCapitalize="words"
+        autoFocus
+        returnKeyType="next"
+        onSubmitEditing={goNext}
+        helper="Don't worry. You will be able to change this later."
+      />
+      <View style={styles.section}>
+        <RowKey>League type</RowKey>
+        <SetupCard>
+          {TYPE_OPTIONS.map((t, i) => (
+            <View key={t.value}>
+              {i > 0 ? <RowDivider /> : null}
+              <ChoiceRow title={t.label} help={t.help} selected={state.type === t.value} onPress={() => patch({ type: t.value })} />
+            </View>
+          ))}
+        </SetupCard>
       </View>
-    </View>
+    </>
   );
 
-  const renderName = () => (
-    <KeyboardAvoidingView
-      style={styles.stepContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.stepContent}>
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>League Name</Text>
-          <TextInput
-            style={styles.textInput}
-            value={state.name}
-            onChangeText={(text) => setState({ ...state, name: text })}
-            placeholder="Give your league a name"
-            placeholderTextColor={Colors.textDark}
-            autoCapitalize="words"
-            autoFocus
+  // ── Step 2 · Season (board: "Create league · Season") ─────────────────
+  const renderSeason = () => {
+    const bye = state.type === 'matchup' ? byeNoticeCopy(state.size, shownWeeks) : null;
+    return (
+      <>
+        <SetupCard style={styles.cardStack}>
+          <Stepper
+            label="Managers"
+            sub="How many you expect, you included"
+            value={state.size}
+            onStep={(d) => patch({ size: stepManagers(state.size, d) })}
+            canDecrement={state.size > MANAGER_SIZES[0]}
+            canIncrement={state.size < MANAGER_SIZES[MANAGER_SIZES.length - 1]}
           />
-          <View style={styles.inputUnderline} />
-          <Text style={styles.inputHint}>Don't worry. You will be able to change this later.</Text>
-        </View>
-      </View>
-
-      <Button
-        title="Next"
-        onPress={goNext}
-        variant="primary"
-        disabled={!state.name.trim()}
-        style={styles.nextButton}
-      />
-    </KeyboardAvoidingView>
-  );
-
-  const renderType = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.stepContent}>
-        <Text style={styles.stepSubtitle}>You can change it later in the settings</Text>
-
-        <View style={styles.cardGrid}>
-          <TouchableOpacity
-            style={[styles.typeCard, state.type === 'matchup' && styles.typeCardSelected]}
-            onPress={() => setState({ ...state, type: 'matchup' })}
-          >
-            {state.type === 'matchup' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>Popular</Text></View>}
-            <View style={styles.typeCardIcon}>
-              <Ionicons name="people" size={32} color={state.type === 'matchup' ? ACCENT : Colors.textMuted} />
-            </View>
-            <Text style={[styles.typeCardTitle, state.type === 'matchup' && styles.typeCardTitleSelected]}>
-              Matchup
-            </Text>
-            {state.type === 'matchup' && (
-              <Text style={styles.typeCardDesc}>Weekly head-to-head battles with playoffs at the end.</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.typeCard, state.type === 'duration' && styles.typeCardSelected]}
-            onPress={() => setState({ ...state, type: 'duration' })}
-          >
-            {state.type === 'duration' && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>Simple</Text></View>}
-            <View style={styles.typeCardIcon}>
-              <Ionicons name="trending-up" size={32} color={state.type === 'duration' ? ACCENT : Colors.textMuted} />
-            </View>
-            <Text style={[styles.typeCardTitle, state.type === 'duration' && styles.typeCardTitleSelected]}>
-              Duration
-            </Text>
-            {state.type === 'duration' && (
-              <Text style={styles.typeCardDesc}>Best portfolio gains at the end wins it all.</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Button
-        title="Next"
-        onPress={goNext}
-        variant="primary"
-        style={styles.nextButton}
-      />
-    </View>
-  );
-
-  const renderSize = () => {
-    // DB CHECK leagues_num_participants_range (20250819185319): 4-16.
-    // The old duration list offered 2, which the insert could never satisfy
-    // (BUG 4). Small groups reach the minimum with bots (DraftPage
-    // fillWithBots), so 4 is the floor for both league types.
-    const sizes = state.type === 'matchup'
-      ? [4, 6, 8, 10, 12, 14, 16]  // Even numbers for matchups
-      : [4, 6, 8, 10, 12, 14, 16];
-
-    return (
-      <View style={styles.stepContainer}>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepSubtitle}>You can change it later in the settings</Text>
-
-          <View style={styles.sizeGrid}>
-            {sizes.map((size) => (
-              <TouchableOpacity
-                key={size}
-                style={[styles.sizeButton, state.size === size && styles.sizeButtonSelected]}
-                onPress={() => setState({ ...state, size })}
-              >
-                <Text style={[styles.sizeButtonText, state.size === size && styles.sizeButtonTextSelected]}>
-                  {size}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Stocks per team lives HERE (not the final step) so the slots
-              step that follows can validate capacity against the real value —
-              it used to sit in renderDraft, after slots, so the builder
-              compared against the default 6 (BUG 2a). */}
-          <View style={styles.settingSection}>
-            <Text style={styles.settingLabel}>Stocks Per Team</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, numRounds: Math.max(3, state.numRounds - 1) })}
-              >
-                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.stepperValue}>
-                <Text style={styles.stepperValueText}>{state.numRounds}</Text>
-                <Text style={styles.stepperValueLabel}>stocks</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, numRounds: Math.min(12, state.numRounds + 1) })}
-              >
-                <Ionicons name="add" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        <Button
-          title="Next"
-          onPress={goNext}
-          variant="primary"
-          style={styles.nextButton}
-        />
-      </View>
-    );
-  };
-
-  const renderStake = () => (
-    <KeyboardAvoidingView
-      style={styles.stepContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepSubtitle}>How do teams stake their picks?</Text>
-
-        {STAKE_MODE_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt.value}
-            style={[styles.budgetCard, styles.stakeCard, state.stakeMode === opt.value && styles.budgetCardSelected]}
-            onPress={() => setState({ ...state, stakeMode: opt.value })}
-          >
-            <Ionicons
-              name={opt.icon as keyof typeof Ionicons.glyphMap}
-              size={24}
-              color={state.stakeMode === opt.value ? ACCENT : Colors.textMuted}
-            />
-            <View style={styles.stakeCardBody}>
-              <Text style={[styles.budgetCardTitle, state.stakeMode === opt.value && styles.budgetCardTitleSelected]}>
-                {opt.label}
-              </Text>
-              <Text style={styles.stakeCardHelp}>{opt.help}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        {state.stakeMode === 'fixed_notional' && (
-          <View style={styles.amountSection}>
-            <Text style={styles.amountLabel}>Stake per Slot</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>$</Text>
-              <TextInput
-                style={styles.amountInput}
-                value={state.notionalPerSlot}
-                onChangeText={(text) => setState({ ...state, notionalPerSlot: text.replace(/[^0-9]/g, '') })}
-                keyboardType="numeric"
-                placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
-                placeholderTextColor={Colors.textDark}
-              />
-            </View>
-            <Text style={styles.stakeCardHelp}>Each pick simulates this dollar amount (fractional shares).</Text>
-          </View>
-        )}
-
-        {state.stakeMode === 'budget_cap' && (
-          <View style={styles.amountSection}>
-            <Text style={styles.amountLabel}>Budget Cap</Text>
-            <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>$</Text>
-              <TextInput
-                style={styles.amountInput}
-                value={state.budgetCap}
-                onChangeText={(text) => setState({ ...state, budgetCap: text.replace(/[^0-9]/g, '') })}
-                keyboardType="numeric"
-                placeholder={String(DEFAULT_BUDGET_CAP)}
-                placeholderTextColor={Colors.textDark}
-              />
-            </View>
-            <View style={styles.presetRow}>
-              {['1000', '2500', '5000', '10000'].map((amount) => (
-                <TouchableOpacity
-                  key={amount}
-                  style={[styles.presetButton, state.budgetCap === amount && styles.presetButtonSelected]}
-                  onPress={() => setState({ ...state, budgetCap: amount })}
-                >
-                  <Text style={[styles.presetButtonText, state.budgetCap === amount && styles.presetButtonTextSelected]}>
-                    ${parseInt(amount).toLocaleString()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.stakeCardHelp}>
-              One share per pick; the sum of your roster's share prices must fit under the cap.
-              Keep it tight — a loose cap never shapes the draft.
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.undraftableSection}>
-          <View style={styles.undraftableRow}>
-            <Text style={styles.undraftableLabel}>Allow non-draftable stocks (full universe)</Text>
-            <Switch
-              value={state.allowUndraftable}
-              onValueChange={(value) => setState({ ...state, allowUndraftable: value })}
-              trackColor={{ false: Colors.border, true: ACCENT }}
-            />
-          </View>
-          <Text style={styles.stakeCardHelp}>
-            Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps.
-          </Text>
-        </View>
-      </ScrollView>
-
-      <Button
-        title="Next"
-        onPress={goNext}
-        variant="primary"
-        style={styles.nextButton}
-      />
-    </KeyboardAvoidingView>
-  );
-
-  const renderSlots = () => (
-    <View style={styles.stepContainer}>
-      <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepSubtitle}>
-          Define your price tiers. Each slot is a price bracket (and optionally a category);
-          a slot with no filters is flex.
-        </Text>
-        <SlotBuilder
-          slots={state.slots}
-          onChange={(slots) => setState({ ...state, slots })}
-          categories={categories}
-          leagueSize={state.size}
-          numRounds={state.numRounds}
-        />
-      </ScrollView>
-
-      {(() => {
-        const blocked = state.slots.length === 0 || validateSlotConfig(state.slots, state.numRounds).length > 0;
-        return (
-          <Button
-            title="Next"
-            onPress={goNext}
-            disabled={blocked}
-            style={styles.nextButton}
-          />
-        );
-      })()}
-    </View>
-  );
-
-  const renderDuration = () => {
-    // values = DB CHECK leagues_duration_days_check in (7,30,90,180,365)
-    const durations = [
-      { value: 7, label: '1 Week', desc: 'Quick game' },
-      { value: 30, label: '1 Month', desc: 'Standard' },
-      { value: 90, label: '3 Months', desc: 'Quarter' },
-      { value: 180, label: '6 Months', desc: 'Half year' },
-      { value: 365, label: '1 Year', desc: 'Full season' },
-    ];
-
-    return (
-      <View style={styles.stepContainer}>
-        <View style={styles.stepContent}>
-          <Text style={styles.stepSubtitle}>How long will your league run?</Text>
-
-          <View style={styles.durationList}>
-            {durations.map((d) => (
-              <TouchableOpacity
-                key={d.value}
-                style={[styles.durationItem, state.durationDays === d.value && styles.durationItemSelected]}
-                onPress={() => setState({ ...state, durationDays: d.value })}
-              >
-                <View>
-                  <Text style={[styles.durationLabel, state.durationDays === d.value && styles.durationLabelSelected]}>
-                    {d.label}
-                  </Text>
-                  <Text style={styles.durationDesc}>{d.desc}</Text>
-                </View>
-                {state.durationDays === d.value && (
-                  <Ionicons name="checkmark-circle" size={24} color={ACCENT} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <Button
-          title="Next"
-          onPress={goNext}
-          variant="primary"
-          style={styles.nextButton}
-        />
-      </View>
-    );
-  };
-
-  const renderMatchup = () => {
-    return (
-      <View style={styles.stepContainer}>
-        <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.stepSubtitle}>Configure your matchup league</Text>
-
-          <View style={styles.settingSection}>
-            <Text style={styles.settingLabel}>Regular Season Length</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, numWeeks: Math.max(minWeeks, state.numWeeks - 1) })}
-              >
-                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.stepperValue}>
-                <Text style={styles.stepperValueText}>{state.numWeeks}</Text>
-                <Text style={styles.stepperValueLabel}>weeks</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, numWeeks: state.numWeeks + 1 })}
-              >
-                <Ionicons name="add" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.settingHint}>Min {minWeeks} weeks for round robin</Text>
-          </View>
-
-          <View style={styles.settingSection}>
-            <Text style={styles.settingLabel}>Playoff Teams</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, playoffTeams: Math.max(2, playoffTeams - 1) })}
-                accessibilityLabel="Fewer playoff teams"
-              >
-                <Ionicons name="remove" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-              <View style={styles.stepperValue}>
-                <Text style={styles.stepperValueText}>{playoffTeams}</Text>
-                <Text style={styles.stepperValueLabel}>teams</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setState({ ...state, playoffTeams: Math.min(state.size, playoffTeams + 1) })}
-                accessibilityLabel="More playoff teams"
-              >
-                <Ionicons name="add" size={24} color={Colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.settingHint}>{playoffLine(playoffTeams)}</Text>
-          </View>
-        </ScrollView>
-
-        <Button
-          title="Next"
-          onPress={goNext}
-          variant="primary"
-          style={styles.nextButton}
-        />
-      </View>
-    );
-  };
-
-  const renderDraft = () => (
-    <View style={styles.stepContainer}>
-      <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.stepSubtitle}>Final step - set up your draft</Text>
-
-        <View style={styles.settingSection}>
-          <Text style={styles.settingLabel}>Draft Date & Time</Text>
-
-          {/* TBD Option */}
-          <TouchableOpacity
-            style={[styles.tbdOption, state.draftDateTBD && styles.tbdOptionSelected]}
-            onPress={() => setState({ ...state, draftDateTBD: true, draftDate: null })}
-          >
-            <View style={styles.tbdRadio}>
-              {state.draftDateTBD && <View style={styles.tbdRadioInner} />}
-            </View>
-            <Text style={[styles.tbdText, state.draftDateTBD && styles.tbdTextSelected]}>
-              TBD - Set later
-            </Text>
-          </TouchableOpacity>
-
-          {/* Pick a date option */}
-          <TouchableOpacity
-            style={[styles.tbdOption, !state.draftDateTBD && styles.tbdOptionSelected]}
-            onPress={() => {
-              setState({ ...state, draftDateTBD: false });
-              setShowDatePicker(true);
-            }}
-          >
-            <View style={styles.tbdRadio}>
-              {!state.draftDateTBD && <View style={styles.tbdRadioInner} />}
-            </View>
-            <Ionicons name="calendar" size={18} color={!state.draftDateTBD ? ACCENT : Colors.textMuted} />
-            <Text style={[styles.tbdText, !state.draftDateTBD && styles.tbdTextSelected]}>
-              {state.draftDate
-                ? state.draftDate.toLocaleString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })
-                : 'Pick a date & time'}
-            </Text>
-          </TouchableOpacity>
-
-          {showDatePicker && !state.draftDateTBD && (
+          {state.type === 'matchup' ? (
             <>
-              <DateTimePicker
-                value={state.draftDate || new Date()}
-                mode="datetime"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                themeVariant="light"
-                onChange={(event, selectedDate) => {
-                  if (Platform.OS !== 'ios') setShowDatePicker(false);
-                  if (selectedDate) setState({ ...state, draftDate: selectedDate, draftDateTBD: false });
-                }}
-                minimumDate={new Date()}
+              <Stepper
+                label="Regular season"
+                value={shownWeeks}
+                unit="weeks"
+                onStep={(d) => patch({ numWeeks: stepWeeks(state.numWeeks, state.size, d) })}
+                canDecrement={shownWeeks > minWeeks}
+                canIncrement
               />
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity
-                  style={styles.datePickerDone}
-                  onPress={() => setShowDatePicker(false)}
-                >
-                  <Text style={styles.datePickerDoneText}>Done</Text>
-                </TouchableOpacity>
-              )}
+              <Text variant="caption" tone="secondary">{roundRobinCaption(minWeeks)}</Text>
+              {bye ? <WarnNote title={bye} line={byeExpectedCopy(state.size)} /> : null}
+              <View style={styles.tight}>
+                <Stepper
+                  label="Playoff teams"
+                  sub={playoffTeamsSub(state.size)}
+                  value={playoffTeams}
+                  onStep={(d) => patch({ playoffTeams: stepWithin(playoffTeams, d, 2, state.size) })}
+                  canDecrement={playoffTeams > 2}
+                  canIncrement={playoffTeams < state.size}
+                />
+                <Text variant="caption" style={styles.tabular}>{playoffLine(playoffTeams) ?? ''}</Text>
+                <Text variant="caption" tone="secondary" style={styles.tabular}>
+                  {seasonCheckCaption(shownWeeks, playoffTeams)}
+                </Text>
+              </View>
             </>
-          )}
+          ) : null}
+        </SetupCard>
+        {state.type === 'duration' ? (
+          <View style={styles.section}>
+            <RowKey>How long will your league run?</RowKey>
+            <SetupCard>
+              {DURATION_OPTIONS.map((d, i) => (
+                <View key={d.value}>
+                  {i > 0 ? <RowDivider /> : null}
+                  <ChoiceRow title={d.label} help={d.desc} selected={state.durationDays === d.value} onPress={() => patch({ durationDays: d.value })} />
+                </View>
+              ))}
+            </SetupCard>
+          </View>
+        ) : null}
+      </>
+    );
+  };
 
-          {state.draftDateTBD && (
-            <Text style={styles.tbdWarning}>
-              You'll need to set a draft date before starting the draft
-            </Text>
-          )}
+  // ── Step 3 · Draft (board: DraftSettingsScreen) ───────────────────────
+  const renderDraft = () => (
+    <>
+      <SetupCard style={styles.cardStack}>
+        <View style={styles.spread}>
+          <Text variant="headline">Pick clock</Text>
+          <Text variant="callout" style={[styles.bold, styles.tabular]}>{`${state.pickSeconds} seconds`}</Text>
         </View>
+        <SegmentedControl
+          options={PICK_SECONDS_OPTIONS.map((o) => ({ label: o.label, value: String(o.value) }))}
+          value={String(state.pickSeconds)}
+          onChange={(v) => patch({ pickSeconds: Number(v) })}
+        />
+        <Text variant="caption" tone="secondary">{pickSecondsCaption(state.pickSeconds)}</Text>
+      </SetupCard>
 
-        {/* Summary */}
-        <Card style={styles.summaryCardOuter}>
-          <Text style={styles.summaryTitle}>League Summary</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Name</Text>
-            <Text style={styles.summaryValue}>{state.name}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Type</Text>
-            <Text style={styles.summaryValue}>{state.type === 'matchup' ? 'Matchup' : 'Duration'}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Teams</Text>
-            <Text style={styles.summaryValue}>{state.size}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Stakes</Text>
-            <Text style={styles.summaryValue}>
-              {state.stakeMode === 'fixed_notional' && `Equal • $${(parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT).toLocaleString()}/slot`}
-              {state.stakeMode === 'price_tiers' && `Price tiers • ${state.slots.length} slot${state.slots.length === 1 ? '' : 's'}`}
-              {state.stakeMode === 'budget_cap' && `Cap • $${(parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP).toLocaleString()}`}
-            </Text>
-          </View>
-          <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.summaryLabel}>Draft</Text>
-            <Text style={[styles.summaryValue, state.draftDateTBD && { color: Colors.warning }]}>
-              {state.draftDateTBD ? 'TBD' : state.draftDate?.toLocaleDateString() || 'TBD'}
-            </Text>
-          </View>
-        </Card>
-      </ScrollView>
+      <SetupCard>
+        <SettingRow
+          label="Draft time"
+          value={draftDateValue}
+          valueColor={state.draftDateTBD ? colors.warnText : undefined}
+          onPress={() => {
+            // Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).
+            setDateError(null);
+            setShowDatePicker(true);
+          }}
+        />
+        <RowDivider />
+        <View style={styles.block}>
+          <RowKey>Draft order</RowKey>
+          <SegmentedControl
+            options={DRAFT_ORDER_OPTIONS}
+            value={state.draftOrder}
+            onChange={(v) => patch({ draftOrder: v as DraftOrderMode })}
+          />
+          <Text variant="caption" tone="secondary">{draftOrderCaption(state.draftOrder)}</Text>
+        </View>
+        <RowDivider />
+        <View style={styles.block}>
+          <Stepper
+            label="Rounds"
+            sub="One per roster slot"
+            value={state.numRounds}
+            onStep={(d) => patch({ numRounds: stepWithin(state.numRounds, d, CREATE_ROUNDS_BOUNDS.min, CREATE_ROUNDS_BOUNDS.max) })}
+            canDecrement={state.numRounds > CREATE_ROUNDS_BOUNDS.min}
+            canIncrement={state.numRounds < CREATE_ROUNDS_BOUNDS.max}
+          />
+        </View>
+        <RowDivider />
+        <View style={styles.block}>
+          <RowKey>If time runs out</RowKey>
+          <Text variant="caption" tone="secondary">{IF_TIME_RUNS_OUT_COPY}</Text>
+        </View>
+      </SetupCard>
 
-      <Button
-        title="Create League"
-        onPress={goNext}
-        variant="success"
-        loading={creating}
-        style={styles.nextButton}
+      {dateError ? (
+        <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+          {dateError}
+        </Text>
+      ) : null}
+      {state.draftDateTBD ? (
+        <Text variant="caption" tone="secondary">
+          {DRAFT_DATE_LATER}
+        </Text>
+      ) : null}
+
+      <DraftDateSheet
+        visible={showDatePicker}
+        initial={state.draftDate}
+        onConfirm={(d) => patch({ draftDate: d, draftDateTBD: false })}
+        onSetLater={() => {
+          patch({ draftDateTBD: true, draftDate: null });
+          setDateError(null);
+        }}
+        onClose={() => setShowDatePicker(false)}
       />
-    </View>
+    </>
+  );
+
+  // ── Step 4 · Stakes (no frame: composed) ──────────────────────────────
+  const renderStakes = () => (
+    <>
+      <SetupCard>
+        {STAKE_MODE_OPTIONS.map((opt, i) => (
+          <View key={opt.value}>
+            {i > 0 ? <RowDivider /> : null}
+            <ChoiceRow title={opt.label} help={opt.help} selected={state.stakeMode === opt.value} onPress={() => patch({ stakeMode: opt.value })} />
+          </View>
+        ))}
+      </SetupCard>
+
+      {state.stakeMode === 'fixed_notional' ? (
+        <Field
+          label="Stake per slot ($)"
+          value={state.notionalPerSlot}
+          onChangeText={(text) => patch({ notionalPerSlot: text.replace(/[^0-9]/g, '') })}
+          keyboardType="numeric"
+          placeholder={String(DEFAULT_NOTIONAL_PER_SLOT)}
+          helper="Each pick simulates this dollar amount (fractional shares)."
+        />
+      ) : null}
+
+      {state.stakeMode === 'budget_cap' ? (
+        <View style={styles.section}>
+          <Field
+            label="Budget cap ($)"
+            value={state.budgetCap}
+            onChangeText={(text) => patch({ budgetCap: text.replace(/[^0-9]/g, '') })}
+            keyboardType="numeric"
+            placeholder={String(DEFAULT_BUDGET_CAP)}
+          />
+          <RowWrap>
+            {BUDGET_PRESETS.map((amount) => (
+              <Chip
+                key={amount}
+                label={`$${parseInt(amount).toLocaleString()}`}
+                selected={state.budgetCap === amount}
+                onPress={() => patch({ budgetCap: amount })}
+              />
+            ))}
+          </RowWrap>
+        </View>
+      ) : null}
+
+      <SetupCard>
+        <SwitchRow
+          label="Allow non-draftable stocks (full universe)"
+          sub="Off (default): only vetted draftable stocks. On: the entire universe, including penny stocks and micro-caps."
+          value={state.allowUndraftable}
+          onValueChange={(value) => patch({ allowUndraftable: value })}
+        />
+      </SetupCard>
+
+      {state.stakeMode === 'price_tiers' ? (
+        <View style={styles.section}>
+          <Text variant="headline" accessibilityRole="header">Roster slots</Text>
+          <Text variant="caption" tone="secondary">
+            {rosterSlotsCaption('price_tiers')}
+          </Text>
+          {state.slots.length === 0 ? (
+            <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">
+              {PRICE_TIERS_NEED_A_SLOT}
+            </Text>
+          ) : null}
+          <SlotBuilder
+            slots={state.slots}
+            onChange={(slots) => patch({ slots })}
+            categories={categories}
+            leagueSize={state.size}
+            numRounds={state.numRounds}
+          />
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <Text variant="headline" accessibilityRole="header">League summary</Text>
+        <SetupCard>
+          <SettingRow label="Name" value={state.name} />
+          <RowDivider />
+          <SettingRow label="Type" value={state.type === 'matchup' ? 'Matchup' : 'Duration'} />
+          <RowDivider />
+          <SettingRow label="Teams" value={String(state.size)} />
+          <RowDivider />
+          <SettingRow
+            label="Stakes"
+            // The shared stakes line (Design Lead: one line across Join and this
+            // summary), with the amounts the insert writes.
+            value={stakesLine(state.stakeMode, {
+              notionalPerSlot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
+              budgetAmount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
+            })}
+          />
+          <RowDivider />
+          <SettingRow
+            label="Draft"
+            value={state.draftDateTBD ? 'TBD' : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'TBD'}
+            valueColor={state.draftDateTBD ? colors.warnText : undefined}
+          />
+        </SetupCard>
+      </View>
+    </>
   );
 
   const renderStep = () => {
     switch (step) {
-      case 'welcome': return renderWelcome();
-      case 'name': return renderName();
-      case 'type': return renderType();
-      case 'size': return renderSize();
-      case 'stake': return renderStake();
-      case 'slots': return renderSlots();
-      case 'duration': return renderDuration();
-      case 'matchup': return renderMatchup();
+      case 'league': return renderLeague();
+      case 'season': return renderSeason();
       case 'draft': return renderDraft();
+      case 'stakes': return renderStakes();
       default: return null;
     }
   };
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Header - shown on all screens */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={step === 'welcome' ? handleClose : goBack}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="chevron-back" size={28} color={Colors.textMuted} />
-        </TouchableOpacity>
-        {step !== 'welcome' && (
-          <Text style={styles.headerTitle}>
-            {step === 'name' && 'Name your league'}
-            {step === 'type' && 'League Type'}
-            {step === 'size' && 'League Size'}
-            {step === 'stake' && 'Stakes'}
-            {step === 'slots' && 'Roster Slots'}
-            {step === 'duration' && 'Duration'}
-            {step === 'matchup' && 'Season Settings'}
-            {step === 'draft' && 'Draft Settings'}
-          </Text>
-        )}
-        <View style={styles.headerSpacer} />
-      </View>
+  if (created) {
+    const share = async () => {
+      try {
+        await Share.share({ message: inviteShareMessage(created.inviteCode) });
+      } catch {
+        // A dismissed share sheet is not an error.
+      }
+    };
+    return (
+      <SetupScaffold
+        title={createdTitle(created.name)}
+        subtitle={CREATED_LINE}
+        footer={<Button label={GO_TO_LEAGUE} onPress={() => router.replace('/(tabs)/league')} />}
+      >
+        {/* The pre-draft Home invite-code card (board). */}
+        <SetupCard style={styles.codeCard}>
+          <View style={styles.grow}>
+            <Text variant="caption" tone="secondary">{INVITE_CODE_LABEL}</Text>
+            <Text variant="title" style={styles.code} selectable>{created.inviteCode}</Text>
+          </View>
+          <Button label="Share" variant="secondary" size="sm" onPress={() => void share()} />
+        </SetupCard>
+        {created.noDate ? (
+          <Text variant="body" tone="secondary">{CREATED_NO_DATE}</Text>
+        ) : null}
+      </SetupScaffold>
+    );
+  }
 
+  const last = step === 'stakes';
+  const blocked =
+    (step === 'league' && !state.name.trim()) ||
+    (last && stakesStepError(state.stakeMode, state.slots.length, slotErrors) !== null);
+
+  return (
+    <SetupScaffold
+      // G-13: step 1's Cancel closes the modal (text only, as G-7); later steps go Back (chevron).
+      back={{ label: step === 'league' ? 'Cancel' : 'Back', onPress: goBack, modal: step === 'league' }}
+      step={{ number: stepNumber(step), total: CREATE_STEPS.length }}
+      title={CREATE_STEP_COPY[step].title}
+      subtitle={CREATE_STEP_COPY[step].subtitle}
+      footer={
+        <Button
+          label={last ? 'Create league' : 'Next'}
+          onPress={goNext}
+          disabled={blocked}
+          status={creating ? 'loading' : 'idle'}
+        />
+      }
+    >
       {renderStep()}
-    </View>
+    </SetupScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  section: {
+    gap: space[3],
   },
-
-  // Header
-  header: {
+  cardStack: {
+    paddingVertical: space[5],
+    gap: space[5],
+  },
+  tight: {
+    gap: space[2],
+  },
+  block: {
+    paddingVertical: space[4],
+    gap: space[3],
+  },
+  spread: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    minHeight: 52,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-
-  // Welcome screen
-  welcomeContainer: {
-    flex: 1,
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: space[2],
   },
-  heroSection: {
-    flex: 1,
-    justifyContent: 'center',
+  bold: {
+    fontFamily: typeFontFamily.bold,
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
+  },
+  codeCard: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    gap: space[4],
+    paddingVertical: space[5],
   },
-  heroIcon: {
-    fontSize: 80,
-    fontFamily: 'Inter_400Regular',
-    marginBottom: 16,
+  grow: {
+    flexGrow: 1,
+    flexShrink: 1,
+    gap: space[1],
   },
-  heroTitle: {
-    fontSize: 28,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
+  code: {
+    fontVariant: ['tabular-nums'],
     letterSpacing: 2,
-  },
-  heroTitleBold: {
-    fontSize: 36,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  welcomeButtons: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    gap: 12,
-  },
-  welcomePrimaryButton: {
-    borderRadius: 30,
-  },
-  welcomeSecondaryButton: {
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: ACCENT,
-  },
-
-  // Step container
-  stepContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  stepContent: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  stepSubtitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginBottom: 24,
-  },
-
-  // Text input (name step)
-  inputContainer: {
-    marginTop: 8,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: ACCENT,
-    marginBottom: 8,
-  },
-  textInput: {
-    fontSize: 18,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-    paddingVertical: 12,
-  },
-  inputUnderline: {
-    height: 2,
-    backgroundColor: ACCENT,
-    marginBottom: 12,
-  },
-  inputHint: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-
-  // Type cards
-  cardGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  typeCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  typeCardSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  typeCardIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  typeCardTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  typeCardTitleSelected: {
-    color: ACCENT,
-  },
-  typeCardDesc: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 16,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -1,
-    left: -1,
-    backgroundColor: ACCENT,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderTopLeftRadius: 14,
-    borderBottomRightRadius: 8,
-  },
-  popularBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
-
-  // Size grid
-  sizeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'center',
-  },
-  sizeButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: Colors.cardBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  sizeButtonSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  sizeButtonText: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-  },
-  sizeButtonTextSelected: {
-    color: ACCENT,
-  },
-
-  // Budget
-  cardRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  budgetCard: {
-    flex: 1,
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  budgetCardSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  budgetCardTitle: {
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  budgetCardTitleSelected: {
-    color: ACCENT,
-  },
-  amountSection: {
-    marginTop: 8,
-  },
-  amountLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: ACCENT,
-    marginBottom: 12,
-  },
-  amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  currencySymbol: {
-    fontSize: 24,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textMuted,
-    marginRight: 4,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 24,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-    paddingVertical: 16,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-  },
-  presetButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.cardBg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  presetButtonSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  presetButtonText: {
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textMuted,
-  },
-  presetButtonTextSelected: {
-    color: ACCENT,
-  },
-
-  // Duration list
-  durationList: {
-    gap: 12,
-  },
-  durationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  durationItemSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  durationLabel: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-  },
-  durationLabelSelected: {
-    color: ACCENT,
-  },
-  durationDesc: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: 2,
-  },
-
-  // Settings (matchup/draft)
-  settingSection: {
-    marginBottom: 28,
-  },
-  settingLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
-    marginBottom: 12,
-  },
-  settingHint: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 16,
-    padding: 12,
-  },
-  stepperBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    alignItems: 'center',
-    marginHorizontal: 32,
-    minWidth: 60,
-  },
-  stepperValueText: {
-    fontSize: 32,
-    fontFamily: 'Inter_700Bold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-  stepperValueLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textMuted,
-  },
-  // Date picker
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  dateButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textPrimary,
-  },
-  dateButtonPlaceholder: {
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textDark,
-  },
-  datePickerDone: {
-    alignItems: 'flex-end',
-    paddingVertical: 8,
-  },
-  datePickerDoneText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: ACCENT,
-  },
-
-  // Summary
-  summaryCardOuter: {
-    marginTop: 8,
-  },
-  summaryTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.textPrimary,
-    marginBottom: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    fontVariant: ['tabular-nums'],
-    color: Colors.textPrimary,
-  },
-
-  // Next button
-  nextButton: {
-    marginHorizontal: 24,
-    marginBottom: 24,
-    borderRadius: 30,
-  },
-
-  // TBD options
-  tbdOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBg,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  tbdOptionSelected: {
-    backgroundColor: ACCENT_BG,
-    borderColor: ACCENT,
-  },
-  tbdRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tbdRadioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ACCENT,
-  },
-  tbdText: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-  },
-  tbdTextSelected: {
-    color: Colors.textPrimary,
-  },
-  tbdWarning: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.warning,
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  // Phase 4 stake-mode cards
-  stakeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    marginBottom: 10,
-  },
-  stakeCardBody: { flex: 1 },
-  stakeCardHelp: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    color: Colors.textMuted,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  undraftableSection: {
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  undraftableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  undraftableLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    color: Colors.textPrimary,
   },
 });

@@ -6,13 +6,26 @@ import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
-import type { MarketCalendarSession } from './time/marketWeek';
+import type { ShellFixture } from './shell/devFixture';
+import { SEAM_ON } from './game/devSeam';
+import { pickLeagueFixture } from './game/devSeamGate';
+
+// The shell fixture, or the board's leagues under the capture seam (3c). Narrowest point:
+// only this fetch branch reads it, and the seam is off outside a dev build.
+const LEAGUE_FIXTURE = pickLeagueFixture<ShellFixture>(SHELL_FIXTURE, SEAM_ON, 'leagues');
+import { standardWeekSessions, type MarketCalendarSession } from './time/marketWeek';
 
 export interface League {
   id: string;
   name: string;
   invite_code: string;
   commissioner_id: string;
+  /** Run it back (PR #94): the season this league renews, or null. Optional until the backend is live. */
+  previous_league_id?: string | null;
+  /** The renewed season's id, once Season 2 exists (optional until the backend is live). */
+  successor_league_id?: string | null;
+  /** The draft order mode (random | manual | legacy); optional in this type. */
+  draft_order_mode?: string | null;
   draft_status: 'not_started' | 'in_progress' | 'completed';
   draft_date: string | null;
   // Written by finalize_league_draft at draft completion, alongside the
@@ -262,24 +275,30 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(true);
 
-    if (SHELL_FIXTURE) {
+    if (LEAGUE_FIXTURE) {
       // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
       // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
       await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
-      const fixture = fixtureLeagues(SHELL_FIXTURE);
+      const fixture = fixtureLeagues(LEAGUE_FIXTURE);
       const stored = await readStoredActiveLeague(userId);
       setLeagues(fixture.leagues);
       setSheetLeagues(fixture.sheet);
+      // A normal Mon–Fri calendar for this week and the next two, so fixture captures
+      // resolve week starts the real way (resolveWeekWindow), never the nominal time.
+      setMarketCalendar([0, 7, 14].flatMap((d) => standardWeekSessions(new Date(Date.now() + d * 86_400_000).toISOString())));
       const resolved = resolveActiveLeagueId(activeRef.current ?? stored, fixture.sheet);
       if (resolved !== activeRef.current) setActiveLeagueId(resolved);
       setLoading(false);
       return;
     }
 
+    // A finished league you left is hidden (league_members.hidden_at, #126): it
+    // comes off Home and Your leagues; its History stays readable to you.
     const { data: memberships, error: memberError } = await supabase
       .from('league_members')
       .select('league_id')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('hidden_at', null);
 
     if (memberError || !memberships || memberships.length === 0) {
       setLeagues([]);

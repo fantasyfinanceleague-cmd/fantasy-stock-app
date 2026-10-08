@@ -36,11 +36,24 @@ export function draftDateTimeLabel(iso: string | null): string | null {
   return `${datePart} · ${timePart} ET`; // board
 }
 
-/** "Draft order set Sat 6:00 PM ET, an hour before the draft" (board) from
- * DraftOrderInfo.finalizeAt -- draft_date minus 1h, when the order takes
- * effect. Null (order-set time unknown) omits the whole line -- the
- * caller shows OrderWaiting instead in that case. */
+/** "The draft room opens Sat 6:00 PM ET, when the order is set." (board,
+ * Home's draft card, PR #135; it matches the lobby's line) from
+ * DraftOrderInfo.finalizeAt -- draft_date minus 1h, when the room opens and
+ * the order takes effect. Home shows it BEFORE the room opens. Null
+ * (order-set time unknown) omits the whole line -- the caller shows
+ * OrderWaiting instead in that case. */
 export function orderSetLine(finalizeAtIso: string | null): string | null {
+  if (!finalizeAtIso) return null;
+  const d = new Date(finalizeAtIso);
+  if (Number.isNaN(d.getTime())) return null;
+  const formatted = new Intl.DateTimeFormat('en-US', ET_WEEKDAY_TIME).format(d);
+  return `The draft room opens ${formatted} ET, when the order is set.`; // board
+}
+
+/** "Draft order set Sat 6:00 PM ET, an hour before the draft" (the board's
+ * earlier wording), for the lobby's revealed-order card, which shows AFTER the
+ * order is set: orderSetLine's future tense would be wrong there. */
+export function orderWasSetLine(finalizeAtIso: string | null): string | null {
   if (!finalizeAtIso) return null;
   const d = new Date(finalizeAtIso);
   if (Number.isNaN(d.getTime())) return null;

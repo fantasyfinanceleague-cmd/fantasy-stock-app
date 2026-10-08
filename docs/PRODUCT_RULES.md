@@ -65,6 +65,11 @@ building anything, and don't reopen a rule without him.
 - **Appearance:** System / Light / Dark. One layout and component set with two complete
   themes; no screen mixes them.
 
+- **League › Schedule** (2026-10-05, option A, "keep it"; 3c-D4): the League tab keeps the
+  full season schedule, every week in order: past weeks with your result and score, this
+  week "● Live", next week "vs {name} · Next", then a closing playoffs line ("Then the
+  playoffs: 4 teams · 2 weeks of playoffs · no byes."). Not dropped to Standings + History.
+
 ## Draft
 
 - **"A draft pick CAN NEVER be unused."** A missed turn is always auto-picked. There's no

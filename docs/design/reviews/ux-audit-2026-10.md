@@ -751,3 +751,39 @@ frames and the code.
 **M3–M5 and 1.2.0:** none of them blocks the cut on the UX rules. The trade's ending exists (rule 11).
 I recommend M3 (C-6) before the cut, because Home already rolls money and Portfolio not doing so is an
 inconsistency on the same numbers. M4 is 1.3. M5 needs only evidence.
+
+---
+
+## Final checks, 2026-10-07
+
+### 3c-2 · PASS, DESIGN-APPROVED `ui/mobile-league-setup` @ `c3abe630`
+
+B-1 (the two pairs pinned in `contrastPairs.ts`, equal to the board's rows, PR #163), B-2 (the flash's text colour now changes on the UI thread in the fill's own frame: navy at or past half gold, the rest colours from the frame the fill crosses 0.5) and B-4 (no empty clock row above "Auto-picking…") are fixed, seen in the re-captured flash strips. The `sp/Text` `animatedStyle` prop is opt-in and needed no separate review. Open on this branch: G-9 and G-15 only (deferred).
+
+### 3e · BLOCK, narrowly, on X-1 (`ui/mobile-money` @ `3ae91a2`)
+
+Fixed: C-1 (quiet while a trade review is open), C-2 (ownership on its own line, "You own this" in `youText`; code, no new capture), C-3 (the review-sell capture was mid-transition; the re-capture is padded), C-4 ("Your position": shares, avg entry, value, gain, and the draft line), C-5 (Try again on no-price / invalid-price; code), C-6 (Portfolio rolls its money like Home), C-9 (the Buy a stock row's tile and accent title, the page-title size, × to close), C-10 (Portfolio re-captured with the row). Accepted: C-8 (the M5 recording) moves to Giorgio's device walkthrough (synthetic taps stopped registering in the simulator session); M4 → 1.3.
+
+| ID | What | P | Fix |
+|---|---|---|---|
+| X-1 | At XL text, Portfolio's value is clipped at the right edge: the stress value reads "$14,446,031.9" (`portfolio-buyrow-xl-light.png`). `RollingMoney` draws one Text per character, so the line can't shrink to fit the way a single Text would. A hidden digit on the big number is a P0 by the plan's definition. Values of $1,000,000 and more are part of the required stress fixture. | **P0** | Fit the row to its container: measure it, and scale the digits down to fit (a minimum of about 0.7) while staying on one line. Re-capture Portfolio at XL with the stress value, and Home's hero at XL with a value of $1,000,000 or more (same component). |
+
+Nothing else is open on 3e for the 1.2.0 cut. M4 is 1.3, and the M5 recording is on the walkthrough.
+
+### 3e · X-1 re-check · PASS, DESIGN-APPROVED `ui/mobile-money` @ `33ea1c09`
+
+X-1 is fixed (PR #167, `fix/rolling-money-fit`, also on main's Home): `RollingMoney` measures the
+container against its natural width and scales by clamp(…, 0.7, 1), anchored by an `align` prop.
+Portfolio at XL shows "$14,446,031.99" in full; Home's hero at XL shows "$1,234,567.80" in full. At
+the scale it lands on (≈0.85 for the 14-character stress value) the value is still the largest and
+heaviest thing on screen, so it reads as the hero; 0.7 is a floor no realistic value reaches. The
+same stress case found a second defect, now fixed: Home's this-week scores overlapped at $1M and
+more (`ScoreDigits` cells had `flex: 1` without `minWidth: 0`). They now split 50/50 with the
+opponent's score against the right edge, and read as a pair in Light and Dark at XL and at standard
+text. C-2 is confirmed on screen: the owner on its own line, untruncated, and "You own this" in
+`youText`.
+
+Evidence note: `home-hero-million-xl-light.png` (12:46) was taken before the scoreboard fix and
+still shows the overlap. Rename it `-before` or replace it, so the record shows the fixed state.
+Nothing else is open on 3e for the 1.2.0 cut. M4 is in 1.3, and the M5 recording is on Giorgio's
+walkthrough.

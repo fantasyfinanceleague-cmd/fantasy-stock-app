@@ -18,7 +18,11 @@ import { StandingsCard, type StandingRow } from '@/components/home/StandingsCard
 import { PreDraftCard } from '@/components/home/PreDraftCard';
 import { DraftingCard } from '@/components/home/DraftingCard';
 import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
+import { RunItBackCard } from '@/components/home/RunItBackCard';
+import { HomeRenewalAsk } from '@/components/game/HomeRenewalAsk';
+import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
+import { HomeSkeleton } from '@/components/game/LoadingSkeletons';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
 import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
@@ -94,9 +98,9 @@ function HomeBody({
     );
   }
   if (status === 'loading' || !viewModel) {
-    // A skeleton card is a later polish item; an empty body while loading
-    // is honest and never fabricates numbers.
-    return null;
+    // UX rule 9 (3c-2): the shape of Home while it loads, placeholders only,
+    // never numbers.
+    return <HomeSkeleton />;
   }
 
   const { phase, hero, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;
@@ -104,14 +108,18 @@ function HomeBody({
   // States 6/7: no money views at all — the draft's own cards.
   if (phase.kind === 'pre_draft') {
     return league ? (
-      <PreDraftCard
-        leagueId={leagueId!}
-        inviteCode={league.invite_code}
-        pickSeconds={league.pick_seconds}
-        numRounds={league.num_rounds}
-        draftDate={league.draft_date}
-        numParticipants={league.num_participants}
-      />
+      <>
+        {/* R4: the commissioner of a renewed league sees the counts while replies come in. */}
+        {league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard successorId={leagueId!} /> : null}
+        <PreDraftCard
+          leagueId={leagueId!}
+          inviteCode={league.invite_code}
+          pickSeconds={league.pick_seconds}
+          numRounds={league.num_rounds}
+          draftDate={league.draft_date}
+          numParticipants={league.num_participants}
+        />
+      </>
     ) : null;
   }
   if (phase.kind === 'drafting') {
@@ -123,6 +131,7 @@ function HomeBody({
   if (phase.kind === 'complete') {
     const myStanding = standings.find((s) => s.user_id === myUserId);
     return (
+      <>
       <SeasonCompleteCard
         leagueId={leagueId!}
         leagueName={league?.name ?? 'your league'}
@@ -138,6 +147,16 @@ function HomeBody({
         // two-fixture-axis gap as SeasonCard's numWeeks below).
         numWeeks={phase.numWeeks}
       />
+      {league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
+      {/* Board #run-it-back frame 1: members are asked on Home too, until they answer. */}
+      {league?.successor_league_id && league.commissioner_id !== myUserId ? (
+        <HomeRenewalAsk
+          successorId={league.successor_league_id}
+          isCommissioner={false}
+          commissionerName={standings.find((s) => s.user_id === league.commissioner_id)?.display_name || 'Your commissioner'}
+        />
+      ) : null}
+    </>
     );
   }
 

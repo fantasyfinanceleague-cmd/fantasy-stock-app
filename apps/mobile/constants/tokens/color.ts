@@ -53,6 +53,8 @@ export interface ThemeColors {
   live: string;
   liveText: string;
   liveGlow: string;
+  /** Text on a `live` gold fill (the your-turn flash). Navy in both themes (Design Lead, 2026-10-06). */
+  onLive: string;
   gain: string;
   loss: string;
   /** Money flat — never green, never red (§9A, unchanged rule from §9). */
@@ -62,6 +64,12 @@ export interface ThemeColors {
   danger: string;
   lossFill: string;
   warnTint: string;
+  /* Medals (§9A, season complete only): a filled disc with the rank numeral.
+     Never medal-coloured text. */
+  medalGold: string;
+  medalSilver: string;
+  medalBronze: string;
+  onMedal: string;
   warnLine: string;
   warnText: string;
   primaryBg: string;
@@ -105,6 +113,7 @@ const light: ThemeColors = {
   live: '#C07E00',
   liveText: '#8A5B00',
   liveGlow: 'rgba(192, 126, 0, 0.35)',
+  onLive: '#0D1B2E',
   gain: '#12803F',
   loss: '#C8303A',
   zero: '#5B6678',
@@ -113,6 +122,10 @@ const light: ThemeColors = {
   danger: '#B42318',
   lossFill: '#C8303A',
   warnTint: '#FFF6DE',
+  medalGold: '#B07A00',
+  medalSilver: '#7C8898',
+  medalBronze: '#C27036',
+  onMedal: '#1A1407',
   warnLine: '#F5D48A',
   warnText: '#7A4B00',
   primaryBg: '#0D1B2E',
@@ -153,6 +166,7 @@ const dark: ThemeColors = {
   live: '#FFC53D',
   liveText: '#FFC53D',
   liveGlow: 'rgba(255, 197, 61, 0.45)',
+  onLive: '#0D1B2E',
   gain: '#4ADE8B',
   loss: '#FF7A7A',
   zero: '#9AAAC4',
@@ -161,6 +175,10 @@ const dark: ThemeColors = {
   danger: '#FF8A80',
   lossFill: '#D93A44',
   warnTint: 'rgba(255, 197, 61, 0.1)',
+  medalGold: '#E8AF2E',
+  medalSilver: '#B9C3CF',
+  medalBronze: '#DC8A55',
+  onMedal: '#0D1B2E',
   warnLine: 'rgba(255, 197, 61, 0.35)',
   warnText: '#FFC53D',
   primaryBg: '#FFFFFF',

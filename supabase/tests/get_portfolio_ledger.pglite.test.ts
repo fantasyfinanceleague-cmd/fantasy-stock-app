@@ -1,6 +1,7 @@
 /**
- * get_portfolio_ledger (20261031000000 -- provisional timestamp) against REAL
- * Postgres (PGlite = Postgres 16 in WASM). NOT hermetic: the first run fetches
+ * get_portfolio_ledger (20261113000000 -- see the migration's own header
+ * for the provisional-timestamp note) against REAL Postgres (PGlite =
+ * Postgres 16 in WASM). NOT hermetic: the first run fetches
  * npm:@electric-sql/pglite. Run instructions: supabase/tests/README.md.
  *
  * Loads VERBATIM (never retyped): the migration under test; its dependencies
@@ -147,7 +148,7 @@ Deno.test({
     await db.exec(RLS);
     await db.exec(await mig('20261004000000_participant_display_names.sql'));
     await db.exec(await mig('20261005000000_league_activity_view.sql'));
-    await db.exec(await mig('20261031000000_get_portfolio_ledger.sql'));
+    await db.exec(await mig('20261113000000_get_portfolio_ledger.sql'));
 
     const MEMBER   = '00000000-0000-4000-8000-000000000001';
     const OPP      = '00000000-0000-4000-8000-000000000002';
