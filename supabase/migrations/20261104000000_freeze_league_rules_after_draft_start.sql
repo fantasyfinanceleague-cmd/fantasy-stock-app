@@ -160,13 +160,14 @@
 --   sets NEW.num_participants on the start UPDATE; that UPDATE's OLD is
 --   'not_started', so this freeze allows it (and it sorts after
 --   trg_leagues_freeze_rules anyway). Checked against #94 @ f450e78
---   (migrations 20261105000000-09, after this one): respond_to_renewal's
+--   (migrations 20261115000000-09, after this one): respond_to_renewal's
 --   self-leave DELETE and cancel_league_renewal's league DELETE act only on
 --   'not_started' leagues (allowed; the cascade is allowed regardless);
 --   trg_league_members_renewal_sync_delete is AFTER DELETE and returns early
 --   when the league is gone; trg_league_members_renewal_guard is INSERT-only;
---   trg_leagues_lineage_columns guards #94's three new leagues columns, which
---   #94 must add to the classification (test + effect block) when it rebases.
+--   trg_leagues_lineage_columns guards #94's three new leagues columns; #94
+--   added them to the classification (test + effect block) on the rebase that
+--   re-stamped these migrations to 20261115000000-08 (#94 @ 8ab10ac onward).
 --   If any of them ever writes a started league, it must do so on a
 --   service-role path.
 --

@@ -22,7 +22,7 @@
 -- anon and service_role, then granted to authenticated only. Refusals of game
 -- state return {"status":"refused","reason":...}; identity failures raise 42501.
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -174,13 +174,17 @@ begin
   insert into public.league_renewal_responses (league_id, user_id, status, decided_by, responded_at)
   values (v_new_id, v_caller, 'in', 'player', now());
 
+  -- hidden_at (#126, leave-league): a player who left the finished Season 1
+  -- league is hidden, not invited back.
   select count(*)::int into v_invited_expected
     from public.league_members m
-   where m.league_id = v_old.id and m.user_id <> v_caller and m.user_id not like 'bot-%';
+   where m.league_id = v_old.id and m.user_id <> v_caller and m.user_id not like 'bot-%'
+     and m.hidden_at is null;
   insert into public.league_renewal_responses (league_id, user_id, status)
   select v_new_id, m.user_id, 'pending'
     from public.league_members m
-   where m.league_id = v_old.id and m.user_id <> v_caller and m.user_id not like 'bot-%';
+   where m.league_id = v_old.id and m.user_id <> v_caller and m.user_id not like 'bot-%'
+     and m.hidden_at is null;
   get diagnostics v_invited = row_count;
   if v_invited <> v_invited_expected then
     raise exception 'renewal_copy_mismatch: invitations % of %', v_invited, v_invited_expected using errcode = 'P0001';
@@ -807,7 +811,7 @@ begin
   if v_l.draft_order_mode <> 'manual' then
     return jsonb_build_object('ok', false, 'reason', 'not_manual');
   end if;
-  -- Run it back (20261105000002): no manual order while a renewal reply is pending.
+  -- Run it back (20261115000002): no manual order while a renewal reply is pending.
   if exists (select 1 from public.league_renewal_responses
               where league_id = p_league_id and status = 'pending') then
     return jsonb_build_object('ok', false, 'reason', 'renewal_replies_pending');

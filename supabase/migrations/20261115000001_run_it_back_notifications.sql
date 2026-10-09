@@ -6,7 +6,7 @@
 -- is about) and a detail snapshot. The detail is written at event time, so a
 -- later push shows what the event said, not the live state.
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
 --
 -- POST-PUSH EFFECT CHECKS:
 --   SELECT pg_get_constraintdef(oid) FROM pg_constraint

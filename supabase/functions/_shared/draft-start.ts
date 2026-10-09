@@ -48,6 +48,11 @@ export function toStartState(
   league: LeagueRow,
   memberCount: number,
   rosterReconfirm: RosterReconfirm | null = null,
+  // Run it back (20261115000002): invitees who have not answered yet. Threaded
+  // through here so the auto-start cron's own blocker evaluation sees it too,
+  // not just draft-control's interactive 'start' (the DB gate is the backstop
+  // either way: trg_leagues_renewal_gate fires on the UPDATE regardless of caller).
+  renewalRepliesPending = 0,
 ): LeagueStartState {
   return {
     commissionerId: String(league.commissioner_id ?? ''),
@@ -59,6 +64,7 @@ export function toStartState(
     leagueType: league.league_type ?? null,
     playoffTeams: league.playoff_teams == null ? null : Number(league.playoff_teams),
     rosterReconfirm,
+    renewalRepliesPending,
   };
 }
 
@@ -170,6 +176,7 @@ export interface StartInputs {
   postponed: boolean;
   slots: Slot[] | null;
   state: LeagueStartState;
+  renewalRepliesPending: number;
 }
 
 /** Read everything one decision needs. Any failed read is an error (never a
@@ -191,8 +198,16 @@ export async function loadStartInputs(
   const { data: pp, error: ppErr } = await admin
     .from('draft_postponements').select('league_id').eq('league_id', leagueId).maybeSingle();
   if (ppErr) return { ok: false, reason: 'postponement_read_failed' };
+  // Run it back: a failed read fails closed (never "nothing pending").
+  const { count: pendingCount, error: pendErr } = await admin
+    .from('league_renewal_responses')
+    .select('user_id', { count: 'exact', head: true })
+    .eq('league_id', leagueId)
+    .eq('status', 'pending');
+  if (pendErr) return { ok: false, reason: 'renewal_pending_read_failed' };
   const memberCount = (members ?? []).length;
   const reconfirm = toRosterReconfirm(rc);
+  const renewalRepliesPending = pendingCount ?? 0;
   return {
     ok: true,
     inputs: {
@@ -201,7 +216,8 @@ export async function loadStartInputs(
       reconfirm,
       postponed: !!pp,
       slots: await loadSavedSlots(admin, leagueId),
-      state: toStartState(league, memberCount, reconfirm),
+      state: toStartState(league, memberCount, reconfirm, renewalRepliesPending),
+      renewalRepliesPending,
     },
   };
 }

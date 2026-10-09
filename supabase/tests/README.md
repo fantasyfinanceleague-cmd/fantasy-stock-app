@@ -561,7 +561,7 @@ explicit `auth.uid() IS NULL` exemption, which changes nothing: their commission
 (`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
 
 #94 compatibility was checked once, in a scratch copy of this suite, against
-`20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:
+`20261115000004_run_it_back_gate.sql` @ `f450e78`, all passing:
 - the renewal self-leave while `not_started` is allowed and its sync sets the reply to `out`;
 - the gate's `num_participants` rewrite on the start UPDATE is allowed (judged on OLD);
 - after the start, the freeze and the leave guard hold.
@@ -642,7 +642,7 @@ Run: `deno test --allow-read supabase/tests/migration_cli_split.test.ts` (files 
 ## run_it_back.pglite.test.ts
 
 What it does:
-- Loads the six `*_run_it_back_*.sql` migrations (20261105000000-05) **verbatim**,
+- Loads the six `*_run_it_back_*.sql` migrations (20261115000000-05) **verbatim**,
   found by suffix and applied in name order, so a re-stamp needs no edit here.
   Also loads `is_member` (20260712000000), `participant_display_name` (20261004000000)
   and the `league_notifications` table DDL (20261013000000) by slicing.

@@ -1,10 +1,10 @@
 -- ============================================================================
 -- FIXTURE: PR #94 (Run it back) membership objects, VERBATIM from
 -- origin/feat/run-it-back @ 398da84 (unmerged when leave-league was built):
---   * league_renewal_responses + its transition guard (20261105000002)
+--   * league_renewal_responses + its transition guard (20261115000002)
 --   * sync_renewal_on_member_delete + trg_league_members_renewal_sync_delete
---     (20261105000004)
--- plus the one lineage column they read (20261105000000).
+--     (20261115000004)
+-- plus the one lineage column they read (20261115000000).
 --
 -- Used ONLY by leave_league.pglite.test.ts to prove leave_league's Run-it-back
 -- branch against #94's real trigger bodies. WHEN #94 MERGES: delete this file

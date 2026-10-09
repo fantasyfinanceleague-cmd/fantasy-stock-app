@@ -8,7 +8,7 @@
 -- its lineage key is its own id: coalesce(lineage_id, id)).
 --
 -- PROVISIONAL TIMESTAMP (Orchestrator, 2026-10-04): this file is named in the
--- 20261105000000-09 range and must be RE-STAMPED to a version later than prod's
+-- 20261115000000-09 range and must be RE-STAMPED to a version later than prod's
 -- latest applied migration right before release. It is a pure rename: nothing
 -- here references its own filename.
 --

@@ -53,7 +53,7 @@ const MIGRATIONS = [
   MIGRATION_UNDER_TEST,
   // Run it back: the completed-season refusal, under the lock (CREATE OR REPLACE
   // of the 13-argument function; loaded after the function it replaces).
-  '20261105000006_record_trade_season_guard.sql',
+  '20261115000006_record_trade_season_guard.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 const SIG13 = 'uuid,uuid,text,text,numeric,numeric,numeric,uuid,uuid[],text[],jsonb,jsonb,uuid';
 const SIG12 = 'uuid,uuid,text,text,numeric,numeric,numeric,uuid,uuid[],text[],jsonb,jsonb';

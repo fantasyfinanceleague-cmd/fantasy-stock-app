@@ -22,7 +22,7 @@
 -- AFTER trg_leagues_member_update_columns (the F1 column guard). The guard
 -- therefore judges the caller's own columns, not this server-side write.
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
 --
 -- POST-PUSH EFFECT CHECKS:
 --   SELECT tgname, tgenabled FROM pg_trigger WHERE tgname = 'trg_leagues_renewal_gate';

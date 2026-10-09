@@ -39,7 +39,7 @@
 --   a manager leaves before the draft. Inserted by leave_league in the same
 --   transaction; the leave-league edge function delivers the push.
 --   CONFLICT NOTE (PR #94, Run it back, unmerged as of this file): its
---   20261105000001 rewrites this same CHECK with the renewal kinds. This CHECK
+--   20261115000001 rewrites this same CHECK with the renewal kinds. This CHECK
 --   is a SUPERSET that already includes them, so applying this file after #94
 --   keeps #94 working. If #94 is ever re-stamped to apply AFTER this file, its
 --   CHECK must add 'member_left', or every pre-draft leave fails its insert.

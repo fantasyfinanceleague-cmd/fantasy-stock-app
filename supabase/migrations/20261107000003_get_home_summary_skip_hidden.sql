@@ -14,7 +14,7 @@
 -- asserts proacl / prosecdef / proconfig are byte-identical before and after.
 --
 -- CONFLICT NOTE (PR #94, Run it back, unmerged as of this file): its
--- 20261105000005 also re-creates get_home_summary. Whichever lands SECOND must
+-- 20261115000005 also re-creates get_home_summary. Whichever lands SECOND must
 -- carry the other's change: if #94 merges first, rebase this file onto #94's
 -- body and keep this one predicate.
 --

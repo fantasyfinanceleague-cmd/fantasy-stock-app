@@ -716,7 +716,7 @@ settings screen.
   - **Not dropped yet:** `season_result.pglite.test.ts` slices the function from
     `20260718000000` to build its archived-season fixture, so it keeps working, and the function
     stays restorable if anything unexpected calls it.
-- **Later:** `DROP FUNCTION` in `20261105000008`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
+- **Later:** `DROP FUNCTION` in `20261115000008`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
   until the mobile build without the button ships (CLAUDE.md: a header comment holds nothing).
   The PGlite fixture keeps slicing the historical file, which is never rewritten. **Wrapping it
   was considered and rejected:** nothing in its body is worth keeping under B.
@@ -933,7 +933,7 @@ Week 1 scored.
 | `20261023000006` | `get_renewal_roster`, `get_league_history` | 1 |
 | `20261023000007` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
 | `20261023000008` | (b) keep teams **or** keepers, if chosen | 2 |
-| `20261105000008` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
+| `20261115000008` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
 
 If (b) picks both keep teams and keepers, request a second range.
 

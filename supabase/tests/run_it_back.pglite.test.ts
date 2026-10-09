@@ -1,5 +1,5 @@
 /**
- * Run it back phase 1 (20261105000000-05) against REAL Postgres (PGlite =
+ * Run it back phase 1 (20261115000000-05) against REAL Postgres (PGlite =
  * Postgres 16 in WASM). NOT hermetic: the first run fetches
  * npm:@electric-sql/pglite. Run instructions: supabase/tests/README.md.
  *
@@ -84,7 +84,8 @@ create table leagues (
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
   user_id text not null, role text not null default 'member'
     check (role in ('commissioner', 'member')),
-  joined_at timestamptz not null default now(), primary key (league_id, user_id));
+  joined_at timestamptz not null default now(), hidden_at timestamptz,
+  primary key (league_id, user_id));
 create table league_draft_slots (id uuid primary key default gen_random_uuid(),
   league_id uuid not null references leagues(id) on delete cascade, slot_index int not null,
   slot_count int not null default 1, price_min numeric, price_max numeric, category_id uuid,
@@ -495,6 +496,16 @@ Deno.test({
         [r3.league_id, [C, A]]), { ok: false, reason: 'renewal_replies_pending' });
     });
 
+    await t.step('hidden members (#126 leave-league) are not invited back', async () => {
+      const L10 = await completedLeague('Hidden', 'random', 4);
+      // D left the finished Season 1 league: hidden, not deleted.
+      await q(`update league_members set hidden_at = now() where league_id = $1 and user_id = $2`, [L10, D]);
+      const r10 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L10]);
+      assertEquals(r10.invited, 2);   // A and B only; D is hidden, the bot is never invited
+      assertEquals(await q(`select count(*)::int c from league_renewal_responses where league_id = $1 and user_id = $2`,
+        [r10.league_id, D]), [{ c: 0 }]);
+    });
+
     await t.step('client contract: renew leaves draft_date NULL; only start_renewed_season sets it', async () => {
       const L9 = await completedLeague('Contract', 'random', 4);
       const r9 = await refusal('authenticated', C, `select public.renew_league($1) r`, [L9]);
@@ -593,7 +604,7 @@ Deno.test({
     });
 
     await t.step('a season completion takes the trade lock after its row lock (lock order, text check)', async () => {
-      const src = await Deno.readTextFile(new URL('supabase/migrations/20261105000009_complete_league_season_trade_lock.sql', ROOT));
+      const src = await Deno.readTextFile(new URL('supabase/migrations/20261115000007_complete_league_season_trade_lock.sql', ROOT));
       const row = src.indexOf('FOR UPDATE;');
       const adv = src.indexOf("pg_advisory_xact_lock(hashtextextended('record-trade:'");
       const upd = src.indexOf("SET season_status = 'completed'");
@@ -640,12 +651,15 @@ Deno.test({
     });
 
     await t.step('get_home_summary: the lineage columns exist, and the grants are the lockdown (re-applied after DROP)', async () => {
-      const [p] = await q(`select p.proacl::text acl, pg_get_function_result(p.oid) res
+      const [p] = await q(`select p.proacl::text acl, pg_get_function_result(p.oid) res, pg_get_functiondef(p.oid) def
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and p.proname = 'get_home_summary'`);
       assert(p.res.includes('previous_league_id uuid'), p.res);
       assert(p.res.includes('successor_league_id uuid'), p.res);
       assertEquals(p.acl, '{postgres=X/postgres,authenticated=X/postgres}');
+      // 20261107000003 landed first (earlier stamp); this DROP+CREATE must not
+      // regress its hidden_at predicate.
+      assert(p.def.includes('m.hidden_at is null'), 'hidden_at predicate must carry forward from 20261107000003');
     });
 
     await t.step('the human effect test (docs/security/run-it-back-effect-test.sql) passes against this fixture', async () => {

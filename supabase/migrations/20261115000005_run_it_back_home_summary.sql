@@ -12,7 +12,12 @@
 -- DROP + CREATE resets privileges, so the grants are re-applied below (the
 -- opposite trap to CLAUDE.md's CREATE OR REPLACE note).
 --
--- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261105000000's header).
+-- CARRIES FORWARD 20261107000003's hidden_at predicate (that migration's own
+-- header anticipated this: "if #94 merges first, rebase this file onto #94's
+-- body and keep this one predicate" -- #94 is re-stamped LATER than
+-- 20261107000003, so this file is the one that must not regress it).
+--
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
 --
 -- POST-PUSH EFFECT CHECKS:
 --   SELECT proacl FROM pg_proc WHERE proname = 'get_home_summary';
@@ -72,6 +77,7 @@ begin
     select l.*
     from leagues l
     join league_members m on m.league_id = l.id and m.user_id = v_caller
+                         and m.hidden_at is null   -- 20261107000003: a hidden finished league leaves Home
   ),
   ranked_standings as (
     -- Rank source: public.league_standings_ranked (20261011000000), the one

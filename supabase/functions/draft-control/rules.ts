@@ -30,7 +30,7 @@ export interface LeagueStartState {
   draftDate: string | null; // ISO, or null = TBD
   leagueType: string | null; // leagues.league_type: 'matchup' | 'duration'
   playoffTeams: number | null; // leagues.playoff_teams, as stored (no default)
-  /** Run it back (20261105000002): how many Season 1 invitees have not answered
+  /** Run it back (20261115000002): how many Season 1 invitees have not answered
    * yet. Counted by the server (pending rows), never inferred. Optional so
    * ordinary leagues need no value; undefined means 0. */
   renewalRepliesPending?: number;
