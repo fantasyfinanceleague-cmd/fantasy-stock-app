@@ -48,7 +48,7 @@ function ByeRow({ side, mine }: { side: BracketSide; mine: boolean }) {
   return (
     <View style={[styles.row, yourRowTint(mine, colors.youTint)]} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}${youA11y(mine)}, bye`}>
       <Text variant="caption" tone="secondary" style={styles.seed}>{side.seed ?? ''}</Text>
-      <Text variant="callout">{side.name}</Text>
+      <Text variant="callout" style={styles.name}>{side.name}</Text>
       <Text variant="callout" tone="secondary" style={styles.end}>Bye</Text>
     </View>
   );
@@ -72,7 +72,7 @@ function SideRow({ side, winner, scored, mine, colors }: { side: BracketSide | n
     // Bold here means the winner, so the tint alone marks your line (board #call-manager-row).
     <View style={[styles.row, yourRowTint(mine, colors.youTint), loser ? { opacity: 0.55 } : null]} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}${youA11y(mine)}${side.gain !== null ? `, ${formatMoney(side.gain, { sign: 'always' })}` : ''}`}>
       <Text variant="caption" tone="secondary" style={styles.seed}>{side.seed ?? ''}</Text>
-      <Text variant="callout" style={isWinner ? styles.bold : null}>{side.name}</Text>
+      <Text variant="callout" style={[styles.name, isWinner ? styles.bold : null]}>{side.name}</Text>
       {side.gain !== null ? <Text variant="callout" style={styles.end}>{formatMoney(side.gain, { sign: 'always' })}</Text> : null}
     </View>
   );
@@ -85,6 +85,8 @@ const styles = StyleSheet.create({
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
   seed: { minWidth: 16, textAlign: 'right' },
-  end: { marginLeft: 'auto' },
+  // The name gives way (wraps) before the score does: at large text the score ran off the card.
+  name: { flexShrink: 1, minWidth: 0 },
+  end: { marginLeft: 'auto', flexShrink: 0 },
   bold: { fontWeight: '800' },
 });

@@ -2,30 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "ef6db602ff59cd55b75e8ed950f0bf2616017c29",
-    "commitShort": "ef6db602",
+    "commit": "e721893fa2b6a3afcc6a24ba79e5ccc5e40da8b8",
+    "commitShort": "e721893f",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/RenewalRoster.tsx"
+        "path": "apps/mobile/components/game/BracketView.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/home/RenewalCountsCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/renewal.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/run-it-back-gate.test.ts"
+        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:29Z",
+    "timestamp": "2026-10-11T05:44:31Z",
     "sourceHash": "sha256:5458cbcf185727332b1c4d2a5bc24dd77c3cd1cb43593a0c2aa606764a8c2408",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
