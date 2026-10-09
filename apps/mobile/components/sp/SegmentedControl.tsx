@@ -8,7 +8,7 @@ import { radius, space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
-import { segmentHitSlop } from './logic/segmentedHit';
+import { segmentHitSlop, segmentWidthFor } from './logic/segmentedHit';
 
 // Stockpile — <SegmentedControl> (Phase 2 foundation). Used for "All
 // matchups this week" (Matchup tab) and similar in-screen filters. The
@@ -31,7 +31,11 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
   const { colors } = useTheme();
   const { duration, easing, withTiming } = useMotion();
 
-  const [segmentWidth, setSegmentWidth] = useState(0);
+  // The track's measured width; each segment's width is derived from the CURRENT option
+  // count on every render (segmentWidthFor), so a change in the number of options moves
+  // the indicator correctly even though the track's width (and layout) didn't change.
+  const [trackWidth, setTrackWidth] = useState(0);
+  const segmentWidth = segmentWidthFor(trackWidth, TRACK_PADDING, options.length);
   const translateX = useSharedValue(0);
 
   const selectedIndex = Math.max(0, options.findIndex((o) => o.value === value));
@@ -55,8 +59,7 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
   const hit = segmentHitSlop(trackHeight);
 
   function handleLayout(event: LayoutChangeEvent) {
-    // The track's 2 pt padding is inside its measured width: each segment is the inner width.
-    setSegmentWidth((event.nativeEvent.layout.width - TRACK_PADDING * 2) / options.length);
+    setTrackWidth(event.nativeEvent.layout.width);
     setTrackHeight(event.nativeEvent.layout.height);
   }
 

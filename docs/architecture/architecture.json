@@ -2,22 +2,26 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "f5d3885e5303103c8d77cbaa2883eddc82bc4241",
-    "commitShort": "f5d3885e",
+    "commit": "f10e77ee58f200b22ba0c46cb30134a7cead60c4",
+    "commitShort": "f10e77ee",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/HistoryList.tsx"
+        "path": "apps/mobile/components/sp/logic/segmentedHit.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-card-padding.test.ts"
+        "path": "apps/mobile/components/sp/SegmentedControl.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sp-segmented-hit.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:16Z",
+    "timestamp": "2026-10-11T05:44:18Z",
     "sourceHash": "sha256:7378739950b5247283afb8f7f400d28f1c2115927e060a800989e9de6effd928",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
