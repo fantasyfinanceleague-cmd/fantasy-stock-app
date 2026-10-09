@@ -38,7 +38,7 @@ save any time").
 | 2 | Queued after-hours orders (C) | Parked as a future plan after 1.2.0; nothing in this plan precludes it | Planner chat, 2026-10-08 |
 | 3 | Search while closed | Always allowed; never gated on market hours (already true in `TradeModal` and the 3e `StockSearchScreen`; this makes it a rule) | Planner chat, 2026-10-08 |
 | 4 | A watchlist exists | Yes: save a stock from search or the stock sheet, any time; see it with price and day change; one tap to the Buy sheet | Planner chat, 2026-10-08 |
-| 5 | Where the watchlist shows and what a row says | To Giorgio as "Your call" mockups (see open question 2) | pending |
+| 5 | Where the watchlist shows and what a row says | To Giorgio as "Your call" mockups: A (Portfolio section, recommended) / B (search tab) / C (both); brief below | pending, brief sent 2026-10-08 |
 
 ## Open questions
 
@@ -145,6 +145,40 @@ the right number for a closed-market list.
 - After changing `supabase/migrations/` and the client call sites, run
   `node scripts/gen-architecture.mjs` and commit; re-capture `db-snapshot.json` after the
   grant/RLS change.
+
+### Mockup brief for the board (W1): "Your call: where the watchlist lives"
+
+Sent to the Orchestrator for the Design Lead on 2026-10-08. The Design Lead draws it on the
+key-screens board as a "Your call" section with a recommendation; Giorgio picks.
+
+- **Options to draw, side by side (Light and Dark):**
+  - **A (recommended):** a "Watching" section on the Portfolio tab below Holdings, 5 rows
+    max, "See all (N)" to a full list.
+  - **B:** a "Watchlist" tab inside the stock search screen (Search · Watchlist).
+  - **C:** both A and B.
+- **Sample data** (from `docs/design/screens/data.js`, the one canonical dataset): a player
+  in a $100–$200 price-tier league with 3 holdings and 4 watched stocks: one that fits a free
+  slot, one owned by another manager, one with a NULL price, one delisted. Two frames per
+  option: **market open** and **market closed** (Friday 5 pm ET).
+- **What each frame must show**, by UX rule (`docs/design/UX_RULES.md`):
+  - Rule 6: the team-value hero stays the one emphasised element; the section is secondary.
+  - Rule 5: the watchlist row is the same row primitive as a holding (name, price, change).
+  - Rule 7: Holdings before Watching; the "Buy a stock" row stays where it is.
+  - Rule 4: 5 rows then "See all"; each row carries the league fit ("Fits your $100–$200
+    slot" / "Held by Maya" / "No longer tradable"); a NULL price renders "—".
+  - Rule 9: closed frames show the last close with an "at close" label; no "live" dot.
+  - Rule 10: closed frame, non-empty list: the "Buy a stock" row reads "Market opens Mon
+    9:30 · 3 on your watchlist".
+  - Rule 8: a delisted row keeps its place with the tag and no Buy; a full list (50) refuses
+    in place: "Your watchlist is full (50). Remove one to add another."
+  - Rule 11: the Save → Saved flip on the stock sheet and in search results is the ending
+    (the control flips, the row settles into the section); no toast.
+  - Rule 3: Save / Saved is a ≥44 pt control in the stock sheet header and on each search
+    result, never adjacent to Buy.
+- **Also draw:** the Save / Saved control on a search result row and in the stock sheet
+  header (one frame each, open market), and the draft screen's search with the queue control
+  and the Save control both visible, labelled "Queue" and "Save", so the two lists cannot be
+  confused.
 
 ### Parked: C, queued after-hours orders (not in this plan)
 
