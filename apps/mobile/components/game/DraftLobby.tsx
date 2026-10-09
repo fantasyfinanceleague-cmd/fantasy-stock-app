@@ -9,6 +9,7 @@ import { countdownLabel, draftDateTimeLabel, orderWasSetLine } from '@/lib/home/
 import { managersProgressCaption, orderWaitingLine, pickClockLine } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
 import { mySnakePicks } from '@/lib/game/draftLobby';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 export interface DraftLobbyProps {
   data: PreDraftData;
@@ -61,11 +62,9 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
           ) : null}
           <View style={styles.order}>
             {order.map((id, i) => (
-              <View key={id} style={styles.orderRow}>
+              <View key={id} style={[styles.orderRow, yourRowTint(id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${i + 1}, ${nameOf(id)}${youA11y(id === myUserId)}`}>
                 <Text variant="caption" tone="secondary" style={styles.seatNo}>{i + 1}</Text>
-                <Text variant="callout" style={id === myUserId ? { fontWeight: '700' } : undefined}>
-                  {nameOf(id)}{id === myUserId ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
-                </Text>
+                <Text variant="callout" style={yourNameStyle(id === myUserId)}>{nameOf(id)}</Text>
               </View>
             ))}
           </View>

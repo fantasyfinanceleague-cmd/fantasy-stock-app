@@ -9,6 +9,7 @@ import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
 import { moveA11y, shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 import { isLargeText, scaledBadge } from '@/components/sp/logic/largeText';
 
 export interface StandingsTableProps {
@@ -43,11 +44,11 @@ export function StandingsRowView({ r, seasonComplete }: { r: StandingsRow; seaso
   const stats = (
     <>
       <Text variant="caption" tone="secondary" style={stacked ? null : styles.record}>{r.record}</Text>
-      <Text variant="callout" style={stacked ? null : styles.gain}>{formatMoney(r.seasonGain, { sign: 'always' })}</Text>
+      <Text variant="callout" style={[stacked ? null : styles.gain, { color: r.seasonGain > 0 ? colors.gain : r.seasonGain < 0 ? colors.loss : colors.text }]}>{formatMoney(r.seasonGain, { sign: 'always' })}</Text>
     </>
   );
   return (
-    <View style={[styles.row, r.isYou ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${r.rank}, ${r.name}, ${r.record}, season gain ${formatMoney(r.seasonGain, { sign: 'always' })}${move ? `, ${move}` : ''}`}>
+    <View style={[styles.row, yourRowTint(r.isYou, colors.youTint, 0)]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${r.rank}, ${r.name}${youA11y(r.isYou)}, ${r.record}, season gain ${formatMoney(r.seasonGain, { sign: 'always' })}${move ? `, ${move}` : ''}`}>
       {/* G-6: one fixed-width rank cell, so medal rows 1–3 line up with 4 onwards. */}
       <View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>
         {medal ? (
@@ -74,9 +75,7 @@ export function StandingsRowView({ r, seasonComplete }: { r: StandingsRow; seaso
         )}
       </View>
       <View style={styles.name}>
-        <Text variant="callout" style={r.isYou ? { fontWeight: '700' } : undefined}>
-          {r.name}{r.isYou ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
-        </Text>
+        <Text variant="callout" style={yourNameStyle(r.isYou)}>{r.name}</Text>
         {r.isBot ? <Text variant="caption" tone="secondary">Bot</Text> : null}
         {stacked ? <View style={styles.statsLine}>{stats}</View> : null}
       </View>

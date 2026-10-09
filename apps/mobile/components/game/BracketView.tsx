@@ -6,6 +6,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
 import type { Bracket, BracketGame, BracketSide } from '@/lib/game/bracket';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 export interface BracketViewProps {
   bracket: Bracket;
@@ -23,7 +24,7 @@ export function BracketView({ bracket, caption, myUserId }: BracketViewProps) {
         <Card style={styles.card}>
           <Text variant="tag" tone="secondary">{`${bracket.rounds[0]?.label ?? ''} · playoff week 1`}</Text>
           {bracket.byes.map((b) => (
-            <ByeRow key={b.userId ?? b.name} side={b} />
+            <ByeRow key={b.userId ?? b.name} side={b} mine={b.userId === myUserId} />
           ))}
         </Card>
       ) : null}
@@ -42,9 +43,10 @@ export function BracketView({ bracket, caption, myUserId }: BracketViewProps) {
   );
 }
 
-function ByeRow({ side }: { side: BracketSide }) {
+function ByeRow({ side, mine }: { side: BracketSide; mine: boolean }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.row} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}, bye`}>
+    <View style={[styles.row, yourRowTint(mine, colors.youTint)]} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}${youA11y(mine)}, bye`}>
       <Text variant="caption" tone="secondary" style={styles.seed}>{side.seed ?? ''}</Text>
       <Text variant="callout">{side.name}</Text>
       <Text variant="callout" tone="secondary" style={styles.end}>Bye</Text>
@@ -62,16 +64,15 @@ function GameCard({ game, myUserId }: { game: BracketGame; myUserId: string }) {
   );
 }
 
-function SideRow({ side, winner, scored, mine, colors }: { side: BracketSide | null; winner: string | null; scored: boolean; mine: boolean; colors: { youText: string; text: string; text2: string } }) {
+function SideRow({ side, winner, scored, mine, colors }: { side: BracketSide | null; winner: string | null; scored: boolean; mine: boolean; colors: { youTint: string; text: string; text2: string } }) {
   if (side === null) return <View style={styles.row}><Text variant="callout" tone="secondary">To be decided</Text></View>;
   const isWinner = winner !== null && winner === side.userId;
   const loser = scored && winner !== null && !isWinner;
   return (
-    <View style={[styles.row, loser ? { opacity: 0.55 } : null]} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}${side.gain !== null ? `, ${formatMoney(side.gain, { sign: 'always' })}` : ''}`}>
+    // Bold here means the winner, so the tint alone marks your line (board #call-manager-row).
+    <View style={[styles.row, yourRowTint(mine, colors.youTint), loser ? { opacity: 0.55 } : null]} accessible accessibilityLabel={`Seed ${side.seed ?? ''}, ${side.name}${youA11y(mine)}${side.gain !== null ? `, ${formatMoney(side.gain, { sign: 'always' })}` : ''}`}>
       <Text variant="caption" tone="secondary" style={styles.seed}>{side.seed ?? ''}</Text>
-      <Text variant="callout" style={[isWinner ? styles.bold : null, mine ? { color: colors.youText } : null]}>
-        {side.name}{mine ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
-      </Text>
+      <Text variant="callout" style={isWinner ? styles.bold : null}>{side.name}</Text>
       {side.gain !== null ? <Text variant="callout" style={styles.end}>{formatMoney(side.gain, { sign: 'always' })}</Text> : null}
     </View>
   );

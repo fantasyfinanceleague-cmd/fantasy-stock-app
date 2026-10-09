@@ -11,6 +11,8 @@ import {
   groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction,
 } from '@/lib/game/renewal';
 import type { RosterResult } from '@/lib/game/useRenewalRoster';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
+import { useAuth } from '@/lib/useAuth';
 
 type FullRoster = Extract<RosterResult, { full_list: true }>;
 
@@ -29,6 +31,8 @@ export interface RenewalRosterProps {
  * in). The order is Season 1's. A non-reply's actions open the native sheet (R7). */
 export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, onChanged }: RenewalRosterProps) {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const myUserId = user?.id ?? '';
   const people = orderRoster(roster.people, season1Order);
   const waiting = roster.people.filter((p) => p.group === 'pending').map((p) => p.display_name);
 
@@ -69,9 +73,10 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
         {people.map((p) => {
           const copy = groupCopy(p.group);
           return (
-            <View key={p.user_id} style={styles.row}>
+            // Bold here already means "Running back", so the tint alone marks you (board #call-manager-row).
+            <View key={p.user_id} style={[styles.row, yourRowTint(p.user_id === myUserId, colors.youTint)]}>
               <View style={styles.name}>
-                <Text variant="callout" style={p.group === 'in' ? { fontWeight: '700' } : p.group === 'out' ? { color: colors.text2 } : undefined}>{p.display_name}</Text>
+                <Text variant="callout" accessibilityLabel={`${p.display_name}${youA11y(p.user_id === myUserId)}`} style={p.group === 'in' ? { fontWeight: '700' } : p.group === 'out' ? { color: colors.text2 } : undefined}>{p.display_name}</Text>
                 {copy.marker ? <Text variant="tag" tone="secondary">{copy.marker}</Text> : null}
               </View>
               <View style={styles.answer}>

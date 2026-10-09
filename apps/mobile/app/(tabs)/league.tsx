@@ -157,7 +157,7 @@ export default function LeagueScreen() {
                 onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : v === 'history' ? 'history' : 'standings')}
               />
               {segment === 'history' ? (
-                history.status === 'ready' ? <HistoryList rows={history.rows} /> : null
+                history.status === 'ready' ? <HistoryList rows={history.rows} myUserId={user?.id ?? ''} /> : null
               ) : segment === 'playoffs' ? (
                 bracket.bracket ? (
                   <BracketView

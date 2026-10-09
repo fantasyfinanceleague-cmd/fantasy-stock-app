@@ -2,15 +2,19 @@
 import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
+import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
 import { historySeasons, type HistoryRow } from '@/lib/game/history';
 import { useLargeText } from '@/components/sp/useLargeText';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 /** League › History (R10): every season of the lineage, its champion, and its frozen
  * final standings, newest first. An unfinished season shows no champion. */
-export function HistoryList({ rows }: { rows: HistoryRow[] }) {
+export function HistoryList({ rows, myUserId }: { rows: HistoryRow[]; myUserId: string }) {
+  const { colors } = useTheme();
   const seasons = historySeasons(rows);
+  const gainColor = (v: number) => (v > 0 ? colors.gain : v < 0 ? colors.loss : colors.text);
   // Large text: the record and gain go under the name (one line squeezed it to a letter per line).
   const largeText = useLargeText();
   return (
@@ -24,21 +28,21 @@ export function HistoryList({ rows }: { rows: HistoryRow[] }) {
           </View>
           {s.champion ? <Text variant="caption" tone="secondary">{`Champion ${s.champion}`}</Text> : <Text variant="caption" tone="secondary">Not finished yet</Text>}
           {s.standings.map((st) => (
-            <View key={st.user_id} style={styles.row}>
+            <View key={st.user_id} style={[styles.row, yourRowTint(st.user_id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${st.rank}, ${st.display_name}${youA11y(st.user_id === myUserId)}, ${st.wins}–${st.losses}, ${formatMoney(st.points_for, { sign: 'always' })}`}>
               <Text variant="callout" style={styles.rank}>{st.rank}</Text>
               {largeText ? (
                 <View style={styles.name}>
-                  <Text variant="callout">{st.display_name}</Text>
+                  <Text variant="callout" style={yourNameStyle(st.user_id === myUserId)}>{st.display_name}</Text>
                   <View style={styles.statsLine}>
                     <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
-                    <Text variant="callout">{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                    <Text variant="callout" style={{ color: gainColor(st.points_for) }}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
                   </View>
                 </View>
               ) : (
                 <>
-                  <Text variant="callout" style={styles.name}>{st.display_name}</Text>
+                  <Text variant="callout" style={[styles.name, yourNameStyle(st.user_id === myUserId)]}>{st.display_name}</Text>
                   <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
-                  <Text variant="callout" style={styles.gain}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                  <Text variant="callout" style={[styles.gain, { color: gainColor(st.points_for) }]}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
                 </>
               )}
             </View>

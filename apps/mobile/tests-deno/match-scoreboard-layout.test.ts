@@ -12,7 +12,7 @@ import { SOURCES } from './sourceManifest.generated.ts';
 Deno.test('the scoreboard card has its own padding, and its scores can never overlap (source guards)', () => {
   const sb = SOURCES['components/game/MatchScoreboard.tsx'];
   assert(sb.includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[1] },'));
-  assert(sb.includes("style={[styles.card, size === 'compact' ? styles.compact : null]}"));
+  assert(sb.includes("style={[styles.card, size === 'compact' ? styles.compact : null, size === 'compact' && aIsYou ? { backgroundColor: colors.youTint } : null]}"));
   assert(sb.includes('scoreCell: { flex: 1, minWidth: 0 },'));
   assert(sb.includes("scoreCellRight: { alignItems: 'flex-end' },"));
   assert(sb.includes('<View style={[styles.scoreCell, styles.scoreCellRight]}>'));

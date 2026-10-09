@@ -8,6 +8,7 @@
  */
 import { StyleSheet, View } from 'react-native';
 import { radius, space } from '@/constants/tokens';
+import { yourNameStyle } from '@/lib/game/managerRow';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -26,7 +27,8 @@ export interface MatchScoreboardProps {
   oppName: string | null;
   /** Shown under the scores when there is no lead line (e.g. "Live · Thu 1:37 PM ET"). */
   statusLine: string;
-  /** True when the first side is the caller: it gets "(you)" and the you colour.
+  /** True when the first side is the caller: your name bold in the you colour (no "(you)":
+   * S-10, Giorgio), and in All matchups your game's card takes the you-tint.
    * Another manager's game (All matchups) has no "you" side, so its scores and names are neutral. */
   aIsYou?: boolean;
 }
@@ -44,12 +46,10 @@ export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppNa
   const oppColor = aIsYou ? (model.oppTone === 'zero' ? colors.zero : colors.oppText) : colors.text;
 
   return (
-    <Card variant="scoreboard" accessible accessibilityLabel={model.a11yLabel} style={[styles.card, size === 'compact' ? styles.compact : null]}>
+    <Card variant="scoreboard" accessible accessibilityLabel={model.a11yLabel} style={[styles.card, size === 'compact' ? styles.compact : null, size === 'compact' && aIsYou ? { backgroundColor: colors.youTint } : null]}>
       <View style={styles.namesRow}>
         {aIsYou ? (
-          <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
-            {youName} <Text variant="callout" tone="secondary">(you)</Text>
-          </Text>
+          <Text variant="callout" style={[{ color: colors.youText }, yourNameStyle(true)]}>{youName}</Text>
         ) : (
           <Text variant="callout">{youName}</Text>
         )}
