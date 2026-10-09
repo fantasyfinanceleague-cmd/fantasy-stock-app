@@ -15,7 +15,7 @@ import { MatchScoreboard } from '@/components/game/MatchScoreboard';
 import { WeekRace } from '@/components/game/WeekRace';
 import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
-import { useRevealOnce } from '@/lib/game/useRevealOnce';
+import { useRevealOnce, type RevealState } from '@/lib/game/useRevealOnce';
 import { useAllMatchups } from '@/lib/game/useAllMatchups';
 import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLineups';
 import type { AllMatchupRow } from '@/lib/game/allMatchups';
@@ -56,7 +56,7 @@ export default function MatchupScreen() {
   const chyron = useLeadChyron(m.derived?.live ?? null, m.quote, m.bars, m.todayIso);
   // G3: the Friday reveal plays once per matchup-week, once the result is posted.
   const revealFinal = m.derived?.view.kind === 'final' && m.derived.final !== null;
-  const revealPlay = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
+  const reveal = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
   // "My matchup" / "All matchups" are the board's labels (key screen 2).
   const [segment, setSegment] = useState<'mine' | 'all'>('mine');
   // The draft's ending on a Week 1 bye opens All matchups (?segment=all). The tab
@@ -91,7 +91,7 @@ export default function MatchupScreen() {
         ) : (
           // S-4: keyed by league, so a league switch mounts a fresh scoreboard, tug and race
           // instead of rolling league A's score into league B's (Home's H5, HomeLeagueTransition).
-          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} finalLines={finalLines} />
+          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} reveal={reveal} finalLines={finalLines} />
         )}
       </BarsRefresh>
     </View>
@@ -140,11 +140,12 @@ interface BodyProps {
   onRefresh: () => Promise<void>;
   leagueName: string;
   chyron: string | null;
-  revealPlay: boolean;
+  /** The one-time reveal: the banner mounts only once it is decided (useRevealOnce). */
+  reveal: RevealState;
   finalLines: FinalLineupsState;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, finalLines }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalLines }: BodyProps) {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   // At the large text sizes the two lineups stack (side by side they ran into each other).
@@ -214,9 +215,10 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
   return (
     <View style={styles.stack}>
       {!isFinal ? <Chyron message={chyron} /> : null}
-      {isFinal && final ? (
+      {/* Mounted only once the reveal is decided: FinalBanner takes its start pose on mount. */}
+      {isFinal && final && reveal.decided ? (
         <FinalBanner
-          play={revealPlay}
+          play={reveal.play}
           text={final.me === final.opp ? `Tied in Week ${week}` : final.me > final.opp ? `${youName} wins Week ${week}` : `${live.opp?.name ?? ''} wins Week ${week}`}
         />
       ) : null}

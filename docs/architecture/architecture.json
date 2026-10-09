@@ -2,30 +2,26 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "2ece7fa772efe73b65d6ecadf62ac440150b7ded",
-    "commitShort": "2ece7fa7",
+    "commit": "f3b297f6b5dfa1bd0ecbc50d3a91670ad20e119c",
+    "commitShort": "f3b297f6",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "A",
-        "path": "apps/mobile/components/sp/logic/fontWeight.ts"
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/Text.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+        "path": "apps/mobile/lib/game/useRevealOnce.ts"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/sp-font-weight.test.ts"
+        "path": "apps/mobile/tests-deno/final-reveal.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:25Z",
+    "timestamp": "2026-10-11T05:44:27Z",
     "sourceHash": "sha256:4684c1b96e0a055a042c22381fbf9f738edc97f7f312d95ecfd33e14f71617b1",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
