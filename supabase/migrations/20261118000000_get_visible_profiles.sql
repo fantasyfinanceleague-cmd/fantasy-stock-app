@@ -82,27 +82,35 @@ begin
     select m.league_id from public.league_members m where m.user_id = v_caller::text
   ),
   -- Everyone who has EVER participated in one of the caller's current leagues,
-  -- restricted up front to the requested ids. Cross-table casts per CLAUDE.md
-  -- (drafts/league_members/matchups ids are text, trades.user_id is uuid).
+  -- each branch restricted to the requested ids so the work is bounded by the
+  -- request, not by the size of the caller's leagues. Cross-table casts per
+  -- CLAUDE.md (drafts/league_members/matchups ids are text, trades.user_id is
+  -- uuid); lower() because ids are compared as text.
   visible as (
-    select v_caller::text as uid
+    select w.uid from wanted w where w.uid = v_caller::text
     union
-    select m.user_id from public.league_members m join my_leagues l on l.league_id = m.league_id
+    select lower(m.user_id) from public.league_members m join my_leagues l on l.league_id = m.league_id
+     where lower(m.user_id) in (select uid from wanted)
     union
-    select s.user_id from public.league_standings s join my_leagues l on l.league_id = s.league_id
+    select lower(s.user_id) from public.league_standings s join my_leagues l on l.league_id = s.league_id
+     where lower(s.user_id) in (select uid from wanted)
     union
-    select mu.team1_user_id from public.matchups mu join my_leagues l on l.league_id = mu.league_id
+    select lower(mu.team1_user_id) from public.matchups mu join my_leagues l on l.league_id = mu.league_id
+     where lower(mu.team1_user_id) in (select uid from wanted)
     union
-    select mu.team2_user_id from public.matchups mu join my_leagues l on l.league_id = mu.league_id
+    select lower(mu.team2_user_id) from public.matchups mu join my_leagues l on l.league_id = mu.league_id
+     where lower(mu.team2_user_id) in (select uid from wanted)
     union
-    select d.user_id::text from public.drafts d join my_leagues l on l.league_id = d.league_id
+    select lower(d.user_id::text) from public.drafts d join my_leagues l on l.league_id = d.league_id
+     where lower(d.user_id::text) in (select uid from wanted)
     union
     select t.user_id::text from public.trades t join my_leagues l on l.league_id = t.league_id
+     where t.user_id::text in (select uid from wanted)
   )
+  -- Compare on the uuid column side so user_profiles' primary key is usable.
   select p.id, p.username, p.avatar
     from public.user_profiles p
-    join wanted w on w.uid = p.id::text
-   where p.id::text in (select lower(v.uid) from visible v where v.uid is not null);
+   where p.id in (select v.uid::uuid from visible v where v.uid is not null);
 end;
 $$;
 

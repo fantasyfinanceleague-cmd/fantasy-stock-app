@@ -45,7 +45,9 @@ Deno.test('no client reads another player\'s user_profiles row directly', () => 
       found.push(f);
       assert(SELF_ROW_FILES.has(f), `${f} reads user_profiles directly: use get_visible_profiles (audit #8)`);
       const chain = src.slice(m.index!, m.index! + 400);
-      const ownRow = /\.eq\(\s*['"]id['"]\s*,/.test(chain.split(';')[0]) ||
+      // The id must be one of the CALLER's identifiers in these files (the
+      // session's userId / user.id, or the just-signed-up data.user.id).
+      const ownRow = /\.eq\(\s*['"]id['"]\s*,\s*(userId|user\.id|data\.user\.id)\s*\)/.test(chain.split(';')[0]) ||
         /\.upsert\(\s*\{\s*id:\s*(data\.user\.id|user\.id)\b/.test(chain);
       assert(ownRow, `${f}: a user_profiles access that is not provably the caller's own row:\n${chain.split(';')[0]}`);
     }
@@ -57,8 +59,11 @@ Deno.test('every Realtime subscription on user_profiles is filtered to one id', 
   for (const f of SOURCES) {
     const src = read(f);
     for (const m of src.matchAll(/table:\s*['"]user_profiles['"]/g)) {
-      const obj = src.slice(src.lastIndexOf('{', m.index!), src.indexOf('}', m.index!) + 1);
-      assert(/filter:\s*`id=eq\.\$\{/.test(obj), `${f}: unfiltered user_profiles subscription: ${obj}`);
+      // The subscription's options object: from its opening brace to the end of
+      // its line (the filter is a template literal, so a '}' search stops early).
+      const start = src.lastIndexOf('{', m.index!);
+      const obj = src.slice(start, src.indexOf('\n', m.index!));
+      assert(/filter:\s*`id=eq\.\$\{selfId\}`/.test(obj), `${f}: user_profiles subscription not filtered to the caller: ${obj}`);
     }
   }
 });

@@ -32,6 +32,27 @@
 -- UNCHANGED: the INSERT and UPDATE own-row policies (auth.uid() = id), which
 -- the signup upsert and the Profile screen use.
 --
+-- RESIDUALS, re-audited as 20261007000000's header asks of whoever narrows
+-- this table's SELECT: check_usernames / set_username (SECURITY DEFINER) still
+-- answer "is username X taken" to any signed-in user, and so does the 23505 of
+-- an own-row upsert. That oracle is inherent to unique usernames; it reveals
+-- only that a name exists, never whose it is or anything else about them, and
+-- check_usernames is rate-limited and get_real_user_ids is scoped to the caller's
+-- leaguemates by 20261116000000 (branch security/scrape-hardening-db). preview-league shows the
+-- commissioner's username to an invite-code holder before joining (admin
+-- client, unaffected by this policy) -- a product question for Giorgio.
+--
+-- PRE-FLIP CHECK (this flip only closes the table if the USING (true) policy
+-- is the ONLY permissive SELECT policy -- another one would keep it open):
+--   SELECT policyname, roles, cmd, qual FROM pg_policies
+--    WHERE tablename = 'user_profiles' AND cmd IN ('SELECT','ALL') ORDER BY 1;
+--   -- EXPECT exactly: Authenticated users can view profiles | {authenticated} | SELECT | true
+--
+-- ROLLBACK (only if signed-in players lose names; re-opens the exposure):
+--   drop policy if exists user_profiles_select_self on public.user_profiles;
+--   create policy "Authenticated users can view profiles" on public.user_profiles
+--     for select to authenticated using (true);
+--
 -- POST-APPLY CHECKS (SQL editor; each on its own):
 --   SELECT policyname, roles, cmd, qual FROM pg_policies WHERE tablename = 'user_profiles' ORDER BY 1;
 --   -- EXPECT: user_profiles_select_self | {authenticated} | SELECT | (id = auth.uid())
