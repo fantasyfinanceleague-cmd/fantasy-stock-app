@@ -36,6 +36,12 @@ building anything, and don't reopen a rule without him.
   keeping the public stock-symbol list readable (option B): the symbols table becomes
   signed-in only, and anything an anonymous caller (or any one signed-in player) could
   bulk-read is audited and locked down, with product-visible changes brought to Giorgio first.
+- **Who can see other players** (2026-10-08, audit #8, option A): "i can only see other names
+  and avatars of other users im in a leauge with. we cannot allow a user to see any
+  information outside of the name/avatar of another member in their league (email, etc) or
+  any info about users not in their league." So: another player's profile is visible only to
+  people who share a league with them, and only their name and avatar. Nothing about players
+  outside your leagues.
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
