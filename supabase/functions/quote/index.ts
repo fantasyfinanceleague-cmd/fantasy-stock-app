@@ -2,8 +2,13 @@
 // Normalized latest-price endpoint for in-app quotes (single or batch).
 // Uses Stockpile's own server-side Alpaca keys (ALPACA_API_KEY / ALPACA_API_SECRET) —
 // the same app-wide data-vendor path as ticker-quotes. No per-user broker credentials.
-// Gateway verify_jwt=true (config.toml) restricts this to authenticated callers.
+// Gateway verify_jwt=true is NOT a sign-in check (the public anon JWT passes
+// it), so the handler requires a real user via getUser, then a FAIL-CLOSED
+// per-user rate limit (_shared/market-guard.ts). Ruling 2026-10-08: nothing
+// scrapable.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { capSymbolList, checkRateLimits, refusalFor, REFUSAL, resolveUser } from '../_shared/market-guard.ts';
 
 function isAllowedOrigin(origin: string): boolean {
   if (!origin) return false;
@@ -36,6 +41,20 @@ const json = (b: unknown, s = 200, req?: Request) => {
 };
 
 const BASE = 'https://data.alpaca.markets/v2';
+
+// Per-user calls per minute. The heaviest real caller is web PriceContext,
+// which prices one symbol per call (3 concurrent, 5-minute poll): a first
+// Dashboard load is about one call per held symbol across the user's leagues.
+// Mobile batches (Home polls one batch every 30 s). 120/min covers a player in
+// five full leagues with room to spare; a scraper gets 120 calls, not unlimited.
+export const QUOTE_LIMIT_PER_MIN = 120;
+// Batch cap. The largest real batch is useAllMatchups: every symbol held in one
+// league-week. leagues_num_participants_range caps a league at 16 teams and
+// Create offers at most 12 rounds, so 16 x 12 = 192 drafted symbols, plus the
+// week's traded-in symbols. 250 covers that; ~50 would silently drop prices on
+// the all-matchups screen of any league bigger than about 4 teams x 12 rounds.
+// Overflow is reported in truncatedSymbols, never silently dropped.
+export const MAX_BATCH_SYMBOLS = 250;
 
 // Simple in-memory cache for quotes (survives across requests in the same worker)
 const quoteCache = new Map<string, { data: any; timestamp: number }>();
@@ -137,6 +156,7 @@ async function fetchSinglePrice(
 // Handle request for multiple symbols - returns { prices: { SYMBOL: price, ... } }
 async function handleMultipleSymbols(
   symbols: string[],
+  truncatedSymbols: string[],
   key: string,
   secret: string,
   respond: (b: unknown, s?: number) => Response
@@ -173,7 +193,11 @@ async function handleMultipleSymbols(
     }
   }
 
-  return respond({ prices, errors: Object.keys(errors).length > 0 ? errors : undefined });
+  return respond({
+    prices,
+    errors: Object.keys(errors).length > 0 ? errors : undefined,
+    truncatedSymbols: truncatedSymbols.length > 0 ? truncatedSymbols : undefined,
+  });
 }
 
 Deno.serve(async (req) => {
@@ -181,6 +205,18 @@ Deno.serve(async (req) => {
   const respond = (b: unknown, s = 200) => json(b, s, req);
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
+
+  // A real signed-in user, then the per-user limit -- before any cache read or
+  // Alpaca call, so a refused caller learns nothing and spends nothing.
+  const SUPABASE_URL = env('SUPABASE_URL');
+  const user = await resolveUser(SUPABASE_URL, env('SB_PUBLISHABLE_KEY'), req.headers.get('Authorization'));
+  if (!user) return respond(REFUSAL.not_authenticated.body, REFUSAL.not_authenticated.status);
+  const admin = createClient(SUPABASE_URL, env('SB_SECRET_KEY_INTERNAL'));
+  const verdict = await checkRateLimits(admin, 'quote', [{ subject: `user:${user.id}`, limit: QUOTE_LIMIT_PER_MIN }]);
+  if (verdict !== 'ok') {
+    const r = refusalFor(verdict);
+    return respond(r.body, r.status);
+  }
 
   // Server-side Alpaca keys (app-wide read-only market data — no per-user credentials)
   const ALPACA_KEY = env('ALPACA_API_KEY');
@@ -194,6 +230,7 @@ Deno.serve(async (req) => {
     // GET ?symbol= or POST {symbol} or POST {symbols: [...]}
     let symbol = '';
     let symbols: string[] = [];
+    let truncatedSymbols: string[] = [];
     if (req.method === 'GET') {
       const u = new URL(req.url);
       symbol = (u.searchParams.get('symbol') || '').trim().toUpperCase();
@@ -201,7 +238,7 @@ Deno.serve(async (req) => {
       const b = await req.json().catch(() => ({}));
       // Support both single symbol and array of symbols
       if (Array.isArray(b?.symbols)) {
-        symbols = b.symbols.map((s: any) => String(s).trim().toUpperCase()).filter(Boolean);
+        ({ symbols, truncated: truncatedSymbols } = capSymbolList(b.symbols, MAX_BATCH_SYMBOLS));
       } else {
         symbol = String(b?.symbol || '').trim().toUpperCase();
       }
@@ -211,7 +248,7 @@ Deno.serve(async (req) => {
 
     // Handle multi-symbol request
     if (symbols.length > 0) {
-      return await handleMultipleSymbols(symbols, ALPACA_KEY, ALPACA_SECRET, respond);
+      return await handleMultipleSymbols(symbols, truncatedSymbols, ALPACA_KEY, ALPACA_SECRET, respond);
     }
 
     if (!symbol) return respond({ error: 'missing_symbol' }, 400);
@@ -240,7 +277,7 @@ Deno.serve(async (req) => {
         const p = Number(r.body?.trade?.p);
         if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
       } else {
-        lastErr = { step: 'trade', status: r.status, preview: r.preview };
+        lastErr = { step: 'trade', status: r.status };
       }
     }
 
@@ -252,7 +289,7 @@ Deno.serve(async (req) => {
         const c = Number(r.body?.bar?.c);
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
       } else {
-        lastErr = { step: 'bar', status: r.status, preview: r.preview };
+        lastErr = { step: 'bar', status: r.status };
       }
     }
 
@@ -267,7 +304,7 @@ Deno.serve(async (req) => {
         if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
         else if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
       } else {
-        lastErr = { step: 'quote', status: r.status, preview: r.preview };
+        lastErr = { step: 'quote', status: r.status };
       }
     }
 
