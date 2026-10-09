@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -31,7 +31,7 @@ export function RunItBackCard() {
     router.push('/(tabs)/league');
   };
   return (
-    <Card>
+    <Card style={styles.card}>
       <Text variant="tag" tone="secondary">Season 2</Text>
       <Text variant="headline">Run it back?</Text>
       <Text variant="callout" tone="secondary">Everyone from Season 1 gets asked if they're in. Once you've heard from everyone, you set up the draft.</Text>
@@ -43,5 +43,8 @@ export function RunItBackCard() {
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   action: { marginTop: space[2] },
 });

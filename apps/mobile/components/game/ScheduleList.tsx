@@ -5,7 +5,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { formatMoney } from '@/components/sp/logic/money';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import type { ScheduleRow } from '@/lib/game/schedule';
 
 export interface ScheduleListProps {
@@ -21,7 +21,7 @@ export function ScheduleList({ rows, playoffLine }: ScheduleListProps) {
   const { colors } = useTheme();
   return (
     <View style={styles.stack}>
-      <Card>
+      <Card style={styles.card}>
         {rows.map((r) => (
           <View key={r.week} style={[styles.row, r.state === 'live' ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={label(r)}>
             <Text variant="caption" style={styles.week}>W{r.week}</Text>
@@ -63,6 +63,9 @@ function label(r: ScheduleRow): string {
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
   week: { minWidth: 34, fontWeight: '700' },

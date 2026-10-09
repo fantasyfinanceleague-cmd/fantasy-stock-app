@@ -4,7 +4,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import {
@@ -65,7 +65,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
   return (
     <View style={styles.stack}>
       <Text variant="caption" tone="secondary">{countsLine(roster.counts)}</Text>
-      <Card>
+      <Card style={styles.card}>
         {people.map((p) => {
           const copy = groupCopy(p.group);
           return (
@@ -88,7 +88,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
         })}
       </Card>
 
-      <Card>
+      <Card style={styles.card}>
         <View style={styles.draftRow}>
           <Text variant="callout">Draft time</Text>
           <Text variant="callout" tone="secondary">Not set</Text>
@@ -106,6 +106,9 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2], flexWrap: 'wrap' },
   name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[1] },

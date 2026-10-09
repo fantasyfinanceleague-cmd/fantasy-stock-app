@@ -4,7 +4,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import type { Bracket, BracketGame, BracketSide } from '@/lib/game/bracket';
 
 export interface BracketViewProps {
@@ -20,7 +20,7 @@ export function BracketView({ bracket, caption, myUserId }: BracketViewProps) {
   return (
     <View style={styles.stack}>
       {bracket.byes.length > 0 ? (
-        <Card>
+        <Card style={styles.card}>
           <Text variant="tag" tone="secondary">{`${bracket.rounds[0]?.label ?? ''} · playoff week 1`}</Text>
           {bracket.byes.map((b) => (
             <ByeRow key={b.userId ?? b.name} side={b} />
@@ -55,7 +55,7 @@ function ByeRow({ side }: { side: BracketSide }) {
 function GameCard({ game, myUserId }: { game: BracketGame; myUserId: string }) {
   const { colors } = useTheme();
   return (
-    <Card>
+    <Card style={styles.card}>
       <SideRow side={game.a} winner={game.winnerUserId} scored={game.scored} mine={game.a?.userId === myUserId} colors={colors} />
       <SideRow side={game.b} winner={game.winnerUserId} scored={game.scored} mine={game.b?.userId === myUserId} colors={colors} />
     </Card>
@@ -78,6 +78,9 @@ function SideRow({ side, winner, scored, mine, colors }: { side: BracketSide | n
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
   seed: { minWidth: 16, textAlign: 'right' },

@@ -4,7 +4,7 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 
@@ -31,7 +31,7 @@ export function RenewalAsk({ leagueId, commissionerName, onAnswered }: RenewalAs
     onAnswered();
   };
   return (
-    <Card>
+    <Card style={styles.card}>
       <Text variant="tag" tone="secondary">Season 2</Text>
       <Text variant="headline">{`${commissionerName} is running it back. Are you in?`}</Text>
       <Text variant="callout" tone="secondary">Same league, new season. The draft is set once everyone has replied.</Text>
@@ -45,5 +45,8 @@ export function RenewalAsk({ leagueId, commissionerName, onAnswered }: RenewalAs
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   row: { flexDirection: 'row', gap: space[2], marginVertical: space[2] },
 });
