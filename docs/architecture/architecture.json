@@ -2,54 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "b60d7bdc4e5eee1be4fc63c3525e8d3536aa6a70",
-    "commitShort": "b60d7bdc",
+    "commit": "f5d3885e5303103c8d77cbaa2883eddc82bc4241",
+    "commitShort": "f5d3885e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/BracketView.tsx"
+        "path": "apps/mobile/components/game/HistoryList.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/ChampBanner.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/DraftLobby.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalAsk.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalReview.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalRoster.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/ScheduleList.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/RenewalCountsCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/RunItBackCard.tsx"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/tests-deno/game-card-padding.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:14Z",
+    "timestamp": "2026-10-11T05:44:16Z",
     "sourceHash": "sha256:7378739950b5247283afb8f7f400d28f1c2115927e060a800989e9de6effd928",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

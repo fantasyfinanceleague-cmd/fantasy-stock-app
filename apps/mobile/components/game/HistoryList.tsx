@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { formatMoney } from '@/components/sp/logic/money';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { historySeasons, type HistoryRow } from '@/lib/game/history';
 
 /** League › History (R10): every season of the lineage, its champion, and its frozen
@@ -14,7 +14,7 @@ export function HistoryList({ rows }: { rows: HistoryRow[] }) {
     <View style={styles.stack}>
       <Text variant="title">History</Text>
       {seasons.map((s) => (
-        <Card key={s.leagueId}>
+        <Card key={s.leagueId} style={styles.card}>
           <View style={styles.head}>
             <Text variant="headline">{`Season ${s.seasonNumber}`}</Text>
             {s.myRecord ? <Text variant="callout" tone="secondary">{s.myRecord}</Text> : null}
@@ -35,6 +35,9 @@ export function HistoryList({ rows }: { rows: HistoryRow[] }) {
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },

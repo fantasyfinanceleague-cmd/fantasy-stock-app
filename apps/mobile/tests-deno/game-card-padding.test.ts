@@ -14,9 +14,12 @@ Deno.test('no game screen mounts a bare sp Card (it has no padding of its own)',
     if (!(path.startsWith('components/game/') || path.startsWith('components/home/') || path.startsWith('app/(tabs)/'))) continue;
     // Code lines only (a comment may name `<Card>`).
     const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
-    assert(!code.includes('<Card>'), `${path} mounts a bare <Card> (no padding: text flush on the edge)`);
+    // Any opening tag without a style (`<Card>`, `<Card key={…}>`, `<Card variant=…>`).
+    for (const m of code.matchAll(/<Card\b([^>]*)>/g)) {
+      assert(m[1].includes('style='), `${path} mounts a Card with no style (no padding: text flush on the edge): ${m[0].slice(0, 60)}`);
+    }
   }
-  for (const f of ['ChampBanner', 'RenewalReview', 'RenewalAsk', 'DraftLobby', 'BracketView', 'RenewalRoster', 'ScheduleList']) {
+  for (const f of ['ChampBanner', 'RenewalReview', 'RenewalAsk', 'DraftLobby', 'BracketView', 'RenewalRoster', 'ScheduleList', 'HistoryList']) {
     assert(SOURCES[`components/game/${f}.tsx`].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), f);
   }
   for (const f of ['RenewalCountsCard', 'RunItBackCard']) {
