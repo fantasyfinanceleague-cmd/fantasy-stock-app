@@ -2985,6 +2985,49 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // S-10 (UX final sweep): ONE manager row everywhere. Giorgio's call: the
+  // name weight. A = names regular, yours bold; B = every name bold (Home's
+  // built excerpt). Both: "(you)" + you-tint on your row, gains coloured by
+  // sign (green/red mark money). Data: Stock Scudetto standings (data.js).
+  // ═════════════════════════════════════════════════════════════════════
+  const ManagerRow = ({ r, v, move }) => {
+    const weight = r.you || v === 'B' ? 700 : 500;
+    const rec = `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: move ? '18px 18px 1fr auto auto' : '18px 1fr auto auto', padding: '10px 6px', background: r.you ? 'var(--c-you-tint)' : undefined, borderRadius: r.you ? 8 : 0 }}>
+        <span className="ks-callout ks-num ks-muted">{r.rank}</span>
+        {move ? (
+          <span className="ks-caption ks-num" style={{ display: 'inline-flex', alignItems: 'center', color: r.delta > 0 ? 'var(--c-gain)' : r.delta < 0 ? 'var(--c-loss)' : 'var(--c-text-3)' }}>
+            {r.delta ? <span style={{ display: 'flex', transform: r.delta < 0 ? 'rotate(180deg)' : undefined }}><Icon d={ICON.up} size={10} width={2.6} /></span> : null}
+            {r.delta ? Math.abs(r.delta) : ''}
+          </span>
+        ) : null}
+        <span className="ks-callout" style={{ fontWeight: weight }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+        <span className="ks-caption ks-num ks-muted">{rec}</span>
+        <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 600, minWidth: 74, textAlign: 'right' }}>{$s(r.pf)}</span>
+      </li>
+    );
+  };
+  function ManagerRowCall({ v = 'A', where = 'league' }) {
+    const league = where === 'league';
+    const rows = league ? K.STANDINGS_FINAL : (() => {
+      const all = K.STANDINGS_BEFORE; const top = all.slice(0, 3); const me = all.find((r) => r.you);
+      return top.some((r) => r.you) ? top : [...top, me];
+    })();
+    return (
+      <Device tab={league ? 'league' : 'home'} label={`Manager row ${v}, ${where}`}>
+        <Head chip={league ? <span className="ks-chip ks-chip--final">Week 6 · Final</span> : null} avatar={!league} />
+        <div className="ks-pad ks-stack">
+          <Card pad="12px 10px">
+            <div className="ks-section-h" style={{ padding: '0 6px 6px' }}><h3>{league ? 'Standings' : 'Standings'}</h3><span className="ks-caption">{league ? 'Week 6 of 14' : 'Through Week 5'}</span></div>
+            <ul className="ks-rows">{rows.map((r) => <ManagerRow key={r.id} r={r} v={v} move={league} />)}</ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -2997,7 +3040,7 @@
     AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
-    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();

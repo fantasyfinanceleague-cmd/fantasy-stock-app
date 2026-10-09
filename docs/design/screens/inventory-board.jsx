@@ -231,6 +231,35 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-manager-row-h">Your call: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Today the same manager is drawn eight different ways: Home's standings excerpt bolds every name, League's table bolds only yours, History marks nobody, and the lobby, the renewal list and the bracket each do their own. One row, used everywhere, needs one look. Both options keep "(you)" and the blue tint on your row, and colour every gain by its sign (green / red mark money; League's table prints them plain today, which is a defect either way). The only difference is the name weight. Stock Scudetto, Roberto B.'s phone.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">League standings</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Your name stands out" note="Names in the regular weight; yours bold, tinted, with (you). The move arrows stay on League only."><I.ManagerRowCall v="A" where="league" /></Fit>
+            <Fit caption="B · Every name bold" note="Today's Home excerpt, applied everywhere. Your row is marked by the tint and (you) only."><I.ManagerRowCall v="B" where="league" /></Fit>
+          </div>
+          <h3 className="b-sub">Home's standings excerpt (top 3, plus you if you're lower)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Your name stands out" note="The same row as League, without the move column."><I.ManagerRowCall v="A" where="home" /></Fit>
+            <Fit caption="B · Every name bold" note="What Home ships today (approved in 3b-2), with coloured gains."><I.ManagerRowCall v="B" where="home" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>A makes you easy to find</b> (UX rule 7: in any list you're in, you are marked). With every name bold, the bold carries nothing, and your row is told apart by a pale tint alone, which is the weakest cue on a sunny screen.</li>
+              <li><b>One thing stands out per list</b> (rule 6): in A it's you. In B six bold names compete.</li>
+              <li><b>B changes nothing on Home</b>, which was approved that way; A changes Home's excerpt (lighter names for everyone else). That is why this is your call.</li>
+              <li>Either way, the same row then serves League standings, Home, League › History (which gains your marker), the draft lobby, the renewal list and the bracket. Columns come and go (rank, move, record, gain, or an action like "Nudge again"); the row's look doesn't.</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
