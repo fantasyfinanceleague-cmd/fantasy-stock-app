@@ -5,7 +5,7 @@
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
 import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
-import { SEAM_ME } from './seamTables';
+import { SEAM_ME, seamLivePrices } from './seamTables';
 import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
@@ -128,7 +128,9 @@ export function invokeFixtureFor(
   }
   if (fn === 'quote') {
     // The board's live prices for the symbols asked for (a fixed sample; never a live quote).
-    const prices: Record<string, number> = { NVDA: 318.37, AAPL: 211.42, AMZN: 236.4, JPM: 215.45, MSFT: 421.0, META: 508.0, AVGO: 184.5, GOOGL: 166.0, PLTR: 65.0, V: 291.4, CRM: 274.1, COIN: 210.0, AMD: 160.0 };
+    // The week-6 holdings' live prices (seamTables: the Home fixture's Thursday prices for your
+    // and Gianluigi's teams) win over the draft sample's, so All matchups matches Matchup.
+    const prices: Record<string, number> = { NVDA: 318.37, AAPL: 211.42, AMZN: 236.4, JPM: 215.45, MSFT: 421.0, META: 508.0, AVGO: 184.5, GOOGL: 166.0, PLTR: 65.0, V: 291.4, CRM: 274.1, COIN: 210.0, AMD: 160.0, ...seamLivePrices() };
     const symbols = Array.isArray(body.symbols) ? (body.symbols as string[]) : [];
     return { data: { prices: Object.fromEntries(symbols.filter((s) => s in prices).map((s) => [s, prices[s]])) }, error: null };
   }
