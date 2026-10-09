@@ -787,3 +787,67 @@ Evidence note: `home-hero-million-xl-light.png` (12:46) was taken before the sco
 still shows the overlap. Rename it `-before` or replace it, so the record shows the fixed state.
 Nothing else is open on 3e for the 1.2.0 cut. M4 is in 1.3, and the M5 recording is on Giorgio's
 walkthrough.
+
+---
+
+## Final sweep · 1.2.0 (2026-10-08)
+
+**Verdict: BLOCK (not yet SHIP).** One product, mostly: the money, draft and setup flows are
+consistent with each other and with the board. But six P1s remain, and the Matchup tab has never
+been seen on a device. Nothing is a P0 on the evidence available. The cut is clear when S-1 to S-6
+are closed and Giorgio's walkthrough list (end of section) is done.
+
+### Scope examined (and not)
+
+- **Code:** `origin/main` @ `025d3005` (after #167, #171, #172), `apps/mobile` only, read through
+  three inventories: shared components and states, copy voice, and motion with Reduce Motion. Every
+  claim graded below was checked against the source by the Design Lead.
+- **Device:** earlier passes (Home 1b; the 3c-2 and 3e gates). **This sweep's simulator pass was cut
+  short:** the game screens can't be shown under the dev fixtures (S-1), and a local fixture change
+  to see them was refused by the permission system; it was reverted, not worked around.
+- **Not examined:** the Matchup tab's live, final and reveal states; League standings, schedule,
+  playoffs, history and the draft recap on device; the first run (onboarding, Get started, empty
+  Home) on device, last approved in 3b-1; push copy (server-side); VoiceOver; tap latency.
+
+### P1, block the cut
+
+| ID | Where | Rule | What's wrong | Fix |
+|---|---|---|---|---|
+| S-1 | Matchup tab and the 3c game screens | 5–11 | **Never gated on a device.** Under every fixture the Matchup tab renders one-sided ("(you)", no name, no opponent, no tug bar, no lineups, text flush to the card edge). Cause: the DEV fixtures disagree on who "me" is (Home and the game seam use `roberto`; the session uses `FIXTURE_USER_ID`). Probably fixture-only, but unverified. | 3c-2 is on it: one shared "me" across fixtures, a guard test, then captures (Matchup live / final + reveal / All matchups; League standings / schedule / playoffs / history; draft recap; Run it back), Light / Dark / XL, and a focused game-screens gate. |
+| S-2 | Legacy `app/(tabs)/draft.tsx` | product rule ("every screen on the new UI") | Still reachable: DraftRoom's finalize hand-off pushes to it (`DraftRoom.tsx:231`), and a `…://draft` link probably opens it. It is the old UI: the light-only `Colors` palette (broken in Dark), "Error" alerts, raw reason codes and `e.message`, "Retry", Title Case, emoji, "draft date". | Keep the finalize heal in the new room: a "Finishing the draft…" state with Try again inside Draft complete, then remove the route (or redirect it to League). |
+| S-3 | Home, pre-draft Members | 7 | `PreDraftCard.tsx:229` colours the FIRST member as you (`i === 0`), but the list is in server order (`usePreDraftData.ts:114`), so most players see someone else, usually the commissioner, marked as themselves. | Mark the member whose id is yours; put you first. |
+| S-4 | Matchup | 9 (H5 class) | `ScoreDigits` keeps the previous score across a league switch (`prevTextRef`; nothing keys the scoreboard by league), so switching leagues rolls league A's score into league B's. The same defect was ruled blocking on Home (H5). | Key the scoreboard (and the tug) by league id, as Home and Portfolio do. Verify in the S-1 captures. |
+| S-5 | Home season chart | §4 (charts update in place) | The draw-in is keyed on `series.join(',')` (`SeasonChart.tsx:70`), so any change to the series redraws the line from nothing. If the 30 s live poll moves today's point, the chart blanks and redraws every 30 s while the market is open. **Likely; verify on device.** | Draw once per league and window; afterwards update in place (`base`). |
+| S-6 | Matchup, loading | 9 | `matchup.tsx:96,148` render nothing while loading (the main body and All matchups), on a high-traffic tab. All matchups' load failure has no retry. | The Home skeleton pattern (`LoadingSkeletons`); "This week's matchups didn't load" + Try again. |
+
+### P2, follow-ups (1.3 unless cheap)
+
+| ID | What | Rule |
+|---|---|---|
+| S-7 | **Load failures come in four forms:** "Couldn't load …" + "Pull down to try again." (Home, League, Matchup), money's `LoadFailure` ("X didn't load" + Try again), an ad-hoc Card + Text + Button (draft lobby, queue, room, renewal), and inline text links (search field, stock sheet). One job, one component: `LoadFailure` with "X didn't load" (the ruled pattern) and Try again everywhere. Two have the wrong subject: another manager's portfolio and trade history both say "Your portfolio didn't load". | 5 / 8 |
+| S-8 | **Silent failures:** League › History and the playoff bracket render nothing when their read fails (`league.tsx:154-162`). | 9 |
+| S-9 | **Loading looks four ways:** Skeleton (Home, room), a hand-rolled skeleton (stock search), text lines ("Loading your portfolio", "Your trade history is loading."), spinners, and blank (League in-season, renewal). Skeletons everywhere a list or card is coming. | 9 / 5 |
+| S-10 | **Manager rows: eight implementations.** Home's standings excerpt and League's table draw the same standings differently (weight, money colour, columns); League › History has no "(you)" and no tint (rule 7); the lobby, renewal roster and bracket each hand-roll bold + "(you)". One `ManagerRow`. **Giorgio's call:** choosing the shared style changes how the approved Home excerpt looks; A/B on the board first. | 5 / 7 |
+| S-11 | **Time formats:** draft time appears in seven shapes. Keep "Sat, Oct 3 · 7:00 PM ET" (with "Today · …" in the picker) and fix the outliers: the league sheet's "Draft Sat 7:00 PM ET" (no date), the renewal review's device-zone "Sat, Oct 3" (no time), and the legacy ones (go with S-2). Home says "The draft room opens Sat 6:00 PM ET", the League tab "opens at 6:00 PM ET": one line. Under an hour the countdown reads "42m" in one place and "42:18" in another: one form ("42:18", the live one). Pin `hourCycle` on the eight unpinned formatters, since Hermes mislabels unpinned hour parts in `formatToParts`. | 4 / 5 |
+| S-12 | **Ownership wording:** about eight phrasings for one fact. The draft room's raw-caps "ALREADY OWNED" badge should read "Owned by {name}" in the money search's form; "{SYMBOL} is already taken." stays as the refusal. Bug: `StockSheetBody.tsx:465` renders "another manager owns AAPL." with a lowercase start. | 5 |
+| S-13 | **Copy voice:** five rate-limit wordings (one: "Too many tries. Wait a moment, then try again."); "did not" in the renewal flow vs "didn't" everywhere else; manager / team / member mixed inside one blocker; "draft date" survives in 3 strings and "League Settings" is capitalised in 4; "Ask Unknown if they can make room." and "Week 1 of ?" leak placeholders; the Home invite share hardcodes "Stockpile" (`PreDraftCard.tsx:85`) where the other three say "Join my league with code {code}"; "Search by ticker or name..." uses ASCII dots; em dashes in league-settings' stake line and in the slot-builder copy. **Excluded:** the sign-ups-paused message, which is Giorgio's verbatim text. | writing rules |
+| S-14 | **Alerts used for outcomes:** "Success" alerts in League settings ("League settings updated") and Create account; save failures as alerts in League settings, the renewal flow and the queue. Confirmation belongs in place, and refusals in the card. | 8 / §9B |
+| S-15 | `stock-search` isn't declared in the root Stack (`_layout.tsx`), so by that file's own rule it is reachable while signed out, and it pushes rather than presents like its siblings. **Also flagged for a security look.** | entry points |
+| S-16 | `player-portfolio` (another manager's portfolio) has no in-app entry (deep link only) and no close control. | entry points |
+| S-17 | **Motion:** the root Stack's screen crossfade runs at `feature` (700 ms), over the `slow` cap for input-blocking transitions; `useMotion`'s comment says it wraps Reduce Motion, but it doesn't, so the §5 "quick crossfade" fallbacks are instant cuts (acceptable, but fix the comment or the fallback); LeagueSheet's exit isn't faster than its entrance; several entrances start fully invisible (Home's hero wrappers, the final banner, the season-complete trophy, which waits on storage even under Reduce Motion). | §4 / §5 |
+
+### P3, polish
+
+- Sheets close three ways (× at two sizes from `sp/Icon`, × from Ionicons in the league sheet, text).
+- Non-LiveDot loops: the Skeleton shimmer, the refresh pulse and the username "checking" dots, none paused off-screen.
+- Haptics: rows split (Portfolio rows buzz; `ListRow` and `Chip` don't); no Success haptic on a confirmed trade.
+- Untokenised timings: the your-turn steps 90/220/160, LiveDot 1400, Skeleton 800, the BrandBars 60 stagger.
+- `borderRadius: 14` typed about 10 times instead of `radius.lg`; `fontWeight: '700'` on `sp/Text` about 25 times.
+- Dead code to delete: `TradeModal`, `LeagueCarousel`, `PLBreakdownModal`, `PerformanceChart`, `PortfolioChart`, `WeekNavigator`, `StatusBadge`. Stale comments in `ThemeProvider.tsx` and `(tabs)/_layout.tsx`.
+- Home runs about five entrances on first open. It was approved that way (3b-2); noted for 1.3, not reopened.
+
+### Giorgio's device walkthrough (add to his list)
+
+The haptics, the your-turn chime and the silent switch (3c-2); the M5 holdings re-order (3e); the
+Matchup tab live on a weekday and a Friday close (S-1, S-4); the Home season chart across a few minutes of
+an open market (S-5); and the plan's own five checks.
