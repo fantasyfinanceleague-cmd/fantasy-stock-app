@@ -294,6 +294,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="player-portfolio" options={HIDDEN_HEADER_MODAL} />
                   <Stack.Screen name="trade-history" options={HIDDEN_HEADER_MODAL} />
+                  {/* S-15: was undeclared, so expo-router auto-added it outside
+                      both guards (reachable signed out by deep link). Default
+                      options, exactly as it was presented when auto-added. */}
+                  <Stack.Screen name="stock-search" />
                   {/* A dev tool: registered ONLY in a development build. Guarded out
                       in a release, the navigator never learns the route, so a link
                       to it falls back to the first screen (Home when signed in,

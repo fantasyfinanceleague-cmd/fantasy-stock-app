@@ -14,7 +14,8 @@
  * to those functions than it used to be. A follow-up should add a per-user
  * limiter (the record-trade / join-league check_and_bump_rate_limit
  * pattern) — deliberately NOT added in this branch, to keep this change to
- * the bug it fixes.
+ * the bug it fixes. DONE 2026-10-08 (security/market-data-guards): index.ts now
+ * requires a signed-in user, a fail-closed per-user limit, and clampStart.
  *
  * THE BUG THIS FIXES: the old handler made ONE request with limit=1000.
  * Alpaca's `limit` on /v2/stocks/bars caps the TOTAL bar count across ALL
@@ -75,6 +76,26 @@ export function capSymbols(symbols: string[], max: number): CapSymbolsResult {
 }
 
 // ── URL building ─────────────────────────────────────────────────────────────
+
+// ── Date-range cap ─────────────────────────────────────────────────────────
+
+export interface ClampStartResult {
+  start: string;
+  clamped: boolean;
+}
+
+/**
+ * Pure. Holds `start` (YYYY-MM-DD, already validated) to no earlier than
+ * `maxDays` calendar days before `todayIso` (YYYY-MM-DD, UTC). An over-long
+ * request is CLAMPED and reported (clamped: true), not refused: the caller
+ * still gets a correct series, just shorter, and says so.
+ */
+export function clampStart(start: string, todayIso: string, maxDays: number): ClampStartResult {
+  const floor = new Date(`${todayIso}T00:00:00Z`);
+  floor.setUTCDate(floor.getUTCDate() - maxDays);
+  const floorIso = floor.toISOString().slice(0, 10);
+  return start < floorIso ? { start: floorIso, clamped: true } : { start, clamped: false };
+}
 
 export interface BuildBarsUrlParams {
   symbols: string[];

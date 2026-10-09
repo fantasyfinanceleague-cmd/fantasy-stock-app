@@ -7,6 +7,7 @@
 
 import { assertEquals } from 'jsr:@std/assert';
 import {
+  clampStart,
   buildBarsUrl,
   capSymbols,
   fetchAllBars,
@@ -281,4 +282,14 @@ Deno.test('fetchAllBars: page 2+ fetch error -> ok:true with partial bars salvag
   assertEquals(result.pages, 1);
   assertEquals(result.bars.AAPL.length, 1);
   assertEquals(new Set(result.incompleteSymbols), new Set(['AAPL', 'MSFT']));
+});
+
+Deno.test('clampStart: a range inside the cap is untouched; an older start is clamped and REPORTED', () => {
+  assertEquals(clampStart('2026-10-01', '2026-10-08', 407), { start: '2026-10-01', clamped: false });
+  // The stock chart's real request: today - 400 days.
+  assertEquals(clampStart('2025-09-03', '2026-10-08', 407), { start: '2025-09-03', clamped: false });
+  // Exactly at the floor is allowed.
+  assertEquals(clampStart('2025-08-27', '2026-10-08', 407), { start: '2025-08-27', clamped: false });
+  // A bulk-history request is clamped to the floor.
+  assertEquals(clampStart('1990-01-01', '2026-10-08', 407), { start: '2025-08-27', clamped: true });
 });
