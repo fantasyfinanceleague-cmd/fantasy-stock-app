@@ -2,14 +2,14 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "69b63e01261dabd64fbe4985ec2a5571a559aa7b",
-    "commitShort": "69b63e01",
+    "commit": "d41cb351fd9abf8bf92cf27c1c2a8e0d0ea645ac",
+    "commitShort": "d41cb351",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "security/lockdown-symbols-stage1",
+    "branch": "security/lockdown-symbols",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-09T00:55:48Z",
-    "sourceHash": "sha256:bde0a29a8bcafe537437abcb49ae31a43c074992eefbe79af0b99ea6efad12f4",
+    "timestamp": "2026-10-09T00:56:34Z",
+    "sourceHash": "sha256:08bf0dc0f9817a30d9ab477740b414eb9a28835ac725cb4e9b0721a301c641a1",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -6719,9 +6719,10 @@
         "touchedBy": [
           "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
           "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
-          "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
+          "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql",
+          "supabase/migrations/20261114000000_symbols_signed_in_only.sql"
         ],
-        "rlsEnabled": false
+        "rlsEnabled": true
       },
       "drift": [
         {
@@ -6733,7 +6734,7 @@
           "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": "DECIDED 2026-07-28 — KEEP the public SELECT policy. This is settled; do not re-derive it.\n\nThe policy is REQUIRED, not merely tolerated. That distinction is the whole point of this note, because the two readings produce the same migration today and opposite futures. symbol-name/index.ts:35 and symbols-search/index.ts:78 both construct their client with SB_PUBLISHABLE_KEY and do NOT forward the caller's Authorization header, so their queries execute as the anon role. The `USING (true)` policy is what makes symbol lookup and search return rows at all. Tighten it to `TO authenticated` — the change that looks obviously safe by analogy with every other table hardened in B1 — and both functions silently return empty: no error, no 401, just a search box that finds nothing.\n\nWHY IT GRADES HIGH ANYWAY: the map's heuristic flags any policy whose predicate contains no identity check. That is the rule working as designed, not a finding. The data is public NASDAQ/NYSE reference listings refreshed from a public feed, the policy is SELECT-only, and writes go through an RLS-bypassing upsert in refresh-symbols using the secret key. There is nothing user-specific in the table to leak.\n\nIF YOU EVER DO WANT IT LOCKED: the prerequisite is switching symbol-name and symbols-search to SB_SECRET_KEY_INTERNAL first, at which point the anon policy becomes genuinely unnecessary and can be dropped. Doing it in the other order breaks search. Judged not worth the moving parts for public ticker data.",
+      "annotation": "REVERSED 2026-10-08 — symbols is SIGNED-IN ONLY. Giorgio: \"I don't want people to be able to scrape anything and the more secure and locked down this can be the better.\" This supersedes the 2026-07-28 KEEP decision below, which was a cost judgement (public ticker data, not worth the moving parts), not a correctness one.\n\nHOW, in the order the 2026-07-28 note said was required: (1) 3cbee6a2 — symbols-search and symbol-name query AS THE CALLER (publishable key + forwarded Authorization; deliberately NOT the secret key), so their reads no longer depend on the anon policy. (2) 20261114000000 — drops the PUBLIC \"read symbols\" policy, adds symbols_select_authenticated (SELECT TO authenticated USING (true)), REVOKEs ALL from anon and PUBLIC (the table grant, so anon is refused with 42501 rather than filtered to 0 rows), and trims authenticated to SELECT (TRUNCATE is not governed by RLS). Every other reader is service_role or a signed-in client; supabase/tests/symbols_readers.test.ts pins that as a complete set and proves no pre-sign-in screen reaches a symbols read.\n\nTHE HIGH DRIFT ROW (public-role-policies-ungated) reads prod via db-snapshot.json, so it stays until (2) is pushed AND the snapshot is re-captured. After that the remaining authenticated USING (true) policy is intended: reference data, identical for every signed-in player. If the row is still HIGH after a fresh capture, the push did not take — run the migration header's relacl / pg_policies checks.\n\nSUPERSEDED (kept for history): DECIDED 2026-07-28 — KEEP the public SELECT policy. This is settled; do not re-derive it.\n\nThe policy is REQUIRED, not merely tolerated. That distinction is the whole point of this note, because the two readings produce the same migration today and opposite futures. symbol-name/index.ts:35 and symbols-search/index.ts:78 both construct their client with SB_PUBLISHABLE_KEY and do NOT forward the caller's Authorization header, so their queries execute as the anon role. The `USING (true)` policy is what makes symbol lookup and search return rows at all. Tighten it to `TO authenticated` — the change that looks obviously safe by analogy with every other table hardened in B1 — and both functions silently return empty: no error, no 401, just a search box that finds nothing.\n\nWHY IT GRADES HIGH ANYWAY: the map's heuristic flags any policy whose predicate contains no identity check. That is the rule working as designed, not a finding. The data is public NASDAQ/NYSE reference listings refreshed from a public feed, the policy is SELECT-only, and writes go through an RLS-bypassing upsert in refresh-symbols using the secret key. There is nothing user-specific in the table to leak.\n\nIF YOU EVER DO WANT IT LOCKED: the prerequisite is switching symbol-name and symbols-search to SB_SECRET_KEY_INTERNAL first, at which point the anon policy becomes genuinely unnecessary and can be dropped. Doing it in the other order breaks search. Judged not worth the moving parts for public ticker data.",
       "verified": true,
       "id": "tbl.symbols",
       "label": "symbols",
@@ -18173,7 +18174,8 @@
       "20261111000002_draft_autopick_sweep_auto_start.sql",
       "20261111000003_schedule_draft_order_notify.sql",
       "20261112000000_league_standings_ranked_through_week.sql",
-      "20261113000000_get_portfolio_ledger.sql"
+      "20261113000000_get_portfolio_ledger.sql",
+      "20261114000000_symbols_signed_in_only.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
