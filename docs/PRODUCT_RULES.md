@@ -78,8 +78,9 @@ building anything, and don't reopen a rule without him.
 - **Manager rows** (2026-10-08, S-10): one row style everywhere a list of managers appears
   (League standings, Home's excerpt, History, the lobby, the Run it back list, the bracket).
   Giorgio: "just bold the users name. dont need to put the (you), people know their name.
-  just bold it." Your name is bold; everyone else's is regular weight; no "(you)" label and
-  no row tint. Gains are coloured by sign; movement arrows on League only.
+  just bold it." Then, asked about the tint: "blue tint as well". So: your name is bold and
+  your row keeps the light blue tint; everyone else's name is regular weight; no "(you)"
+  label. Gains are coloured by sign; movement arrows on League only.
 - **Draft recap** (2026-10-08): the designed League › History recap is NOT in 1.2.0 (Design
   Lead ruling, 1.3). Nothing in 1.2.0 links to it; the draft's ending is Draft complete.
 
