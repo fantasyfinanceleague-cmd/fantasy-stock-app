@@ -83,9 +83,11 @@ export default function MatchupScreen() {
           />
         ) : null}
         {segment === 'all' ? (
-          <AllMatchupsList state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
+          <AllMatchupsList key={activeLeagueId ?? 'none'} state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
         ) : (
-          <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} finalLines={finalLines} />
+          // S-4: keyed by league, so a league switch mounts a fresh scoreboard, tug and race
+          // instead of rolling league A's score into league B's (Home's H5, HomeLeagueTransition).
+          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} finalLines={finalLines} />
         )}
       </BarsRefresh>
     </View>

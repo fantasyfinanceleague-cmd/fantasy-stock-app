@@ -2,30 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "603dcfa939efa2f631a0ab1138e6277a76352814",
-    "commitShort": "603dcfa9",
+    "commit": "0c8873e9111c6ab752f5edfce84262b89dc68111",
+    "commitShort": "0c8873e9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/home/PreDraftCard.tsx"
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "A",
-        "path": "apps/mobile/lib/home/preDraftMembers.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/pre-draft-members-you.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+        "path": "apps/mobile/tests-deno/matchup-league-key.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:01Z",
+    "timestamp": "2026-10-11T05:44:03Z",
     "sourceHash": "sha256:a680d414bae684c4847e817428299ad0ef37206dc256ed20d853d1672139fd01",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
