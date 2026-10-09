@@ -31,6 +31,11 @@ building anything, and don't reopen a rule without him.
 - **Board review answers** (2026-10-06): "Buy a stock" (tappable-but-blocked ownership, the
   Portfolio entry row, the search copy) and the stock chart ("A week ago" as the comparison
   line): "fine".
+- **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
+  to scrape anything and the more secure and locked down this can be the better." Chosen over
+  keeping the public stock-symbol list readable (option B): the symbols table becomes
+  signed-in only, and anything an anonymous caller (or any one signed-in player) could
+  bulk-read is audited and locked down, with product-visible changes brought to Giorgio first.
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
