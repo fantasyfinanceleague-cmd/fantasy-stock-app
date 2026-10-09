@@ -43,6 +43,7 @@ Deno.test('each screen that broke stacks at large text (source guards)', () => {
   const bracket = SOURCES['components/game/BracketView.tsx'];
   assert(bracket.includes('name: { flexShrink: 1, minWidth: 0 },'));
   assert(bracket.includes("end: { marginLeft: 'auto', flexShrink: 0 },"));
+  assert(SOURCES['components/game/DraftComplete.tsx'].includes("sectionHead: { flexDirection: 'row', flexWrap: 'wrap',"));
   // The hook reads the live scale (re-renders on a text-size change).
   assert(SOURCES['components/sp/useLargeText.ts'].includes('const { fontScale } = useWindowDimensions();'));
 });

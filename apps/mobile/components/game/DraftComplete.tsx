@@ -90,7 +90,8 @@ const styles = StyleSheet.create({
   stack: { gap: space[4] },
   hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   section: { gap: space[2] },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  // Wraps at large text (XL capture: the caption ran off the screen).
+  sectionHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: space[2] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3], minHeight: 44 },
   rowText: { flex: 1, gap: 2 },
   ticker: { fontWeight: '700' },
