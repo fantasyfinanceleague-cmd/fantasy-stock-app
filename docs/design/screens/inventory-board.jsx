@@ -236,18 +236,18 @@
             <span className="b-sec__n b-sec__n--code">UX</span>
             <div>
               <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
-              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." So: your name bold, everyone else in the regular weight; no "(you)" and no tint on your row. Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
             </div>
           </header>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="League standings" note="Rank, move, name, record, gain. Only your name is bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
             <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
           </div>
           <div className="b-ask">
             <h3>Notes for the build</h3>
             <ul>
               <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
-              <li><b>The renewal list is the one exception to the bold.</b> There, bold already means "Running back" (his earlier ruling), so your name there is only un-tagged; nothing extra marks it.</li>
+              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
               <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
             </ul>
           </div>

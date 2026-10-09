@@ -319,7 +319,7 @@
               <><b>The Home hero</b> (your call: Concept A). Team value is the big number; the line under it is the season gain, the same words as the Standings column. It is not value − $12,000: the value also moves between the draft and Week 1's open and over every Friday close → Monday open, when no matchup is scoring. Portfolio keeps its own gain, value − cost, labelled "since the draft".</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
               <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score. <b>Past weeks are one point each</b> (that week's scored result, at Friday's close) joined by straight lines; only this week has day-by-day points. Time stays to scale: every week is five trading days wide. Scrubbing a past week reads that week's own result ("Week 3 · {$s(K.ROBERTO_WEEKS[2].gain)}"); this week reads the day and the running total.</>,
-              <>Top of the standings with your name bold. The avatar opens Profile.</>,
+              <>Top of the standings with your row tinted and your name bold. The avatar opens Profile.</>,
               <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
             motion={<>
@@ -360,7 +360,7 @@
           notes={<Notes
             shows={[
               <><b>One order, also the playoff seeding</b> (your call): win percentage, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. A bye is no result: it counts as neither a win nor a loss and is left out of win percentage. Records read W–L, with –T only when there are ties.</>,
-              <>▲/▼ show the move since last week. Your name is bold wherever you land.</>,
+              <>▲/▼ show the move since last week. Your row is tinted and your name bold wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
             motion={<>

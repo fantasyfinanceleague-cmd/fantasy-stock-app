@@ -686,7 +686,7 @@
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div className="ks-seg ks-seg--game"><span>My matchup</span><span className="on">All matchups</span></div>
           {live.map((m) => (
-            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8 }}>
+            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><span style={{ fontWeight: m.you ? 700 : 500 }}>{m.a}</span><span style={{ fontWeight: 500 }}>{m.b}</span></div>
               <Scores left={$s(m.ga)} right={$s(m.gb)} size="md" />
               <Tug you={m.ga} opp={m.gb} />
@@ -846,7 +846,7 @@
     );
   }
 
-  /** The revealed draft order (after 6:00 PM), your name bold, with
+  /** The revealed draft order (after 6:00 PM), your row tinted and bold, with
    * what the snake means for you. New copy. */
   /** The in-app "order is set" card (posted at T−1h in either mode, with a
    * push). mode: 'random' | 'manual'. New copy. */
@@ -872,7 +872,7 @@
         <OrderSetCard mode={mode} />
         <ol className="ks-rows" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16 }}>
           {L.order.map((m, i) => (
-            <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8 }}>
+            <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-caption ks-num">{i + 1}</span>
               <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
               <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
@@ -924,7 +924,7 @@
             <div className="ks-card" style={{ padding: '2px 8px' }}>
               <ol className="ks-rows">
                 {L.order.map((m, i) => (
-                  <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '10px 6px' }}>
+                  <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '10px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                     <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                     <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
                     <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
@@ -1099,7 +1099,7 @@
     const M = ({ a, b, sa, sb, win, live }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa, win === 0], [b, sb, win === 1]].map(([n, s, w]) => (
-          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1 }} className="ks-callout">
+          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1, ...(n.startsWith('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
             <span style={{ fontWeight: n.startsWith('Roberto') ? 700 : 500 }}>{n}</span><span className="ks-num">{s}</span>
           </div>
         ))}
@@ -1131,7 +1131,7 @@
     const Game = ({ a, b, sa, sb, live, bye, pending }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa], [b, sb]].map(([n, s], i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined }} className="ks-callout">
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined, ...(n && n.includes('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
             <span style={{ color: bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: n && n.includes('Roberto') ? 700 : 500 }}>{n}</span>
             <span className="ks-num">{s}</span>
           </div>
@@ -1509,7 +1509,7 @@
   const Season1Rows = ({ n = 6 }) => (
     <ul className="ks-rows">
       {S1.rows.slice(0, n).map((r) => (
-        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0' }}>
+        <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
           <Medal rank={r.rank} />
           <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
           <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
@@ -1671,7 +1671,7 @@
         {rows.map((r) => {
           const st = state(r.id);
           return (
-            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center', background: r.id === me ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-t ks-num" style={{ color: st === 'in' ? undefined : 'var(--c-text-2)' }}>{r.rank}</span>
               <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}</span>
               {st === 'in' ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Running back</span> : null}
@@ -2131,7 +2131,7 @@
           <div className="ks-card" style={{ padding: '2px 8px' }}>
             <ol className="ks-rows">
               {order.map((m, i) => (
-                <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '9px 6px' }}>
+                <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '9px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                   <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
                   <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
@@ -2988,14 +2988,14 @@
   // ═════════════════════════════════════════════════════════════════════
   // S-10 (UX final sweep): ONE manager row everywhere. RULED by Giorgio
   // 2026-10-08: "just bold the users name. dont need to put the (you), people
-  // know their name. just bold it." Your name 700, everyone else 500; no
-  // "(you)", no row tint. Gains coloured by sign; move arrows on League only.
+  // know their name. just bold it." + "blue tint as well". Your name 700 on
+  // the you-tint row, everyone else 500; no "(you)". Gains coloured by sign; move arrows on League only.
   // VoiceOver still says "you" (the label, not the pixels). Data: data.js.
   // ═════════════════════════════════════════════════════════════════════
   const ManagerRow = ({ r, move }) => {
     const rec = `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
     return (
-      <li className="ks-row" style={{ gridTemplateColumns: move ? '18px 18px 1fr auto auto' : '18px 1fr auto auto', padding: '10px 6px' }}>
+      <li className="ks-row" style={{ gridTemplateColumns: move ? '18px 18px 1fr auto auto' : '18px 1fr auto auto', padding: '10px 6px', background: r.you ? 'var(--c-you-tint)' : undefined, borderRadius: r.you ? 8 : 0 }}>
         <span className="ks-callout ks-num ks-muted">{r.rank}</span>
         {move ? (
           <span className="ks-caption ks-num" style={{ display: 'inline-flex', alignItems: 'center', color: r.delta > 0 ? 'var(--c-gain)' : r.delta < 0 ? 'var(--c-loss)' : 'var(--c-text-3)' }}>

@@ -306,7 +306,7 @@
             <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
             <ul className="ks-rows">
               {near.map((r) => (
-                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0' }}>
+                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-t ks-num">{r.rank}</span>
                   <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
                   <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
@@ -421,7 +421,7 @@
                 const r = pos[p.id];
                 const d = after ? r.delta : 0;
                 return (
-                  <div key={p.id} className="ks-lbrow" style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
+                  <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
                     <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
                     <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
                       {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
