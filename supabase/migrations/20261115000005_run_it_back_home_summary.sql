@@ -1,29 +1,30 @@
 -- ============================================================================
--- Leave league (4/7): get_home_summary skips leagues the caller has hidden
+-- Run it back (6/6): get_home_summary gains the renewal links
 -- ============================================================================
--- Leaving a FINISHED league hides it for that user (league_members.hidden_at,
--- 20261107000000). Home (the single-league Home, driven by this function's
--- list) must stop showing it; the history stays readable through every other
--- reader (is_member() is unchanged, and get_home_league takes an explicit
--- league id, so "Past leagues" can still open it).
+-- Design: docs/migrations/RUN_IT_BACK_DESIGN.md (rev 3.1), §2.1 and §2.8.
+-- 20261011000001's body, verbatim, plus two output columns:
+--   previous_league_id   the season this league renews (NULL = a first season)
+--   successor_league_id  the season that renews this one (NULL = none yet)
+-- The client shows "Run it back?" on a finished league with no successor, and a
+-- "Season N" link on one that has a successor.
 --
--- The function below is 20261011000001's body VERBATIM except ONE predicate in
--- my_leagues: `and m.hidden_at is null`. CREATE OR REPLACE keeps the existing
--- privileges and the return type is unchanged; the revoke/grant block is
--- re-stated verbatim so proacl reads the same either way. The PGlite test
--- asserts proacl / prosecdef / proconfig are byte-identical before and after.
+-- RETURNS TABLE changes shape, so the function is DROPPED and re-created.
+-- DROP + CREATE resets privileges, so the grants are re-applied below (the
+-- opposite trap to CLAUDE.md's CREATE OR REPLACE note).
 --
--- CONFLICT NOTE (PR #94, Run it back, unmerged as of this file): its
--- 20261115000005 also re-creates get_home_summary. Whichever lands SECOND must
--- carry the other's change: if #94 merges first, rebase this file onto #94's
--- body and keep this one predicate.
+-- CARRIES FORWARD 20261107000003's hidden_at predicate (that migration's own
+-- header anticipated this: "if #94 merges first, rebase this file onto #94's
+-- body and keep this one predicate" -- #94 is re-stamped LATER than
+-- 20261107000003, so this file is the one that must not regress it).
 --
--- PROVISIONAL TIMESTAMP: see 20261107000000's header.
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
 --
--- POST-PUSH EFFECT CHECK:
---   SELECT proacl, prosecdef, proconfig FROM pg_proc WHERE proname = 'get_home_summary';
---   -- unchanged: {postgres=X/postgres,authenticated=X/postgres}, t, {"search_path=public, pg_temp"}
+-- POST-PUSH EFFECT CHECKS:
+--   SELECT proacl FROM pg_proc WHERE proname = 'get_home_summary';
+--   -- expect {postgres=X/postgres,authenticated=X/postgres} exactly
 -- ============================================================================
+
+drop function if exists public.get_home_summary();
 
 create or replace function public.get_home_summary()
 returns table(
@@ -55,7 +56,9 @@ returns table(
   team2_user_id         text,
   team2_display_name    text,
   team2_is_bot          boolean,
-  team2_gain            numeric(12,2)
+  team2_gain            numeric(12,2),
+  previous_league_id    uuid,
+  successor_league_id   uuid
 )
 language plpgsql
 stable
@@ -124,14 +127,15 @@ begin
     public.participant_display_name(mu.team2_user_id),
     case when mu.id is null or mu.team2_user_id is null then null
          else mu.team2_user_id ~* '^bot-[0-9]+(-[0-9]+)?$' end,
-    mu.team2_gain
+    mu.team2_gain,
+    l.previous_league_id,
+    (select n.id from public.leagues n where n.previous_league_id = l.id)
   from my_leagues l
   left join my_standing ms on ms.league_id = l.id
   left join my_matchup mu on mu.league_id = l.id
   order by l.created_at;
 end;
 $$;
-
 revoke all on function public.get_home_summary() from public;
 revoke all on function public.get_home_summary() from anon;
 revoke all on function public.get_home_summary() from authenticated;

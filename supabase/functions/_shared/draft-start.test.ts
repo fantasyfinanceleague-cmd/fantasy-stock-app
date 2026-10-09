@@ -24,6 +24,9 @@ interface World {
   pool: 'error' | Array<{ ordinals: number[]; n: number; prices: number[] }>;
   reconfirm?: Record<string, unknown> | null | 'error';
   postponed?: boolean;
+  // Run it back: pending renewal replies. undefined/0 = none (every test here
+  // is an ordinary league unless it says otherwise).
+  renewalPending?: number | 'error';
   rpc: Record<string, unknown>; // name -> data (or { __error })
 }
 
@@ -71,8 +74,14 @@ function fakeAdmin(w: World) {
           throw new Error(`unexpected maybeSingle on ${table}`);
         },
         then: (ok: (v: unknown) => unknown) => {
-          if (table !== 'league_members') throw new Error(`unexpected await on ${table}`);
-          return res(w.members.map((user_id) => ({ user_id }))).then(ok);
+          if (table === 'league_members') return res(w.members.map((user_id) => ({ user_id }))).then(ok);
+          if (table === 'league_renewal_responses') {
+            return (w.renewalPending === 'error'
+              ? Promise.resolve({ data: null, error: { message: 'boom' }, count: null })
+              : Promise.resolve({ data: null, error: null, count: w.renewalPending ?? 0 })
+            ).then(ok);
+          }
+          throw new Error(`unexpected await on ${table}`);
         },
       };
       return chain;

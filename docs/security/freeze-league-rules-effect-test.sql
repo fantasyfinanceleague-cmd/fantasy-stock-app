@@ -88,7 +88,8 @@ declare
     'season_status', 'current_week', 'current_season_id', 'commissioner_id',
     'league_start_date', 'league_end_date',
     'draft_status', 'playoff_teams', 'draft_order_mode', 'pick_clock_enabled', 'draft_started_at', 'pick_seconds', 'id',
-    'name', 'draft_date', 'invite_code', 'created_at', 'budget_mode'];
+    'name', 'draft_date', 'invite_code', 'created_at', 'budget_mode',
+    'previous_league_id', 'lineage_id', 'season_number'];
 begin
   -- ---- G: catalog -----------------------------------------------------------
   select count(*) into n from pg_trigger

@@ -51,6 +51,9 @@ const MIGRATIONS = [
   '20260811000002_trades_drop_direct_client_insert.sql',
   BASE_MIGRATION,
   MIGRATION_UNDER_TEST,
+  // Run it back: the completed-season refusal, under the lock (CREATE OR REPLACE
+  // of the 13-argument function; loaded after the function it replaces).
+  '20261115000006_record_trade_season_guard.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 const SIG13 = 'uuid,uuid,text,text,numeric,numeric,numeric,uuid,uuid[],text[],jsonb,jsonb,uuid';
 const SIG12 = 'uuid,uuid,text,text,numeric,numeric,numeric,uuid,uuid[],text[],jsonb,jsonb';
@@ -66,6 +69,7 @@ alter default privileges in schema public grant all on tables to anon, authentic
 grant usage on schema public to anon, authenticated, service_role;
 create table leagues (
   id uuid primary key default gen_random_uuid(), draft_status text default 'completed',
+  season_status text default 'active' check (season_status in ('active', 'playoffs', 'completed')),
   stake_mode text, budget_amount numeric(12,2) not null default 100, notional_per_slot numeric not null default 1000,
   num_rounds int not null default 6, allow_undraftable boolean not null default false);
 create table league_members (league_id uuid not null references leagues(id) on delete cascade,
@@ -124,7 +128,7 @@ Deno.test({
 
     // ---- the prod write path, with SQL reads ------------------------------
     async function readState(L: string, withSlots: boolean): Promise<LedgerState> {
-      const [league] = await q(`select draft_status, stake_mode, budget_amount, notional_per_slot, num_rounds,
+      const [league] = await q(`select draft_status, season_status, stake_mode, budget_amount, notional_per_slot, num_rounds,
         allow_undraftable from leagues where id=$1`, [L]);
       const picks = await q(`select id::text id, user_id, symbol, entry_price, quantity, pick_number, slot_id::text slot_id
         from drafts where league_id=$1 order by created_at, id`, [L]) as DraftRow[];
@@ -651,6 +655,18 @@ Deno.test({
       assertEquals(await tradeCount(L), 0);
     });
 
+    await t.step('a completed season refuses a trade under the lock and writes nothing (Run it back)', async () => {
+      const A = await user();
+      const L = await league({ stake_mode: 'budget_cap', budget_amount: 1000, num_rounds: 4 }, [A]);
+      await q(`update leagues set draft_status = 'completed', season_status = 'completed' where id=$1`, [L]);
+      const e = expect(await readState(L, true));
+      assertEquals(await rpc(L, buy(A, 'MSFT'), plan1, e), { ok: false, reason: 'season_completed' });
+      assertEquals(await tradeCount(L), 0);
+      // The draft check still comes first: an unfinished draft is draft_not_completed.
+      await q(`update leagues set draft_status = 'in_progress' where id=$1`, [L]);
+      assertEquals(await rpc(L, buy(A, 'MSFT'), plan1, e), { ok: false, reason: 'draft_not_completed' });
+    });
+
     await t.step('the funded unique index is mapped INSIDE the RPC (by name) to proceeds_unavailable', async () => {
       const A = await user();
       const L = await league({ stake_mode: 'fixed_notional', notional_per_slot: 1000, num_rounds: 3 }, [A]);
@@ -676,8 +692,9 @@ Deno.test({
       assert(from > 0 && to > from, `effect-check DO block not found in ${label}`);
       return src.slice(from, to).split('\n').map((l) => l.replace(/^--   ?/, '')).join('\n');
     };
-    const baseSrc = await Deno.readTextFile(MIGRATIONS[MIGRATIONS.length - 2]);
-    const migSrc = await Deno.readTextFile(MIGRATIONS[MIGRATIONS.length - 1]);
+    // By name, not by position: the season guard is appended to MIGRATIONS below.
+    const baseSrc = await Deno.readTextFile(new URL(`supabase/migrations/${BASE_MIGRATION}`, ROOT));
+    const migSrc = await Deno.readTextFile(new URL(`supabase/migrations/${MIGRATION_UNDER_TEST}`, ROOT));
     const baseBlock = extractDo(baseSrc, BASE_MIGRATION);
     const slotBlock = extractDo(migSrc, MIGRATION_UNDER_TEST);
     const verdictOf = async (block: string) => {

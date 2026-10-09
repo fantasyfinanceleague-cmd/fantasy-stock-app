@@ -194,9 +194,20 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
     if (rcErr) return json({ ok: false, reason: 'unhandled' }, 500);
 
+    // Run it back: invitees who have not answered yet. A COUNT of the pending
+    // rows (a server read; the table grants service_role SELECT only), so a
+    // read failure is a 500, never a silent "0 pending".
+    const { count: pendingCount, error: pendErr } = await admin
+      .from('league_renewal_responses')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('league_id', leagueId)
+      .eq('status', 'pending');
+    if (pendErr) return json({ ok: false, reason: 'unhandled' }, 500);
+    const repliesPending = pendingCount ?? 0;
+
     // Commissioner identity comes ONLY from the verified league row — never
     // from the request body.
-    const state = toStartState(league, memberIds.length, toRosterReconfirm(reconfirmRow));
+    const state = toStartState(league, memberIds.length, toRosterReconfirm(reconfirmRow), repliesPending);
     const botsAllowed = isBotsAllowedForEmail(BOTS_ALLOWED_EMAILS, user.email);
     const botsNeeded = computeBotsNeeded(state.memberCount, state.numParticipants);
 
@@ -255,6 +266,7 @@ Deno.serve(async (req: Request) => {
         is_commissioner: commissioner,
         bots_allowed: botsAllowed,
         bots_needed: botsNeeded,
+        replies_pending: repliesPending,
         member_count: state.memberCount,
         min_members: MIN_DRAFT_MEMBERS,
       });
@@ -337,6 +349,8 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'add_bots') {
       if (!botsAllowed) return json({ ok: false, reason: 'bots_not_allowed' }, 403);
+      // Run it back: bots take seats an invitee may still need (the cap is 16).
+      if (repliesPending > 0) return json({ ok: false, reason: 'renewal_replies_pending' }); // 200: game-flow refusal
       if (state.draftStatus !== 'not_started') {
         return json({ ok: false, reason: 'not_started_state' }); // 200: game-flow refusal
       }

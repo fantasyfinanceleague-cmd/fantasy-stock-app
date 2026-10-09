@@ -63,6 +63,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds, fetchEligibleCategoryIdsBatch } from '../_shared/category-eligibility.ts';
+import { tradeRefusalReason } from './gate.ts';
 import {
   fixedNotionalFunding,
   type TradeRow,
@@ -172,7 +173,7 @@ async function rateLimitOk(admin: any, userId: string, ip: string): Promise<bool
   }
 }
 
-const LEAGUE_COLUMNS = 'id, num_rounds, draft_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable';
+const LEAGUE_COLUMNS = 'id, num_rounds, draft_status, season_status, stake_mode, budget_amount, notional_per_slot, allow_undraftable';
 
 // Reads the league-scoped state the validator (and the CAS) work from. Every
 // trades/drafts read is PAGINATED in a stable (created_at, id) order: an
@@ -194,8 +195,11 @@ async function readLedger(
     const { data, error } = await admin.from('leagues').select(LEAGUE_COLUMNS).eq('id', leagueId).maybeSingle();
     if (error) return { ok: false, reply: unhandled() };
     if (!data) return { ok: false, reply: { status: 404, body: { ok: false, reason: 'league_not_found' } } };
-    if (data.draft_status !== 'completed') {
-      return { ok: false, reply: { status: 200, body: { ok: false, reason: 'draft_not_completed' } } };
+    // Trading opens once the draft is done and closes with the season: the pure
+    // gate (gate.ts). record_trade_atomic re-checks both under its lock.
+    const refusal = tradeRefusalReason(data);
+    if (refusal) {
+      return { ok: false, reply: { status: 200, body: { ok: false, reason: refusal } } };
     }
     league = data as LeagueRow;
   }
@@ -328,8 +332,11 @@ Deno.serve(async (req: Request) => {
     if (!league) return json({ ok: false, reason: 'league_not_found' }, 404);
     // Trading opens once the draft is done; before that the draft IS the
     // acquisition path.
-    if (league.draft_status !== 'completed') {
-      return json({ ok: false, reason: 'draft_not_completed' }); // 200: game-flow refusal (join-league pattern)
+    // 200: game-flow refusal (join-league pattern). season_completed: Run it back
+    // (record-trade/gate.ts): a finished season is frozen, and trading closes with it.
+    const refusal = tradeRefusalReason(league);
+    if (refusal) {
+      return json({ ok: false, reason: refusal });
     }
 
     const { data: member, error: memErr } = await admin

@@ -1,17 +1,36 @@
 -- ============================================================================
--- FIXTURE: PR #94 (Run it back) membership objects, VERBATIM from
--- origin/feat/run-it-back @ 398da84 (unmerged when leave-league was built):
---   * league_renewal_responses + its transition guard (20261115000002)
---   * sync_renewal_on_member_delete + trg_league_members_renewal_sync_delete
---     (20261115000004)
--- plus the one lineage column they read (20261115000000).
---
--- Used ONLY by leave_league.pglite.test.ts to prove leave_league's Run-it-back
--- branch against #94's real trigger bodies. WHEN #94 MERGES: delete this file
--- and load #94's migrations from supabase/migrations/ instead.
+-- Run it back (3/6): the renewal reply record and its transition guard
 -- ============================================================================
-
-alter table public.leagues add column if not exists previous_league_id uuid references public.leagues(id);
+-- Design: docs/migrations/RUN_IT_BACK_DESIGN.md (rev 3.1), §2.2 and §2.5.
+--
+-- league_renewal_responses has ONE row per invited Season 1 player, on the NEW
+-- league, written by renew_league and never by a client. The expected set is
+-- frozen when the ask goes out, so "No reply yet" is a count against a fixed
+-- set, not "a Season 1 member with no row".
+--
+--   status     pending | in | out          (the discriminator; never inferred from NULL)
+--   decided_by player | commissioner       (NULL while pending)
+--
+-- The commissioner's own row is 'in' (decided_by 'player'): they are a member.
+--
+-- THE ONE-WAY DOOR (CLAUDE.md "a gate keyed on state must not be re-openable"):
+-- the guard trigger below refuses, for EVERY role including service_role:
+--   * any transition INTO 'pending' (rows are created pending only, by
+--     renew_league's INSERT; nothing moves a row back to pending);
+--   * any change of a row decided by the commissioner ("Remove is final");
+--   * 'out' for the league's own commissioner (they cannot opt out of their
+--     own renewal);
+--   * an invalid status/decided_by pair (the stamps CHECK).
+-- The RPCs enforce the same rules with readable reasons; the trigger is the
+-- backstop, so a direct write cannot make the gate reopen.
+--
+-- PROVISIONAL TIMESTAMP: re-stamp before release (see 20261115000000's header).
+--
+-- POST-PUSH EFFECT CHECKS:
+--   SELECT relrowsecurity FROM pg_class WHERE relname = 'league_renewal_responses';   -- t
+--   SELECT grantee, privilege_type FROM information_schema.role_table_grants
+--   WHERE table_name = 'league_renewal_responses';   -- service_role SELECT only
+-- ============================================================================
 
 create table if not exists public.league_renewal_responses (
   league_id       uuid not null references public.leagues(id) on delete cascade,
@@ -34,6 +53,8 @@ create table if not exists public.league_renewal_responses (
   constraint league_renewal_responses_nudge_check check (nudge_count >= 0)
 );
 
+comment on table public.league_renewal_responses is
+  'Run it back: one row per invited Season 1 player on the NEW league. status is the discriminator (pending|in|out). Written only by the renewal SECURITY DEFINER functions; the guard trigger makes the pending state one-way.';
 
 create index if not exists league_renewal_responses_pending_idx
   on public.league_renewal_responses (league_id) where status = 'pending';
@@ -90,39 +111,13 @@ create trigger trg_league_renewal_responses_transitions
   before insert or update on public.league_renewal_responses
   for each row execute function public.enforce_renewal_response_transitions();
 
-create or replace function public.sync_renewal_on_member_delete()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
-declare
-  v_comm     text;
-  v_prev     uuid;
-  v_status   text;
-begin
-  select l.commissioner_id, l.previous_league_id into v_comm, v_prev
-    from public.leagues l where l.id = old.league_id;
-  if not found or v_prev is null then
-    return null;   -- an ordinary league, or the league itself is being deleted
-  end if;
-  select r.status into v_status from public.league_renewal_responses r
-   where r.league_id = old.league_id and r.user_id = old.user_id;
-  if v_status is distinct from 'in' then
-    return null;   -- no reply, or already out / pending: nothing to keep in step
-  end if;
-  if v_comm = old.user_id then
-    raise exception 'renewal_commissioner_out: the commissioner cannot leave their own renewal'
-      using errcode = '22023';
-  end if;
-  update public.league_renewal_responses
-     set status = 'out', decided_by = 'player', responded_at = now()
-   where league_id = old.league_id and user_id = old.user_id;
-  return null;
-end;
-$$;
+-- ----------------------------------------------------------------------------
+-- RLS + grants. No client policies: every read is an RPC, every write is a
+-- DEFINER function. service_role gets SELECT only, for draft-control's
+-- replies-pending count. Revoke by name (Supabase default grants ALL on new
+-- tables to the API roles).
+-- ----------------------------------------------------------------------------
+alter table public.league_renewal_responses enable row level security;
 
-drop trigger if exists trg_league_members_renewal_sync_delete on public.league_members;
-create trigger trg_league_members_renewal_sync_delete
-  after delete on public.league_members
-  for each row execute function public.sync_renewal_on_member_delete();
+revoke all on table public.league_renewal_responses from public, anon, authenticated, service_role;
+grant select on table public.league_renewal_responses to service_role;

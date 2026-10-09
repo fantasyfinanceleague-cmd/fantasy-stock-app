@@ -183,6 +183,24 @@ Deno.test('below the headcount floor only the headcount blocker is shown', () =>
   assertEquals(blockers, [{ code: 'not_enough_members', have: 3, need: MIN_DRAFT_MEMBERS }]);
 });
 
+Deno.test('computeStartBlockers: no pending renewal replies adds no blocker (ordinary leagues)', () => {
+  assertEquals(computeStartBlockers(startState(), NOW), []);
+  assertEquals(computeStartBlockers(startState({ renewalRepliesPending: 0 }), NOW), []);
+});
+
+Deno.test('computeStartBlockers: a pending renewal reply blocks with the count, last in order', () => {
+  const blockers = computeStartBlockers(startState({ renewalRepliesPending: 2 }), NOW);
+  assertEquals(blockers, [{ code: 'renewal_replies_pending', pending: 2 }]);
+  // Listed after the fundamental blockers, so the commissioner sees those first.
+  const both = computeStartBlockers(startState({ renewalRepliesPending: 1, memberCount: 2 }), NOW);
+  assertEquals(both.map((b) => b.code), ['not_enough_members', 'renewal_replies_pending']);
+});
+
+Deno.test('canStartDraft: false while a renewal reply is pending, true once none is', () => {
+  assertEquals(canStartDraft(startState({ renewalRepliesPending: 1 }), NOW), false);
+  assertEquals(canStartDraft(startState({ renewalRepliesPending: 0 }), NOW), true);
+});
+
 Deno.test('computeStartBlockers: a pending roster reconfirmation blocks, right after the state blocker', () => {
   const rc = { departed: [{ userId: 'u-sam', name: 'Sam' }], membersBefore: 5, choice: 'pending' as const };
   assertEquals(computeStartBlockers(startState({ rosterReconfirm: rc }), NOW), [

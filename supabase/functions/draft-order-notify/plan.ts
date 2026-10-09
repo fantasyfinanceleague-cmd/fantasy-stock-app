@@ -1,3 +1,10 @@
+import {
+  renewalInviteBody,
+  renewalRemovedBody,
+  renewalReplyBody,
+  seasonSetBody,
+} from '../_shared/renewal-copy.ts';
+
 /**
  * Pure decisions for draft-order-notify — no DB, no network, hermetically
  * tested in plan.test.ts.
@@ -80,10 +87,77 @@ export function formatDraftDateTime(iso: string): string {
   return `${p.weekday}, ${p.month} ${p.day} · ${p.time}`;
 }
 
+/** Run it back notice kinds (20261115000001). Copy: _shared/renewal-copy.ts, the
+ * 3c prompt's "Run it back" section (design @ 3244d02). */
+export const RENEWAL_KINDS = ['renewal_invite', 'renewal_reply', 'renewal_nudge', 'renewal_removed', 'season_set'] as const;
+export type RenewalKind = (typeof RENEWAL_KINDS)[number];
+// Selected alongside DELIVERED_KINDS in index.ts. 'draft_order_set' is NOT
+// included here or anywhere else in this file: it is retired from push (see
+// the header comment), and reviving it into a select would resurrect it.
+
+export interface RenewalNotice {
+  kind: RenewalKind;
+  leagueName: string;
+  leagueId: string;
+  /** league_notifications.detail: the event as it happened, written at event time. */
+  detail: Record<string, unknown>;
+}
+
+/** The push for a renewal notice, built SERVER-SIDE from the stored detail only.
+ * Every string comes from _shared/renewal-copy.ts. Returns null for an unknown
+ * kind (the caller settles that row as skipped). */
+export function renewalNoticeMessage(n: RenewalNotice) {
+  const d = n.detail;
+  const season = Number(d.season_number) || 0;
+  const data = { type: n.kind, screen: 'league', league_id: n.leagueId };
+  const num = (v: unknown) => Number(v) || 0;
+  switch (n.kind) {
+    case 'renewal_invite':
+    case 'renewal_nudge':
+      return {
+        title: n.leagueName,
+        body: renewalInviteBody({ commissioner: String(d.commissioner_name ?? 'The commissioner'), season }),
+        data,
+      };
+    case 'renewal_reply':
+      return {
+        title: n.leagueName,
+        body: renewalReplyBody({
+          name: String(d.subject_name ?? 'A player'),
+          response: d.response === 'in' ? 'in' : 'out',
+          season,
+          running: num(d.in),
+          out: num(d.out),
+          noReply: num(d.pending),
+        }),
+        data,
+      };
+    case 'renewal_removed':
+      return {
+        title: n.leagueName,
+        body: renewalRemovedBody({ commissioner: String(d.commissioner_name ?? 'The commissioner'), season, league: n.leagueName }),
+        data,
+      };
+    case 'season_set':
+      return {
+        title: n.leagueName,
+        body: seasonSetBody({
+          league: n.leagueName,
+          season,
+          draftDate: typeof d.draft_date === 'string' ? d.draft_date : null,
+        }),
+        data,
+      };
+    default:
+      return null;
+  }
+}
+
 export type DeliveryOutcome =
   | 'sent'
   | 'no_token' // no device registered, or notifications turned off
   | 'not_in_order' // left the league (or never in the order) since the notice was created
+  | 'unknown_kind' // a kind this function does not deliver: never retried
   | 'superseded' // the event no longer holds (fixed, rescheduled, started): saying it would be wrong
   | 'lookup_failed'
   | 'expo_error'
@@ -99,6 +173,7 @@ export function nextPushStatus(outcome: DeliveryOutcome, attempts: number): Push
     case 'sent': return 'sent';
     case 'no_token': return 'no_device';
     case 'not_in_order': return 'skipped';
+    case 'unknown_kind': return 'skipped';
     case 'superseded': return 'skipped';
     default: return attempts >= MAX_PUSH_ATTEMPTS ? 'failed' : 'pending';
   }

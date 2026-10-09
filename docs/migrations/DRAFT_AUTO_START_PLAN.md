@@ -185,7 +185,7 @@ Read it as: any `DUE NOW` row starts within 10 s of the push. Any `future` row s
 ## Merge notes (rebased onto main @ 5471392: auto-pick cron + #126 merged)
 
 - **#126 (leave-league), integrated.** `draft-control` start runs `startDraftIfDue`. `draft-start.ts` reads `league_roster_reconfirm` (fails closed) into `toStartState`, so the TS evaluation reports `roster_reconfirm_required` before any pool read. `start_league_draft` also catches #126's real gate by name. The PGlite chain loads `20261107000000` + `20261107000006` and proves it. `status` and `confirm_roster` keep #126's read. #126's raw `updErr` string match is gone with the conditional UPDATE it guarded.
-- **#94 (Run it back):** `renewal_replies_pending` is caught by name. A stand-in raising its exact text (`20261105000004` on its branch) is tested. Its start trigger sets `num_participants`, which isn't a CAS input. `renew_league` INSERTs `not_started` (allowed by the INSERT guard), and `start_renewed_season` never writes `draft_status`. Re-check both when it rebases.
+- **#94 (Run it back):** `renewal_replies_pending` is caught by name. A stand-in raising its exact text (`20261115000004` on its branch) is tested. Its start trigger sets `num_participants`, which isn't a CAS input. `renew_league` INSERTs `not_started` (allowed by the INSERT guard), and `start_renewed_season` never writes `draft_status`. Re-check both when it rebases.
 - **Kind CHECK / notifications:** untouched here.
 
 ## Review (2026-10-06): supabase-reviewer + security-reviewer, no blockers

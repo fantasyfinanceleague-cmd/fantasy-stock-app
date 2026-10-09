@@ -173,6 +173,12 @@ const CLASSIFICATION: Record<string, { kind: Kind; by?: string; why?: string }> 
   draft_date: { kind: 'editable', why: 'ruling 2026-11-04; inert once the draft has started' },
   invite_code: { kind: 'editable', why: 'rotation is harmless: joins are gated on draft_status' },
   created_at: { kind: 'editable', why: 'display only' },
+  // Run it back (20261115000000/000004): a direct client write is refused for
+  // ALL three, regardless of draft_status (current_user test, not the
+  // transition table), so they sit outside the frozen/stamp_once scheme.
+  previous_league_id: { kind: 'guarded', by: 'trg_leagues_lineage_columns' },
+  lineage_id: { kind: 'guarded', by: 'trg_leagues_lineage_columns' },
+  season_number: { kind: 'guarded', by: 'trg_leagues_lineage_columns' },
 };
 
 // The frozen columns, each with a value that differs from the fixture's.

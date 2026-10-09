@@ -561,7 +561,7 @@ explicit `auth.uid() IS NULL` exemption, which changes nothing: their commission
 (`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
 
 #94 compatibility was checked once, in a scratch copy of this suite, against
-`20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:
+`20261115000004_run_it_back_gate.sql` @ `f450e78`, all passing:
 - the renewal self-leave while `not_started` is allowed and its sync sets the reply to `out`;
 - the gate's `num_participants` rewrite on the start UPDATE is allowed (judged on OLD);
 - after the start, the freeze and the leave guard hold.
@@ -639,6 +639,51 @@ reads as `BEGIN ATOMIC`. Fix: quote the identifier (`public."my_atomic_fn"`).
 
 Run: `deno test --allow-read supabase/tests/migration_cli_split.test.ts` (files only).
 
+## run_it_back.pglite.test.ts
+
+What it does:
+- Loads the six `*_run_it_back_*.sql` migrations (20261115000000-05) **verbatim**,
+  found by suffix and applied in name order, so a re-stamp needs no edit here.
+  Also loads `is_member` (20260712000000), `participant_display_name` (20261004000000)
+  and the `league_notifications` table DDL (20261013000000) by slicing.
+- Simulates Supabase's default EXECUTE grants, so every grant assertion proves the
+  explicit revokes work.
+
+It covers, in one ordered flow on one league:
+- grants: client RPCs authenticated-only; helpers and triggers closed; the table
+  closed to every API role except a SELECT for service_role (draft-control's count);
+- identity: anon refused by the grant; a player refused as non-commissioner;
+- `renew_league`: fresh code, cap 16, old season byte-identical, each human member
+  invited once, the bot excluded, and a second tap returns the same season;
+- the gate: `draft_date`, `draft_status` and `draft_order_mode` refused while a reply
+  is pending, including as service_role;
+- replies: commissioner-cannot-opt-out, strangers, a bad value; the notice counts;
+  the free in/out/in flip; `unchanged` on a repeat;
+- a pending player sees only their own status; a stranger sees nothing;
+- nudge: once per 24 h, status never changes;
+- remove: pending to out, decided by the commissioner, final for the player;
+- the table guard, for every role: nothing returns to pending; removed is final;
+  the commissioner cannot be out; inserts are pending-only (the commissioner's own
+  'in' row excepted);
+- the review: unknown keys, bad slots and a missing date refused before any write;
+  settings and slots applied; `season_set` once per member (not the commissioner, not
+  the removed);
+- a newcomer joins; the draft start sets `num_participants` to the member count;
+- after the start: replies, removals and the review refused;
+- the roster: full list for members, counts, the commissioner's actions;
+- history: a newcomer reads Season 1 standings and week-by-week matchups; a stranger
+  reads nothing; a removed Season 1 member keeps Season 1;
+- `set_draft_order` refused while a reply is pending;
+- cancel: the new season and its rows vanish; the predecessor renews again;
+- `finalize_league_draft` numbers the season from `leagues.season_number` (3, not 1);
+- `get_home_summary`: the lineage columns exist; its ACL is re-applied after the DROP.
+
+NOT covered here (their own suites or still open):
+- the draft-order triggers and meta tables (not loaded): "the order locks" and the
+  leave/join append rules under renewal;
+- the PR #9 member column guard (not loaded), so the trigger-order claim is untested;
+- `join_league_by_code`'s `league_full` cap for newcomers (not loaded);
+- races are sequential: the FOR UPDATE locks are structural, not exercised in parallel.
 ## autopick_cron_wiring.test.ts, autopick_cron_predicate.pglite.test.ts
 
 The auto-pick cron (`20261106000000`) cannot run in PGlite (`pg_cron`, `pg_net` and `vault` do not exist
