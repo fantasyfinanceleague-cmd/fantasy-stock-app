@@ -1,7 +1,33 @@
 // supabase/functions/ticker-quotes/index.ts
-// Public endpoint for ticker display - uses server-side Alpaca keys
-// This is read-only market data, safe to serve without per-user auth
+// Quotes for the web ticker tape (anonymous) and for signed-in mobile screens
+// (usePortfolio, the stock sheet), on the shared server-side Alpaca key.
+//
+// verify_jwt = false (config.toml explains why: the web ticker can render before
+// <Protected> resolves), so THIS HANDLER is the whole boundary. Ruling
+// 2026-10-08, nothing scrapable:
+//   * a real signed-in user (getUser) may quote any symbol, under a fail-closed
+//     per-user limit;
+//   * an anonymous caller may quote ONLY the ticker tape's own symbols
+//     (TICKER_SYMBOLS, pinned equal to apps/web/src/Ticker.jsx by a test), under
+//     a fail-closed per-IP limit;
+//   * anything else is 401, before any cache read or Alpaca call.
+// Alpaca error text is never returned.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { checkRateLimits, clientIp, refusalFor, REFUSAL, resolveUser } from '../_shared/market-guard.ts';
+
+/** EXACTLY the web ticker tape's SYMBOLS (apps/web/src/Ticker.jsx); a test
+ * fails if the two drift. The only symbols an anonymous caller can quote. */
+export const TICKER_SYMBOLS: readonly string[] = [
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX', 'V',
+  'JPM', 'UNH', 'HD', 'MA', 'DIS', 'PFE', 'T', 'KO', 'PEP', 'INTC', 'CRM', 'BABA',
+];
+// Per IP per minute, anonymous. The tape fetches 10 symbols once a minute per
+// open tab; 60 allows six tabs behind one address.
+export const ANON_LIMIT_PER_IP_PER_MIN = 60;
+// Per user per minute, signed in. usePortfolio quotes each held symbol (3 at a
+// time, 2-minute cache) and each stock-sheet open is one call.
+export const USER_LIMIT_PER_MIN = 120;
 
 let requestOrigin = '';
 
@@ -99,6 +125,23 @@ Deno.serve(async (req) => {
 
     if (!symbol) return json({ error: 'missing_symbol' }, 400);
 
+    // The guard, before the cache and before Alpaca.
+    const SUPABASE_URL = env('SUPABASE_URL');
+    const user = await resolveUser(SUPABASE_URL, env('SB_PUBLISHABLE_KEY'), req.headers.get('Authorization'));
+    if (!user && !TICKER_SYMBOLS.includes(symbol)) {
+      return json(REFUSAL.not_authenticated.body, REFUSAL.not_authenticated.status);
+    }
+    const admin = createClient(SUPABASE_URL, env('SB_SECRET_KEY_INTERNAL'));
+    const verdict = user
+      ? await checkRateLimits(admin, 'ticker-quotes', [{ subject: `user:${user.id}`, limit: USER_LIMIT_PER_MIN }])
+      : await checkRateLimits(admin, 'ticker-quotes-anon', [
+        { subject: `ip:${clientIp(req) || 'unknown'}`, limit: ANON_LIMIT_PER_IP_PER_MIN },
+      ]);
+    if (verdict !== 'ok') {
+      const r = refusalFor(verdict);
+      return json(r.body, r.status);
+    }
+
     // Check cache first
     const cached = getCachedQuote(symbol);
     if (cached) {
@@ -120,7 +163,7 @@ Deno.serve(async (req) => {
         const p = Number(r.body?.trade?.p);
         if (Number.isFinite(p) && p > 0) { price = p; source = 'trade.p'; }
       } else {
-        lastErr = { step: 'trade', status: r.status, preview: r.preview };
+        lastErr = { step: 'trade', status: r.status };
       }
     }
 
@@ -132,7 +175,7 @@ Deno.serve(async (req) => {
         const c = Number(r.body?.bar?.c);
         if (Number.isFinite(c) && c > 0) { price = c; source = 'bar.c'; }
       } else {
-        lastErr = { step: 'bar', status: r.status, preview: r.preview };
+        lastErr = { step: 'bar', status: r.status };
       }
     }
 
@@ -147,7 +190,7 @@ Deno.serve(async (req) => {
         if (Number.isFinite(bp) && bp > 0) { price = bp; source = 'quote.bp'; }
         else if (Number.isFinite(ap) && ap > 0) { price = ap; source = 'quote.ap'; }
       } else {
-        lastErr = { step: 'quote', status: r.status, preview: r.preview };
+        lastErr = { step: 'quote', status: r.status };
       }
     }
 

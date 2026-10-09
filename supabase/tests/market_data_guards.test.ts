@@ -218,6 +218,74 @@ Deno.test({
   },
 });
 
+Deno.test({
+  name: 'market data guards: ticker-quotes (verify_jwt=false, the handler is the boundary)',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn(t) {
+    const tq = await load('ticker-quotes');
+
+    await t.step('control: a signed-in user quotes ANY symbol under a per-user limit', () => withFake(async (f) => {
+      const res = await post(tq, { symbol: 'ZZZQ' });
+      assertEquals(res.status, 200);
+      assertEquals((await res.json()).price, 200);
+      assertEquals(f.limits, [{ bucket: 'ticker-quotes', subject: `user:${USER_ID}`, limit: 120 }]);
+    }));
+
+    await t.step('control: an anonymous visitor gets the ticker tape (AAPL), limited per IP', () => withFake(async (f) => {
+      const res = await post(tq, { symbol: 'aapl' }, { jwt: null, ip: '203.0.113.5' });
+      assertEquals(res.status, 200);
+      assertEquals(f.limits, [{ bucket: 'ticker-quotes-anon', subject: 'ip:203.0.113.5', limit: 60 }]);
+    }));
+
+    for (const [label, jwt] of [['no Authorization', null], ['the bare anon JWT', ANON_JWT]] as const) {
+      await t.step(`${label} + a symbol OFF the tape → 401, no limiter bump, no Alpaca`, () => withFake(async (f) => {
+        const res = await post(tq, { symbol: 'ZZZQ' }, { jwt, ip: '203.0.113.5' });
+        assertEquals(res.status, 401);
+        assertEquals(f.limits, []);
+        assertEquals(f.alpaca, []);
+      }));
+    }
+
+    for (const mode of ['limited', 'error', 'null'] as const) {
+      await t.step(`anonymous tape symbol, limiter ${mode} → refused (fail closed), no Alpaca`, () => withFake(async (f) => {
+        const res = await post(tq, { symbol: 'MSFT' }, { jwt: null, ip: '203.0.113.9' });
+        assertEquals(res.status, mode === 'limited' ? 429 : 503);
+        assertEquals(f.alpaca, []);
+      }, (f) => { f.limiter = mode; }));
+    }
+
+    await t.step('signed-in, limiter limited → 429 (the user path is limited too)', () => withFake(async (f) => {
+      assertEquals((await post(tq, { symbol: 'ZZZR' })).status, 429);
+      assertEquals(f.alpaca, []);
+    }, (f) => { f.limiter = 'limited'; }));
+
+    await t.step('no client IP → one shared ip:unknown bucket, not a free pass', () => withFake(async (f) => {
+      await post(tq, { symbol: 'KO' }, { jwt: null });
+      assertEquals(f.limits.map((l) => l.subject), ['ip:unknown']);
+    }));
+
+    await t.step('a vendor failure never echoes vendor text', () => withFake(async () => {
+      const res = await post(tq, { symbol: 'ZZZS' });
+      assertEquals(res.status, 404);
+      assertFalse((await res.text()).includes(VENDOR_TEXT));
+    }, (f) => { f.alpacaFails = true; }));
+  },
+});
+
+Deno.test('ticker-quotes: the anonymous allowlist is EXACTLY the web ticker tape\'s SYMBOLS', () => {
+  const arr = (src: string, name: string) => {
+    const m = new RegExp(`${name}[^=]*=\\s*\\[([^\\]]*)\\]`).exec(src);
+    assert(m, `${name} not found`);
+    return [...m[1].matchAll(/['"]([A-Z.]+)['"]/g)].map((x) => x[1]).sort();
+  };
+  const read = (rel: string) => Deno.readTextFileSync(new URL(`../../${rel}`, import.meta.url));
+  const server = arr(read('supabase/functions/ticker-quotes/index.ts'), 'TICKER_SYMBOLS');
+  const web = arr(read('apps/web/src/Ticker.jsx'), 'const SYMBOLS');
+  assertEquals(server.length, 21);
+  assertEquals(server, web);
+});
+
 // Put the developer's env back after every test in this file has run.
 globalThis.addEventListener('unload', () => {
   for (const [k, v] of SAVED_ENV) v === undefined ? Deno.env.delete(k) : Deno.env.set(k, v);

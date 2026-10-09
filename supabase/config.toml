@@ -214,8 +214,8 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/finnhub-quote/index.ts"
 
-# ⚠️ THE ODD ONE OUT — verify_jwt = FALSE, and it has NO in-code guard either, so
-# it is fully anon-callable. It is the only market-data function that is; quote,
+# ⚠️ THE ODD ONE OUT — verify_jwt = FALSE. Until 2026-10-08 it had NO in-code
+# guard either, so it was fully anon-callable (see L4 ACTIONED below). It is the only market-data function that is; quote,
 # historical-bars, symbol-name and symbols-search are all ON.
 #
 # DELIBERATE IN ORIGIN, not a mis-set toggle:
@@ -236,6 +236,12 @@ entrypoint = "./functions/finnhub-quote/index.ts"
 # keyed per-IP since there is no user), NOT flipping this flag — flipping it
 # breaks the ticker for the reason above. Do not "normalise" it to match its
 # siblings without reading this.
+#
+# L4 ACTIONED 2026-10-08 (security/market-data-guards), flag still OFF: the
+# handler is the boundary. Anonymous callers may quote ONLY the ticker tape's
+# 21 symbols (TICKER_SYMBOLS, pinned to Ticker.jsx by a test) under a
+# fail-closed per-IP limit; a real signed-in user (getUser) may quote any
+# symbol under a fail-closed per-user limit; anything else is 401.
 [functions.ticker-quotes]
 enabled = true
 verify_jwt = false
