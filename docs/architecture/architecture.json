@@ -2,50 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c69db8187ad4e4f71675d8f6d2c73a4396061474",
-    "commitShort": "c69db818",
+    "commit": "603dcfa939efa2f631a0ab1138e6277a76352814",
+    "commitShort": "603dcfa9",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/HomeRenewalAsk.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/LeagueRenewal.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/RenewalCountsCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/renewalFixture.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamCalls.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useRenewalRoster.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/devFixture.ts"
+        "path": "apps/mobile/components/home/PreDraftCard.tsx"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/run-it-back-fixture.test.ts"
+        "path": "apps/mobile/lib/home/preDraftMembers.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/pre-draft-members-you.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:43:59Z",
+    "timestamp": "2026-10-11T05:44:01Z",
     "sourceHash": "sha256:a680d414bae684c4847e817428299ad0ef37206dc256ed20d853d1672139fd01",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
