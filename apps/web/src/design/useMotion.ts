@@ -1,18 +1,23 @@
-import { useReducedMotionConfig } from 'motion/react';
+import { useReducedMotion, useReducedMotionConfig } from 'motion/react';
 import { motion as motionTokens } from './tokens';
 
 // DESIGN_DIRECTION.md §5 (binding): "one useMotion() hook returns the token
 // set already reduced" when reduced motion is requested.
 //
-// Deliberately `useReducedMotionConfig()`, NOT the plain `useReducedMotion()`:
-// the plain hook only ever reads the OS's prefers-reduced-motion media query
-// (once, at mount — it doesn't even react to a later system-level change),
-// and ignores the ambient `<MotionConfig reducedMotion="always">` override
-// entirely. `useReducedMotionConfig()` composes both — 'never'/'always' from
-// context short-circuits the OS preference, otherwise it falls through to
-// it — which is what actually lets the gallery's toggle force reduced
-// motion for its screenshot/recording proof without the tester's OS needing
-// to be in that state.
+// `reduced` = the OS preference OR an explicit <MotionConfig> override:
+//   - useReducedMotion() reads prefers-reduced-motion via matchMedia.
+//   - useReducedMotionConfig() reads the ambient <MotionConfig
+//     reducedMotion>. On its own it is NOT enough: motion's DEFAULT context
+//     is reducedMotion "never", under which it returns false whatever the
+//     OS says, so any tree without a MotionConfig wrapper silently ignored
+//     reduced-motion users (found in phase 3a: the landing kept pinning and
+//     scrubbing under an emulated OS "reduce"; the gallery masked it because
+//     it wraps itself). Fixed per the Design Lead, 2026-09-26.
+// The OS preference therefore always wins toward reduced — nothing can
+// force motion ON over the user's setting — while MotionConfig "always"
+// (the gallery's toggle) can still force it on for proof screenshots.
+// Wrap app roots in <MotionRoot> (reducedMotion="user") as well, so motion's
+// own components also skip transform animations for those users.
 //
 // This hook supplies the shared numbers; several §5 rows (digit roll ->
 // instant swap, tug overshoot -> no overshoot, stagger -> appear together)
@@ -55,7 +60,9 @@ export interface UseMotionResult {
 }
 
 export function useMotion(): UseMotionResult {
-  const reduced = useReducedMotionConfig() ?? false;
+  const osReduced = useReducedMotion() ?? false;
+  const configReduced = useReducedMotionConfig() ?? false;
+  const reduced = osReduced || configReduced;
   return {
     reduced,
     duration: DURATION_SECONDS,

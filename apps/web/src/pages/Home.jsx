@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuthUser } from '../auth/useAuthUser';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../supabase/supabaseClient';
-import LandingPage from './LandingPage';
+import LandingPage from './landing/LandingPage';
 
 export default function Home() {
   const user = useAuthUser();
