@@ -89,7 +89,16 @@ Deno.serve(async (req) => {
   const maxResults = Math.min(15, Number(limit) || 10);
   const seen = new Set<string>();
 
-  const addItems = (newItems: Array<{ symbol: string; name: string; is_draftable?: boolean }> | null) => {
+  // A failed read must never look like "no matches" (CLAUDE.md success
+  // signals #5: .from() resolves { data, error }, it does not throw). After
+  // 20261114000000 an anon-JWT caller is refused here (42501) and must get an
+  // error, not an empty list; a signed-in breakage must surface the same way.
+  let readFailed = false;
+  const addItems = (
+    newItems: Array<{ symbol: string; name: string; is_draftable?: boolean }> | null,
+    error?: unknown,
+  ) => {
+    if (error) readFailed = true;
     if (!newItems) return;
     for (const item of newItems) {
       if (!seen.has(item.symbol) && items.length < maxResults) {
@@ -100,56 +109,58 @@ Deno.serve(async (req) => {
   };
 
   // 1. Exact symbol match (highest priority)
-  const { data: exactSymbol } = await supabase
+  const { data: exactSymbol, error: exactSymbolErr } = await supabase
     .from('symbols')
     .select('symbol,name,is_draftable')
     .eq('symbol', query)
     .limit(1);
-  addItems(exactSymbol);
+  addItems(exactSymbol, exactSymbolErr);
 
   // 2. Symbol starts with query
   if (items.length < maxResults) {
-    const { data: symbolStartsWith } = await supabase
+    const { data: symbolStartsWith, error: symbolStartsWithErr } = await supabase
       .from('symbols')
       .select('symbol,name,is_draftable')
       .like('symbol', `${query}%`)
       .order('symbol')
       .limit(maxResults);
-    addItems(symbolStartsWith);
+    addItems(symbolStartsWith, symbolStartsWithErr);
   }
 
   // 3. Name starts with query (e.g., "Intel" -> "Intel Corporation")
   if (items.length < maxResults) {
-    const { data: nameStartsWith } = await supabase
+    const { data: nameStartsWith, error: nameStartsWithErr } = await supabase
       .from('symbols')
       .select('symbol,name,is_draftable')
       .ilike('name', `${query}%`)
       .order('symbol')
       .limit(maxResults);
-    addItems(nameStartsWith);
+    addItems(nameStartsWith, nameStartsWithErr);
   }
 
   // 4. Symbol contains query
   if (items.length < maxResults) {
-    const { data: symbolContains } = await supabase
+    const { data: symbolContains, error: symbolContainsErr } = await supabase
       .from('symbols')
       .select('symbol,name,is_draftable')
       .ilike('symbol', `%${query}%`)
       .order('symbol')
       .limit(maxResults);
-    addItems(symbolContains);
+    addItems(symbolContains, symbolContainsErr);
   }
 
   // 5. Name contains query (lowest priority)
   if (items.length < maxResults) {
-    const { data: nameContains } = await supabase
+    const { data: nameContains, error: nameContainsErr } = await supabase
       .from('symbols')
       .select('symbol,name,is_draftable')
       .ilike('name', `%${query}%`)
       .order('symbol')
       .limit(maxResults);
-    addItems(nameContains);
+    addItems(nameContains, nameContainsErr);
   }
+
+  if (readFailed) return json({ items: [], error: 'lookup_failed' }, 500);
 
   // Items are already deduplicated via the seen Set in addItems
 

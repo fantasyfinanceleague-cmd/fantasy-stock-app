@@ -46,7 +46,7 @@ interface Seen { url: URL; authorization: string | null; apikey: string | null }
 /** Fake upstreams: PostgREST answers /rest/v1/symbols as the role the bearer
  * maps to (the caller sees one row; anon is refused 42501, which is what the
  * migration's REVOKE ALL ... FROM anon produces); Alpaca is recorded. */
-function install(): { seen: Seen[]; alpaca: string[]; restore: () => void } {
+function install(opts: { failCaller?: boolean } = {}): { seen: Seen[]; alpaca: string[]; restore: () => void } {
   const seen: Seen[] = [];
   const alpaca: string[] = [];
   const original = globalThis.fetch;
@@ -60,6 +60,10 @@ function install(): { seen: Seen[]; alpaca: string[]; restore: () => void } {
     if (url.pathname === '/rest/v1/symbols') {
       const authorization = req.headers.get('Authorization');
       seen.push({ url, authorization, apikey: req.headers.get('apikey') });
+      if (opts.failCaller && authorization === `Bearer ${CALLER_JWT}`) {
+        return new Response(JSON.stringify({ code: 'XX000', message: 'upstream hiccup' }),
+          { status: 500, headers: { 'content-type': 'application/json' } });
+      }
       if (authorization !== `Bearer ${CALLER_JWT}`) {
         return new Response(
           JSON.stringify({ code: '42501', message: 'permission denied for table symbols' }),
@@ -123,14 +127,25 @@ Deno.test({
         } finally { f.restore(); }
       });
 
-      await t.step('symbols-search: anon-JWT caller → no rows, and no Alpaca price fetch', async () => {
+      await t.step('symbols-search: anon-JWT caller → refused as an ERROR (not "no matches"), no Alpaca fetch', async () => {
         const f = install();
         try {
           const res = await post(search, ANON_JWT, { q: 'AAPL' });
-          assertEquals((await res.json()).items, []);
+          assertEquals(res.status, 500);
+          assertEquals(await res.json(), { items: [], error: 'lookup_failed' });
           assert(f.seen.length > 0);
           for (const s of f.seen) assertEquals(s.authorization, `Bearer ${ANON_JWT}`);
           assertEquals(f.alpaca, [], 'an anon caller must not be able to use search as a price proxy');
+        } finally { f.restore(); }
+      });
+
+      await t.step('symbols-search: a failed read for a SIGNED-IN caller is a 500, never an empty result', async () => {
+        const f = install({ failCaller: true });
+        try {
+          const res = await post(search, CALLER_JWT, { q: 'AAPL' });
+          assertEquals(res.status, 500);
+          assertEquals((await res.json()).error, 'lookup_failed');
+          assertEquals(f.alpaca, []);
         } finally { f.restore(); }
       });
 
@@ -249,7 +264,8 @@ Deno.test('symbols readers: the shared helpers are only ever handed the admin (s
 // 3. Pre-sign-in screens never read symbols
 // ---------------------------------------------------------------------------
 
-const SYMBOLS_TOUCH = /\.from\(\s*['"]symbols['"]|['"]symbols-search['"]|['"]symbol-name['"]/;
+const SYMBOLS_TOUCH =
+  /\.from\(\s*['"]symbols['"]|['"]symbols-search['"]|['"]symbol-name['"]|useStockSheet\(\)\s*[.;]/;
 
 /** Local imports only (relative, or mobile's '@/'), followed transitively. */
 function reach(entry: string, alias: string | null): Map<string, string> {
@@ -276,8 +292,14 @@ function reach(entry: string, alias: string | null): Map<string, string> {
 
 Deno.test('symbols readers: no pre-sign-in screen (mobile or web) reaches a symbols read', () => {
   const entries: Array<[string, string | null]> = [
+    // join-league is a deep-link target. app/_layout.tsx is deliberately NOT an
+    // entry: as the root it statically imports every provider, including
+    // MoneyHostProvider, whose StockSheetBody (symbol-name via useStockSheetData)
+    // mounts only after a screen calls useStockSheet().open(symbol)
+    // (MoneyHost.tsx). So the guard below also refuses any pre-sign-in screen
+    // that reaches that opener.
     ...['login', 'create-account', 'forgot-password', 'reset-password', 'get-started', 'onboarding',
-      'pick-username', 'username'].map((s): [string, string | null] => [`apps/mobile/app/${s}.tsx`, 'apps/mobile/']),
+      'pick-username', 'username', 'join-league'].map((s): [string, string | null] => [`apps/mobile/app/${s}.tsx`, 'apps/mobile/']),
     ...['LandingPage', 'Home', 'Login'].map((s): [string, string | null] => [`apps/web/src/pages/${s}.jsx`, null]),
   ];
   for (const [entry, alias] of entries) {
