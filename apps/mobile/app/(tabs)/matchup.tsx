@@ -27,6 +27,9 @@ import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
 import { nameOf } from '@/lib/game/buildMatchupViewModel';
 import { buildMatchScoreboardModel } from '@/lib/game/matchScoreboardModel';
 import { COPY } from '@/lib/game/gameCopy';
+import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
+import { AllMatchupsSkeleton, MatchupSkeleton } from '@/components/game/LoadingSkeletons';
+import { LoadFailure } from '@/components/money/LoadFailure';
 import { formatMoney } from '@/components/sp/logic/money';
 import { unpricedNote } from '@/lib/plCoverage';
 import {
@@ -94,10 +97,11 @@ export default function MatchupScreen() {
   );
 }
 
-function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[] }; week: number; myUserId: string }) {
-  if (state.status === 'loading' || state.status === 'idle') return null;
+function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[]; retry: () => void }; week: number; myUserId: string }) {
+  // S-6: loading shows the games' shape (never a blank tab); a failed load says so and offers Try again.
+  if (state.status === 'loading' || state.status === 'idle') return <AllMatchupsSkeleton />;
   if (state.status === 'error') {
-    return <Text variant="callout" tone="secondary">Couldn't load this week's matchups.</Text>;
+    return <LoadFailure title={COPY.allMatchupsLoadFailed} message={MONEY_COPY.loadRetryMessage} onRetry={state.retry} />;
   }
   return (
     <View style={styles.stack}>
@@ -147,7 +151,9 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
       <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
     );
   }
-  if (status === 'loading' || !derived || !user) return null; // honest empty while loading, never a made-up number
+  if (status === 'no-league') return null;
+  // S-6: the score row's and lineups' shape while loading, never a made-up number.
+  if (status === 'loading' || !derived || !user) return <MatchupSkeleton />;
 
   const { view, live, final, weekEnd, week } = derived;
   const youName = live.me.name;

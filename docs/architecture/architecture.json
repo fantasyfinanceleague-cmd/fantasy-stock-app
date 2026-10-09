@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0c8873e9111c6ab752f5edfce84262b89dc68111",
-    "commitShort": "0c8873e9",
+    "commit": "0fff6159df451338f257ff092a0ff659f58c5078",
+    "commitShort": "0fff6159",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -13,12 +13,28 @@
         "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
+        "code": "M",
+        "path": "apps/mobile/components/game/LoadingSkeletons.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/gameCopy.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/useAllMatchups.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/loading-skeletons.test.ts"
+      },
+      {
         "code": "A",
-        "path": "apps/mobile/tests-deno/matchup-league-key.test.ts"
+        "path": "apps/mobile/tests-deno/matchup-loading.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:03Z",
-    "sourceHash": "sha256:a680d414bae684c4847e817428299ad0ef37206dc256ed20d853d1672139fd01",
+    "timestamp": "2026-10-11T05:44:05Z",
+    "sourceHash": "sha256:cc1fdd87b3e1dcb9b8bbc86b5e2c22599387521ab0615e411a2dc85cc0c3b3f0",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -15410,7 +15426,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/game/useAllMatchups.ts:77"
+        "apps/mobile/lib/game/useAllMatchups.ts:83"
       ],
       "via": [
         "seamInvoke"
@@ -15428,7 +15444,7 @@
         "team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id, is_tie, is_playoff, week_start, week_end"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useAllMatchups.ts:39"
+        "apps/mobile/lib/game/useAllMatchups.ts:45"
       ]
     },
     {
@@ -15443,7 +15459,7 @@
         "user_id, symbol, action, quantity, price, created_at"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useAllMatchups.ts:62"
+        "apps/mobile/lib/game/useAllMatchups.ts:68"
       ]
     },
     {
@@ -15458,7 +15474,7 @@
         "user_id, symbol, quantity, week_start_price, entered_mid_week, created_at"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useAllMatchups.ts:52"
+        "apps/mobile/lib/game/useAllMatchups.ts:58"
       ]
     },
     {
@@ -17856,7 +17872,7 @@
             "apps/mobile/app/(tabs)/draft.tsx:492",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
-            "apps/mobile/lib/game/useAllMatchups.ts:77",
+            "apps/mobile/lib/game/useAllMatchups.ts:83",
             "apps/mobile/lib/home/useHomeLeague.ts:590",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
@@ -19447,7 +19463,7 @@
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
       "apps/mobile/components/game/DraftRoom.tsx:199 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:251 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/lib/game/useAllMatchups.ts:77 -> quote (via seamInvoke)",
+      "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
@@ -19593,9 +19609,9 @@
       "apps/mobile/lib/game/seamCalls.ts:44 -> leagues.update",
       "apps/mobile/lib/game/seamCalls.ts:66 -> leagues.insert",
       "apps/mobile/lib/game/seamCalls.ts:72 -> league_members.insert",
-      "apps/mobile/lib/game/useAllMatchups.ts:39 -> matchups.select",
-      "apps/mobile/lib/game/useAllMatchups.ts:52 -> week_snapshots.select",
-      "apps/mobile/lib/game/useAllMatchups.ts:62 -> trades.select",
+      "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
+      "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
+      "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
       "apps/mobile/lib/game/useBracket.ts:29 -> matchups.select",
       "apps/mobile/lib/game/useDraftAutoStart.ts:101 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:149 -> leagues.update (via seamUpdateLeague)",

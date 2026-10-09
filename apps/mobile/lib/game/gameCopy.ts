@@ -15,6 +15,7 @@ export const COPY_SOURCES = {
   preSeasonChyron: 'board',
   endsFriday: 'board',
   byeNoResult: 'new',
+  allMatchupsLoadFailed: 'new', // the Design Lead's final sweep (S-6), for the copy audit
 } as const;
 
 const MINUS = '−';
@@ -57,4 +58,5 @@ export const COPY = {
   preSeasonChyron: (startLabel: string) => `Week 1 starts ${startLabel}. No leader until the market opens.`,
   endsFriday: 'Ends Fri 4:00 PM ET',
   byeNoResult: 'Bye week · no result',
+  allMatchupsLoadFailed: "This week's matchups didn't load",
 } as const;
