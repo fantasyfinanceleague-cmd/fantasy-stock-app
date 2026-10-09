@@ -5,11 +5,14 @@ import { Text } from '@/components/sp/Text';
 import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
 import { historySeasons, type HistoryRow } from '@/lib/game/history';
+import { useLargeText } from '@/components/sp/useLargeText';
 
 /** League › History (R10): every season of the lineage, its champion, and its frozen
  * final standings, newest first. An unfinished season shows no champion. */
 export function HistoryList({ rows }: { rows: HistoryRow[] }) {
   const seasons = historySeasons(rows);
+  // Large text: the record and gain go under the name (one line squeezed it to a letter per line).
+  const largeText = useLargeText();
   return (
     <View style={styles.stack}>
       <Text variant="title">History</Text>
@@ -23,9 +26,21 @@ export function HistoryList({ rows }: { rows: HistoryRow[] }) {
           {s.standings.map((st) => (
             <View key={st.user_id} style={styles.row}>
               <Text variant="callout" style={styles.rank}>{st.rank}</Text>
-              <Text variant="callout" style={styles.name}>{st.display_name}</Text>
-              <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
-              <Text variant="callout" style={styles.gain}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
+              {largeText ? (
+                <View style={styles.name}>
+                  <Text variant="callout">{st.display_name}</Text>
+                  <View style={styles.statsLine}>
+                    <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
+                    <Text variant="callout">{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text variant="callout" style={styles.name}>{st.display_name}</Text>
+                  <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
+                  <Text variant="callout" style={styles.gain}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                </>
+              )}
             </View>
           ))}
         </Card>
@@ -42,6 +57,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
   rank: { minWidth: 24, textAlign: 'right' },
-  name: { flex: 1 },
+  name: { flex: 1, minWidth: 0 },
+  statsLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: space[2] },
   gain: { minWidth: 92, textAlign: 'right' },
 });

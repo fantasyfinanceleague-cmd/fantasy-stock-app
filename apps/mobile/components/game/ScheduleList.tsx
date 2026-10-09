@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
+import { useLargeText } from '@/components/sp/useLargeText';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { LiveDot } from '@/components/sp/game/LiveDot';
@@ -19,16 +20,18 @@ export interface ScheduleListProps {
  * "Next" the week after. A bye is neutral: never W or L. */
 export function ScheduleList({ rows, playoffLine }: ScheduleListProps) {
   const { colors } = useTheme();
+  // Large text: the result goes on its own line under the week (it was clipped off the card).
+  const largeText = useLargeText();
   return (
     <View style={styles.stack}>
       <Card style={styles.card}>
         {rows.map((r) => (
-          <View key={r.week} style={[styles.row, r.state === 'live' ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={label(r)}>
+          <View key={r.week} style={[styles.row, largeText ? styles.rowWrap : null, r.state === 'live' ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={label(r)}>
             <Text variant="caption" style={styles.week}>W{r.week}</Text>
-            <Text variant="callout" tone={r.state === 'future' || r.state === 'next' ? 'secondary' : undefined} style={r.state === 'live' ? styles.bold : undefined}>
+            <Text variant="callout" tone={r.state === 'future' || r.state === 'next' ? 'secondary' : undefined} style={[styles.opponent, r.state === 'live' ? styles.bold : null]}>
               {r.bye ? 'Bye' : r.opponent === null ? '' : `vs ${r.opponent}`}
             </Text>
-            <View style={styles.result}>
+            <View style={[styles.result, largeText ? styles.resultLine : null]}>
               {r.bye ? (
                 <Text variant="caption" tone="secondary">{r.gain === null ? '' : formatMoney(r.gain, { sign: 'always' })}</Text>
               ) : r.state === 'live' ? (
@@ -71,5 +74,8 @@ const styles = StyleSheet.create({
   week: { minWidth: 34, fontWeight: '700' },
   bold: { fontWeight: '700' },
   result: { marginLeft: 'auto', alignItems: 'flex-end' },
+  rowWrap: { flexWrap: 'wrap' },
+  opponent: { flexShrink: 1 },
+  resultLine: { width: '100%' },
   liveRow: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
 });

@@ -30,6 +30,7 @@ import { COPY } from '@/lib/game/gameCopy';
 import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
 import { AllMatchupsSkeleton, MatchupSkeleton } from '@/components/game/LoadingSkeletons';
 import { LoadFailure } from '@/components/money/LoadFailure';
+import { useLargeText } from '@/components/sp/useLargeText';
 import { formatMoney } from '@/components/sp/logic/money';
 import { unpricedNote } from '@/lib/plCoverage';
 import {
@@ -146,6 +147,8 @@ interface BodyProps {
 function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, finalLines }: BodyProps) {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  // At the large text sizes the two lineups stack (side by side they ran into each other).
+  const largeText = useLargeText();
   if (status === 'error') {
     return (
       <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
@@ -236,13 +239,13 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
       {isFinal ? (
         finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows && live.opp ? (
-          <View style={styles.lineups}>
+          <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
             <Lineup title={youName} rows={finalLines.mine.rows} />
             <Lineup title={live.opp.name} rows={finalLines.theirs.rows} />
           </View>
         ) : null
       ) : live.opp ? (
-        <View style={styles.lineups}>
+        <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
           <Lineup title={youName} rows={live.me.lineup} />
           <Lineup title={live.opp.name} rows={live.opp.lineup} />
         </View>
@@ -268,7 +271,10 @@ function Lineup({ title, rows }: { title: string; rows: LineupRow[] }) {
 const styles = StyleSheet.create({
   stack: { gap: space[4] },
   lineups: { flexDirection: 'row', gap: space[4] },
-  lineup: { flex: 1, gap: space[2] },
-  lineRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  lineupsStacked: { flexDirection: 'column', gap: space[5] },
+  // minWidth 0: a flex column's minimum is otherwise its content's width, so the two
+  // lineups overflowed into each other instead of sharing the row.
+  lineup: { flex: 1, minWidth: 0, gap: space[2] },
+  lineRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[2] },
   symbol: { fontWeight: '600' },
 });

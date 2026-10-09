@@ -53,7 +53,7 @@ export function MatchScoreboard({ model, mineGain, oppGain, size, youName, oppNa
         ) : (
           <Text variant="callout">{youName}</Text>
         )}
-        {oppName ? <Text variant="callout" tone="secondary">{oppName}</Text> : null}
+        {oppName ? <Text variant="callout" tone="secondary" style={styles.oppName}>{oppName}</Text> : null}
       </View>
 
       <View style={styles.scoresRow}>
@@ -91,7 +91,9 @@ const styles = StyleSheet.create({
   // ThisWeekCard does): without these the text sat flush on the card edge (final sweep S-1).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[1] },
   compact: { paddingVertical: space[3], paddingHorizontal: space[4] },
-  namesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: space[2] },
+  // Wraps (as ThisWeekCard's does): at large text the opponent's name went off the card.
+  namesRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: space[2] },
+  oppName: { flexShrink: 1, textAlign: 'right', marginLeft: 'auto' },
   scoresRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 4, gap: space[5] },
   // ThisWeekCard's rule (#167): `minWidth: 0` lets `flex: 1` really split the row, so
   // ScoreDigits' adjustsFontSizeToFit has a width to shrink against and the two scores

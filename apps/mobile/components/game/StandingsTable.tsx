@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
@@ -9,6 +9,7 @@ import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
 import { moveA11y, shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
+import { isLargeText, scaledBadge } from '@/components/sp/logic/largeText';
 
 export interface StandingsTableProps {
   rows: StandingsRow[];
@@ -31,15 +32,27 @@ const MEDAL: Record<number, { fill: 'medalGold' | 'medalSilver' | 'medalBronze';
 /** One standings row (also the pinned copy of yours: the SAME component). */
 export function StandingsRowView({ r, seasonComplete }: { r: StandingsRow; seasonComplete: boolean }) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  // Large text: the name gets the row's width and the record and gain go under it (one
+  // line, the name squeezed to a letter per line, capture pass 2026-10-08).
+  const stacked = isLargeText(fontScale);
+  // The medal disc grows with its numeral (a fixed 20 pt disc clipped the rank at XL).
+  const disc = scaledBadge(20, fontScale);
   const medal = seasonComplete ? MEDAL[r.rank] : undefined;
   const move = moveA11y(r.move);
+  const stats = (
+    <>
+      <Text variant="caption" tone="secondary" style={stacked ? null : styles.record}>{r.record}</Text>
+      <Text variant="callout" style={stacked ? null : styles.gain}>{formatMoney(r.seasonGain, { sign: 'always' })}</Text>
+    </>
+  );
   return (
     <View style={[styles.row, r.isYou ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${r.rank}, ${r.name}, ${r.record}, season gain ${formatMoney(r.seasonGain, { sign: 'always' })}${move ? `, ${move}` : ''}`}>
       {/* G-6: one fixed-width rank cell, so medal rows 1–3 line up with 4 onwards. */}
-      <View style={styles.rankCell}>
+      <View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>
         {medal ? (
-          <View style={[styles.disc, { backgroundColor: colors[medal.fill] }]}>
-            <Text variant="caption" style={[styles.discNumeral, { color: colors.onMedal }]}>{r.rank}</Text>
+          <View style={[styles.disc, { width: disc, height: disc, borderRadius: disc / 2, backgroundColor: colors[medal.fill] }]}>
+            <Text variant="caption" maxFontSizeMultiplier={1.6} style={[styles.discNumeral, { color: colors.onMedal }]}>{r.rank}</Text>
           </View>
         ) : (
           <Text variant="callout" style={styles.rank}>{r.rank}</Text>
@@ -65,9 +78,9 @@ export function StandingsRowView({ r, seasonComplete }: { r: StandingsRow; seaso
           {r.name}{r.isYou ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
         </Text>
         {r.isBot ? <Text variant="caption" tone="secondary">Bot</Text> : null}
+        {stacked ? <View style={styles.statsLine}>{stats}</View> : null}
       </View>
-      <Text variant="caption" tone="secondary" style={styles.record}>{r.record}</Text>
-      <Text variant="callout" style={styles.gain}>{formatMoney(r.seasonGain, { sign: 'always' })}</Text>
+      {stacked ? null : stats}
     </View>
   );
 }
@@ -134,11 +147,12 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
   rankCell: { width: 28, alignItems: 'center' },
   rank: { textAlign: 'center' },
-  disc: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  disc: { alignItems: 'center', justifyContent: 'center' },
   discNumeral: { fontSize: 11, fontWeight: '800' },
   moveCell: { minWidth: 30 },
   moveRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  name: { flex: 1 },
+  name: { flex: 1, minWidth: 0 },
+  statsLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: space[2] },
   record: { minWidth: 56, textAlign: 'right' },
   gain: { minWidth: 92, textAlign: 'right' },
   caption: { marginTop: space[2] },

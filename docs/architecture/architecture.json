@@ -2,26 +2,54 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "f10e77ee58f200b22ba0c46cb30134a7cead60c4",
-    "commitShort": "f10e77ee",
+    "commit": "356650fe9aeeb91badf4d51490a6da00dab56429",
+    "commitShort": "356650fe",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/segmentedHit.ts"
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/SegmentedControl.tsx"
+        "path": "apps/mobile/components/game/HistoryList.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/sp-segmented-hit.test.ts"
+        "path": "apps/mobile/components/game/MatchScoreboard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/ScheduleList.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/StandingsTable.tsx"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/components/sp/logic/largeText.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/components/sp/useLargeText.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:18Z",
+    "timestamp": "2026-10-11T05:44:20Z",
     "sourceHash": "sha256:7378739950b5247283afb8f7f400d28f1c2115927e060a800989e9de6effd928",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
