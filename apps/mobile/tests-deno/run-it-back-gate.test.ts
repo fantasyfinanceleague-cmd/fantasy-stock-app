@@ -32,3 +32,15 @@ Deno.test('every Run it back entry point is behind the switch (Home and League)'
     assert(mounts.every((p) => p === 'app/(tabs)/index.tsx' || p === 'app/(tabs)/league.tsx'), `${name} mounted in ${mounts.join(', ')}`);
   }
 });
+
+import { waitingOnSentence } from '../lib/game/renewal.ts';
+
+Deno.test('"Waiting on …" never doubles the period after an initial (capture pass: "Andrea P..")', () => {
+  assertEquals(waitingOnSentence(['Andrea P.']), 'Waiting on Andrea P.');
+  assertEquals(waitingOnSentence(['Marta C.', 'Andrea P.']), 'Waiting on Marta C., Andrea P.');
+  assertEquals(waitingOnSentence(['Andrea']), 'Waiting on Andrea.');
+  for (const p of ['components/game/RenewalRoster.tsx', 'components/home/RenewalCountsCard.tsx']) {
+    assert(SOURCES[p].includes('waitingOnSentence(waiting)'), p);
+    assert(!SOURCES[p].includes("Waiting on ${waiting.join(', ')}"), p);
+  }
+});

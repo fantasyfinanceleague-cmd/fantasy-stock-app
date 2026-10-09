@@ -12,6 +12,13 @@ export function runItBackEnabled(flag: string | undefined): boolean {
   return flag === '1';
 }
 
+/** "Waiting on Andrea P." as a sentence: names ending in an initial already carry the
+ * period, so the sentence's own period is not added again ("Andrea P.." in the capture). */
+export function waitingOnSentence(names: readonly string[]): string {
+  const list = `Waiting on ${names.join(', ')}`;
+  return list.endsWith('.') ? list : `${list}.`;
+}
+
 export type RenewalGroup = 'in' | 'new' | 'out' | 'pending';
 
 export interface RenewalCounts {

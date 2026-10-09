@@ -8,8 +8,7 @@ import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import {
-  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction,
-} from '@/lib/game/renewal';
+  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction, waitingOnSentence } from '@/lib/game/renewal';
 import type { RosterResult } from '@/lib/game/useRenewalRoster';
 import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 import { useAuth } from '@/lib/useAuth';
@@ -103,7 +102,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
           <Text variant="callout" tone="secondary">Random</Text>
         </View>
         {draftDisabled(roster.replies_pending) ? (
-          <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. Waiting on ${waiting.join(', ')}.`}</Text>
+          <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. ${waitingOnSentence(waiting)}`}</Text>
         ) : null}
       </Card>
     </View>

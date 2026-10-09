@@ -5,7 +5,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { radius, space } from '@/constants/tokens';
-import { countsLine } from '@/lib/game/renewal';
+import { countsLine, waitingOnSentence } from '@/lib/game/renewal';
 import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 
 /** R4 (Home, the commissioner while replies come in): the counts line, "Waiting on …",
@@ -19,7 +19,7 @@ export function RenewalCountsCard({ successorId }: { successorId: string }) {
     <Card style={styles.card}>
       <Text variant="tag" tone="secondary">{`Season 2 · running back`}</Text>
       <Text variant="callout">{countsLine(r.counts)}</Text>
-      {waiting.length > 0 ? <Text variant="caption" tone="secondary">{`Waiting on ${waiting.join(', ')}. You'll set up the draft once everyone has replied.`}</Text> : null}
+      {waiting.length > 0 ? <Text variant="caption" tone="secondary">{`${waitingOnSentence(waiting)} You'll set up the draft once everyone has replied.`}</Text> : null}
       <View style={styles.action}>
         <Button label="See who's in" variant="secondary" onPress={() => router.push('/(tabs)/league')} />
       </View>
