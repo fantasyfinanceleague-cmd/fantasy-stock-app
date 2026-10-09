@@ -170,6 +170,13 @@ building anything, and don't reopen a rule without him.
     you to the back of the line; after each week is scored the order resets to reverse
     standings (last place first, standings tiebreaks apply).
   - After the run, the loser is told who won and why, in one short clause.
+- **Where the watchlist lives** (2026-10-09, "C and approved", board `#call-watchlist`): a
+  Watchlist tab inside "Buy a stock" (the player pool, as ESPN / Sleeper / Yahoo keep it) plus
+  a "Watching" section on the Portfolio tab ("See all (N)" opens the tab); one list behind
+  both. Rows: ticker + one status line (availability in this league, or "Claimed · fills Mon
+  9:30 AM ET"); Buy only while the market is open; Claim only while closed, also on "No free
+  … slot" rows since the claim names the sale that frees the slot. Names: Save/Saved (star)
+  and Claim/Claims; never "Queue" (the draft's word) or "Order".
 - **League features follow fantasy football, not a brokerage** (2026-10-08): anything that
   belongs to a league (watchlist, draft, waivers-like queues, standings, trades between
   managers) is modelled on how ESPN / Sleeper / Yahoo fantasy football do it; brokerage

@@ -1,6 +1,6 @@
 # Trading window, watchlist and claims (the waiver wire)
 
-Status: Draft (awaiting Giorgio's approval; placement and claim UI decided on the board during W1)
+Status: Approved (Giorgio, 2026-10-09: "C and approved")
 Planner session: "Planner" (Fable 5.1), 2026-10-08/09 · Orchestrator hand-off: —
 
 ## Goal
@@ -63,8 +63,8 @@ football").
 | 9 | First dibs | Per-league **waiver order**: starts as reverse draft order; any successful claim moves you to the back; resets to reverse standings after each week is scored (standings tiebreaks apply) | AskUserQuestion, 2026-10-08 |
 | 10 | Naming | "Save"/"Saved" (star) for the watchlist; **"Claim"/"Claims"** for the waiver wire; never "Queue" (the draft's word) or "Order" (brokerage) | Planner ↔ Design Lead, 2026-10-08 |
 | 11 | Lose ending | Names the winner and one short reason clause ("Gianluigi B. claimed AAPL · lower in the standings") | Design Lead ruling, flagged on the board |
-| 12 | Where the watchlist and claims live; row states; composer | To Giorgio as "Your call" mockups: `key-screens.html#call-watchlist` (23 frames, all nine brief items; branch `design/watchlist-claims` @ `97d25526`, pushed after #181). The Design Lead recommends **C** | drawn 2026-10-09; Giorgio to pick |
-| 13 | Design Lead rulings on the board, for Giorgio's eye (2026-10-09) | (a) **Claim also appears on "No free … slot" rows while closed**, since the claim names the sale that frees the slot; live Buy does not. (b) Failed copy: "LOW opened at $203.10, above your $100–$200 slot · Nothing was bought." (c) Watchlist rows show ticker + one status line, no company name, so a row with a button stays at two lines. (d) The 9:30 refusal frames use an available stock so "just buy it" is true. Data: tier-league examples are AMGN paid by selling NVDA (a same-tier swap, the only sale that can fund a tier-league claim) and LOW from the budget; 6 managers → "3rd of 6"; Home hook "Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist" | board, 2026-10-09 |
+| 12 | Where the watchlist and claims live | **C** (Giorgio, 2026-10-09: "C and approved"): the Watchlist tab inside "Buy a stock" (the player pool, where fantasy apps keep it) plus the "Watching" section on the Portfolio tab ("See all (N)" → the tab), one list behind both. Board `key-screens.html#call-watchlist` (23 frames; `origin/design/watchlist-claims` @ `97d25526`, stacked on #181) | board, 2026-10-09 |
+| 13 | Design Lead rulings on the board, accepted with the approval (2026-10-09) | (a) **Claim also appears on "No free … slot" rows while closed**, since the claim names the sale that frees the slot; live Buy does not. (b) Failed copy: "LOW opened at $203.10, above your $100–$200 slot · Nothing was bought." (c) Watchlist rows show ticker + one status line, no company name, so a row with a button stays at two lines. (d) The 9:30 refusal frames use an available stock so "just buy it" is true. Data: tier-league examples are AMGN paid by selling NVDA (a same-tier swap, the only sale that can fund a tier-league claim) and LOW from the budget; 6 managers → "3rd of 6"; Home hook "Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist" | board, 2026-10-09 |
 
 ## Open questions
 
