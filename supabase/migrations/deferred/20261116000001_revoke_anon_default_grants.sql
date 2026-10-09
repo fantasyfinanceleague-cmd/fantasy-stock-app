@@ -19,7 +19,7 @@
 --     only allows the built-in PUBLIC default to be revoked globally), none to
 --     PUBLIC.
 --
--- PRECONDITIONS (all three; see deferred/README.md)
+-- PRECONDITIONS (all four; see deferred/README.md)
 --   1. security/lockdown-symbols stage 1 (PR #175) is DEPLOYED: before it,
 --      symbols-search and symbol-name read symbols as anon and would go empty.
 --   2. 20261116000000 is applied (it is the function half of this sweep, and
@@ -28,6 +28,29 @@
 --      confirming no anon grant is load-bearing:
 --        - no storage bucket relies on anon table access (storageBuckets);
 --        - defaultPrivileges shows the postgres/public rules this edits.
+--
+--   4. This read-only query returns ZERO rows. Revoking PUBLIC EXECUTE is safe
+--      only for functions that grant their real callers explicitly; a public
+--      function with a NULL proacl, a non-postgres owner (an extension that
+--      landed in public, a supabase_admin object), or no explicit
+--      authenticated entry may be relying on PUBLIC and must be granted
+--      explicitly (or excluded) first:
+--        SELECT p.oid::regprocedure, pg_get_userbyid(p.proowner), p.proacl
+--          FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+--         WHERE n.nspname = 'public'
+--           AND (p.proacl IS NULL OR pg_get_userbyid(p.proowner) <> 'postgres'
+--                OR NOT p.proacl::text ~ 'authenticated=');
+--      (Trigger functions and service_role-only RPCs will appear; each is fine
+--      if no API role calls it directly -- read the list, do not just count.)
+--
+-- KNOWN LIMITS (say what this does NOT cover)
+--   * Only the FOR ROLE postgres default rules are edited. Supabase also keeps
+--     rules FOR ROLE supabase_admin IN SCHEMA public; objects supabase_admin
+--     creates (platform upgrades, not our migrations) are still born with anon
+--     grants. postgres cannot alter another role's defaults.
+--   * The GLOBAL PUBLIC rule also applies to a later CREATE EXTENSION run as
+--     postgres: that extension's functions will not be PUBLIC-executable, so
+--     grant what is needed explicitly in the same migration.
 --
 -- PRODUCT-IMPACT CHECK (done 2026-10-08, from the repo)
 --   * No pre-sign-in screen reads a table or calls an RPC. The one anon WRITE

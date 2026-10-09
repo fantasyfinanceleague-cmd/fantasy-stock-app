@@ -126,7 +126,7 @@ objects migrations create later (ruling 2026-10-08, nothing scrapable). Today
 RLS is the only gate between anon and most tables; this removes the other.
 Not yet decided: it is held for Giorgio's go-ahead as well as its preconditions.
 
-**Preconditions (all three):**
+**Preconditions (all four):**
 1. `security/lockdown-symbols` stage 1 (PR #175) is **deployed** — before it,
    `symbols-search` / `symbol-name` read `symbols` as anon. Prove it by source:
    `supabase functions download symbols-search` contains
@@ -136,6 +136,10 @@ Not yet decided: it is held for Giorgio's go-ahead as well as its preconditions.
 3. A fresh `db-snapshot.json` captured with the 2026-10-08 `db-snapshot.sql`, read
    for `storageBuckets` (no public bucket relying on anon table access) and
    `defaultPrivileges` (the postgres/public rules this edits are present).
+4. The header's read-only function query (precondition 4) has been read row by
+   row: no public function an API role calls relies on the PUBLIC grant.
+   Known limits (header): supabase_admin's own default rules are not edited, and
+   a later `CREATE EXTENSION` as postgres needs explicit grants.
 
 **Product impact (checked 2026-10-08):** none. No pre-sign-in screen reads a
 table or calls an RPC; the one anon write (the `user_profiles` upsert after a

@@ -32,7 +32,8 @@
 -- 4. symbol_category_overrides.justification (internal curation rationale) is
 --    no longer readable by authenticated. A column REVOKE is a no-op while the
 --    role holds table-wide SELECT, so the table grant is replaced by a column
---    grant on (id, symbol, category_id, created_at). Clients select only
+--    grant on (id, symbol, category_id, created_at), and every other default
+--    privilege (INSERT/UPDATE/DELETE/TRUNCATE...) goes too. Clients select only
 --    symbol and category_id (mobile + web categoryData) and filter on symbol;
 --    edge functions and draft_feasibility_pool read as service_role.
 --
@@ -151,8 +152,10 @@ revoke all on function public.get_real_user_ids(text[]) from public, anon;
 grant execute on function public.get_real_user_ids(text[]) to authenticated;
 
 -- 4 --------------------------------------------------------------------------
-revoke select on table public.symbol_category_overrides from authenticated;
-revoke all on table public.symbol_category_overrides from anon;
+-- ALL, not just SELECT: Supabase's defaults also handed authenticated INSERT /
+-- UPDATE / DELETE / TRUNCATE (RLS blocks the writes; TRUNCATE ignores RLS).
+-- service_role and the owner keep everything (curation writes as service_role).
+revoke all on table public.symbol_category_overrides from public, anon, authenticated;
 grant select (id, symbol, category_id, created_at) on table public.symbol_category_overrides to authenticated;
 
 -- 5 --------------------------------------------------------------------------

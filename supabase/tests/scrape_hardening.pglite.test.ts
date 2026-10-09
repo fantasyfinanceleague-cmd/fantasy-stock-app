@@ -216,6 +216,14 @@ Deno.test({
         Error, 'permission denied');
       await assertRejects(() => as('anon', null, () => q(`select symbol from public.symbol_category_overrides`)),
         Error, 'permission denied');
+      for (const sql of [
+        `insert into public.symbol_category_overrides (symbol, category_id, justification) values ('X', '${CAT}', 'x')`,
+        `update public.symbol_category_overrides set symbol = 'Y'`,
+        `delete from public.symbol_category_overrides`,
+        `truncate public.symbol_category_overrides`,
+      ]) {
+        await assertRejects(() => as('authenticated', A, () => q(sql)), Error, 'permission denied');
+      }
       const svc = await as('service_role', null, () => q(`select justification from public.symbol_category_overrides where symbol = 'AAPL'`));
       assertEquals(svc[0].justification, 'internal curation note');
     });
