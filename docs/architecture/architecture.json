@@ -2,62 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0e39545200095d20c335c39b913b9f8313b39ec3",
-    "commitShort": "0e395452",
+    "commit": "2ece7fa772efe73b65d6ecadf62ac440150b7ded",
+    "commitShort": "2ece7fa7",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/BracketView.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/DraftLobby.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/HistoryList.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/MatchScoreboard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalRoster.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/StandingsTable.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/StandingsCard.tsx"
-      },
-      {
         "code": "A",
-        "path": "apps/mobile/lib/game/managerRow.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/manager-row.test.ts"
+        "path": "apps/mobile/components/sp/logic/fontWeight.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/match-scoreboard-layout.test.ts"
+        "path": "apps/mobile/components/sp/Text.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/sp-font-weight.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:22Z",
+    "timestamp": "2026-10-11T05:44:25Z",
     "sourceHash": "sha256:4684c1b96e0a055a042c22381fbf9f738edc97f7f312d95ecfd33e14f71617b1",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
