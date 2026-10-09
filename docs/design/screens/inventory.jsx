@@ -3028,6 +3028,534 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: where the watchlist lives (Giorgio, 2026-10-08: trading stays
+  // market-hours only; search and SAVE any time; the list is PER LEAGUE, a
+  // fantasy-football watch list, not a brokerage one) AND the daily waiver
+  // wire: Claims, placed only while closed, run at the next 9:30 open in
+  // waiver order. Brief: plan 2026-10-08-trading-window-and-watchlist,
+  // "Mockup brief (W1), revised 2026-10-09". Tier Cup
+  // (the board's price-tier league; DIS sold, so the $100–$200 slot is
+  // open), Roberto B.'s phone. Thu 1:37 PM ET = open; Fri 5:00 PM ET =
+  // closed. NVDA and SHOP's Thursday numbers and AMZN's owner are derived
+  // (data.js); every other price and change here is SAMPLE. All copy here is new unless noted.
+  // ═════════════════════════════════════════════════════════════════════
+  const STAR = 'M12 3.6l2.55 5.17 5.7.83-4.13 4.02.98 5.68L12 16.62 6.9 19.3l.98-5.68L3.75 9.6l5.7-.83z';
+  const WLP = {
+    F: { co: 'Ford', thu: 11.42, thuPct: -0.61, fri: 11.51, friPct: 0.79 },
+    KO: { co: 'Coca-Cola', thu: 68.1, thuPct: 0.38, fri: 67.84, friPct: -0.38 },
+    NVDA: { co: 'NVIDIA', thu: K.NVDA.thu, thuPct: K.NVDA.todayPct, fri: K.NVDA.fri, friPct: 1.11 },
+    NFLX: { co: 'Netflix', thu: 612.3, thuPct: 1.24, fri: 618.05, friPct: 0.94 },
+    COST: { co: 'Costco', thu: 918.1, thuPct: -0.27, fri: 921.4, friPct: 0.36 },
+    SHOP: { co: 'Shopify', thu: K.SALE.buy.price, thuPct: K.SALE.buy.todayPct, fri: 105.06, friPct: -0.44, open: 105.31 },
+    AMZN: { co: 'Amazon', thu: 236.4, thuPct: 0.92, fri: 238.11, friPct: 0.72 },
+    AMGN: { co: 'Amgen', thu: priceOf('AMGN'), thuPct: -0.52, fri: 291.12, friPct: 0.56, open: 290.4 },
+    LOW: { co: 'Lowe’s', thu: 197.92, thuPct: -0.31, fri: 198.75, friPct: 0.42, open: 203.1 },
+    DIS: { co: 'Disney', thu: TIER.sold[2], thuPct: -0.35, fri: 103.42, friPct: 0.51 },
+    WBA: { co: 'Walgreens', thu: null, thuPct: null, fri: null, friPct: null, gone: true },
+  };
+  const WL_HELD = ['F', 'KO', 'NVDA', 'NFLX', 'COST'];
+  const WL_WATCH = ['SHOP', 'AMZN', 'NVDA', 'AMGN', 'WBA'];
+  const WL_FIT = {
+    SHOP: 'Available · fits your $100–$200 slot',
+    DIS: 'Available · fits your $100–$200 slot',
+    AMZN: `Owned by ${ownerOf('AMZN').name}`,
+    NVDA: 'You own this',
+    AMGN: 'No free $200–$400 slot',
+    WBA: 'No longer tradable',
+  };
+  const DIS_CASH = 102.9;
+  const BUDGET_LEFT = 412.6; // SAMPLE: Tier Cup budget left at Friday's close (includes the DIS cash)
+  const FILLS = 'fills Mon 9:30 AM ET';
+  // Two pending claims (Fri 5:00 PM): AMGN funded by selling NVDA (same
+  // $200–$400 tier), LOW from the budget into the open $100–$200 slot.
+  const CLAIMS = [
+    { t: 'AMGN', fund: 'Selling NVDA', sub: '$321.90 at Fri close' },
+    { t: 'LOW', fund: 'From your budget', sub: `${$(BUDGET_LEFT)} left` },
+  ];
+  // Waiver order, Tier Cup (SAMPLE, six managers from data.js). Reverse
+  // standings after Week 6 was scored; you're 3rd.
+  const WAIVER = ['andrea', 'gianluigi', 'roberto', 'francesco', 'alessandro', 'paolo'];
+  /** The Buy / Claim spot: same place, same size, same weight. */
+  const ActBtn = ({ children }) => (
+    <span role="button" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 44, minWidth: 64, padding: '0 14px', borderRadius: 22, fontSize: 14, fontWeight: 700, background: 'var(--c-primary-bg)', color: 'var(--c-primary-fg)' }}>{children}</span>
+  );
+  const TextBtn = ({ children, danger }) => (
+    <span role="button" className="ks-callout" style={{ height: 44, display: 'inline-flex', alignItems: 'center', padding: '0 2px', fontWeight: 700, color: danger ? 'var(--c-danger)' : 'var(--c-accent)' }}>{children}</span>
+  );
+  /** Save / Saved (the fantasy watch-list star): a 44 pt labelled control. Never placed next to Buy. */
+  const SaveBtn = ({ saved, label }) => (
+    <span role="button" aria-pressed={saved ? 'true' : 'false'} aria-label={label} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 44, minWidth: 44, padding: '0 12px', borderRadius: 22, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', background: saved ? 'var(--c-accent-tint)' : 'transparent', color: saved ? 'var(--c-accent)' : 'var(--c-text)', border: saved ? '1px solid transparent' : '1px solid var(--c-secondary-border)' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d={STAR} fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" /></svg>
+      {saved ? 'Saved' : 'Save'}
+    </span>
+  );
+  /** Queue / Queued on the draft search: the same size as Save, a different icon. */
+  const QueueBtn = ({ queued }) => (
+    <span role="button" aria-pressed={queued ? 'true' : 'false'} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, height: 44, minWidth: 44, padding: '0 12px', borderRadius: 22, fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', background: queued ? 'var(--c-inset)' : 'transparent', color: 'var(--c-text)', border: queued ? '1px solid transparent' : '1px solid var(--c-secondary-border)' }}>
+      <Icon d={queued ? CHECK : ICON.plus} size={16} width={2.6} />
+      {queued ? 'Queued' : 'Queue'}
+    </span>
+  );
+  /** One watched stock: the holding row primitive (logo · ticker / one status
+   *  line · price / change); the company name lives on the sheet. Like a fantasy watch list, the status says whether
+   *  you can get it HERE. The action spot: Buy (open, available), Claim
+   *  (closed, available or no free slot: a claim names the sale that makes
+   *  room), Cancel (claimed), Remove (no longer tradable). */
+  const WatchRow = ({ t, closed, claimed }) => {
+    const p = WLP[t];
+    const price = closed ? p.fri : p.thu;
+    const ch = closed ? p.friPct : p.thuPct;
+    const fit = WL_FIT[t];
+    const avail = fit.startsWith('Available');
+    const nofit = fit.startsWith('No free');
+    const mine = fit === 'You own this';
+    const act = claimed ? <TextBtn>Cancel</TextBtn>
+      : p.gone ? <TextBtn>Remove</TextBtn>
+      : !closed && avail ? <ActBtn>Buy</ActBtn>
+      : closed && (avail || nofit) ? <ActBtn>Claim</ActBtn> : null;
+    const status = claimed ? <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>Claimed · {FILLS}</span>
+      : avail ? <span style={{ color: 'var(--c-accent)', fontWeight: 700 }}>{fit}</span>
+      : mine ? <span style={{ color: 'var(--c-you-text)', fontWeight: 700 }}>{fit}</span>
+      : p.gone ? <b style={{ color: 'var(--c-text)' }}>{fit}</b> : fit;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: act ? '36px 1fr auto auto' : '36px 1fr auto' }}>
+        <span style={p.gone ? { opacity: 0.45 } : undefined}><Logo t={t} /></span>
+        <span><span className="ks-t" style={p.gone ? { color: 'var(--c-text-2)' } : undefined}>{t}</span><br /><span className="ks-caption">{status}</span></span>
+        <span className="ks-right ks-num"><b>{price == null ? '—' : $(price)}</b><br />{ch == null ? <span className="ks-caption ks-muted">—</span> : <span className={`ks-caption ${tone(ch)}`} style={{ fontWeight: 700 }}>{pct(ch)}</span>}</span>
+        {act}
+      </li>
+    );
+  };
+  const tierOfP = (p) => TIER.tierOf(p);
+  /** Portfolio in Tier Cup with (A/C) or without (B) the Watching section. */
+  function WatchPortfolio({ closed, section = true, n = WL_WATCH.length, seeAllTo, claimed }) {
+    const held = WL_HELD.map((t) => ({ t, ...WLP[t], price: closed ? WLP[t].fri : WLP[t].thu, ch: closed ? WLP[t].friPct : WLP[t].thuPct }));
+    const value = held.reduce((s, r) => s + r.price, 0) + DIS_CASH;
+    const watch = WL_WATCH.slice(0, 5);
+    return (
+      <Device full tab="portfolio" time={closed ? '5:00' : '1:37'} label={`Tier Cup portfolio, market ${closed ? 'closed' : 'open'}${section ? ', Watching section' : ''}`}>
+        <Head name="Tier Cup" chip={closed ? <span className="ks-chip">Closed</span> : <Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value · includes cash{closed ? ' · at Fri close' : ''}</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(value)}</div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>5 of 6</b> tiers filled</span>
+            <span className="ks-callout ks-muted">One stock per tier</span>
+          </div>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+              <span className="ks-logo" style={{ background: 'var(--c-accent-tint)', color: 'var(--c-accent)' }}><Icon d={ICON.search} size={18} /></span>
+              <span><span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)' }}>Buy a stock</span><br />
+                <span className="ks-caption ks-num">{closed ? `Market opens Mon 9:30 AM ET · ${n} on your watchlist` : `${$(DIS_CASH)} from your DIS sale is ready to invest.`}</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+            {claimed ? (
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+                <span className="ks-logo" style={{ background: 'var(--c-inset)', color: 'var(--c-text)', fontSize: 15, fontWeight: 800 }}>{CLAIMS.length}</span>
+                <span><span className="ks-callout" style={{ fontWeight: 700 }}>Claims</span><br />
+                  <span className="ks-caption">{CLAIMS.length} pending · {FILLS}</span></span>
+                <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+              </li>
+            ) : null}
+          </ul></Card>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">{closed ? 'At Fri close' : 'Value · today'}</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {held.map((r) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={r.t} />
+                  <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {tierOfP(r.thu)} slot · 1 sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(r.price)}</b><br /><span className={`ks-caption ${tone(r.ch)}`} style={{ fontWeight: 700 }}>{pct(r.ch)}</span></span>
+                </li>
+              ))}
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)', fontSize: 11 }}>Open</span>
+                <span><span className="ks-t">$100–$200 slot</span><br /><span className="ks-caption">Sold DIS · buy a stock priced $100 to $200</span></span>
+                <span className="ks-right"><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Fill<Icon d={ICON.right} size={12} width={2.6} /></span></span>
+              </li>
+            </ul></div>
+          </div>
+          {section ? (
+            <div>
+              <div className="ks-section-h"><h3>Watching</h3><span className="ks-caption">{closed ? 'At Fri close' : 'Price · today'}</span></div>
+              <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+                {watch.map((t) => <WatchRow key={t} t={t} closed={closed} claimed={claimed && t === 'AMGN'} />)}
+                {n > 5 ? (
+                  <li className="ks-row" style={{ gridTemplateColumns: '1fr 16px', padding: '13px 0' }}>
+                    <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)' }}>See all ({n})</span>
+                    <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+                  </li>
+                ) : null}
+              </ul></div>
+              {seeAllTo ? <span className="ks-caption" style={{ display: 'block', marginTop: 6 }}>{seeAllTo}</span> : null}
+            </div>
+          ) : null}
+        </div>
+      </Device>
+    );
+  }
+  /** The stock sheet, Tier Cup. state: 'closed' (AMGN; the Buy spot reads
+   *  Claim) | 'opened' (SHOP, Mon 9:30:05: a Claim tapped on a stale sheet) |
+   *  'processing' (SHOP, Mon 9:30:20: a live buy while the run is going).
+   *  The 9:30 frames use SHOP because it is available: "just buy it" must be true. */
+  function ClaimSheet({ state = 'closed' }) {
+    const closed = state === 'closed';
+    const t = closed ? 'AMGN' : 'SHOP', P = WLP[t];
+    return (
+      <Device tab="portfolio" time={closed ? '5:00' : '9:30'} label={`Stock sheet, ${state}`} overlay={
+        <Sheet top={closed ? 214 : 268}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t={t} />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption ks-num">{P.co} · {$(closed ? P.fri : P.open)}{closed ? ' at Fri close' : ''}</span></span>
+            <SaveBtn saved label={`Saved ${t}`} />
+            <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-inset)', boxShadow: 'none', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout">In Tier Cup</span><span className="ks-callout" style={closed ? undefined : { color: 'var(--c-accent)', fontWeight: 700 }}>{WL_FIT[t]}</span>
+          </div>
+          {closed ? (
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 4 }}>
+              <span className="ks-headline" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}><Icon d={LOCK} size={18} />Market closed</span>
+              <span className="ks-callout ks-muted">Trading opens Mon 9:30 AM ET. Prices show Friday's close.</span>
+            </div>
+          ) : (
+            <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span>Sell</span></div>
+          )}
+          {state === 'opened' ? <TAlert>Market's open: just buy it.</TAlert> : null}
+          {state === 'processing' ? <TAlert>Claims are being processed. Try again in a minute.</TAlert> : null}
+          <span className="ks-btn" style={state === 'processing' ? { opacity: 0.45 } : undefined} aria-disabled={state === 'processing' || undefined}>{closed ? 'Claim' : 'Review buy'}</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>{closed ? 'A claim fills at Monday’s open, in waiver order. Sell NVDA in the claim to make room.' : 'Market data provided by Alpaca'}</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={closed ? <span className="ks-chip">Closed</span> : <Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+  /** The composer: the 3e review, re-labelled. full: a 6th claim, refused in place. */
+  function ClaimComposer({ full }) {
+    const t = 'AMGN';
+    return (
+      <Device noTabs time="5:00" label={full ? 'Claim composer, 5 claims pending' : 'Claim composer'}>
+        <div className="ks-head">
+          <span className="ks-callout ks-muted">Tier Cup</span>
+          <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} aria-label="Close without claiming"><Icon d={ICON.close} size={22} /></span>
+        </div>
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Claim {t}</h2>
+          <Card><Sum rows={[
+            ['Buy', `1 ${t}`],
+            ['Price', 'Monday’s opening price'],
+            ['Last close', `${$(WLP[t].fri)} · Fri`],
+          ]} /></Card>
+          <div>
+            <div className="ks-section-h"><h3>Paid by</h3></div>
+            <Card><ul className="ks-rows">
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+                <Logo t="NVDA" />
+                <span><span className="ks-callout" style={{ fontWeight: 700 }}>Selling NVDA</span><br /><span className="ks-caption ks-num">1 sh · {$(WLP.NVDA.fri)} at Fri close · same $200–$400 slot</span></span>
+                <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+              </li>
+            </ul></Card>
+          </div>
+          <Card><Sum rows={[
+            ['Fits', 'Your $200–$400 slot, once NVDA is sold'],
+            ['As of', 'Friday’s close'],
+          ]} /></Card>
+          {full ? <TAlert>5 claims pending. Cancel one to claim another.</TAlert> : null}
+          <span className="ks-btn" style={full ? { opacity: 0.45 } : undefined} aria-disabled={full || undefined}>Claim · {FILLS}</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>If a manager ahead of you in the waiver order claims {t}, you keep NVDA.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Your claims (only yours: claims are blind) and your waiver position. */
+  function ClaimsList({ order }) {
+    const me = WAIVER.indexOf('roberto') + 1;
+    return (
+      <Device tab="portfolio" time="5:00" label={order ? 'Waiver order' : 'Claims'} overlay={order ? (
+        <Sheet top={250}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span className="ks-title">Waiver order</span><span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span></div>
+          <ul className="ks-rows">
+            {WAIVER.map((id, i) => {
+              const m = K.byId[id];
+              return (
+                <li key={id} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr', padding: '9px 6px', background: m.you ? 'var(--c-you-tint)' : undefined, borderRadius: m.you ? 8 : 0 }}>
+                  <span className="ks-callout ks-num ks-muted">{i + 1}</span>
+                  <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
+                  <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <span className="ks-caption">Whoever is higher gets a stock two managers claimed. It starts as the reverse of the draft order; a claim that fills sends you to the back; after each week is scored it resets to the reverse of the standings.</span>
+        </Sheet>
+      ) : null}>
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack">
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Claims</h2>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '1fr 16px', padding: '13px 0' }}>
+              <span className="ks-callout">You're <b>{me === 3 ? '3rd' : me}</b> of {WAIVER.length} in the waiver order</span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+          </ul></Card>
+          <div>
+            <div className="ks-section-h"><h3>Pending</h3><span className="ks-caption">{FILLS[0].toUpperCase() + FILLS.slice(1)}</span></div>
+            <Card><ul className="ks-rows">
+              {CLAIMS.map((c) => (
+                <li key={c.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={c.t} />
+                  <span><span className="ks-t">Buy {c.t}</span><br /><span className="ks-caption ks-num">{c.fund} · {c.sub}</span></span>
+                  <TextBtn>Cancel</TextBtn>
+                </li>
+              ))}
+            </ul></Card>
+          </div>
+          <span className="ks-caption">Only you see your claims. Nobody sees who else claimed a stock until the claims run at the open.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** The ending at Monday's open, one per outcome, on Portfolio. */
+  function ClaimEnding({ kind = 'won' }) {
+    const E = {
+      won: { title: 'AMGN is yours', line: `${$(WLP.AMGN.open)} at the open · paid by selling NVDA`, icon: CHECK, tone: 'var(--c-gain)' },
+      lost: { title: 'Gianluigi B. claimed AMGN · lower in the standings', line: 'Your NVDA was not sold.', icon: ICON.info, tone: 'var(--c-text-2)' },
+      failed: { title: `LOW opened at ${$(WLP.LOW.open)}, above your $100–$200 slot`, line: 'Nothing was bought. Your budget is unchanged.', icon: ICON.info, tone: 'var(--c-text-2)' },
+    }[kind];
+    const nv = kind === 'won' ? { t: 'AMGN', co: 'Amgen', v: WLP.AMGN.open } : { t: 'NVDA', co: 'NVIDIA', v: 323.05 };
+    return (
+      <Device tab="portfolio" time="9:31" label={`Claim ending, ${kind}`}>
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-card" role="status" style={{ padding: 14, display: 'grid', gridTemplateColumns: '28px 1fr', gap: 10, alignItems: 'start' }}>
+            <span style={{ width: 28, height: 28, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'var(--c-sunken)', color: E.tone }}><Icon d={E.icon} size={16} width={2.6} /></span>
+            <span><span className="ks-caption ks-muted">Claims · Mon 9:30 AM ET</span><br /><span className="ks-callout" style={{ fontWeight: 700 }}>{E.title}</span><br /><span className="ks-callout ks-muted">{E.line}</span></span>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {[['F', 'Ford', 11.47], ['KO', 'Coca-Cola', 67.9], [nv.t, nv.co, nv.v], ['NFLX', 'Netflix', 619.2], ['COST', 'Costco', 920.55]].map(([t, co, v]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', background: kind === 'won' && t === 'AMGN' ? 'var(--c-accent-tint)' : undefined }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {tierOfP(v)} slot · 1 sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(v)}</b></span>
+                </li>
+              ))}
+              <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)', fontSize: 11 }}>Open</span>
+                <span><span className="ks-t">$100–$200 slot</span><br /><span className="ks-caption">Sold DIS · buy a stock priced $100 to $200</span></span>
+                <span className="ks-right"><span className="ks-caption" style={{ color: 'var(--c-accent)', fontWeight: 700, display: 'inline-flex', alignItems: 'center' }}>Fill<Icon d={ICON.right} size={12} width={2.6} /></span></span>
+              </li>
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** Home's rule-10 hook, market closed. Stock Scudetto on Thursday evening
+   *  (the board's HomeClosed), so the counts are THIS league's: 1 claim
+   *  (SHOP, paid by selling TSLA) and 3 saved (AMZN, AMD, SHOP). */
+  function HomeClaimsHook() {
+    const w = K.WEEK_CLOSES[4];
+    return (
+      <Device tab="home" time="8:15" label="Home, market closed, claims and watchlist hook">
+        <Head avatar />
+        <div className="ks-pad ks-stack">
+          <Hero value={12000 + K.HOME.throughW5 + w.you} gain={K.HOME.throughW5 + w.you} meta="2nd of 6 · 4–1 · Week 6 of 14" />
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+              <span className="ks-logo" style={{ background: 'var(--c-sunken)', color: 'var(--c-text-2)' }}><Icon d={LOCK} size={18} /></span>
+              <span><span className="ks-callout" style={{ fontWeight: 700 }}>Market opens Fri 9:30 AM ET</span><br /><span className="ks-caption">1 claim pending · 3 on your watchlist</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+          </ul></Card>
+          <GameCard tag="This week" chip={<span className="ks-chip">Market closed</span>}>
+            <Scores left={$s(w.you)} right={$s(w.opp)} size="lg" />
+            <Tug you={w.you} opp={w.opp} />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-caption">
+              <span>You lead by <b className="ks-num">{$(w.you - w.opp)}</b> at Thursday's close</span>
+              <span className="ks-muted">Resumes Fri 9:30 AM ET</span>
+            </div>
+          </GameCard>
+        </div>
+      </Device>
+    );
+  }
+  /** Switching leagues with the pill: Stock Scudetto (per-slot, every slot
+   *  invested) keeps its OWN list, and SHOP gets a different answer here. */
+  function WatchOtherLeague() {
+    const P = K.PORTFOLIO_LIVE;
+    const sc = [['AMZN', `Owned by ${ownerOf('AMZN').name}`], ['AMD', `Owned by ${ownerOf('AMD').name}`], ['SHOP', 'No free slot']];
+    const px = { AMZN: [priceOf('AMZN'), 0.92], AMD: [priceOf('AMD'), -1.18], SHOP: [priceOf('SHOP'), K.SALE.buy.todayPct] };
+    return (
+      <Device full tab="portfolio" label="Stock Scudetto portfolio, its own Watching list">
+        <Head chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-caption">Portfolio value</div>
+            <div className="ks-score ks-num" style={{ fontSize: 48, lineHeight: '50px', fontStretch: '75%' }}>{$(P.value)}</div>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout"><b>6 of 6</b> slots invested</span>
+            <span className="ks-callout ks-muted">{$(K.LEAGUE.notionalPerSlot)} per slot at the draft</span>
+          </div>
+          <Card><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr 16px', padding: '12px 0' }}>
+              <span className="ks-logo" style={{ background: 'var(--c-accent-tint)', color: 'var(--c-accent)' }}><Icon d={ICON.search} size={18} /></span>
+              <span><span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)' }}>Buy a stock</span><br />
+                <span className="ks-caption">Every slot is invested. Sell a holding to free one.</span></span>
+              <span className="ks-muted"><Icon d={ICON.right} size={16} /></span>
+            </li>
+          </ul></Card>
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {P.rows.map((r) => (
+                <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={r.t} />
+                  <span><span className="ks-t">{r.t}</span><br /><span className="ks-caption ks-num">{r.co} · {r.qty.toFixed(2)} sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(r.value)}</b><br /><span className={`ks-caption ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+          <div>
+            <div className="ks-section-h"><h3>Watching</h3><span className="ks-caption">Price · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {sc.map(([t, tag]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto' }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption">{NAMES[t]} · {tag}</span></span>
+                  <span className="ks-right ks-num"><b>{$(px[t][0])}</b><br /><span className={`ks-caption ${tone(px[t][1])}`} style={{ fontWeight: 700 }}>{pct(px[t][1])}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+  /** B: the search screen's Watchlist tab (Search · Watchlist). */
+  function WatchTab({ closed }) {
+    return (
+      <Device noTabs time={closed ? '5:00' : '1:37'} label={`Buy a stock, Watchlist tab, market ${closed ? 'closed' : 'open'}`}>
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Buy a stock</h2>
+          <div className="ks-seg" style={{ height: 40 }}><span>Search</span><span className="on">Watchlist</span></div>
+          {closed ? (
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 4 }}>
+              <span className="ks-headline" style={{ fontWeight: 700, display: 'flex', gap: 8, alignItems: 'center' }}><Icon d={LOCK} size={18} />Market closed</span>
+              <span className="ks-callout ks-muted">Trading opens Mon 9:30 AM ET. Prices show Friday's close.</span>
+            </div>
+          ) : null}
+          <div className="ks-section-h" style={{ marginBottom: -6 }}><h3>{WL_WATCH.length} saved</h3><span className="ks-caption">{closed ? 'At Fri close' : 'Price · today'}</span></div>
+          <Card><ul className="ks-rows">{WL_WATCH.map((t) => <WatchRow key={t} t={t} closed={closed} />)}</ul></Card>
+          <span className="ks-caption">Tap a stock to see it{closed ? '' : ' and buy'}. This list is for Tier Cup only; each league keeps its own.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Save on search results. full: the 50-cap refusal, in place under the row. */
+  function SaveResults({ full }) {
+    const R = ({ t, owned, saved, last }) => (
+      <li className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto auto', borderBottom: last ? 'none' : undefined }}>
+        <Logo t={t} />
+        <span><span className="ks-t">{t}</span><br /><span className="ks-caption">{NAMES[t]}{owned ? <> · Owned by {ownerOf(t).name}</> : null}</span></span>
+        <span className="ks-right ks-num ks-callout"><b>{$(priceOf(t))}</b></span>
+        <SaveBtn saved={saved} label={`${saved ? 'Saved' : 'Save'} ${t}`} />
+      </li>
+    );
+    return (
+      <Device noTabs label={full ? 'Buy a stock, watchlist full' : 'Buy a stock, Save on results'}>
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Buy a stock</h2>
+          <div className="ks-seg" style={{ height: 40 }}><span className="on">Search</span><span>Watchlist</span></div>
+          <SearchBox q="AM" focus={false} />
+          <Card><ul className="ks-rows">
+            <R t="AMZN" owned saved={!full} />
+            <R t="AMD" owned />
+            <R t="AMGN" />
+            {full ? (
+              <li role="alert" style={{ listStyle: 'none', margin: '0 0 12px', padding: '10px 12px', borderRadius: 10, background: 'var(--c-warn-tint)', border: '1px solid var(--c-warn-line)' }}>
+                <span className="ks-callout" style={{ fontWeight: 600, color: 'var(--c-text)' }}>Your watchlist is full (50). Remove one to add another.</span>
+              </li>
+            ) : null}
+          </ul></Card>
+          <span className="ks-caption">Tap a row to open the stock. Save keeps it on this league's watchlist, open market or not.</span>
+        </div>
+      </Device>
+    );
+  }
+  /** Save / Saved in the stock sheet header, far from Buy. */
+  function SaveSheet() {
+    const t = 'SHOP';
+    return (
+      <Device tab="portfolio" label="Stock sheet, Saved in the header" overlay={
+        <Sheet top={250}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t={t} />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption ks-num">Shopify · {$(WLP.SHOP.thu)}</span></span>
+            <SaveBtn saved label="Saved SHOP" />
+            <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-inset)', boxShadow: 'none', display: 'flex', justifyContent: 'space-between' }}>
+            <span className="ks-callout">In Tier Cup</span><span className="ks-callout" style={{ color: 'var(--c-accent)', fontWeight: 700 }}>Available · fits your $100–$200 slot</span>
+          </div>
+          <div className="ks-seg" style={{ height: 40 }}><span className="on">Buy</span><span style={{ opacity: 0.45 }}>Sell</span></div>
+          <div className="ks-card" style={{ padding: '2px 14px', boxShadow: 'none' }}><ul className="ks-rows">
+            <li className="ks-row" style={{ gridTemplateColumns: '1fr auto' }}><span className="ks-callout">Buy</span><span className="ks-callout ks-num"><b>1 share</b></span></li>
+            <li className="ks-row" style={{ gridTemplateColumns: '1fr auto' }}><span className="ks-callout">Fills</span><span className="ks-callout"><b>Your $100–$200 slot</b></span></li>
+          </ul></div>
+          <span className="ks-btn">Review buy</span>
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+  /** The draft room's search: Queue (this draft's auto-pick list) and Save (your watchlist), both labelled. */
+  function DraftQueueSave() {
+    const rows = K.DRAFT_SEARCH.results;
+    const saved = { APP: true };
+    return (
+      <Device tab="league" label="Draft room search, Queue and Save">
+        <Head chip={<Chip kind="live">Drafting</Chip>} />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <div className="ks-raised" style={{ padding: 14, display: 'grid', gap: 2 }}>
+            <span className="ks-title">Paolo M. is up</span>
+            <span className="ks-callout ks-muted">Round 2 of {K.LEAGUE.slots} · Pick 12, then 13</span>
+            <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · you're up in 2 picks</span>
+          </div>
+          <div className="ks-search">
+            <Icon d={ICON.search} size={18} />
+            <span className="ks-callout">{K.DRAFT_SEARCH.query}</span>
+          </div>
+          <ul className="ks-rows">
+            {rows.slice(1).map((r) => (
+              <li key={r.t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto auto', padding: '8px 0' }}>
+                <Logo t={r.t} game />
+                <span><span className="ks-t ks-callout">{r.t}</span><br /><span className="ks-caption ks-muted ks-num">{r.co} · {$(r.price)}</span></span>
+                <QueueBtn queued={r.t === 'APPF'} />
+                <SaveBtn saved={!!saved[r.t]} label={`${saved[r.t] ? 'Saved' : 'Save'} ${r.t} to your watchlist`} />
+              </li>
+            ))}
+          </ul>
+          <div className="ks-card" style={{ padding: '10px 12px', background: 'var(--c-inset)', boxShadow: 'none', display: 'grid', gap: 4 }}>
+            <span className="ks-caption"><b>Queue</b> · this draft picks from it if your time runs out.</span>
+            <span className="ks-caption"><b>Save</b> · this league's watchlist, for buying once the season starts.</span>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -3041,6 +3569,8 @@
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn, ManagerRowCall,
+    WatchPortfolio, WatchOtherLeague, WatchTab, SaveResults, SaveSheet, DraftQueueSave,
+    ClaimSheet, ClaimComposer, ClaimsList, ClaimEnding, HomeClaimsHook,
     WebHome, WebPortfolio, WebSettings,
   };
 })();

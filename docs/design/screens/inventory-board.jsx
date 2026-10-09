@@ -253,6 +253,83 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-watchlist" aria-labelledby="call-watchlist-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-watchlist-h">Your call: the watchlist and daily claims</h2>
+              <p className="b-job">Giorgio, 2026-10-08: trading stays market hours only; search and save any time; the watchlist is per league ("each one has its own waiver wire"); and a daily waiver wire: "you can claim stocks after the close of each day. if no one else claims that day, you get it. if two or more people claim, then we have the order decide." Drawn to the fantasy-football model (docs/design/FANTASY_CONVENTIONS.md): a star to save, a Claim that settles at the next 9:30 open, a visible waiver order, blind claims, visible holdings. Tier Cup (price tiers; selling DIS left the $100–$200 slot open), Roberto B.'s phone; open = Thu 1:37 PM, closed = Fri 5:00 PM, the run = Mon 9:30 AM ET. Use the Theme switch for Dark. All watchlist and claim copy is new unless a caption says otherwise.</p>
+            </div>
+          </header>
+
+          <h3 className="b-sub">1 · Where it lives: A, B or C (recommend C)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit h={1236} caption="A · Watching on Portfolio · open" note={'Holdings first, then Watching: the holding row plus one status line saying whether you can get the stock in this league. Buy sits on the available row while the market is open.'}><I.WatchPortfolio /></Fit>
+            <Fit h={1266} caption="A · Watching on Portfolio · closed" note={'Closed chip, no live dot, every price "At Fri close". Buy\'s spot reads Claim (the same size and place). Claim also shows on "No free $200–$400 slot", because a claim can name the sale that makes room; a live Buy can\'t.'}><I.WatchPortfolio closed /></Fit>
+            <Fit caption="B · Buy a stock › Watchlist · open" note="The list inside the player pool, as ESPN, Sleeper and Yahoo do it. Portfolio stays as it is today."><I.WatchTab /></Fit>
+            <Fit caption="B · Buy a stock › Watchlist · closed" note={'The approved "Market closed" card on top; Claim in Buy\'s spot.'}><I.WatchTab closed /></Fit>
+            <Fit h={1334} caption="★ C · Portfolio (more than 5 saved)" note={'C is both, one list. Portfolio shows five, then "See all (12)", which opens Buy a stock on its Watchlist tab.'}><I.WatchPortfolio closed n={12} seeAllTo="See all opens Buy a stock › Watchlist." /></Fit>
+            <Fit caption="★ C · Buy a stock › Watchlist" note="The same list in the player pool, where a fantasy player looks for it."><I.WatchTab closed /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · Each league has its own list</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit h={1108} caption="Switch to Stock Scudetto with the pill" note={'A different list (AMZN, AMD, SHOP). The same SHOP reads "No free slot" here (every slot is invested) and "Available" in Tier Cup. Owners are this league\'s, from its draft.'}><I.WatchOtherLeague /></Fit>
+          </div>
+
+          <h3 className="b-sub">3 · Claim, the closed-market twin of Buy</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Stock sheet · closed" note={'Where Review buy sits when the market is open, the same button reads Claim. The star stays in the header, far from it. Approved copy: the Market closed card.'}><I.ClaimSheet /></Fit>
+            <Fit caption="The composer (the 3e review, re-labelled)" note={'What you buy, what pays for it (the sale picker; cash in a budget league), the fit as of Friday\'s close, and the fill time on the button. × closes without claiming.'}><I.ClaimComposer /></Fit>
+            <Fit h={1328} caption="After claiming" note={'The status line becomes "Claimed · fills Mon 9:30 AM ET"; the star doesn\'t change; the action spot reads Cancel. A Claims row appears under Buy a stock.'}><I.WatchPortfolio closed claimed /></Fit>
+          </div>
+
+          <h3 className="b-sub">4 · Your claims and the waiver order</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Claims (yours only)" note={'Pending claims with what pays for each, Cancel until the run starts, and your place in the waiver order. It never shows anyone else\'s claims.'}><I.ClaimsList /></Fit>
+            <Fit caption="The waiver order, on tap" note="Visible to the whole league, like the standings. Your row: bold on the light-blue tint (S-10)."><I.ClaimsList order /></Fit>
+          </div>
+
+          <h3 className="b-sub">5 · Endings at the 9:30 open (one each)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Won" note="The position lands at the opening price, paid by the sale you named. The new holding is lit once, then settles."><I.ClaimEnding kind="won" /></Fit>
+            <Fit caption="Lost" note="Names the winner and one short reason (Design Lead ruling, for Giorgio). The sale did not happen, and the card says so."><I.ClaimEnding kind="lost" /></Fit>
+            <Fit caption="Failed" note={'Named reason, nothing happened. Ruled wording: the brief\'s "No free $100–$200 slot at the open" would say there was no free slot when the slot WAS free; the stock left its tier.'}><I.ClaimEnding kind="failed" /></Fit>
+          </div>
+
+          <h3 className="b-sub">6 · Refusals, in place</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Claim on a sheet left open past 9:30" note={'"Market\'s open: just buy it." The button turns back into Review buy.'}><I.ClaimSheet state="opened" /></Fit>
+            <Fit caption="A 6th claim" note={'"5 claims pending. Cancel one to claim another." The button stays visible, disabled.'}><I.ClaimComposer full /></Fit>
+            <Fit caption="A live buy during the run" note={'"Claims are being processed. Try again in a minute." Live trading waits for the run (at most ten minutes).'}><I.ClaimSheet state="processing" /></Fit>
+            <Fit caption="Watchlist full (50)" note={'"Your watchlist is full (50). Remove one to add another." (the plan\'s line).'}><I.SaveResults full /></Fit>
+          </div>
+
+          <h3 className="b-sub">7 · Save, Home and the draft room</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Save on a search result" note={'The star, a 44 pt labelled control on every result, open market or not. Tapping flips Save to Saved, and that flip is the whole ending (no toast). No Buy on a result row.'}><I.SaveResults /></Fit>
+            <Fit caption="Saved in the stock sheet header" note="Next to the name, far from Buy. Open market."><I.SaveSheet /></Fit>
+            <Fit caption="Home hook · closed (your call)" note={'Stock Scudetto on Thursday evening, so the counts are this league\'s: "Market opens Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist". Taps through to Claims.'}><I.HomeClaimsHook /></Fit>
+            <Fit caption="Draft room: Queue and Save" note={'Two labelled lists with a key. No Claim during a draft: the draft is how you get stocks then.'}><I.DraftQueueSave /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Your call · recommend C</h3>
+            <ul>
+              <li><b>Fantasy apps keep the watch list in the player pool</b> (ESPN's Watch List filter on Free Agents; Sleeper's star and Watchlist on Players). Our player pool is Buy a stock, so the tab (B) is where a fantasy player looks first (UX rule 1).</li>
+              <li><b>Portfolio is where you are when the market is closed</b>, so A puts the list, and Claim, on the screen you already open on a Friday night. Capped at five rows, below Holdings, so your team stays the headline (rule 6).</li>
+              <li><b>C is both, as one list</b>: "See all" on Portfolio opens the tab. Nothing is duplicated except the door.</li>
+            </ul>
+            <h3>Design Lead rulings to check</h3>
+            <ul>
+              <li><b>One status line per row.</b> A claimed stock shows "Claimed · fills Mon 9:30 AM ET" in place of its availability; the star never changes.</li>
+              <li><b>Claim also on "No free … slot" rows</b> (closed only), since the claim names the sale that frees the slot. While open, those rows have no Buy: you sell first, as today.</li>
+              <li><b>The lost ending names the winner and one reason</b> ("lower in the standings"); the failed ending says what the stock did ("LOW opened at $203.10, above your $100–$200 slot").</li>
+              <li><b>Sample data.</b> The brief's AAPL examples are drawn with the board's own stocks: AMGN paid by selling NVDA (both in the $200–$400 tier, the swap a tier league allows), and LOW from the budget. The waiver order and Tier Cup's budget are sample.</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
