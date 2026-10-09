@@ -147,6 +147,16 @@ building anything, and don't reopen a rule without him.
   when they arent allowed to buy. they should still be able to search and add stocks to a
   watchlist or something to save for later." Search never depends on market hours; a
   watchlist exists (plan: [`plans/2026-10-08-trading-window-and-watchlist.md`](plans/2026-10-08-trading-window-and-watchlist.md)).
+- **The watchlist is per league** (2026-10-08): "by league. if im in multiple fantasy football
+  leagues, each one has its own waiver wire. if i want to buy apple in one league, i may not
+  be able to in another if another player has it, i already have it, or it doesnt fit my
+  team by one of the league rules." A per-player list "makes no sense".
+- **League features follow fantasy football, not a brokerage** (2026-10-08): anything that
+  belongs to a league (watchlist, draft, waivers-like queues, standings, trades between
+  managers) is modelled on how ESPN / Sleeper / Yahoo fantasy football do it; brokerage
+  conventions (Robinhood) apply only to money surfaces (portfolio value, a stock's price and
+  chart, buy/sell mechanics). Giorgio: "i need you to research fantasy football so that this
+  doesnt come up." Reference: [`design/FANTASY_CONVENTIONS.md`](design/FANTASY_CONVENTIONS.md).
 
 ## League lifecycle
 
