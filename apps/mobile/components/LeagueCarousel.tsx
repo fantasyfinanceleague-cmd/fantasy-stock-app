@@ -71,10 +71,10 @@ export default function LeagueCarousel() {
 
             if (season.champion_user_id || season.runner_up_user_id) {
               const userIds = [season.champion_user_id, season.runner_up_user_id].filter(Boolean);
+              // Other players' names come ONLY through get_visible_profiles
+              // (audit #8, 20261118000000); user_profiles becomes self-only.
               const { data: profiles } = await supabase
-                .from('user_profiles')
-                .select('id, username')
-                .in('id', userIds);
+                .rpc('get_visible_profiles', { p_user_ids: userIds });
 
               if (profiles) {
                 const champProfile = profiles.find(p => p.id === season.champion_user_id);

@@ -21,10 +21,13 @@ export function UserProfilesProvider({ children }) {
 
     setLoading(true);
 
+    // Other players' profiles come ONLY through get_visible_profiles (audit #8,
+    // 20261118000000): id, username and avatar of leaguemates (leavers
+    // included), nothing else; ids outside the caller's leagues are absent and
+    // fall through to the null-username default below. user_profiles itself
+    // becomes self-only.
     const { data, error } = await supabase
-      .from('user_profiles')
-      .select('id, username, avatar')
-      .in('id', toFetch);
+      .rpc('get_visible_profiles', { p_user_ids: toFetch });
 
     if (!error && data) {
       const newProfiles = {};
@@ -93,13 +96,27 @@ export function UserProfilesProvider({ children }) {
     return profile?.avatar || '📊';
   }, [profiles]);
 
-  // Subscribe to realtime updates for profiles
+  // Realtime: the signed-in user's OWN row only (audit #8). This used to
+  // subscribe to every profile change unfiltered; with user_profiles
+  // self-only, Realtime would deliver only the caller's row anyway, so the
+  // filter states that intent and keeps other players' changes off the wire
+  // even before the policy flips. Re-subscribes when the signed-in user changes.
+  const [selfId, setSelfId] = useState(null);
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setSelfId(data?.user?.id ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSelfId(session?.user?.id ?? null);
+    });
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!selfId) return undefined;
     const channel = supabase
-      .channel('user_profiles_changes')
+      .channel(`user_profiles_self_${selfId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_profiles' },
+        { event: '*', schema: 'public', table: 'user_profiles', filter: `id=eq.${selfId}` },
         (payload) => {
           if (payload.new) {
             setProfiles(prev => ({
@@ -117,7 +134,7 @@ export function UserProfilesProvider({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selfId]);
 
   const value = {
     profiles,

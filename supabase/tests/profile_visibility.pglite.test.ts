@@ -42,6 +42,7 @@ alter default privileges in schema public grant execute on functions to anon, au
 
 create table public.user_profiles (id uuid primary key references auth.users(id), username text, avatar text,
   notifications_enabled boolean default true, created_at timestamptz default now(), updated_at timestamptz);
+create unique index user_profiles_username_unique on public.user_profiles (lower(username)) where username is not null;
 alter table public.user_profiles enable row level security;
 create policy "Authenticated users can view profiles" on public.user_profiles for select to authenticated using (true);
 create policy "Users can insert own profile" on public.user_profiles for insert with check (auth.uid() = id);
@@ -146,6 +147,16 @@ Deno.test({
       const upd = await as('authenticated', A, () => db.query(`update public.user_profiles set avatar = 'x' where id = $1`, [B]));
       assertEquals(upd.affectedRows, 0);
       assertEquals((await q(`select avatar from public.user_profiles where id = $1`, [B]))[0].avatar, '🐻');
+      // ON CONFLICT DO UPDATE needs the EXISTING row to pass SELECT: the own row
+      // does, so the signup upsert and web Profile's upserts keep working...
+      await as('authenticated', A, () => q(`insert into public.user_profiles (id, username) values ($1, 'alice2')
+        on conflict (id) do update set username = excluded.username`, [A]));
+      assertEquals((await q(`select username from public.user_profiles where id = $1`, [A]))[0].username, 'alice2');
+      // ...and a name another player holds still surfaces as 23505 (the clients'
+      // "username taken" signal), even though that player's row is invisible.
+      const taken = await as('authenticated', A, () => q(`insert into public.user_profiles (id, username) values ($1, 'BOB')
+        on conflict (id) do update set username = excluded.username`, [A])).then(() => null, (e) => e);
+      assertEquals(taken?.code, '23505');
       const pol = await q(`select policyname from pg_policies where tablename = 'user_profiles' order by 1`);
       assertEquals(pol.map((r) => r.policyname),
         ['Users can insert own profile', 'Users can update own profile', 'user_profiles_select_self']);

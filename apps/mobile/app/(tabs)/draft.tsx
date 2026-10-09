@@ -191,10 +191,11 @@ export default function DraftScreen() {
       // otherwise 22P02 the whole .in() query below.
       const userIds = (memberData || []).map(m => m.user_id).filter(isUuid);
 
+      // Other players' names come ONLY through get_visible_profiles (audit #8,
+      // 20261118000000): id + username + avatar for leaguemates, nothing else.
+      // user_profiles itself becomes self-only.
       const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('id, username')
-        .in('id', userIds);
+        .rpc('get_visible_profiles', { p_user_ids: userIds });
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
 
