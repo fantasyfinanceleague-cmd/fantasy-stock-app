@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261023000009_drop_start_new_league_season.sql` and `20261116000001_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead).
+**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261023000009_drop_start_new_league_season.sql` and `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead).
 
 ## How to use it
 
@@ -118,7 +118,7 @@ re-capture `docs/architecture/db-snapshot.json` and move this section to
 function from the historical `20260718000000` file, which is never
 rewritten, so it is unaffected.)
 
-### `20261116000001_revoke_anon_default_grants.sql` — PROPOSAL (lockdown audit #7)
+### `20261116000002_revoke_anon_default_grants.sql` — PROPOSAL (lockdown audit #7)
 
 Revokes every anon privilege on public tables, views and sequences, anon/PUBLIC
 EXECUTE on public functions, and the default privileges that hand both to

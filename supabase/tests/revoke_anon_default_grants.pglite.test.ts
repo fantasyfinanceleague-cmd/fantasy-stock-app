@@ -1,5 +1,5 @@
 /**
- * PROPOSED migration supabase/migrations/deferred/20261116000001 (NOT in the
+ * PROPOSED migration supabase/migrations/deferred/20261116000002 (NOT in the
  * db push path) against REAL Postgres (PGlite). Proves the proposal does what
  * its header claims before anyone decides to apply it:
  *   - existing public tables, views, sequences and functions lose every anon
@@ -16,10 +16,10 @@ import { assertEquals } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
-const PROPOSAL = 'supabase/migrations/deferred/20261116000001_revoke_anon_default_grants.sql';
+const PROPOSAL = 'supabase/migrations/deferred/20261116000002_revoke_anon_default_grants.sql';
 
 Deno.test({
-  name: 'deferred 20261116000001: anon loses every default grant, now and for new objects',
+  name: 'deferred 20261116000002: anon loses every default grant, now and for new objects',
   sanitizeResources: false,
   sanitizeOps: false,
   async fn(t) {
