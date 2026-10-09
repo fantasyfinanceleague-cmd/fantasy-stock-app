@@ -75,6 +75,14 @@ building anything, and don't reopen a rule without him.
   week "● Live", next week "vs {name} · Next", then a closing playoffs line ("Then the
   playoffs: 4 teams · 2 weeks of playoffs · no byes."). Not dropped to Standings + History.
 
+- **Manager rows** (2026-10-08, S-10): one row style everywhere a list of managers appears
+  (League standings, Home's excerpt, History, the lobby, the Run it back list, the bracket).
+  Giorgio: "just bold the users name. dont need to put the (you), people know their name.
+  just bold it." Your name is bold; everyone else's is regular weight; no "(you)" label and
+  no row tint. Gains are coloured by sign; movement arrows on League only.
+- **Draft recap** (2026-10-08): the designed League › History recap is NOT in 1.2.0 (Design
+  Lead ruling, 1.3). Nothing in 1.2.0 links to it; the draft's ending is Draft complete.
+
 ## Draft
 
 - **"A draft pick CAN NEVER be unused."** A missed turn is always auto-picked. There's no
