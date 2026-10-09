@@ -5,7 +5,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { RENEWAL_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { space } from '@/constants/tokens';
-import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { screenFor } from '@/lib/game/renewal';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { season1Order as orderFromHistory } from '@/lib/game/history';
@@ -32,7 +32,7 @@ export interface LeagueRenewalProps {
 export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged, settings, inviteCode, onScheduled }: LeagueRenewalProps) {
   // Bumped by Try again on a failed read (the house "X didn't load" form).
   const [retry, setRetry] = useState(0);
-  const st = useRenewalRoster(successorId, null, retry);
+  const st = useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, retry);
   // The Season 1 order is the frozen rank of the lineage's first finished season (R5).
   const history = useLeagueHistory(successorId, true);
   if (st.status === 'loading' || st.status === 'idle') return null;

@@ -58,7 +58,7 @@ const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE)
 const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
-import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
@@ -222,7 +222,7 @@ export default function LeagueScreen() {
 function RenewedPreDraft({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
   const { activeLeague, refresh } = useLeagueContext();
   const [rosterKey, setRosterKey] = useState(0);
-  const roster = useRenewalRoster(leagueId, null, rosterKey);
+  const roster = useRenewalRoster(leagueId, RENEWAL_FIXTURE_CALLER, rosterKey);
   const ready = roster.status === 'ready' && renewalReadyForLobby({ roster: roster.roster, draftDate: activeLeague?.draft_date });
   if (ready) return <LeagueLobby leagueId={leagueId} />;
   return (

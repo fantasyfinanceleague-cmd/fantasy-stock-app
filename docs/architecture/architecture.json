@@ -2,35 +2,51 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4e77c75dab4cde137116799850e2305b5c8f7314",
-    "commitShort": "4e77c75d",
+    "commit": "c69db8187ad4e4f71675d8f6d2c73a4396061474",
+    "commitShort": "c69db818",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/app/(tabs)/league.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/renewal.ts"
+        "path": "apps/mobile/components/game/HomeRenewalAsk.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-renewal.test.ts"
+        "path": "apps/mobile/components/game/LeagueRenewal.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/home/RenewalCountsCard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/renewalFixture.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamCalls.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/useRenewalRoster.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/shell/devFixture.ts"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/run-it-back-gate.test.ts"
+        "path": "apps/mobile/tests-deno/run-it-back-fixture.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:43:57Z",
-    "sourceHash": "sha256:61245a3024a20f10df4399cc50b8473352d01d80205714d49663b8b6add17e1c",
+    "timestamp": "2026-10-11T05:43:59Z",
+    "sourceHash": "sha256:a680d414bae684c4847e817428299ad0ef37206dc256ed20d853d1672139fd01",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -15384,7 +15400,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:69"
+        "apps/mobile/lib/game/seamCalls.ts:72"
       ]
     },
     {
@@ -15397,7 +15413,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:63"
+        "apps/mobile/lib/game/seamCalls.ts:66"
       ]
     },
     {
@@ -15410,7 +15426,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:41"
+        "apps/mobile/lib/game/seamCalls.ts:44"
       ]
     },
     {
@@ -15772,7 +15788,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_renewal_roster')",
       "callSites": [
-        "apps/mobile/lib/game/useRenewalRoster.ts:42"
+        "apps/mobile/lib/game/useRenewalRoster.ts:45"
       ],
       "via": [
         "seamRpc"
@@ -19060,7 +19076,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 58,
+        "line": 61,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -19068,7 +19084,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 66,
+        "line": 69,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -19076,7 +19092,7 @@
         "surface": "client",
         "name": "seamInvoke",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 32,
+        "line": 35,
         "kind": "forwarder:invoke",
         "detail": "argument 0 is the function name"
       },
@@ -19084,7 +19100,7 @@
         "surface": "client",
         "name": "seamRpc",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 23,
+        "line": 26,
         "kind": "forwarder:rpc",
         "detail": "argument 0 is the RPC name"
       },
@@ -19092,7 +19108,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 72,
+        "line": 75,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -19108,7 +19124,7 @@
         "surface": "client",
         "name": "seamUpdateLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 38,
+        "line": 41,
         "kind": "seam-stub",
         "detail": "leagues.update"
       }
@@ -19511,7 +19527,7 @@
       "apps/mobile/lib/game/useLeagueStandings.ts:37 -> get_home_league (via seamRpc)",
       "apps/mobile/lib/game/useLeagueStandings.ts:50 -> league_standings_ranked (via seamRpc)",
       "apps/mobile/lib/game/useLeaveLeague.ts:29 -> get_league_display_names (via seamRpc)",
-      "apps/mobile/lib/game/useRenewalRoster.ts:42 -> get_renewal_roster (via seamRpc)",
+      "apps/mobile/lib/game/useRenewalRoster.ts:45 -> get_renewal_roster (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
       "apps/mobile/lib/home/useHomeLeague.ts:563 -> get_home_league",
@@ -19602,9 +19618,9 @@
       "apps/mobile/lib/categoryData.ts:65 -> categories.select",
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
-      "apps/mobile/lib/game/seamCalls.ts:41 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:63 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:69 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:44 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:66 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:72 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:39 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:52 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:62 -> trades.select",

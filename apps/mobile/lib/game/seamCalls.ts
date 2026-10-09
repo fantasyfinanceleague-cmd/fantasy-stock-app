@@ -8,6 +8,7 @@ import { supabase } from '../supabase';
 import { SEAM_ON } from './devSeam';
 import { fixtureFor, invokeFixtureFor } from './seamFixtures';
 import { seamTableRows, seamWeekClosed, type SeamTableName } from './seamTables';
+import { markFixtureRenewed } from '../shell/devFixture';
 import { parseDraftRoomVariant, roomVariantAfterAutoPick } from './seamRoom';
 
 /** EXPO_PUBLIC_DRAFT_ROOM_FIXTURE: how far the board's draft has gone (seamRoom.ts).
@@ -18,6 +19,8 @@ import { saveLeagueSlots, type SlotDraft } from '../categoryData';
 export async function seamRpc(name: string, args: Record<string, unknown>) {
   if (SEAM_ON) {
     const f = fixtureFor(name, args, roomVariant);
+    // A renewal adds Season 2 to the fixture league list, as the real list would.
+    if (f && name === 'renew_league') markFixtureRenewed();
     if (f) return f;
   }
   return supabase.rpc(name, args);
