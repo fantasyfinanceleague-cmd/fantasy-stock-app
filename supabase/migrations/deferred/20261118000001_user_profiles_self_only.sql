@@ -1,0 +1,50 @@
+-- user_profiles becomes SELF ONLY (audit #8, stage 2 of 2). HELD in deferred/:
+-- `supabase db push` does not apply this directory. See deferred/README.md for
+-- the preconditions; move this file into supabase/migrations/ only when they hold.
+--
+-- Giorgio, 2026-10-08 (ruling A, verbatim): "i can only see other names and
+-- avatars of other users im in a leauge with. we cannot allow a user to see any
+-- information outside of the name/avatar of another member in their league
+-- (email, etc) or any info about users not in their league."
+--
+-- Today "Authenticated users can view profiles" is FOR SELECT TO authenticated
+-- USING (true): any signed-in account can page every user's id, username,
+-- avatar, notifications_enabled, created_at and updated_at, and -- because the
+-- table is in supabase_realtime -- receive every profile change live. After
+-- this, a signed-in user's SELECT returns their OWN row only. Everything about
+-- other players comes through get_visible_profiles (20261118000000: id,
+-- username, avatar; leaguemates incl. leavers) or the existing definer RPCs
+-- that name participants (get_league_display_names, get_home_summary,
+-- get_home_league, get_season_result, get_portfolio_ledger, ...), all of
+-- which read user_profiles as their owner and are unaffected.
+--
+-- Realtime: postgres_changes applies the subscriber's RLS, so after this a
+-- subscriber receives only changes to their own row. (Web's subscription is
+-- also filtered to the caller's id in the same release.)
+--
+-- PRECONDITIONS (deferred/README.md): 20261118000000 applied; the client
+-- release that moved every other-player read to get_visible_profiles is what
+-- players run. The live 1.1.0 build (main@7571d10) reads other players' rows
+-- DIRECTLY in eight places and cannot be fixed by OTA from main (main adds
+-- native modules); applying this while 1.1.0 is in use makes those names fall
+-- back to raw ids / "Unknown".
+--
+-- UNCHANGED: the INSERT and UPDATE own-row policies (auth.uid() = id), which
+-- the signup upsert and the Profile screen use.
+--
+-- POST-APPLY CHECKS (SQL editor; each on its own):
+--   SELECT policyname, roles, cmd, qual FROM pg_policies WHERE tablename = 'user_profiles' ORDER BY 1;
+--   -- EXPECT: user_profiles_select_self | {authenticated} | SELECT | (id = auth.uid())
+--   --         plus the unchanged insert/update own-row policies; NO USING (true).
+--   SELECT has_table_privilege('anon', 'public.user_profiles', 'SELECT');   -- EXPECT f
+--   -- Effect: signed in, every screen still names leaguemates (and leavers in
+--   -- history); a REST read /rest/v1/user_profiles?select=id with a user token
+--   -- returns exactly one row, the caller's.
+
+drop policy if exists "Authenticated users can view profiles" on public.user_profiles;
+drop policy if exists user_profiles_select_self on public.user_profiles;
+create policy user_profiles_select_self on public.user_profiles
+  for select to authenticated using (id = auth.uid());
+
+-- The table grant too, not just RLS: anon has no reason to touch this table.
+revoke all on table public.user_profiles from anon;
