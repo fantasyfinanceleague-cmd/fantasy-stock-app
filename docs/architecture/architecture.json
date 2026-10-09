@@ -2,18 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6d599a97347c981c044f8cd7d1dec2f3f74eb841",
-    "commitShort": "6d599a97",
+    "commit": "6f4c9f50374b04389a3ae7d76e84cabc898e7c0f",
+    "commitShort": "6f4c9f50",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "security/profile-visibility",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
-      }
-    ],
-    "timestamp": "2026-10-09T02:47:43Z",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-09T17:20:40Z",
     "sourceHash": "sha256:464c8e175d10e6db8433b6bc97741f93359744e9a6b61de07bc1752f3a1298a6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -21,8 +16,8 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 31.1,
-    "ageDays": 1.3,
+    "ageHours": 45.6,
+    "ageDays": 1.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b",
@@ -11574,7 +11569,7 @@
       "payload": "SELECT drafts (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:93"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:99"
       ]
     },
     {
@@ -11588,7 +11583,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261118000000_get_visible_profiles.sql:77",
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:85"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:87"
       ]
     },
     {
@@ -11601,7 +11596,7 @@
       "payload": "SELECT league_standings (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:87"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:90"
       ]
     },
     {
@@ -11614,8 +11609,8 @@
       "payload": "SELECT matchups (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:89",
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:91"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:93",
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:96"
       ]
     },
     {
@@ -11628,7 +11623,7 @@
       "payload": "SELECT trades (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:95"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:102"
       ]
     },
     {
@@ -11641,7 +11636,7 @@
       "payload": "SELECT user_profiles (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261118000000_get_visible_profiles.sql:98"
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:107"
       ]
     },
     {
