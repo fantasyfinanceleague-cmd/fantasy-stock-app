@@ -202,7 +202,8 @@ call" section with a recommendation; Giorgio picks.
   - Rule 6: the team-value hero stays the one emphasised element; the section is secondary.
   - Rule 5: the watchlist row is the same row primitive as a holding (name, price, change).
   - Rule 7: Holdings before Watching; the "Buy a stock" row stays where it is; the player's
-    own name, where it appears, is bold only (no "(you)", no tint).
+    own name, where it appears, is bold and the row carries the light-blue tint; no "(you)"
+    (Giorgio's S-10 final ruling, #179/#180).
   - Rule 4: 5 rows then "See all"; each row carries its availability tag (above); a NULL
     price renders "—".
   - Rule 9: closed frames show the last close with an "at close" label; no "live" dot.
@@ -242,7 +243,11 @@ cancellable until then), and should be planned from `FANTASY_CONVENTIONS.md`.
   "Market opens Mon 9:30" must reuse that formatter, not `marketOpensLabel` as-is, so the
   watchlist never shows a time in a different shape from Home.
 - **Manager names.** Wherever a name appears ("Held by Maya"), the own-row rule applies: your
-  own name in bold only, no "(you)", no tint (Giorgio, 2026-10-08, S-10).
+  own name in bold and your row tinted light blue, no "(you)" (Giorgio, 2026-10-08, S-10
+  final ruling, recorded on main via #179/#180). Also new (2026-10-08): players see ONLY their
+  leaguemates' name and avatar, nothing about anyone outside their leagues; "Owned by Maya"
+  fits because Maya is a leaguemate. Profile-visibility migration is `20261118`; the
+  watchlist keeps `20261117`.
 - **1.2.0 timing.** The UX final sweep (#176) has 1.2.0 on BLOCK for S-1..S-6. The watchlist
   is not a 1.2.0 blocker and must not delay the cut; if 1.2.0 is cut first, the watchlist
   ships in 1.2.x or 1.3. Giorgio decides the ordering when the sweep clears.
