@@ -91,7 +91,7 @@ save any time").
 3. The **Watchlist** (location per the board decision) lists saved stocks with the last price
    and the day's change. A row tap opens the stock sheet. While the market is open, the sheet
    offers Buy as today. While it is closed, the sheet says "Market's closed. Opens Mon 9:30
-   ET." (the 3e `marketOpensLabel`) and the Save control still works.
+   ET." (via the S-11 standard time formatter) and the Save control still works.
 4. Swipe or tap to remove. Removing a stock you hold does nothing to the position.
 5. A stock that stops being tradable (delisted, or `symbols.active = false`) stays on the
    list with a "No longer tradable" tag and no Buy, so a player sees why it vanished from
@@ -192,9 +192,16 @@ and the UX for "placed, fills at 9:30". It is additive on A and changes nothing 
 
 ## Risks and edge cases
 
-- **3e owns the files this touches.** `StockSearchScreen`, `StockSheetBody`, `refusals.ts`
-  are on `ui/mobile-money`, mid-gate. The watchlist branches **after 3e merges** (or as a
-  3e follow-up the same worker takes), never in parallel on the same files.
+- **3e is merged** (#172, 2026-10-07; its ledger migration `20261113000000` is applied), so
+  the watchlist branches off `main` and builds on the merged `StockSearchScreen`,
+  `StockSheetBody` and `refusals.ts`. Migration ranges in flight: `20261114` (applied),
+  `20261115` (Run it back, #94), `20261116` (security hardening); **the watchlist migration
+  takes `20261117000000+`.**
+- **Time formats.** The pre-1.2.0 sweep item S-11 standardises draft/market time formats;
+  "Market opens Mon 9:30" must reuse that formatter, not `marketOpensLabel` as-is, so the
+  watchlist never shows a time in a different shape from Home.
+- **Manager names.** Wherever a name appears ("Held by Maya"), the own-row rule applies: your
+  own name in bold only, no "(you)", no tint (Giorgio, 2026-10-08, S-10).
 - **1.2.0 timing.** The UX final sweep (#176) has 1.2.0 on BLOCK for S-1..S-6. The watchlist
   is not a 1.2.0 blocker and must not delay the cut; if 1.2.0 is cut first, the watchlist
   ships in 1.2.x or 1.3. Giorgio decides the ordering when the sweep clears.
@@ -246,7 +253,7 @@ The Orchestrator decides the final split.
 | W0 | Push this branch, open the docs PR | — | Orchestrator |
 | W1 | Mockup brief (Planner) → "Your call" board section (Design Lead) → Giorgio decides → rules recorded | Open Q1 answered | Planner, Design Lead |
 | W2 | Migration + RLS + cap, PGlite effect test; HUMAN ACTION `db push` handoff | Q1 | `supabase-migration-writer`, `supabase-reviewer`, `security-reviewer`; Giorgio applies |
-| W3 | Client: Save/Saved, watchlist screen, refusals, Deno tests | W1, W2 applied, **3e merged** | mobile worker |
+| W3 | Client: Save/Saved, watchlist screen, refusals, Deno tests (off `main`; 3e is merged, #172) | W1, W2 applied, S-11 formatter on main | mobile worker |
 | W4 | Architecture map regen; db-snapshot re-capture | W2, W3 | worker (map), Giorgio (snapshot) |
 | W5 | UX gate (Design Lead + `ux-reviewer`), Giorgio's hand check, release in 1.2.x/1.3 | W3 | Design Lead, Giorgio |
 

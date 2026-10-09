@@ -58,6 +58,9 @@ building anything, and don't reopen a rule without him.
 
 - **Home shows only the selected league**, with the league pill ("+N" hint) to switch.
   There's no "your other leagues" row.
+- **Manager rows** (2026-10-08, S-10 board sweep, relayed by the Orchestrator): in any list of
+  managers, your own row is marked by **bolding your name only**: no "(you)" suffix and no
+  tint. Applies wherever names appear (standings, schedule, draft order, "Held by …" tags).
 - **Home hero:** team value is the big number; under it "+$X · +Y% season gain · +$Z today".
   The Home chart plots season gain, week by week.
 - **Portfolio's gain is "since the draft"** (value − cost). It's deliberately a different
