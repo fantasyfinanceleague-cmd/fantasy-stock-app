@@ -17,6 +17,18 @@ import { nextWeekStartsLabel } from '../home/homeCopy';
 import { dollars } from '../stakesLine';
 import { resolveWeekWindow, type MarketCalendarSession } from '../time/marketWeek';
 import { managerAtPick } from './draftBoard';
+import type { FunctionRefusal } from '../functionRefusal';
+
+/** What the room's finalize (validate-and-record-pick action 'finalize', idempotent,
+ * any member may ask) came to (UX final sweep S-2): the draft finished; the server
+ * says it isn't full (our read was stale: re-read); or it didn't finish (no answer,
+ * a refusal, or a failed status write), so Draft complete offers Try again. */
+export function finalizeHealOutcome(r: FunctionRefusal): 'finished' | 'reread' | 'failed' {
+  if (r.transport) return 'failed';
+  if (r.reason === 'draft_not_complete') return 'reread';
+  if (r.reason === null && r.body.ok === true && !r.body.status_update_error) return 'finished';
+  return 'failed';
+}
 
 export const DRAFT_COMPLETE_TAG = 'Draft complete'; // board
 export const YOUR_TEAM_IS_SET = 'Your team is set'; // board
@@ -100,12 +112,12 @@ export function draftPriceLabel(price: number | null): string | null {
 }
 
 /** How long every pick in and draft_status still 'in_progress' waits before the
- * room hands off to the legacy finalize heal (the server finalizes in the last
- * pick's own request; a re-read inside this window normally sees 'completed'). */
+ * room finalizes the draft itself (the server finalizes in the last pick's own
+ * request; a re-read inside this window normally sees 'completed'). */
 export const FINALIZE_GRACE_MS = 6000;
 
-/** Hand off to the finalize heal only once the draft has sat full and not
- * completed for the whole grace window. */
+/** Finalize in the room (S-2; it used to hand off to the legacy draft screen) only
+ * once the draft has sat full and not completed for the whole grace window. */
 export function shouldHandOffToFinalize(fullSinceMs: number | null, nowMs: number): boolean {
   return fullSinceMs !== null && nowMs - fullSinceMs >= FINALIZE_GRACE_MS;
 }

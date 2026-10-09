@@ -3,9 +3,9 @@
  *
  * screen:'draft' (draft_turn from send-notification, draft_order_set from
  * draft-order-notify) opens the League tab, which shows the pre-draft lobby
- * or the live draft room by phase. It no longer opens the legacy
- * (tabs)/draft route: that route is kept ONLY for the finalize heal, which
- * the draft room hands off to itself (components/game/DraftRoom.tsx).
+ * or the live draft room by phase. It never opens the legacy (tabs)/draft
+ * route, which is now only a redirect to the League tab (UX final sweep S-2;
+ * the finalize heal runs inside components/game/DraftRoom.tsx).
  */
 export type NotificationTarget = '/(tabs)/league' | '/(tabs)/matchup';
 

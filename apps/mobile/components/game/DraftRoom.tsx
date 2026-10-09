@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, View, StyleSheet } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
@@ -24,7 +23,7 @@ import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDra
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
-import { FINALIZE_GRACE_MS, myRosterPicks, shouldHandOffToFinalize, weekOneIsBye, weekOneLine, weekOneRealStart } from '@/lib/game/draftComplete';
+import { FINALIZE_GRACE_MS, finalizeHealOutcome, myRosterPicks, shouldHandOffToFinalize, weekOneIsBye, weekOneLine, weekOneRealStart } from '@/lib/game/draftComplete';
 import { useWeekOne } from '@/lib/game/useWeekOne';
 import type { MarketCalendarSession } from '@/lib/time/marketWeek';
 import { picksUntilTurn } from '@/lib/home/draftTurn';
@@ -212,9 +211,20 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   // The draft's ending (U-10). The last pick's realtime insert reaches the room
   // before the server's finalize (in that pick's own request) flips draft_status,
-  // so the room re-reads after a grace window and hands off to the legacy
-  // finalize heal (PR #20) only if the draft is STILL full and not completed.
+  // so the room re-reads after a grace window and, only if the draft is STILL full
+  // and not completed, finalizes it itself (S-2: the heal used to hand off to the
+  // legacy draft screen). It runs once on its own; Draft complete offers Try again.
   const handedOff = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finishFailed, setFinishFailed] = useState(false);
+  const finishDraft = async () => {
+    setFinishing(true);
+    const { data, error } = await seamInvoke('validate-and-record-pick', { body: { league_id: leagueId, action: 'finalize' } });
+    const outcome = finalizeHealOutcome(await readFunctionRefusal(data, error));
+    setFinishFailed(outcome === 'failed');
+    setFinishing(false);
+    refresh();
+  };
   const stuck = draftDone && room.draftStatus === 'in_progress';
   const [fullSince, setFullSince] = useState<number | null>(null);
   useEffect(() => {
@@ -228,8 +238,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   useEffect(() => {
     if (stuck && !handedOff.current && shouldHandOffToFinalize(fullSince, Date.now())) {
       handedOff.current = true;
-      router.push('/(tabs)/draft');
+      void finishDraft();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- finishDraft is read at that moment; it runs once per stuck draft
   }, [stuck, fullSince, room.picks]);
   useEffect(() => {
     if (draftDone) onEnding?.();
@@ -293,6 +304,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null, weekOneIsBye(weekOne))}
         bye={weekOneIsBye(weekOne)}
         onSeeMatchup={() => onSeeMatchup?.({ all: weekOneIsBye(weekOne) })}
+        finishFailed={finishFailed && !finished}
+        finishing={finishing}
+        onRetryFinish={() => void finishDraft()}
       />
     );
   }

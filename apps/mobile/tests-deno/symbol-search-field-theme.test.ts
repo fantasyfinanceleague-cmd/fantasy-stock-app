@@ -8,7 +8,6 @@
 import { assertEquals } from 'jsr:@std/assert';
 import field from '../components/SymbolSearchField.tsx' with { type: 'text' };
 import tradeModal from '../components/TradeModal.tsx' with { type: 'text' };
-import legacyDraft from '../app/(tabs)/draft.tsx' with { type: 'text' };
 
 Deno.test('the search field never imports the legacy light-only Colors (or its shadows)', () => {
   assertEquals(field.includes("from '@/constants/Colors'"), false);
@@ -25,7 +24,8 @@ Deno.test('the ruled tokens: field inset / text / text2 placeholder; results sur
 });
 
 Deno.test("no caller on main passes its own colours into the field", () => {
-  for (const [p, src] of [['components/TradeModal.tsx', tradeModal], ['app/(tabs)/draft.tsx', legacyDraft]] as const) {
+  // (The legacy app/(tabs)/draft.tsx is a redirect since S-2: no field there any more.)
+  for (const [p, src] of [['components/TradeModal.tsx', tradeModal]] as const) {
     const at = src.indexOf('<SymbolSearchField');
     const el = src.slice(at, src.indexOf('/>', at));
     assertEquals(at >= 0, true, p);
