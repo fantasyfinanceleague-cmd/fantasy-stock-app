@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { parseDraftOrder } from '@/lib/draftOrder';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { HOME_FIXTURE } from './devFixture';
+import { FIXTURE_USER_ID } from '@/lib/shell/fixtureIds';
 
 export interface PreDraftMember {
   userId: string;
@@ -51,7 +52,7 @@ function fixturePreDraftWaiting(): PreDraftData {
     waiting: true,
     orderRevealed: null,
     members: [
-      { userId: 'roberto', displayName: 'Roberto B.', isBot: false },
+      { userId: FIXTURE_USER_ID, displayName: 'Roberto B.', isBot: false },
       { userId: 'paolo', displayName: 'Paolo M.', isBot: false },
       { userId: 'gianluigi', displayName: 'Gianluigi B.', isBot: false },
     ],
@@ -68,9 +69,9 @@ function fixturePreDraftWaiting(): PreDraftData {
 function fixturePreDraft(): PreDraftData {
   return {
     waiting: false,
-    orderRevealed: ['roberto', 'paolo', 'gianluigi'],
+    orderRevealed: [FIXTURE_USER_ID, 'paolo', 'gianluigi'],
     members: [
-      { userId: 'roberto', displayName: 'Roberto B.', isBot: false },
+      { userId: FIXTURE_USER_ID, displayName: 'Roberto B.', isBot: false },
       { userId: 'paolo', displayName: 'Paolo M.', isBot: false },
       { userId: 'gianluigi', displayName: 'Gianluigi B.', isBot: false },
       { userId: 'luca', displayName: 'Luca V.', isBot: false },

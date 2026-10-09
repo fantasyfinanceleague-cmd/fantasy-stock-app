@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../useAuth';
+import { FIXTURE_USER_ID } from '../shell/fixtureIds';
 import { SEAM_ON } from '../game/devSeam';
 import { useLeagueContext, type HomeSummaryRow } from '../LeagueContext';
 import { playoffRoundLabelForWeek } from '../playoffs';
@@ -108,7 +109,7 @@ let leaderFlipCall = 0;
  * contradict the hero. Ordered by points, as league_standings_ranked
  * returns them. Gianluigi's points are his mirrored scored weeks. */
 const XL_STANDINGS: GetHomeLeagueResult['standings'] = [
-  { user_id: 'roberto', rank: 1, wins: 4, losses: 1, ties: 0, points_for: 15235.76, display_name: 'Roberto B.', is_bot: false },
+  { user_id: FIXTURE_USER_ID, rank: 1, wins: 4, losses: 1, ties: 0, points_for: 15235.76, display_name: 'Roberto B.', is_bot: false },
   { user_id: 'paolo', rank: 2, wins: 3, losses: 2, ties: 0, points_for: 9120.44, display_name: 'Paolo M.', is_bot: false },
   { user_id: 'luca', rank: 3, wins: 3, losses: 2, ties: 0, points_for: 4280.1, display_name: 'Luca V.', is_bot: false },
   { user_id: 'marco', rank: 4, wins: 2, losses: 3, ties: 0, points_for: -980.25, display_name: 'Marco T.', is_bot: false },
@@ -164,7 +165,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const week6 = {
     week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
     is_playoff: false,
-    team1_user_id: 'roberto',
+    team1_user_id: FIXTURE_USER_ID,
     team2_user_id: isBye ? null : 'gianluigi',
     ...(isBye ? { team1_gain: null, team2_gain: null } : week6Gains),
   };
@@ -176,7 +177,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // every other regular-season fixture hasn't reached week 6's close yet.
   const week7 = {
     week_number: 7, week_start: '2026-09-28T09:30:00.000-04:00', week_end: '2026-10-02T16:00:00.000-04:00',
-    is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    is_playoff: false, team1_user_id: FIXTURE_USER_ID, team2_user_id: 'gianluigi',
     team1_gain: null, team2_gain: null,
   };
 
@@ -194,7 +195,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // the tug and scores show real numbers.
   const wildCardWeek = {
     week_number: round1Week, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
-    is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    is_playoff: true, team1_user_id: FIXTURE_USER_ID, team2_user_id: 'gianluigi',
     team1_gain: null, team2_gain: null,
   };
 
@@ -204,7 +205,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // 2026-09-30, case c). Lost in round 1 (Wild Card), same as wildCardWeek.
   const lostSemifinalWeek = {
     week_number: round1Week, week_start: '2026-12-14T13:30:00.000Z', week_end: '2026-12-18T20:00:00.000Z',
-    is_playoff: true, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    is_playoff: true, team1_user_id: FIXTURE_USER_ID, team2_user_id: 'gianluigi',
     team1_gain: -10, team2_gain: 40,
   };
 
@@ -214,7 +215,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // until round 1 is scored.
   const round2ByeWeek = {
     week_number: round2Week, week_start: '2026-12-21T13:30:00.000Z', week_end: '2026-12-25T20:00:00.000Z',
-    is_playoff: true, team1_user_id: 'roberto', team2_user_id: null,
+    is_playoff: true, team1_user_id: FIXTURE_USER_ID, team2_user_id: null,
     team1_gain: null, team2_gain: null,
   };
 
@@ -223,7 +224,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
     return {
       week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
-      is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+      is_playoff: false, team1_user_id: FIXTURE_USER_ID, team2_user_id: 'gianluigi',
       team1_gain: w.gain, team2_gain: -w.gain,
     };
   });
@@ -236,7 +237,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // scoreboard-preview card back to a generic "Opponent" placeholder.
   const preSeasonWeek1 = {
     week_number: 1, week_start: '2026-08-03T13:30:00.000Z', week_end: '2026-08-07T20:00:00.000Z',
-    is_playoff: false, team1_user_id: 'roberto', team2_user_id: 'gianluigi',
+    is_playoff: false, team1_user_id: FIXTURE_USER_ID, team2_user_id: 'gianluigi',
     team1_gain: null, team2_gain: null,
   };
 
@@ -287,7 +288,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     matchups,
     standings: isXL ? XL_STANDINGS : isPreSeason
       ? [
-          { user_id: 'roberto', rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
+          { user_id: FIXTURE_USER_ID, rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
           { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },
           { user_id: 'gianluigi', rank: 3, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Gianluigi B.', is_bot: false },
         ]
@@ -319,7 +320,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
           // every one of these fixtures, so the real record is 5-1 and
           // points_for includes week 6's gain too.
           {
-            user_id: 'roberto', rank: 2,
+            user_id: FIXTURE_USER_ID, rank: 2,
             wins: regularSeasonComplete ? 5 : 4, losses: 1, ties: 0,
             points_for: regularSeasonComplete ? cents(129.99 + (week6Gains.team1_gain ?? 0)) : 129.99,
             display_name: 'Roberto B.', is_bot: false,
@@ -361,7 +362,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const leagueStartDate = fixture === 'pre_season' ? '2026-08-03T13:30:00.000Z' : '2026-08-01T00:00:00Z';
 
   const meta: HomeLeagueMeta = {
-    myUserId: 'roberto', draftStatus, leagueStartDate,
+    myUserId: FIXTURE_USER_ID, draftStatus, leagueStartDate,
     seasonStatus, currentWeek, numWeeks: regularSeasonComplete ? playoffNumWeeks : FIXTURE_LEAGUE.numWeeks,
     playoffTeams: FIXTURE_LEAGUE.playoffTeams, stakeMode: FIXTURE_LEAGUE.stakeMode,
     notionalPerSlot: isXLMillion ? XL_MILLION_LEAGUE.notionalPerSlot : isXLLarge ? XL_LEAGUE.notionalPerSlot : FIXTURE_LEAGUE.notionalPerSlot,

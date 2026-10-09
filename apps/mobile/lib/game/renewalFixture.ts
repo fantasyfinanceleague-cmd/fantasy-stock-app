@@ -6,6 +6,7 @@
  * counts are computed from the people, never typed, so they cannot drift.
  */
 import type { RenewalGroup, RenewalCounts } from './renewal';
+import { FIXTURE_USER_ID } from '../shell/fixtureIds';
 
 export interface FixturePerson {
   user_id: string;
@@ -21,7 +22,8 @@ export interface FixturePerson {
 }
 
 const ROSTER: { user_id: string; display_name: string; group: RenewalGroup; is_commissioner?: boolean }[] = [
-  { user_id: 'roberto', display_name: 'Roberto B.', group: 'in', is_commissioner: true },
+  // The commissioner is the signed-in fixture user (FIXTURE_USER_ID), one "me" across every fixture.
+  { user_id: FIXTURE_USER_ID, display_name: 'Roberto B.', group: 'in', is_commissioner: true },
   { user_id: 'paolo', display_name: 'Paolo M.', group: 'in' },
   { user_id: 'alessandro', display_name: 'Alessandro D.', group: 'out' },
   { user_id: 'francesco', display_name: 'Francesco T.', group: 'in' },
@@ -77,14 +79,15 @@ export function fixtureRoster(caller: 'commissioner' | 'in' | 'new' | 'pending' 
       draft_date: null,
     };
   }
-  const me = people.find((p) => p.user_id === (caller === 'commissioner' ? 'roberto' : caller === 'in' ? 'paolo' : 'marta'))!;
+  // The caller's own status, by role (the SQL derives it from the caller's row; no self-id lookup here).
+  const callerStatus: RenewalGroup = caller === 'commissioner' ? people.find((p) => p.is_commissioner)!.group : caller;
   const counts = fixtureCounts(people);
   return {
     status: 'ok' as const,
     league_id: FIXTURE_LEAGUE_ID,
     full_list: true as const,
     is_commissioner: caller === 'commissioner',
-    caller_status: me.group,
+    caller_status: callerStatus,
     draft_status: 'not_started',
     draft_date: null,
     counts,

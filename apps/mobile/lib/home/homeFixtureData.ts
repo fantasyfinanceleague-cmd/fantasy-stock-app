@@ -62,18 +62,18 @@ export const ROBERTO_WEEKS: { week: number; gain: number; result: 'W' | 'L' }[] 
   { week: 5, gain: 54.24, result: 'W' },
 ];
 
-export function fixtureSnapshots(side: 'roberto' | 'gianluigi'): LiveSnapshot[] {
-  const rows = side === 'roberto' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
+export function fixtureSnapshots(side: 'me' | 'opponent'): LiveSnapshot[] {
+  const rows = side === 'me' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
   return rows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), weekStartPrice: h.mon, enteredMidWeek: false }));
 }
 
-export function fixturePrice(side: 'roberto' | 'gianluigi', at: 'thu' | 'fri' | 'prev' | 'mon'): (symbol: string) => number | null {
-  const rows = side === 'roberto' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
+export function fixturePrice(side: 'me' | 'opponent', at: 'thu' | 'fri' | 'prev' | 'mon'): (symbol: string) => number | null {
+  const rows = side === 'me' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
   return (symbol: string) => rows.find((h) => h.symbol === symbol)?.[at] ?? null;
 }
 
-export function fixtureDraftRows(side: 'roberto' | 'gianluigi'): { symbol: string; entryPrice: number; quantity: number }[] {
-  const rows = side === 'roberto' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
+export function fixtureDraftRows(side: 'me' | 'opponent'): { symbol: string; entryPrice: number; quantity: number }[] {
+  const rows = side === 'me' ? ROBERTO_HOLDINGS : GIANLUIGI_HOLDINGS;
   return rows.map((h) => ({ symbol: h.symbol, entryPrice: h.draft, quantity: fixtureQty(h) }));
 }
 

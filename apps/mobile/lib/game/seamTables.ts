@@ -28,7 +28,7 @@ const WEEK_END = '2026-10-02T20:00:00Z';
 
 // The board's live holdings (quantity, Monday open) for each side of the week-6 games.
 const HOLDINGS: Record<string, { symbol: string; quantity: number; start: number; end: number }[]> = {
-  roberto: [
+  [SEAM_ME]: [
     { symbol: 'NVDA', quantity: 6.8942, start: 300.2, end: 318.37 },
     { symbol: 'AAPL', quantity: 10.0705, start: 205.1, end: 211.42 },
   ],
@@ -50,7 +50,7 @@ function snapshotRows() {
 
 function weekMatchups() {
   return [
-    { team1_user_id: 'roberto', team2_user_id: 'gianluigi', team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK },
+    { team1_user_id: SEAM_ME, team2_user_id: 'gianluigi', team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK },
     { team1_user_id: 'paolo', team2_user_id: 'alessandro', team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK },
     { team1_user_id: 'francesco', team2_user_id: 'andrea', team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK },
   ];
@@ -59,9 +59,9 @@ function weekMatchups() {
 /** The board's 4-team bracket: round 1 played (the board's scores), round 2 to be decided. */
 function playoffMatchups() {
   return [
-    { playoff_round_number: 1, bracket_position: 0, team1_user_id: 'roberto', team2_user_id: 'francesco', team1_gain: 288.1, team2_gain: 96.42, winner_user_id: 'roberto' },
+    { playoff_round_number: 1, bracket_position: 0, team1_user_id: SEAM_ME, team2_user_id: 'francesco', team1_gain: 288.1, team2_gain: 96.42, winner_user_id: SEAM_ME },
     { playoff_round_number: 1, bracket_position: 1, team1_user_id: 'paolo', team2_user_id: 'alessandro', team1_gain: -41.3, team2_gain: 120.55, winner_user_id: 'alessandro' },
-    { playoff_round_number: 2, bracket_position: 0, team1_user_id: 'roberto', team2_user_id: 'alessandro', team1_gain: null, team2_gain: null, winner_user_id: null },
+    { playoff_round_number: 2, bracket_position: 0, team1_user_id: SEAM_ME, team2_user_id: 'alessandro', team1_gain: null, team2_gain: null, winner_user_id: null },
   ];
 }
 

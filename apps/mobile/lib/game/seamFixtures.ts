@@ -17,10 +17,10 @@ export function fixtureHistory() {
   return [
     {
       league_id: 'fixture-season-1', season_number: 1, is_current: false, draft_status: 'completed',
-      completed_at: '2026-01-15T00:00:00Z', champion_user_id: 'roberto', champion_display_name: 'Roberto B.',
+      completed_at: '2026-01-15T00:00:00Z', champion_user_id: SEAM_ME, champion_display_name: 'Roberto B.',
       my_rank: 1, my_wins: 11, my_losses: 3, my_ties: 0,
       final_standings: [
-        { user_id: 'roberto', rank: 1, wins: 11, losses: 3, ties: 0, points_for: 1962.4, points_against: 0, display_name: 'Roberto B.' },
+        { user_id: SEAM_ME, rank: 1, wins: 11, losses: 3, ties: 0, points_for: 1962.4, points_against: 0, display_name: 'Roberto B.' },
         { user_id: 'paolo', rank: 2, wins: 10, losses: 4, ties: 0, points_for: 1744.1, points_against: 0, display_name: 'Paolo M.' },
         { user_id: 'alessandro', rank: 3, wins: 8, losses: 6, ties: 0, points_for: 1203.55, points_against: 0, display_name: 'Alessandro D.' },
         { user_id: 'francesco', rank: 4, wins: 6, losses: 8, ties: 0, points_for: 612.8, points_against: 0, display_name: 'Francesco T.' },

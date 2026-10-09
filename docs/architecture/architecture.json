@@ -2,82 +2,50 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "d026f3331a5fa520671df5d90548af7dcb9cc37e",
-    "commitShort": "d026f333",
+    "commit": "24fe7c7c9843c59a87c1e795908230d785a69346",
+    "commitShort": "24fe7c7c",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app.json"
+        "path": "apps/mobile/lib/game/renewalFixture.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
+        "path": "apps/mobile/lib/game/seamFixtures.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/money/StockSheetBody.tsx"
+        "path": "apps/mobile/lib/game/seamTables.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/home/homeFixtureData.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/home/useHomeLeague.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/home/usePreDraftData.ts"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/route-declarations.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/sell-only-held.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/web/src/pages/DraftPage.jsx"
-      },
-      {
-        "code": "M",
-        "path": "supabase/config.toml"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/market-guard.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "supabase/functions/_shared/market-guard.ts"
-      },
-      {
-        "code": "D",
-        "path": "supabase/functions/finnhub-quote/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/historical-bars/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/historical-bars/paginate.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/historical-bars/paginate.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/quote/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/ticker-quotes/index.ts"
+        "path": "apps/mobile/tests-deno/fixture-identity.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:37:50Z",
-    "sourceHash": "sha256:7d9a3b62be0e02ac3c4ac40723129013474a4e8395762023535c84f9950e5b3e",
+    "timestamp": "2026-10-11T05:43:49Z",
+    "sourceHash": "sha256:e46c05f8b26615eab973572ffb72dbead4770a7ca032db20c201ae8da9626280",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 81.9,
+    "ageHours": 82,
     "ageDays": 3.4,
     "staleAfterDays": 14,
     "stale": false,
@@ -2697,7 +2665,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:433"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:432"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2711,7 +2679,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 433
+        "line": 432
       }
     },
     {
@@ -2827,7 +2795,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:331"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:330"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2841,7 +2809,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 331
+        "line": 330
       }
     },
     {
@@ -2906,7 +2874,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:391"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:390"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2920,7 +2888,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 391
+        "line": 390
       }
     },
     {
@@ -3026,7 +2994,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:253",
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:252",
           "supabase/migrations/20261111000001_draft_status_server_only.sql:46"
         ],
         "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
@@ -11567,7 +11535,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:446"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:445"
       ]
     },
     {
@@ -11632,7 +11600,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:360"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:359"
       ]
     },
     {
@@ -11645,7 +11613,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:403"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:402"
       ]
     },
     {
@@ -14547,7 +14515,7 @@
       "payload": "trigger on drafts",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:470"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:469"
       ]
     },
     {
@@ -14625,7 +14593,7 @@
       "payload": "trigger on league_draft_slots",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:384"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:383"
       ]
     },
     {
@@ -14680,7 +14648,7 @@
       "payload": "trigger on league_members",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:426"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:425"
       ]
     },
     {
@@ -14863,7 +14831,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:324"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:323"
       ]
     },
     {
@@ -15896,7 +15864,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:606"
+        "apps/mobile/lib/home/useHomeLeague.ts:607"
       ]
     },
     {
@@ -15908,7 +15876,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:589"
+        "apps/mobile/lib/home/useHomeLeague.ts:590"
       ]
     },
     {
@@ -15920,7 +15888,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:562"
+        "apps/mobile/lib/home/useHomeLeague.ts:563"
       ]
     },
     {
@@ -15932,7 +15900,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_draft_order')",
       "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:105"
+        "apps/mobile/lib/home/usePreDraftData.ts:106"
       ],
       "via": [
         "seamRpc"
@@ -15947,7 +15915,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_league_display_names')",
       "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:106"
+        "apps/mobile/lib/home/usePreDraftData.ts:107"
       ],
       "via": [
         "seamRpc"
@@ -17909,7 +17877,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:77",
-            "apps/mobile/lib/home/useHomeLeague.ts:589",
+            "apps/mobile/lib/home/useHomeLeague.ts:590",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -17972,7 +17940,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:606",
+            "apps/mobile/lib/home/useHomeLeague.ts:607",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19504,8 +19472,8 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:44 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:589 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:606 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:590 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:607 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
@@ -19554,9 +19522,9 @@
       "apps/mobile/lib/game/useRenewalRoster.ts:42 -> get_renewal_roster (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:562 -> get_home_league",
-      "apps/mobile/lib/home/usePreDraftData.ts:105 -> get_draft_order (via seamRpc)",
-      "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_league_display_names (via seamRpc)",
+      "apps/mobile/lib/home/useHomeLeague.ts:563 -> get_home_league",
+      "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
+      "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
       "apps/mobile/lib/money/usePortfolioLedger.ts:31 -> get_portfolio_ledger",
