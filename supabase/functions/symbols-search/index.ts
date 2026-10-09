@@ -75,7 +75,13 @@ Deno.serve(async (req) => {
   const query = String(q || '').trim().toUpperCase();
   if (!query) return json({ items: [] });
 
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!);
+  // Query AS THE CALLER (publishable key + the caller's JWT), never as bare
+  // anon and never with the secret key: symbols is signed-in only
+  // (20261114000000), so a signed-in player reads it through RLS and an
+  // anon-JWT caller gets zero rows (and so no Alpaca price fetch either).
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+  });
 
   // Smart search with relevance-based ordering
   // Priority: 1) Exact symbol, 2) Symbol starts-with, 3) Name starts-with, 4) Symbol/Name contains
