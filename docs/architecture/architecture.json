@@ -2,54 +2,26 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "660f05801414b838c935fafc5bc540597bcd90aa",
-    "commitShort": "660f0580",
+    "commit": "8edc70c5c54d5f07c89a6aefe85b0468ce02dc41",
+    "commitShort": "8edc70c5",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/draft.tsx"
+        "path": "apps/mobile/components/home/SeasonCard.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/DraftComplete.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/DraftRoom.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/ThemeProvider.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/draftComplete.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/notificationRoute.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-complete.test.ts"
+        "path": "apps/mobile/components/home/SeasonChart.tsx"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/game-draft-finalize-heal.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/symbol-search-field-theme.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/symbol-search-theme.test.ts"
+        "path": "apps/mobile/tests-deno/season-chart-draw-key.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:08Z",
+    "timestamp": "2026-10-11T05:44:10Z",
     "sourceHash": "sha256:7378739950b5247283afb8f7f400d28f1c2115927e060a800989e9de6effd928",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

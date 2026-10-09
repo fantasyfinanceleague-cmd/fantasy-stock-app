@@ -48,11 +48,16 @@ export interface SeasonChartProps {
    * H2 draw-in to replay. Later window changes within the SAME league
    * still draw in as usual. */
   skipEntrance?: boolean;
+  /** What the line draws in for (S-5): the chart's window ('1W' | '1M' | 'Season').
+   * The chart remounts per league (Home is keyed by league), so the line draws in once
+   * per league and window; a new value (the 30 s live poll moving today's point)
+   * updates the path in place instead of blanking and redrawing it. */
+  drawKey?: string;
 }
 
 const HEIGHT = 148;
 
-export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false }: SeasonChartProps) {
+export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false, drawKey = 'season' }: SeasonChartProps) {
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const [width, setWidth] = useState(0);
@@ -65,10 +70,11 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, {}, positions) : null;
   const lineLength = geometry?.lineLength ?? 0;
 
-  // H2: the line draws in on first view, and again after a window or series
-  // change (lib/chart/useDrawIn, shared with 3e's stock chart, M2).
+  // H2: the line draws in on first view and on a window change (lib/chart/useDrawIn,
+  // shared with 3e's stock chart, M2). Never on a value change (S-5): keyed on the
+  // series' values, every 30 s poll in market hours blanked and redrew the line.
   const drawProgress = useDrawIn({
-    key: series.join(','),
+    key: drawKey,
     lineLength,
     reduced,
     durationMs: duration.feature,
