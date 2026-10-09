@@ -148,6 +148,28 @@ building anything, and don't reopen a rule without him.
   leagues, each one has its own waiver wire. if i want to buy apple in one league, i may not
   be able to in another if another player has it, i already have it, or it doesnt fit my
   team by one of the league rules." A per-player list "makes no sense".
+- **The watchlist is not a queue** (2026-10-08): "multiple players can save the same stock,
+  its like a player on the waiver wire. i can want to add them but so can someone else."
+  Saving reserves nothing. Separately, "there should be a way to save stocks to keep an eye
+  on them, and a way to queue them to add the next day that works like the waiver wire."
+- **The waiver wire: daily claims** (2026-10-08). Giorgio chose daily moves over a weekly
+  lineup lock: "a user should be able to trade daily. this is based on fantasy football,
+  doesnt need every same rule. an investor should be able to make moves mid week. so our
+  'waiver wire' will be a daily thing. you can claim stocks after the close of each day. if
+  no one else claims that day, you get it. if two or more people claim, then we have the
+  order decide. the order works like fantasy football, starts as reverse draft order. then
+  shifts based on wins/loss and claims made."
+  - A claim is placed only while the market is closed (Claim is Buy's closed-market twin;
+    during market hours you just Buy). It is processed at the next market open, 9:30 ET, at
+    the opening price, before live trading opens for that day.
+  - A claim is "Buy X, funded by selling Y" (or by cash in a budget-cap league); if the claim
+    loses, Y is not sold. Whole positions only, as always.
+  - Claims are blind: you cannot see who else has claimed a stock or how many. Holdings stay
+    visible ("Owned by …" as shipped); you only ever see leaguemates.
+  - The order: starts as reverse draft order; ANY successful claim (contested or not) moves
+    you to the back of the line; after each week is scored the order resets to reverse
+    standings (last place first, standings tiebreaks apply).
+  - After the run, the loser is told who won and why, in one short clause.
 - **League features follow fantasy football, not a brokerage** (2026-10-08): anything that
   belongs to a league (watchlist, draft, waivers-like queues, standings, trades between
   managers) is modelled on how ESPN / Sleeper / Yahoo fantasy football do it; brokerage
