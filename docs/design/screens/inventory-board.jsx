@@ -158,7 +158,7 @@
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
-          <Fit caption="Draft recap"><I.DraftRecap /></Fit>
+          <Fit caption="Draft recap · 1.3, not in 1.2.0" note="No entry point leads here in 1.2.0."><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
@@ -228,6 +228,28 @@
             <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
             <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
             <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Notes for the build</h3>
+            <ul>
+              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+            </ul>
           </div>
         </section>
 

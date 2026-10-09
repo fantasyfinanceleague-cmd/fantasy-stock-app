@@ -308,7 +308,7 @@
               {near.map((r) => (
                 <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-t ks-num">{r.rank}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
                   <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                   <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
                 </li>
@@ -353,10 +353,10 @@
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="ks-avatar ks-avatar--sm">RB</span>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B. <span className="ks-muted" style={{ fontWeight: 500 }}>(you)</span></span>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B.</span>
               </span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Gianluigi B.</span>
+                <span className="ks-callout" style={{ fontWeight: 500 }}>Gianluigi B.</span>
                 <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
               </span>
             </div>
@@ -427,7 +427,7 @@
                       {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
-                    <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout" style={{ fontWeight: p.you ? 700 : 500, whiteSpace: 'nowrap' }}>{p.name}</span>
                     <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                     <span className={`ks-callout ks-num ks-right ${tone(r.pf)}`} style={{ fontWeight: 700 }}>{$s(r.pf)}</span>
                   </div>

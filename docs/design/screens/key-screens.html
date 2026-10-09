@@ -469,7 +469,7 @@
 /* ── Leaderboard rows (FLIP) ───────────────────────────────────────────── */
 .ks-lb { position: relative; }
 .ks-lbrow { position: absolute; left: 0; right: 0; height: 56px; display: grid; grid-template-columns: 22px 30px 30px 1fr auto 86px; align-items: center; gap: 10px; padding: 0 14px; transition: transform var(--sp-motion-duration-slow) var(--sp-motion-ease-settle); }
-.ks-lbrow--you { background: var(--c-you-tint); box-shadow: inset 3px 0 0 var(--c-you); }
+.ks-lbrow--you { background: var(--c-you-tint); }
 .ks-delta { font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; gap: 1px; }
 .ks-delta--up { color: var(--c-gain); } .ks-delta--down { color: var(--c-loss); }
 .ks-delta--flat { color: var(--c-text-2); }
@@ -1406,7 +1406,7 @@
               {near.map((r) => (
                 <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-t ks-num">{r.rank}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
                   <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                   <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
                 </li>
@@ -1451,10 +1451,10 @@
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="ks-avatar ks-avatar--sm">RB</span>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B. <span className="ks-muted" style={{ fontWeight: 500 }}>(you)</span></span>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B.</span>
               </span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Gianluigi B.</span>
+                <span className="ks-callout" style={{ fontWeight: 500 }}>Gianluigi B.</span>
                 <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
               </span>
             </div>
@@ -1525,7 +1525,7 @@
                       {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
-                    <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout" style={{ fontWeight: p.you ? 700 : 500, whiteSpace: 'nowrap' }}>{p.name}</span>
                     <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                     <span className={`ks-callout ks-num ks-right ${tone(r.pf)}`} style={{ fontWeight: 700 }}>{$s(r.pf)}</span>
                   </div>
@@ -2622,8 +2622,8 @@
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div className="ks-seg ks-seg--game"><span>My matchup</span><span className="on">All matchups</span></div>
           {live.map((m) => (
-            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, boxShadow: m.you ? 'inset 3px 0 0 var(--c-you)' : undefined }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><b>{m.a}{m.you ? ' (you)' : ''}</b><b>{m.b}</b></div>
+            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><span style={{ fontWeight: m.you ? 700 : 500 }}>{m.a}</span><span style={{ fontWeight: 500 }}>{m.b}</span></div>
               <Scores left={$s(m.ga)} right={$s(m.gb)} size="md" />
               <Tug you={m.ga} opp={m.gb} />
             </div>
@@ -2782,7 +2782,7 @@
     );
   }
 
-  /** The revealed draft order (after 6:00 PM), your slot highlighted, with
+  /** The revealed draft order (after 6:00 PM), your row tinted and bold, with
    * what the snake means for you. New copy. */
   /** The in-app "order is set" card (posted at T−1h in either mode, with a
    * push). mode: 'random' | 'manual'. New copy. */
@@ -2811,7 +2811,7 @@
             <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-caption ks-num">{i + 1}</span>
               <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-              <span className="ks-callout" style={{ fontWeight: m.you ? 800 : 600, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
+              <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
             </li>
           ))}
         </ol>
@@ -2863,7 +2863,7 @@
                   <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '10px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                     <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                     <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                    <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                     <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : null}</span>
                   </li>
                 ))}
@@ -2891,7 +2891,7 @@
                 <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto 24px', padding: '10px 6px', ...(i === 2 ? { background: 'var(--c-surface)', boxShadow: 'var(--c-sheet-shadow)', borderRadius: 10, transform: 'scale(1.02) translateY(-4px)', position: 'relative', zIndex: 1 } : {}) }}>
                   <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                   <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                   <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : m.commish ? <span className="ks-chip ks-chip--money">Commish</span> : null}</span>
                   <span className="ks-muted" aria-label="Drag handle" style={{ fontSize: 18, textAlign: 'center' }}>≡</span>
                 </li>
@@ -2960,7 +2960,7 @@
                 <li key={p.n} className="ks-row" style={{ gridTemplateColumns: '22px 36px 1fr', padding: '9px 0' }}>
                   <span className="ks-caption ks-num">{p.n}</span>
                   <Logo t={p.t} game />
-                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· {p.who}{p.you ? ' (you)' : ''}</span><br />
+                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· <span style={p.you ? { fontWeight: 700, color: 'var(--c-text)' } : undefined}>{p.who}</span></span><br />
                     <span className="ks-caption" style={p.how.startsWith('Auto') ? { color: 'var(--c-live-text)', fontWeight: 700 } : undefined}>{p.how}</span></span>
                 </li>
               ))}
@@ -3035,8 +3035,8 @@
     const M = ({ a, b, sa, sb, win, live }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa, win === 0], [b, sb, win === 1]].map(([n, s, w]) => (
-          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1 }} className="ks-callout">
-            <b style={{ color: n.startsWith('Roberto') ? 'var(--c-you-text)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
+          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1, ...(n.startsWith('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
+            <span style={{ fontWeight: n.startsWith('Roberto') ? 700 : 500 }}>{n}</span><span className="ks-num">{s}</span>
           </div>
         ))}
         {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
@@ -3067,8 +3067,8 @@
     const Game = ({ a, b, sa, sb, live, bye, pending }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa], [b, sb]].map(([n, s], i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined }} className="ks-callout">
-            <b style={{ color: n && n.includes('Roberto') ? 'var(--c-you-text)' : bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: bye && i === 1 ? 500 : 700 }}>{n}</b>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined, ...(n && n.includes('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
+            <span style={{ color: bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: n && n.includes('Roberto') ? 700 : 500 }}>{n}</span>
             <span className="ks-num">{s}</span>
           </div>
         ))}
@@ -3447,7 +3447,7 @@
       {S1.rows.slice(0, n).map((r) => (
         <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
           <Medal rank={r.rank} />
-          <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
+          <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
           <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
           <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
         </li>
@@ -3607,9 +3607,9 @@
         {rows.map((r) => {
           const st = state(r.id);
           return (
-            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center', background: r.id === me ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-t ks-num" style={{ color: st === 'in' ? undefined : 'var(--c-text-2)' }}>{r.rank}</span>
-              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}{r.id === me ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}</span>
               {st === 'in' ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Running back</span> : null}
               {st === 'out' ? <span className="ks-callout ks-muted">Out</span> : null}
               {st === 'none' ? (
@@ -4070,7 +4070,7 @@
                 <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '9px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                   <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                   <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : q1 === 'B' ? <span className="ks-muted">≡</span> : null}</span>
                 </li>
               ))}
@@ -4921,6 +4921,49 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // S-10 (UX final sweep): ONE manager row everywhere. RULED by Giorgio
+  // 2026-10-08: "just bold the users name. dont need to put the (you), people
+  // know their name. just bold it." + "blue tint as well". Your name 700 on
+  // the you-tint row, everyone else 500; no "(you)". Gains coloured by sign; move arrows on League only.
+  // VoiceOver still says "you" (the label, not the pixels). Data: data.js.
+  // ═════════════════════════════════════════════════════════════════════
+  const ManagerRow = ({ r, move }) => {
+    const rec = `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: move ? '18px 18px 1fr auto auto' : '18px 1fr auto auto', padding: '10px 6px', background: r.you ? 'var(--c-you-tint)' : undefined, borderRadius: r.you ? 8 : 0 }}>
+        <span className="ks-callout ks-num ks-muted">{r.rank}</span>
+        {move ? (
+          <span className="ks-caption ks-num" style={{ display: 'inline-flex', alignItems: 'center', color: r.delta > 0 ? 'var(--c-gain)' : r.delta < 0 ? 'var(--c-loss)' : 'var(--c-text-3)' }}>
+            {r.delta ? <span style={{ display: 'flex', transform: r.delta < 0 ? 'rotate(180deg)' : undefined }}><Icon d={ICON.up} size={10} width={2.6} /></span> : null}
+            {r.delta ? Math.abs(r.delta) : ''}
+          </span>
+        ) : null}
+        <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
+        <span className="ks-caption ks-num ks-muted">{rec}</span>
+        <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 600, minWidth: 74, textAlign: 'right' }}>{$s(r.pf)}</span>
+      </li>
+    );
+  };
+  function ManagerRowCall({ where = 'league' }) {
+    const league = where === 'league';
+    const rows = league ? K.STANDINGS_FINAL : (() => {
+      const all = K.STANDINGS_BEFORE; const top = all.slice(0, 3); const me = all.find((r) => r.you);
+      return top.some((r) => r.you) ? top : [...top, me];
+    })();
+    return (
+      <Device tab={league ? 'league' : 'home'} label={`Manager row, ${where}`}>
+        <Head chip={league ? <span className="ks-chip ks-chip--final">Week 6 · Final</span> : null} avatar={!league} />
+        <div className="ks-pad ks-stack">
+          <Card pad="12px 10px">
+            <div className="ks-section-h" style={{ padding: '0 6px 6px' }}><h3>Standings</h3><span className="ks-caption">{league ? 'Week 6 of 14' : 'Through Week 5'}</span></div>
+            <ul className="ks-rows">{rows.map((r) => <ManagerRow key={r.id} r={r} move={league} />)}</ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -4933,7 +4976,7 @@
     AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
-    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -5100,7 +5143,7 @@
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
-          <Fit caption="Draft recap"><I.DraftRecap /></Fit>
+          <Fit caption="Draft recap · 1.3, not in 1.2.0" note="No entry point leads here in 1.2.0."><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
@@ -5170,6 +5213,28 @@
             <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
             <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
             <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Notes for the build</h3>
+            <ul>
+              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+            </ul>
           </div>
         </section>
 
@@ -5829,7 +5894,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
@@ -5845,7 +5910,7 @@
               <><b>The Home hero</b> (your call: Concept A). Team value is the big number; the line under it is the season gain, the same words as the Standings column. It is not value − $12,000: the value also moves between the draft and Week 1's open and over every Friday close → Monday open, when no matchup is scoring. Portfolio keeps its own gain, value − cost, labelled "since the draft".</>,
               <>This week's matchup comes first: the live scoreboard card, with the lead in the metric that decides the matchup.</>,
               <>The season chart ("Season gain, week by week") plots the same season gain against $0, with week ticks and each week's result (W/L) underneath. It ends at the hero's season gain, and this week's rise equals this week's matchup score. <b>Past weeks are one point each</b> (that week's scored result, at Friday's close) joined by straight lines; only this week has day-by-day points. Time stays to scale: every week is five trading days wide. Scrubbing a past week reads that week's own result ("Week 3 · {$s(K.ROBERTO_WEEKS[2].gain)}"); this week reads the day and the running total.</>,
-              <>Top of the standings with you highlighted. The avatar opens Profile.</>,
+              <>Top of the standings with your row tinted and your name bold. The avatar opens Profile.</>,
               <><b>Other leagues</b> (your call: Concept B, pill only): there is no list on Home. The league pill shows "+2" (two more leagues) on every tab and opens the league sheet with every league grouped by phase.</>,
             ]}
             motion={<>
@@ -5886,7 +5951,7 @@
           notes={<Notes
             shows={[
               <><b>One order, also the playoff seeding</b> (your call): win percentage, then head-to-head, then <b>season gain</b> (the sum of your weekly matchup gains). Paolo M. and Roberto B. are both 5–1 and haven't played each other, so season gain decides: Roberto's {$s(K.STANDINGS_FINAL[0].pf)} beats Paolo's {$s(K.STANDINGS_FINAL[1].pf)}. A bye is no result: it counts as neither a win nor a loss and is left out of win percentage. Records read W–L, with –T only when there are ties.</>,
-              <>▲/▼ show the move since last week. You are highlighted wherever you land.</>,
+              <>▲/▼ show the move since last week. Your row is tinted and your name bold wherever you land.</>,
               <>Week 6 results underneath: every matchup, both scores.</>,
             ]}
             motion={<>
