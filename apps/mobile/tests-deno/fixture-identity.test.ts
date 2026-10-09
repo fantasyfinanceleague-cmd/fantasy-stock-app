@@ -74,3 +74,22 @@ Deno.test('production identifies "me" by the auth user id, so a fixture exercise
   assert(screen.includes('mine: user.id,'));
   assert(screen.includes("myUserId={user?.id ?? ''}"));
 });
+
+// ── F2: the League tab's movement renders under the seam ─────────────────────
+
+import { buildStandingsRows } from '../lib/game/standings.ts';
+import { seamPreviousRanks } from '../lib/game/seamTables.ts';
+
+Deno.test('F2: the through-week ranking has a seam fixture, so the arrows show up, down and held', () => {
+  const prev = fixtureFor('league_standings_ranked', { p_league_id: 'fx-scudetto', p_through_week: 5 })!.data as { user_id: string; rank: number }[];
+  assertEquals(prev, seamPreviousRanks());
+  // The 1-arg call (no p_through_week) has no fixture: the seam never guesses it.
+  assertEquals(fixtureFor('league_standings_ranked', { p_league_id: 'fx-scudetto' }), null);
+  // Against the League tab's standings (the Home fixture's scored league): Paolo 1, you 2, Luca 3, Chiara 4, Marco 5, Gianluigi 6.
+  const current = ['paolo', SEAM_ME, 'luca', 'chiara', 'marco', 'gianluigi'].map((user_id, i) => ({ user_id, rank: i + 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: user_id, is_bot: false }));
+  const rows = buildStandingsRows(current, SEAM_ME, new Map(prev.map((r) => [r.user_id, r.rank])));
+  assertEquals(rows.map((r) => r.move), [1, -1, 1, -1, 0, 0]);
+  const hook = SOURCES['lib/game/useLeagueStandings.ts'];
+  assert(hook.includes("await seamRpc('league_standings_ranked', { p_league_id: leagueId, p_through_week: week - 1 })"));
+  assert(!hook.includes("error: { message: 'seam' }")); // the old short-circuit
+});

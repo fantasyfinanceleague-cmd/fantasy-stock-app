@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e21b1d72e1b7545c551399273135339e5a17a06c",
-    "commitShort": "e21b1d72",
+    "commit": "4e2b4ab59038f804ea5cbb9ecf33f703a346a46c",
+    "commitShort": "4e2b4ab5",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -18,11 +18,15 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-seam-tables.test.ts"
+        "path": "apps/mobile/lib/game/useLeagueStandings.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/fixture-identity.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:43:51Z",
-    "sourceHash": "sha256:e46c05f8b26615eab973572ffb72dbead4770a7ca032db20c201ae8da9626280",
+    "timestamp": "2026-10-11T05:43:53Z",
+    "sourceHash": "sha256:57dc7a4285c39f26fae75b7baddd47ea4d377678ca6d5e53b6eeaa9ede8a870f",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -15702,7 +15706,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('league_standings_ranked')",
       "callSites": [
-        "apps/mobile/lib/game/useLeagueStandings.ts:52"
+        "apps/mobile/lib/game/useLeagueStandings.ts:50"
       ],
       "via": [
         "seamRpc"
@@ -19501,7 +19505,7 @@
       "apps/mobile/lib/game/useDraftStatus.ts:63 -> get_draft_clock (via seamRpc)",
       "apps/mobile/lib/game/useLeagueHistory.ts:22 -> get_league_history (via seamRpc)",
       "apps/mobile/lib/game/useLeagueStandings.ts:37 -> get_home_league (via seamRpc)",
-      "apps/mobile/lib/game/useLeagueStandings.ts:52 -> league_standings_ranked (via seamRpc)",
+      "apps/mobile/lib/game/useLeagueStandings.ts:50 -> league_standings_ranked (via seamRpc)",
       "apps/mobile/lib/game/useLeaveLeague.ts:29 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/game/useRenewalRoster.ts:42 -> get_renewal_roster (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",

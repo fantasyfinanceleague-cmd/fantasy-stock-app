@@ -50,6 +50,14 @@ const HOLDINGS: Record<string, SeamHolding[]> = {
   [marco]: [{ symbol: 'AMD', quantity: 7.5, start: 158.0, live: 160.0, close: 155.3 }],
 };
 
+/** The ranking through LAST week (league_standings_ranked(p_league_id, p_through_week)),
+ * for the League tab's movement arrows: the order before week 6 was scored. Against
+ * the Home fixture's current standings, Paolo and Luca moved up one, you and Chiara
+ * down one, and Marco and Gianluigi held (so up, down and held all show). */
+export function seamPreviousRanks(): { user_id: string; rank: number }[] {
+  return [SEAM_ME, paolo, chiara, luca, marco, gianluigi].map((user_id, i) => ({ user_id, rank: i + 1 }));
+}
+
 /** Each held symbol's live (Thursday) price, for the seam's quote fixture. */
 export function seamLivePrices(): Record<string, number> {
   return Object.fromEntries(Object.values(HOLDINGS).flat().map((h) => [h.symbol, h.live]));

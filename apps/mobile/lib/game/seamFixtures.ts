@@ -5,7 +5,7 @@
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
 import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
-import { SEAM_ME, seamLivePrices } from './seamTables';
+import { SEAM_ME, seamLivePrices, seamPreviousRanks } from './seamTables';
 import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
@@ -69,6 +69,8 @@ export function fixtureFor(name: string, args: Record<string, unknown>, roomVari
     // ---- Run it back: reads ----
     case 'get_renewal_roster': return { data: fixtureRoster('commissioner', new Date()), error: null };
     case 'get_league_history': return { data: fixtureHistory(), error: null };
+    // The through-week ranking (the League tab's movement): last week's order.
+    case 'league_standings_ranked': return typeof args.p_through_week === 'number' ? { data: seamPreviousRanks(), error: null } : null;
     // ---- the draft room: reads ----
     case 'get_draft_clock': return { data: fixtureDraftRoom(roomVariant).clock, error: null };
     case 'get_draft_order': return { data: fixtureDraftRoom().order, error: null };
