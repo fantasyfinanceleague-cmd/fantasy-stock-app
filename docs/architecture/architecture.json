@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3bdb627f5fe4e18284c87e04ec9c6d2364fa236b",
-    "commitShort": "3bdb627f",
+    "commit": "d3092ede1fd3ca87556a2113cb0bd65432874a58",
+    "commitShort": "d3092ede",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "security/profile-visibility",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-09T01:59:50Z",
-    "sourceHash": "sha256:08bf0dc0f9817a30d9ab477740b414eb9a28835ac725cb4e9b0721a301c641a1",
+    "timestamp": "2026-10-09T02:47:27Z",
+    "sourceHash": "sha256:464c8e175d10e6db8433b6bc97741f93359744e9a6b61de07bc1752f3a1298a6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 30.3,
+    "ageHours": 31.1,
     "ageDays": 1.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -3634,6 +3634,37 @@
       "source": {
         "path": "supabase/migrations/20261014000000_get_season_result_rpc.sql",
         "line": 162
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261118000000_get_visible_profiles.sql:53"
+        ],
+        "latestDefinition": "supabase/migrations/20261118000000_get_visible_profiles.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.get_visible_profiles",
+      "label": "get_visible_profiles()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261118000000_get_visible_profiles.sql",
+        "line": 53
       }
     },
     {
@@ -11531,6 +11562,86 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.drafts",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.drafts",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT drafts (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:93"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.league_members",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:77",
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:85"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.league_standings",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:87"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.matchups",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:89",
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:91"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.trades",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.trades",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT trades (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:95"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_visible_profiles->tbl.user_profiles",
+      "from": "pg.get_visible_profiles",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261118000000_get_visible_profiles.sql:98"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.handle_new_user_profile->tbl.user_profiles#insert",
       "from": "pg.handle_new_user_profile",
       "to": "tbl.user_profiles",
@@ -13695,9 +13806,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('draft-control')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:325",
-        "apps/mobile/app/(tabs)/draft.tsx:384",
-        "apps/mobile/app/(tabs)/draft.tsx:405"
+        "apps/mobile/app/(tabs)/draft.tsx:326",
+        "apps/mobile/app/(tabs)/draft.tsx:385",
+        "apps/mobile/app/(tabs)/draft.tsx:406"
       ]
     },
     {
@@ -13709,7 +13820,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:492"
+        "apps/mobile/app/(tabs)/draft.tsx:493"
       ]
     },
     {
@@ -13721,9 +13832,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:428",
-        "apps/mobile/app/(tabs)/draft.tsx:471",
-        "apps/mobile/app/(tabs)/draft.tsx:542"
+        "apps/mobile/app/(tabs)/draft.tsx:429",
+        "apps/mobile/app/(tabs)/draft.tsx:472",
+        "apps/mobile/app/(tabs)/draft.tsx:543"
       ]
     },
     {
@@ -13735,7 +13846,19 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_draft_order')",
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:215"
+        "apps/mobile/app/(tabs)/draft.tsx:216"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.draft->pg.get_visible_profiles",
+      "from": "ui.draft",
+      "to": "pg.get_visible_profiles",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_visible_profiles')",
+      "callSites": [
+        "apps/mobile/app/(tabs)/draft.tsx:198"
       ]
     },
     {
@@ -13750,7 +13873,7 @@
         "id, user_id, symbol, entry_price, round, pick_number, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:223"
+        "apps/mobile/app/(tabs)/draft.tsx:224"
       ]
     },
     {
@@ -13765,7 +13888,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:259"
+        "apps/mobile/app/(tabs)/draft.tsx:260"
       ]
     },
     {
@@ -13781,21 +13904,6 @@
       ],
       "callSites": [
         "apps/mobile/app/(tabs)/draft.tsx:185"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.draft->tbl.user_profiles",
-      "from": "ui.draft",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('id, username')",
-      "columns": [
-        "id, username"
-      ],
-      "callSites": [
-        "apps/mobile/app/(tabs)/draft.tsx:195"
       ]
     },
     {
@@ -14531,6 +14639,18 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.LeagueCarousel->pg.get_visible_profiles",
+      "from": "ui.LeagueCarousel",
+      "to": "pg.get_visible_profiles",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_visible_profiles')",
+      "callSites": [
+        "apps/mobile/components/LeagueCarousel.tsx:77"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.LeagueCarousel->tbl.league_seasons",
       "from": "ui.LeagueCarousel",
       "to": "tbl.league_seasons",
@@ -14558,21 +14678,6 @@
       "callSites": [
         "apps/mobile/components/LeagueCarousel.tsx:109",
         "apps/mobile/components/LeagueCarousel.tsx:128"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.LeagueCarousel->tbl.user_profiles",
-      "from": "ui.LeagueCarousel",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('id, username')",
-      "columns": [
-        "id, username"
-      ],
-      "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:75"
       ]
     },
     {
@@ -14913,16 +15018,13 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.src.context.UserProfilesContext.jsx->tbl.user_profiles",
+      "id": "e.ui.src.context.UserProfilesContext.jsx->pg.get_visible_profiles",
       "from": "ui.src.context.UserProfilesContext.jsx",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('id, username, avatar')",
-      "columns": [
-        "id, username, avatar"
-      ],
+      "to": "pg.get_visible_profiles",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_visible_profiles')",
       "callSites": [
-        "apps/web/src/context/UserProfilesContext.jsx:25"
+        "apps/web/src/context/UserProfilesContext.jsx:30"
       ]
     },
     {
@@ -16236,7 +16338,7 @@
           "edge": "e.ui.draft->fn.quote",
           "detail": "Price display for candidate picks. Advisory only.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:492"
+            "apps/mobile/app/(tabs)/draft.tsx:493"
           ]
         },
         {
@@ -16244,7 +16346,7 @@
           "edge": "e.ui.draft->fn.validate-and-record-pick",
           "detail": "The ONLY pick write path since DR-001 Phase 3: the client-INSERT policies on drafts were dropped (20260811000003).",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:428"
+            "apps/mobile/app/(tabs)/draft.tsx:429"
           ]
         },
         {
@@ -16392,7 +16494,7 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/app/(tabs)/draft.tsx:492",
+            "apps/mobile/app/(tabs)/draft.tsx:493",
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:77",
@@ -16584,6 +16686,16 @@
     {
       "node": "pg.get_portfolio_ledger",
       "label": "get_portfolio_ledger()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.get_visible_profiles",
+      "label": "get_visible_profiles()",
       "groupKey": "existence",
       "field": "existence",
       "declared": "created by migration",
@@ -17549,6 +17661,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.get_visible_profiles",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -17631,13 +17749,13 @@
     "e.ui.league-settings->pg.start_new_league_season"
   ],
   "stats": {
-    "nodes": 237,
-    "edges": 564,
+    "nodes": 238,
+    "edges": 570,
     "flows": 8,
-    "drift": 45,
-    "driftHigh": 18,
+    "drift": 46,
+    "driftHigh": 19,
     "deadCode": 40,
-    "unverified": 30
+    "unverified": 31
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -17664,13 +17782,13 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/(tabs)/draft.tsx:325 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:384 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:405 -> draft-control",
-      "apps/mobile/app/(tabs)/draft.tsx:428 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:471 -> validate-and-record-pick",
-      "apps/mobile/app/(tabs)/draft.tsx:492 -> quote",
-      "apps/mobile/app/(tabs)/draft.tsx:542 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:326 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:385 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:406 -> draft-control",
+      "apps/mobile/app/(tabs)/draft.tsx:429 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:472 -> validate-and-record-pick",
+      "apps/mobile/app/(tabs)/draft.tsx:493 -> quote",
+      "apps/mobile/app/(tabs)/draft.tsx:543 -> validate-and-record-pick",
       "apps/mobile/app/join-league.tsx:54 -> preview-league",
       "apps/mobile/app/join-league.tsx:63 -> join-league",
       "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
@@ -17715,8 +17833,10 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/draft.tsx:215 -> get_draft_order",
+      "apps/mobile/app/(tabs)/draft.tsx:198 -> get_visible_profiles",
+      "apps/mobile/app/(tabs)/draft.tsx:216 -> get_draft_order",
       "apps/mobile/app/(tabs)/league.tsx:106 -> renew_league (via seamRpc)",
+      "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:39 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:25 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
@@ -17744,6 +17864,7 @@
       "apps/mobile/lib/money/usePortfolioLedger.ts:31 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
+      "apps/web/src/context/UserProfilesContext.jsx:30 -> get_visible_profiles",
       "apps/web/src/pages/DraftPage.jsx:381 -> get_draft_order",
       "apps/web/src/pages/DraftPage.jsx:394 -> get_real_user_ids",
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
@@ -17790,9 +17911,8 @@
     ],
     "tableOps": [
       "apps/mobile/app/(tabs)/draft.tsx:185 -> league_members.select",
-      "apps/mobile/app/(tabs)/draft.tsx:195 -> user_profiles.select",
-      "apps/mobile/app/(tabs)/draft.tsx:223 -> drafts.select",
-      "apps/mobile/app/(tabs)/draft.tsx:259 -> league_draft_slots.select",
+      "apps/mobile/app/(tabs)/draft.tsx:224 -> drafts.select",
+      "apps/mobile/app/(tabs)/draft.tsx:260 -> league_draft_slots.select",
       "apps/mobile/app/create-league.tsx:188 -> leagues.insert (via seamInsertLeague)",
       "apps/mobile/app/create-league.tsx:212 -> league_members.insert (via seamInsertMember)",
       "apps/mobile/app/create-league.tsx:222 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
@@ -17803,7 +17923,6 @@
       "apps/mobile/components/LeagueCarousel.tsx:109 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:128 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
-      "apps/mobile/components/LeagueCarousel.tsx:75 -> user_profiles.select",
       "apps/mobile/lib/LeagueContext.tsx:170 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:172 -> league_seasons.select",
       "apps/mobile/lib/LeagueContext.tsx:175 -> market_calendar.select",
@@ -17851,7 +17970,6 @@
       "apps/mobile/lib/usePortfolio.ts:128 -> trades.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",
-      "apps/web/src/context/UserProfilesContext.jsx:25 -> user_profiles.select",
       "apps/web/src/pages/Dashboard.jsx:132 -> drafts.select",
       "apps/web/src/pages/Dashboard.jsx:144 -> trades.select",
       "apps/web/src/pages/Dashboard.jsx:215 -> matchups.select",
@@ -18175,7 +18293,8 @@
       "20261111000003_schedule_draft_order_notify.sql",
       "20261112000000_league_standings_ranked_through_week.sql",
       "20261113000000_get_portfolio_ledger.sql",
-      "20261114000000_symbols_signed_in_only.sql"
+      "20261114000000_symbols_signed_in_only.sql",
+      "20261118000000_get_visible_profiles.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
