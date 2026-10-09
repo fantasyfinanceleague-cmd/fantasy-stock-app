@@ -158,7 +158,7 @@
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
-          <Fit caption="Draft recap"><I.DraftRecap /></Fit>
+          <Fit caption="Draft recap · 1.3, not in 1.2.0" note="No entry point leads here in 1.2.0."><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
@@ -235,27 +235,20 @@
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">UX</span>
             <div>
-              <h2 id="call-manager-row-h">Your call: one manager row everywhere</h2>
-              <p className="b-job">From the 1.2.0 final sweep (S-10). Today the same manager is drawn eight different ways: Home's standings excerpt bolds every name, League's table bolds only yours, History marks nobody, and the lobby, the renewal list and the bracket each do their own. One row, used everywhere, needs one look. Both options keep "(you)" and the blue tint on your row, and colour every gain by its sign (green / red mark money; League's table prints them plain today, which is a defect either way). The only difference is the name weight. Stock Scudetto, Roberto B.'s phone.</p>
+              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." So: your name bold, everyone else in the regular weight; no "(you)" and no tint on your row. Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
             </div>
           </header>
-          <h3 className="b-sub">League standings</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · Your name stands out" note="Names in the regular weight; yours bold, tinted, with (you). The move arrows stay on League only."><I.ManagerRowCall v="A" where="league" /></Fit>
-            <Fit caption="B · Every name bold" note="Today's Home excerpt, applied everywhere. Your row is marked by the tint and (you) only."><I.ManagerRowCall v="B" where="league" /></Fit>
-          </div>
-          <h3 className="b-sub">Home's standings excerpt (top 3, plus you if you're lower)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · Your name stands out" note="The same row as League, without the move column."><I.ManagerRowCall v="A" where="home" /></Fit>
-            <Fit caption="B · Every name bold" note="What Home ships today (approved in 3b-2), with coloured gains."><I.ManagerRowCall v="B" where="home" /></Fit>
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Only your name is bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
           </div>
           <div className="b-ask">
-            <h3>Your call · recommend A</h3>
+            <h3>Notes for the build</h3>
             <ul>
-              <li><b>A makes you easy to find</b> (UX rule 7: in any list you're in, you are marked). With every name bold, the bold carries nothing, and your row is told apart by a pale tint alone, which is the weakest cue on a sunny screen.</li>
-              <li><b>One thing stands out per list</b> (rule 6): in A it's you. In B six bold names compete.</li>
-              <li><b>B changes nothing on Home</b>, which was approved that way; A changes Home's excerpt (lighter names for everyone else). That is why this is your call.</li>
-              <li>Either way, the same row then serves League standings, Home, League › History (which gains your marker), the draft lobby, the renewal list and the bracket. Columns come and go (rank, move, record, gain, or an action like "Nudge again"); the row's look doesn't.</li>
+              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+              <li><b>The renewal list is the one exception to the bold.</b> There, bold already means "Running back" (his earlier ruling), so your name there is only un-tagged; nothing extra marks it.</li>
+              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
             </ul>
           </div>
         </section>

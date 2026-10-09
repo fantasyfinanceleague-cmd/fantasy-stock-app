@@ -306,9 +306,9 @@
             <div className="ks-section-h"><h3>Standings</h3><span className="ks-caption">Through Week 5</span></div>
             <ul className="ks-rows">
               {near.map((r) => (
-                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
+                <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto auto', padding: '9px 0' }}>
                   <span className="ks-t ks-num">{r.rank}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
                   <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                   <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
                 </li>
@@ -353,10 +353,10 @@
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="ks-avatar ks-avatar--sm">RB</span>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B. <span className="ks-muted" style={{ fontWeight: 500 }}>(you)</span></span>
+                <span className="ks-callout" style={{ fontWeight: 700 }}>Roberto B.</span>
               </span>
               <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span className="ks-callout" style={{ fontWeight: 700 }}>Gianluigi B.</span>
+                <span className="ks-callout" style={{ fontWeight: 500 }}>Gianluigi B.</span>
                 <span className="ks-avatar ks-avatar--sm ks-avatar--opp">GB</span>
               </span>
             </div>
@@ -421,13 +421,13 @@
                 const r = pos[p.id];
                 const d = after ? r.delta : 0;
                 return (
-                  <div key={p.id} className={p.you ? 'ks-lbrow ks-lbrow--you' : 'ks-lbrow'} style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
+                  <div key={p.id} className="ks-lbrow" style={{ transform: `translateY(${(r.rank - 1) * ROW}px)` }}>
                     <span className="ks-score" style={{ fontSize: 22 }}>{r.rank}</span>
                     <span className={`ks-delta ${d > 0 ? 'ks-delta--up' : d < 0 ? 'ks-delta--down' : 'ks-delta--flat'}`} key={`${after}${d}`}>
                       {d > 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`up ${d}`}><Icon d={ICON.up} size={12} width={3} />{d}</span> : d < 0 ? <span className="ks-pop" style={{ display: 'inline-flex', alignItems: 'center' }} aria-label={`down ${-d}`}><Icon d={ICON.chevron} size={12} width={3} />{-d}</span> : '–'}
                     </span>
                     <span className={p.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{p.init}</span>
-                    <span className="ks-callout" style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.name}{p.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout" style={{ fontWeight: p.you ? 700 : 500, whiteSpace: 'nowrap' }}>{p.name}</span>
                     <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
                     <span className={`ks-callout ks-num ks-right ${tone(r.pf)}`} style={{ fontWeight: 700 }}>{$s(r.pf)}</span>
                   </div>
