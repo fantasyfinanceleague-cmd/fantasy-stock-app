@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1c5f205bee6a191a5585d098d51d2b4306c2b55e",
-    "commitShort": "1c5f205b",
+    "commit": "6dca3071d34a9d60dab6e3e9228588cf8d8d7c61",
+    "commitShort": "6dca3071",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "security/market-data-guards-fns",
+    "branch": "security/scrape-hardening-db",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-09T02:30:36Z",
-    "sourceHash": "sha256:939c3dc6f2555a0597c4d9875f130e0a011f78d2562f18d53e2b857b16e4c269",
+    "timestamp": "2026-10-09T02:34:57Z",
+    "sourceHash": "sha256:7a68ec60dd1bfd31bb720a40bda65d03d2e3fbca6c66c0ad100088b12b7a022a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 30.8,
+    "ageHours": 30.9,
     "ageDays": 1.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -2050,10 +2050,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261007000000_username_write_path.sql:167"
+          "supabase/migrations/20261007000000_username_write_path.sql:167",
+          "supabase/migrations/20261116000000_scrape_hardening.sql:69"
         ],
-        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -2063,8 +2064,8 @@
       "sublabel": "SECURITY DEFINER · service_role, authenticated",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261007000000_username_write_path.sql",
-        "line": 167
+        "path": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "line": 69
       }
     },
     {
@@ -3553,10 +3554,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20250122000000_check_real_users.sql:4"
+          "supabase/migrations/20250122000000_check_real_users.sql:4",
+          "supabase/migrations/20261116000000_scrape_hardening.sql:130"
         ],
-        "latestDefinition": "supabase/migrations/20250122000000_check_real_users.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -3566,8 +3568,8 @@
       "sublabel": "SECURITY DEFINER · authenticated, service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20250122000000_check_real_users.sql",
-        "line": 4
+        "path": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "line": 130
       }
     },
     {
@@ -10325,7 +10327,8 @@
       "payload": "SELECT user_profiles (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261007000000_username_write_path.sql:193"
+        "supabase/migrations/20261007000000_username_write_path.sql:193",
+        "supabase/migrations/20261116000000_scrape_hardening.sql:105"
       ]
     },
     {
@@ -11449,6 +11452,20 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261113000000_get_portfolio_ledger.sql:102"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_real_user_ids->tbl.league_members",
+      "from": "pg.get_real_user_ids",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261116000000_scrape_hardening.sql:139",
+        "supabase/migrations/20261116000000_scrape_hardening.sql:140"
       ]
     },
     {
@@ -17590,7 +17607,7 @@
   ],
   "stats": {
     "nodes": 236,
-    "edges": 562,
+    "edges": 563,
     "flows": 8,
     "drift": 45,
     "driftHigh": 18,
@@ -18132,7 +18149,9 @@
       "20261111000003_schedule_draft_order_notify.sql",
       "20261112000000_league_standings_ranked_through_week.sql",
       "20261113000000_get_portfolio_ledger.sql",
-      "20261114000000_symbols_signed_in_only.sql"
+      "20261114000000_symbols_signed_in_only.sql",
+      "20261116000000_scrape_hardening.sql",
+      "20261116000001_purge_rate_limit_counters.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
