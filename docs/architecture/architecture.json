@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9181ca749f568923e793df4936090b744c5bfb18",
-    "commitShort": "9181ca74",
+    "commit": "533c2cf47a22acef8007a674c5c9a297c888ff54",
+    "commitShort": "533c2cf4",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/run-it-back",
     "dirty": true,
@@ -14,70 +14,26 @@
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-start.test.ts"
+        "path": "supabase/functions/symbol-name/index.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/_shared/draft-start.ts"
+        "path": "supabase/functions/symbols-search/index.ts"
       },
       {
-        "code": "M",
-        "path": "supabase/functions/draft-control/rules.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/draft-order-notify/plan.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261107000000_leave_league_schema.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261107000003_get_home_summary_skip_hidden.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000000_run_it_back_lineage.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000001_run_it_back_notifications.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000002_run_it_back_responses.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000003_run_it_back_rpcs.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000004_run_it_back_gate.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/20261115000005_run_it_back_home_summary.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
+        "code": "A",
+        "path": "supabase/migrations/20261114000000_symbols_signed_in_only.sql"
       }
     ],
-    "timestamp": "2026-10-09T02:02:56Z",
-    "sourceHash": "sha256:48f63f15e633a4ad8101aaa5738481b0bc7422ba6af444111c2a2d512be3fff1",
+    "timestamp": "2026-10-09T02:14:44Z",
+    "sourceHash": "sha256:6bb310f0ab0665acf900d233e5562dbd86c44174dae774f4c0c4dfde559cdf4e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 30.4,
+    "ageHours": 30.5,
     "ageDays": 1.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -1079,7 +1035,7 @@
           "SB_PUBLISHABLE_KEY",
           "SUPABASE_URL"
         ],
-        "lines": 41
+        "lines": 46
       },
       "db": null,
       "declared": null,
@@ -1109,7 +1065,7 @@
           "SB_PUBLISHABLE_KEY",
           "SUPABASE_URL"
         ],
-        "lines": 163
+        "lines": 180
       },
       "db": null,
       "declared": null,
@@ -7326,9 +7282,10 @@
         "touchedBy": [
           "supabase/migrations/20260810000001_symbols_add_enrichment_columns.sql",
           "supabase/migrations/20260811000007_symbols_enrichment_support.sql",
-          "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql"
+          "supabase/migrations/20260928000000_symbols_price_unsupported_column.sql",
+          "supabase/migrations/20261114000000_symbols_signed_in_only.sql"
         ],
-        "rlsEnabled": false
+        "rlsEnabled": true
       },
       "drift": [
         {
@@ -7340,7 +7297,7 @@
           "note": "UNAUTHENTICATED READ of every row. PUBLIC includes anon and the predicate is unconditional. This may be intentional for public reference data — but it must be an explicit decision, not an assumption, and it has to be consistent with any function-level lockdown covering the same data."
         }
       ],
-      "annotation": "DECIDED 2026-07-28 — KEEP the public SELECT policy. This is settled; do not re-derive it.\n\nThe policy is REQUIRED, not merely tolerated. That distinction is the whole point of this note, because the two readings produce the same migration today and opposite futures. symbol-name/index.ts:35 and symbols-search/index.ts:78 both construct their client with SB_PUBLISHABLE_KEY and do NOT forward the caller's Authorization header, so their queries execute as the anon role. The `USING (true)` policy is what makes symbol lookup and search return rows at all. Tighten it to `TO authenticated` — the change that looks obviously safe by analogy with every other table hardened in B1 — and both functions silently return empty: no error, no 401, just a search box that finds nothing.\n\nWHY IT GRADES HIGH ANYWAY: the map's heuristic flags any policy whose predicate contains no identity check. That is the rule working as designed, not a finding. The data is public NASDAQ/NYSE reference listings refreshed from a public feed, the policy is SELECT-only, and writes go through an RLS-bypassing upsert in refresh-symbols using the secret key. There is nothing user-specific in the table to leak.\n\nIF YOU EVER DO WANT IT LOCKED: the prerequisite is switching symbol-name and symbols-search to SB_SECRET_KEY_INTERNAL first, at which point the anon policy becomes genuinely unnecessary and can be dropped. Doing it in the other order breaks search. Judged not worth the moving parts for public ticker data.",
+      "annotation": "REVERSED 2026-10-08 — symbols is SIGNED-IN ONLY. Giorgio: \"I don't want people to be able to scrape anything and the more secure and locked down this can be the better.\" This supersedes the 2026-07-28 KEEP decision below, which was a cost judgement (public ticker data, not worth the moving parts), not a correctness one.\n\nHOW, in the order the 2026-07-28 note said was required: (1) 3cbee6a2 — symbols-search and symbol-name query AS THE CALLER (publishable key + forwarded Authorization; deliberately NOT the secret key), so their reads no longer depend on the anon policy. (2) 20261114000000 — drops the PUBLIC \"read symbols\" policy, adds symbols_select_authenticated (SELECT TO authenticated USING (true)), REVOKEs ALL from anon and PUBLIC (the table grant, so anon is refused with 42501 rather than filtered to 0 rows), and trims authenticated to SELECT (TRUNCATE is not governed by RLS). Every other reader is service_role or a signed-in client; supabase/tests/symbols_readers.test.ts pins that as a complete set and proves no pre-sign-in screen reaches a symbols read.\n\nTHE HIGH DRIFT ROW (public-role-policies-ungated) reads prod via db-snapshot.json, so it stays until (2) is pushed AND the snapshot is re-captured. After that the remaining authenticated USING (true) policy is intended: reference data, identical for every signed-in player. If the row is still HIGH after a fresh capture, the push did not take — run the migration header's relacl / pg_policies checks.\n\nSUPERSEDED (kept for history): DECIDED 2026-07-28 — KEEP the public SELECT policy. This is settled; do not re-derive it.\n\nThe policy is REQUIRED, not merely tolerated. That distinction is the whole point of this note, because the two readings produce the same migration today and opposite futures. symbol-name/index.ts:35 and symbols-search/index.ts:78 both construct their client with SB_PUBLISHABLE_KEY and do NOT forward the caller's Authorization header, so their queries execute as the anon role. The `USING (true)` policy is what makes symbol lookup and search return rows at all. Tighten it to `TO authenticated` — the change that looks obviously safe by analogy with every other table hardened in B1 — and both functions silently return empty: no error, no 401, just a search box that finds nothing.\n\nWHY IT GRADES HIGH ANYWAY: the map's heuristic flags any policy whose predicate contains no identity check. That is the rule working as designed, not a finding. The data is public NASDAQ/NYSE reference listings refreshed from a public feed, the policy is SELECT-only, and writes go through an RLS-bypassing upsert in refresh-symbols using the secret key. There is nothing user-specific in the table to leak.\n\nIF YOU EVER DO WANT IT LOCKED: the prerequisite is switching symbol-name and symbols-search to SB_SECRET_KEY_INTERNAL first, at which point the anon policy becomes genuinely unnecessary and can be dropped. Doing it in the other order breaks search. Judged not worth the moving parts for public ticker data.",
       "verified": true,
       "id": "tbl.symbols",
       "label": "symbols",
@@ -10379,7 +10336,7 @@
         "name"
       ],
       "callSites": [
-        "supabase/functions/symbol-name/index.ts:36"
+        "supabase/functions/symbol-name/index.ts:41"
       ]
     },
     {
@@ -10406,11 +10363,11 @@
         "symbol,name,is_draftable"
       ],
       "callSites": [
-        "supabase/functions/symbols-search/index.ts:107",
-        "supabase/functions/symbols-search/index.ts:118",
-        "supabase/functions/symbols-search/index.ts:129",
-        "supabase/functions/symbols-search/index.ts:140",
-        "supabase/functions/symbols-search/index.ts:98"
+        "supabase/functions/symbols-search/index.ts:113",
+        "supabase/functions/symbols-search/index.ts:122",
+        "supabase/functions/symbols-search/index.ts:133",
+        "supabase/functions/symbols-search/index.ts:144",
+        "supabase/functions/symbols-search/index.ts:155"
       ]
     },
     {
@@ -19882,12 +19839,12 @@
       "supabase/functions/snapshot-week-start/index.ts:590 -> week_snapshots.select",
       "supabase/functions/snapshot-week-start/index.ts:626 -> matchups.update",
       "supabase/functions/snapshot-week-start/index.ts:765 -> week_snapshots.upsert",
-      "supabase/functions/symbol-name/index.ts:36 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:107 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:118 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:129 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:140 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:98 -> symbols.select",
+      "supabase/functions/symbol-name/index.ts:41 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:113 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:122 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:133 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:144 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:155 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:316 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
@@ -20039,6 +19996,7 @@
       "20261111000003_schedule_draft_order_notify.sql",
       "20261112000000_league_standings_ranked_through_week.sql",
       "20261113000000_get_portfolio_ledger.sql",
+      "20261114000000_symbols_signed_in_only.sql",
       "20261115000000_run_it_back_lineage.sql",
       "20261115000001_run_it_back_notifications.sql",
       "20261115000002_run_it_back_responses.sql",

@@ -32,7 +32,12 @@ Deno.serve(async (req) => {
   const sym = String(symbol || '').toUpperCase();
   if (!sym) return json({ error: 'symbol required' }, 400);
 
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!);
+  // Query AS THE CALLER (publishable key + the caller's JWT), never as bare
+  // anon and never with the secret key: symbols is signed-in only
+  // (20261114000000), so an anon-JWT caller is refused by the table grant.
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SB_PUBLISHABLE_KEY')!, {
+    global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+  });
   const { data, error } = await supabase.from('symbols').select('name').eq('symbol', sym).maybeSingle();
 
   if (error) return json({ error: 'Failed to lookup symbol' }, 500);
