@@ -270,9 +270,41 @@ claim while open), `watchlist_full`, `symbol_inactive`. Pure helpers in `lib/mon
   idempotency row; the resolver never concludes anything league-wide from a subset (lesson 5);
   `cron_job_status` is written through `runJob` (lesson 6); `net.http_post` has the explicit
   timeout (lesson 8); the client renders the server's outcome, never its hope (rule 9).
-- **Migration hygiene.** `20261117000000+` for the watchlist, the claims in the same range;
-  no bare `atomic` in identifiers (`migration_cli_split.test.ts`); applied files are never
-  rewritten; `deferred/` for anything held.
+- **Migration hygiene.** No bare `atomic` in identifiers (`migration_cli_split.test.ts`);
+  applied files are never rewritten; `deferred/` for anything held. Ranges below.
+
+### Build constraints (agreed with the Orchestrator, 2026-10-09)
+
+1. **Migration ranges (provisional; re-stamped at release after prod's latest):** watchlist
+   `20261117000000`–`09`; profile visibility `20261118` (not this plan); claims
+   `20261119000000`–`09` onward.
+2. **Re-created objects must be a SUPERSET of `main`'s latest at build time.** The claims
+   work re-creates things other branches also touch: `record_trade_atomic` (13-arg; #94's
+   `20261115000006` re-creates it too), `finalize_league_draft` (#94's `20261115000000`),
+   `process-week-results`, and `league_notifications_kind_check` (new kinds `claim_won`,
+   `claim_lost`, `claim_failed`). Each re-creation starts from `main`'s current body at the
+   moment the branch is cut and adds; it never restores an older version (the #94 near-miss).
+   The kind CHECK is guarded by `supabase/tests/notification_kinds_monotonic.test.ts`; the
+   two functions get the same kind of guard: a PGlite test that the re-created body still
+   passes `main`'s existing effect tests for them.
+3. **The `claims_processing` hold is on the live trade path, so it is treated as a prod
+   change to trading:** (a) a PGlite/Deno effect test that a live buy during a league's
+   unfinished run is refused with `claims_processing` and succeeds the moment `claims_runs`
+   has the row; (b) a byte-verified deploy of `record-trade` from the deploy checkout
+   (download + diff); (c) **fail-open, explicitly:** the hold is per league and lifts by
+   itself 10 minutes after the session open (`market_calendar.session_open_at + 10 min`),
+   whether or not the run happened, so a dead cron can never strand a league's trading
+   closed. A late or missing run is surfaced, not hidden: the `claims-run` job writes
+   `failed` with the reason, and any claim the live trades invalidated fails with the
+   normal `record_trade_atomic` reason when the run finally executes. No silent carry-over.
+4. **The `claims_run` cron is verified by DATA, never by its enqueue status:** `claims_runs`
+   has a row per league-day with pending claims; `claims.status` is terminal for every claim
+   with `run_date = today`; `trades` holds the winners' two rows at the open price. Every
+   exit of the function writes a terminal `cron_job_status` through `runJob` (including
+   "already ran today" as `success` with that message, and "no pending claims anywhere" as
+   `success` with that message, so the row's NULL-ness is never a discriminator).
+   `supabase/tests/cron_status_handlers.test.ts` drives the real handler through every exit;
+   `cron_timeouts.pglite.test.ts` enforces `timeout_milliseconds = 180000`.
 - **Time formats.** "Mon 9:30 AM ET" via the S-11 standard formatter.
 - **Names.** Own name bold on the light-blue tint, no "(you)" (S-10 final, #179/#180); only
   leaguemates' name and avatar are ever shown (profile visibility, `20261118`).
@@ -320,10 +352,10 @@ The Orchestrator decides the final split. W2/W3 (watchlist) can ship without W4�
 |---|---|---|---|
 | W0 | Push this branch, open the docs PR | — | Orchestrator |
 | W1 | Revised mockup brief (sent) → "Your call" board sections (placement, row states, composer, endings, Home hook) → Giorgio decides → rules recorded | — | Design Lead, Planner |
-| W2 | Watchlist migration (`20261117000000`): table, RLS, cap; PGlite test; HUMAN ACTION `db push` | — | `supabase-migration-writer`, `supabase-reviewer`, `security-reviewer`; Giorgio applies |
+| W2 | Watchlist migration (`20261117000000`–`09`): table, RLS, cap; PGlite test; HUMAN ACTION `db push` | — | `supabase-migration-writer`, `supabase-reviewer`, `security-reviewer`; Giorgio applies |
 | W3 | Watchlist client: Save/Saved, the list, refusals, Deno tests | W1, W2 applied | mobile worker |
-| W4 | Claims backend: `claims`, `waiver_order`, `claims_runs`, `place_claim`/`cancel_claim`/`resolve_claims`, init in `finalize_league_draft`, weekly reset in `process-week-results`, notification kinds; PGlite + Deno tests; HUMAN ACTION `db push` | W2 | migration writer + backend worker; reviewers; Giorgio applies |
-| W5 | `claims-run` edge function + `claims_run` cron + the `claims_processing` hold in `record-trade`; `cron_status_handlers` test; deploy from the deploy checkout, byte-verified | W4 | backend worker; Giorgio deploys |
+| W4 | Claims backend (`20261119000000`–`09`): `claims`, `waiver_order`, `claims_runs`, `place_claim`/`cancel_claim`/`resolve_claims`, init in `finalize_league_draft`, weekly reset in `process-week-results`, notification kinds; each re-created object a SUPERSET of main's latest (constraint 2); PGlite + Deno tests; HUMAN ACTION `db push` | W2 | migration writer + backend worker; reviewers; Giorgio applies |
+| W5 | `claims-run` edge function + `claims_run` cron (verified by data, constraint 4) + the `claims_processing` hold in `record-trade` (effect test, fail-open after 10 min, byte-verified deploy: constraint 3); `cron_status_handlers` test; deploy from the deploy checkout | W4 | backend worker; Giorgio deploys |
 | W6 | Claims client: Claim as Buy's closed twin, composer (`mode: 'claim'`), Claims list, endings, pushes, refusals, Deno tests | W1, W4 applied | mobile worker |
 | W7 | Architecture map regen; db-snapshot re-capture; the live test above | W5, W6 | worker (map), Giorgio (snapshot, live test) |
 | W8 | UX gate; Giorgio's hand check; release in 1.2.x/1.3 | W7 | Design Lead + `ux-reviewer`, Giorgio |
