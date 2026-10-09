@@ -134,6 +134,16 @@ building anything, and don't reopen a rule without him.
   $100–$200 slot"). A tier is set by the entry price and never moves. Category slots name
   their category ("Fills your Tech slot"); a slot with neither is "Flex".
 - Trading follows market hours (the server refuses closed-market trades).
+- **Trading window** (2026-10-08): the market-hours rule stays. Giorgio considered a
+  fantasy-style lock (trade only while the market is closed) and ruled against it: "im
+  leaning keeping it like a real portfolio where i cant buy/sell after hours." Decision on
+  the Planner's three options: "Immediate A with C as the long term plan", where A = trade
+  only while the market is open, and C = later, orders placed after hours that fill at the
+  next open (Robinhood-style). C is parked as a future plan, not built now.
+- **Search and save any time** (2026-10-08): "a user should still be able to search a stock
+  when they arent allowed to buy. they should still be able to search and add stocks to a
+  watchlist or something to save for later." Search never depends on market hours; a
+  watchlist exists (plan: [`plans/2026-10-08-trading-window-and-watchlist.md`](plans/2026-10-08-trading-window-and-watchlist.md)).
 
 ## League lifecycle
 
