@@ -8,7 +8,9 @@
 -- then run `node scripts/gen-architecture.mjs`.
 --
 -- This is READ-ONLY. It creates nothing, alters nothing, and touches no data
--- rows -- only catalog tables (pg_proc, pg_class, pg_policy) and cron.job.
+-- rows -- only catalog tables (pg_proc, pg_class, pg_policy, pg_attribute,
+-- pg_default_acl, pg_publication_tables), cron.job, and storage.buckets'
+-- configuration rows (bucket name + public flag; never storage.objects).
 --
 -- WHY THIS FILE EXISTS
 -- Three classes of fact are invisible to the filesystem and are exactly the
@@ -24,6 +26,16 @@
 --      functions in this history.
 --   3. cron.job rows. Migrations unschedule/reschedule by name inside
 --      DO-blocks that swallow exceptions; the live schedule is authoritative.
+--   4. TABLE / VIEW / COLUMN grants and DEFAULT PRIVILEGES (added 2026-10-08,
+--      lockdown audit #7). Supabase grants ALL on every new public table to
+--      anon by default, so "can anon SELECT this?" has two gates -- the grant
+--      AND a policy -- and before this the snapshot recorded only the second.
+--      The scraping audit could not answer it for any table. Captured now:
+--      tables[].acl / columnAcls, views[] (with security_invoker), the
+--      default-privilege rules that decide what NEW objects are born with,
+--      storage.buckets (a public bucket is an anonymous read), and the
+--      Realtime publication (a published table streams row changes to every
+--      subscriber RLS admits).
 --
 -- SECRET SAFETY -- READ BEFORE COMMITTING THE OUTPUT
 -- `cron.job.command` is captured because the job body is architecturally
@@ -100,6 +112,18 @@ SELECT jsonb_pretty(jsonb_build_object(
       SELECT jsonb_build_object(
         'name',       c.relname,
         'rlsEnabled', c.relrowsecurity,
+        -- relacl: NULL = never explicitly granted/revoked -> owner-only by
+        -- Postgres default. Supabase's default privileges make it non-NULL at
+        -- creation (anon=arwdDxt/...), which is the point of capturing it.
+        'acl',        CASE WHEN c.relacl IS NULL THEN 'null'::jsonb
+                           ELSE to_jsonb(c.relacl::text[]) END,
+        -- Column-level grants (e.g. SELECT (id, symbol) after a column
+        -- lockdown). Only columns that carry an explicit ACL are listed.
+        'columnAcls', coalesce((
+          SELECT jsonb_object_agg(a.attname, to_jsonb(a.attacl::text[]) ORDER BY a.attname)
+          FROM pg_attribute a
+          WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped AND a.attacl IS NOT NULL
+        ), '{}'::jsonb),
         'rlsForced',  c.relforcerowsecurity,
         -- CHECK constraints (added 2026-08-11): the BUG-4 audit had to grep
         -- migrations because the snapshot didn't record them — and migrations
@@ -147,6 +171,66 @@ SELECT jsonb_pretty(jsonb_build_object(
       WHERE n.nspname = 'public'
         AND c.relkind IN ('r', 'p')   -- ordinary + partitioned tables
     ) s
+  ),
+
+  -- ------------------------------------------------------------------------
+  -- VIEWS + MATERIALIZED VIEWS: grants and security_invoker
+  -- ------------------------------------------------------------------------
+  -- A view WITHOUT security_invoker runs as its owner and bypasses the base
+  -- tables' RLS, so its own grant is the whole boundary.
+  'views', (
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'name',            c.relname,
+             'kind',            CASE c.relkind WHEN 'm' THEN 'materialized' ELSE 'view' END,
+             'securityInvoker', coalesce('security_invoker=true' = ANY (c.reloptions)
+                                         OR 'security_invoker=on' = ANY (c.reloptions), false),
+             'acl',             CASE WHEN c.relacl IS NULL THEN 'null'::jsonb
+                                     ELSE to_jsonb(c.relacl::text[]) END
+           ) ORDER BY c.relname), '[]'::jsonb)
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('v', 'm')
+  ),
+
+  -- ------------------------------------------------------------------------
+  -- DEFAULT PRIVILEGES: what NEW objects are born with
+  -- ------------------------------------------------------------------------
+  -- objectType: r = tables (and views), S = sequences, f = functions,
+  -- T = types, n = schemas. schema NULL = a global rule (all schemas).
+  'defaultPrivileges', (
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'grantor',    pg_get_userbyid(d.defaclrole),
+             'schema',     CASE WHEN d.defaclnamespace = 0 THEN NULL ELSE d.defaclnamespace::regnamespace::text END,
+             'objectType', d.defaclobjtype::text,
+             'acl',        to_jsonb(d.defaclacl::text[])
+           ) ORDER BY pg_get_userbyid(d.defaclrole), d.defaclnamespace, d.defaclobjtype), '[]'::jsonb)
+    FROM pg_default_acl d
+    WHERE d.defaclnamespace = 0 OR d.defaclnamespace = 'public'::regnamespace
+  ),
+
+  -- ------------------------------------------------------------------------
+  -- STORAGE BUCKETS: a public bucket serves its objects to anyone
+  -- ------------------------------------------------------------------------
+  'storageBuckets', (
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'id',     b.id,
+             'name',   b.name,
+             'public', b.public
+           ) ORDER BY b.id), '[]'::jsonb)
+    FROM storage.buckets b
+  ),
+
+  -- ------------------------------------------------------------------------
+  -- REALTIME PUBLICATION: which tables stream row changes
+  -- ------------------------------------------------------------------------
+  'publications', (
+    SELECT coalesce(jsonb_agg(jsonb_build_object(
+             'publication', pt.pubname,
+             'schema',      pt.schemaname,
+             'table',       pt.tablename,
+             'columns',     to_jsonb(pt.attnames)
+           ) ORDER BY pt.pubname, pt.schemaname, pt.tablename), '[]'::jsonb)
+    FROM pg_publication_tables pt
   ),
 
   -- ------------------------------------------------------------------------
