@@ -93,3 +93,39 @@ Deno.test('F2: the through-week ranking has a seam fixture, so the arrows show u
   assert(hook.includes("await seamRpc('league_standings_ranked', { p_league_id: leagueId, p_through_week: week - 1 })"));
   assert(!hook.includes("error: { message: 'seam' }")); // the old short-circuit
 });
+
+// ── F3: a scored Home fixture closes week 6 in the seam too ───────────────────
+
+import { seamWeekClosed } from '../lib/game/seamTables.ts';
+import { finalLineup } from '../lib/game/finalLineup.ts';
+import { GIANLUIGI_HOLDINGS, ROBERTO_HOLDINGS, fixtureQty } from '../lib/home/homeFixtureData.ts';
+
+/** The Home fixture's posted week-6 gain (useHomeLeague's week6Gains), recomputed here. */
+const homeGain = (rows: typeof ROBERTO_HOLDINGS) => Math.round(rows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0) * 100) / 100;
+
+Deno.test('F3: the week is closed exactly in the Home fixtures that score week 6', () => {
+  for (const f of ['scored', 'complete', 'complete_runner_up', 'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs']) assertEquals(seamWeekClosed(f), true, f);
+  for (const f of ['live_open', 'live_closed', 'scoring', 'pre_season', 'bye', undefined]) assertEquals(seamWeekClosed(f), false, String(f));
+  // The same list as fixtureHomeLeague's own isScored (source guard on its regularSeasonComplete).
+  const home = SOURCES['lib/home/useHomeLeague.ts'];
+  assert(home.includes("const regularSeasonComplete = isPlayoffState || fixture === 'complete' || fixture === 'complete_runner_up';"));
+  assert(home.includes("const isPlayoffState = isPlayoffLive || isPlayoffBye || isEliminated || isMissedPlayoffs;"));
+  assert(home.includes("const isScored = fixture === 'scored' || regularSeasonComplete;"));
+});
+
+Deno.test('F3: closed, your game posts the Home fixture\'s gains, and the final lineups sum to them to the cent', () => {
+  const games = seamTableRows(true, 'matchups_week', 'on_clock', { weekClosed: true }) as { team1_user_id: string; team1_gain: number; team2_gain: number; winner_user_id: string | null }[];
+  const mine = games.find((g) => g.team1_user_id === SEAM_ME)!;
+  assertEquals(mine.team1_gain, homeGain(ROBERTO_HOLDINGS));
+  assertEquals(mine.team2_gain, homeGain(GIANLUIGI_HOLDINGS));
+  assert(games.every((g) => g.team1_gain !== null && g.team2_gain !== null), 'All matchups shows Final for every game');
+  const snaps = seamTableRows(true, 'week_snapshots', 'on_clock', { weekClosed: true }) as { user_id: string; symbol: string; quantity: number; week_start_price: number; week_end_price: number | null; entered_mid_week: boolean }[];
+  for (const [user, gain] of [[SEAM_ME, mine.team1_gain], ['gianluigi', mine.team2_gain]] as const) {
+    const res = finalLineup({ snapshots: snaps.filter((s) => s.user_id === user), trades: [], teamGain: gain });
+    assertEquals(res.ok, true, `${user}'s final lineup is shown (sums to the posted gain)`);
+  }
+  // Open (live_open, the default): no closes, no gains.
+  const open = seamTableRows(true, 'week_snapshots') as { week_end_price: number | null }[];
+  assert(open.every((s) => s.week_end_price === null));
+  assert((seamTableRows(true, 'matchups_week') as { team1_gain: number | null }[]).every((g) => g.team1_gain === null));
+});

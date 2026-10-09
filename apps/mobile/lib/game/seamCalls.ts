@@ -7,7 +7,7 @@
 import { supabase } from '../supabase';
 import { SEAM_ON } from './devSeam';
 import { fixtureFor, invokeFixtureFor } from './seamFixtures';
-import { seamTableRows, type SeamTableName } from './seamTables';
+import { seamTableRows, seamWeekClosed, type SeamTableName } from './seamTables';
 import { parseDraftRoomVariant, roomVariantAfterAutoPick } from './seamRoom';
 
 /** EXPO_PUBLIC_DRAFT_ROOM_FIXTURE: how far the board's draft has gone (seamRoom.ts).
@@ -46,7 +46,8 @@ export async function seamTable<T>(
   name: SeamTableName,
   real: () => PromiseLike<{ data: T[] | null; error: unknown; count?: number | null }>,
 ): Promise<{ data: T[] | null; error: unknown; count?: number | null }> {
-  const rows = seamTableRows(SEAM_ON, name, roomVariant);
+  // Week 6 closes in the Home fixtures that score it (EXPO_PUBLIC_HOME_FIXTURE=scored, …).
+  const rows = seamTableRows(SEAM_ON, name, roomVariant, { weekClosed: seamWeekClosed(process.env.EXPO_PUBLIC_HOME_FIXTURE) });
   if (rows) return { data: rows as T[], error: null, count: rows.length };
   return real();
 }

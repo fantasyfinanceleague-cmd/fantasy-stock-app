@@ -63,14 +63,32 @@ export function seamLivePrices(): Record<string, number> {
   return Object.fromEntries(Object.values(HOLDINGS).flat().map((h) => [h.symbol, h.live]));
 }
 
-function snapshotRows() {
+/** Is week 6 over in this Home fixture? The same states useHomeLeague's fixtureHomeLeague
+ * scores week 6 in (`isScored`: 'scored', and every state after the regular season), so
+ * Matchup, All matchups and the final lineups agree on whether the week has closed. */
+export function seamWeekClosed(homeFixture: string | null | undefined): boolean {
+  return ['scored', 'complete', 'complete_runner_up', 'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs'].includes(homeFixture ?? '');
+}
+
+/** A team's week-6 gain at Friday's close, to the cent: the Home fixture's own formula
+ * (week6Gains: shares × (Friday close − Monday open)), so it matches the posted gain. */
+function closedGain(user: string): number {
+  return Math.round((HOLDINGS[user] ?? []).reduce((s, h) => s + h.quantity * (h.close - h.start), 0) * 100) / 100;
+}
+
+function snapshotRows(weekClosed: boolean) {
   return Object.entries(HOLDINGS).flatMap(([user, rows]) =>
-    rows.map((h) => ({ user_id: user, symbol: h.symbol, quantity: h.quantity, week_start_price: h.start, week_end_price: null, entered_mid_week: false, created_at: WEEK_START })),
+    rows.map((h) => ({ user_id: user, symbol: h.symbol, quantity: h.quantity, week_start_price: h.start, week_end_price: weekClosed ? h.close : null, entered_mid_week: false, created_at: WEEK_START })),
   );
 }
 
-function weekMatchups() {
-  const game = (team1: string, team2: string) => ({ team1_user_id: team1, team2_user_id: team2, team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK });
+function weekMatchups(weekClosed: boolean) {
+  const game = (team1: string, team2: string) => {
+    if (!weekClosed) return { team1_user_id: team1, team2_user_id: team2, team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK };
+    const g1 = closedGain(team1);
+    const g2 = closedGain(team2);
+    return { team1_user_id: team1, team2_user_id: team2, team1_gain: g1, team2_gain: g2, winner_user_id: g1 === g2 ? null : g1 > g2 ? team1 : team2, is_tie: g1 === g2, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK };
+  };
   return [game(SEAM_ME, gianluigi), game(paolo, luca), game(chiara, marco)];
 }
 
@@ -91,7 +109,7 @@ function playoffMatchups() {
 }
 
 /** The fixture rows for a table read, or null when the seam is off (the real query stands). */
-export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock'): unknown[] | null {
+export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock', opts: { weekClosed?: boolean } = {}): unknown[] | null {
   if (!on) return null;
   switch (table) {
     case 'drafts':
@@ -103,7 +121,7 @@ export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: Dr
         { symbol: 'CRM', position: 2 },
         { symbol: 'V', position: 3 },
       ];
-    case 'matchups_week': return weekMatchups();
+    case 'matchups_week': return weekMatchups(opts.weekClosed === true);
     // The transfer picker's current members (the draft fixture's names; Roberto is you).
     // Your own row, for a leave's re-read: still a member (the capture of "You're still in …").
     case 'league_members_me': return [{ hidden_at: null }];
@@ -114,7 +132,7 @@ export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: Dr
       { team1_user_id: SEAM_ME, team2_user_id: 'gianluigi', week_start: nextNominalTuesday(Date.now()) },
     ];
     case 'matchups_playoff': return playoffMatchups();
-    case 'week_snapshots': return snapshotRows();
+    case 'week_snapshots': return snapshotRows(opts.weekClosed === true);
     case 'trades': return [];
   }
 }

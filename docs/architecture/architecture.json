@@ -2,15 +2,15 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4e2b4ab59038f804ea5cbb9ecf33f703a346a46c",
-    "commitShort": "4e2b4ab5",
+    "commit": "bf38581b40ae569da4a64c7a7e7ef2628308b7b9",
+    "commitShort": "bf38581b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/seamFixtures.ts"
+        "path": "apps/mobile/lib/game/seamCalls.ts"
       },
       {
         "code": "M",
@@ -18,15 +18,11 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/useLeagueStandings.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/tests-deno/fixture-identity.test.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:43:53Z",
-    "sourceHash": "sha256:57dc7a4285c39f26fae75b7baddd47ea4d377678ca6d5e53b6eeaa9ede8a870f",
+    "timestamp": "2026-10-11T05:43:55Z",
+    "sourceHash": "sha256:b2c3dd5928a0d18ebebe355219bc04efe60656431c5aa178ce88df37658cce1d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -15380,7 +15376,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:68"
+        "apps/mobile/lib/game/seamCalls.ts:69"
       ]
     },
     {
@@ -15393,7 +15389,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:62"
+        "apps/mobile/lib/game/seamCalls.ts:63"
       ]
     },
     {
@@ -19056,7 +19052,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 57,
+        "line": 58,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -19064,7 +19060,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 65,
+        "line": 66,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -19088,7 +19084,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 71,
+        "line": 72,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -19599,8 +19595,8 @@
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
       "apps/mobile/lib/game/seamCalls.ts:41 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:62 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:68 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:63 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:69 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:39 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:52 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:62 -> trades.select",
