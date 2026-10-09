@@ -21,6 +21,8 @@ import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { RunItBackCard } from '@/components/home/RunItBackCard';
 import { HomeRenewalAsk } from '@/components/game/HomeRenewalAsk';
 import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
+import { runItBackEnabled } from '@/lib/game/renewal';
+
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { HomeSkeleton } from '@/components/game/LoadingSkeletons';
 import { PhaseTransition } from '@/components/home/PhaseTransition';
@@ -33,6 +35,9 @@ import {
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
   standingsThroughWeek,
 } from '@/lib/home/homeCopy';
+
+/** Run it back stays off until its backend (PR #94) is live: see runItBackEnabled. */
+const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);
 
 // `rightLabel` for live/closed states is derived from the phase's own
 // `weekEnd`/`resumesAt` (never a hardcoded literal — code review,
@@ -110,7 +115,7 @@ function HomeBody({
     return league ? (
       <>
         {/* R4: the commissioner of a renewed league sees the counts while replies come in. */}
-        {league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard successorId={leagueId!} /> : null}
+        {RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard successorId={leagueId!} /> : null}
         <PreDraftCard
           leagueId={leagueId!}
           inviteCode={league.invite_code}
@@ -147,9 +152,9 @@ function HomeBody({
         // two-fixture-axis gap as SeasonCard's numWeeks below).
         numWeeks={phase.numWeeks}
       />
-      {league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
+      {RUN_IT_BACK_ON && league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
       {/* Board #run-it-back frame 1: members are asked on Home too, until they answer. */}
-      {league?.successor_league_id && league.commissioner_id !== myUserId ? (
+      {RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? (
         <HomeRenewalAsk
           successorId={league.successor_league_id}
           isCommissioner={false}

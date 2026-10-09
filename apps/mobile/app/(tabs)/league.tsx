@@ -50,9 +50,12 @@ import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
+import { runItBackEnabled } from '@/lib/game/renewal';
 
 /** The leave flow's kill switch (item 13): members reach League settings (and Leave league) too. */
 const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
+/** Run it back stays off until its backend (PR #94) is live: see runItBackEnabled. */
+const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
 import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
@@ -84,7 +87,7 @@ export default function LeagueScreen() {
   const onEnding = useCallback(() => setEndingFor(activeLeagueId), [activeLeagueId]);
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   // The screen is the rules' choice for the phase (lib/game/leaguePhase.ts).
-  const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: !!activeLeague.previous_league_id }) : 'placeholder';
+  const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: RUN_IT_BACK_ON && !!activeLeague.previous_league_id }) : 'placeholder';
   const drafting = screen === 'draft_room';
   const preDraft = (screen === 'lobby' || screen === 'renewal') && activeLeagueId !== null;
   const inSeason = screen === 'season';
@@ -138,7 +141,7 @@ export default function LeagueScreen() {
         <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
           {st.status === 'ready' ? (
             <View style={styles.stack}>
-              {phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
+              {RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
                 <Card style={styles.strip}>
                   <Text variant="headline">You're the commissioner</Text>
                   <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
@@ -195,7 +198,7 @@ export default function LeagueScreen() {
     );
   }
 
-  if (preDraft && activeLeagueId && activeLeague?.previous_league_id) {
+  if (RUN_IT_BACK_ON && preDraft && activeLeagueId && activeLeague?.previous_league_id) {
     return <RenewedPreDraft leagueId={activeLeagueId} createdAt={activeLeague.created_at ?? new Date().toISOString()} />;
   }
   if (preDraft && activeLeagueId) {
