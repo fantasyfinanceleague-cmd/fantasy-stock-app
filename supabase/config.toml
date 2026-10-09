@@ -209,11 +209,6 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/symbols-search/index.ts"
 
-[functions.finnhub-quote]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/finnhub-quote/index.ts"
-
 # ⚠️ THE ODD ONE OUT — verify_jwt = FALSE. Until 2026-10-08 it had NO in-code
 # guard either, so it was fully anon-callable (see L4 ACTIONED below). It is the only market-data function that is; quote,
 # historical-bars, symbol-name and symbols-search are all ON.

@@ -291,3 +291,20 @@ globalThis.addEventListener('unload', () => {
   for (const [k, v] of SAVED_ENV) v === undefined ? Deno.env.delete(k) : Deno.env.set(k, v);
 });
 
+
+Deno.test('finnhub-quote is gone: no function, no config block, no client invoke', () => {
+  const root = new URL('../../', import.meta.url);
+  let exists = true;
+  try { Deno.statSync(new URL('supabase/functions/finnhub-quote/index.ts', root)); } catch { exists = false; }
+  assertFalse(exists, 'finnhub-quote was re-added; it needs the market-data guard (or stays deleted)');
+  assertFalse(Deno.readTextFileSync(new URL('supabase/config.toml', root)).includes('[functions.finnhub-quote]'));
+  const walk = (dir: URL): string[] => [...Deno.readDirSync(dir)].flatMap((e) =>
+    e.name === 'node_modules' || e.name.startsWith('.') ? []
+      : e.isDirectory ? walk(new URL(`${e.name}/`, dir))
+      : /\.(jsx?|tsx?)$/.test(e.name) ? [new URL(e.name, dir).href] : []);
+  for (const app of ['apps/web/src/', 'apps/mobile/app/', 'apps/mobile/lib/', 'apps/mobile/components/']) {
+    for (const f of walk(new URL(app, root))) {
+      assertFalse(/invoke\(\s*['"]finnhub-quote['"]/.test(Deno.readTextFileSync(new URL(f))), `${f} invokes finnhub-quote`);
+    }
+  }
+});
