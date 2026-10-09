@@ -22,3 +22,9 @@ secret:
       match: 22be091eb1515c4742fb8af5d9628e841d913040dd8879e762889df142789aaa
   ignored-paths:
     - ".gitleaks.toml"
+    # GENERATED (apps/mobile/tests-deno/gen-source-manifest.mjs): only file paths
+    # mapped to import labels, e.g. 'constants/passwordRules.ts': s288. The
+    # password screens' paths trip "Generic Password" on every UI PR (3-4 false
+    # incidents each, triaged 2026-10-06/07). It never holds data, keys or tokens;
+    # gitleaks still scans it on commit. Giorgio's decision, 2026-10-08.
+    - "apps/mobile/tests-deno/sourceManifest.generated.ts"
