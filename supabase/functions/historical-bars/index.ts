@@ -5,12 +5,15 @@
 // tested in paginate.test.ts) — this file is just wiring: parse+validate the
 // request, drive Alpaca with a per-page timeout, shape the response.
 //
-// RISK: see the header comment in paginate.ts — a call here can now make up
-// to MAX_PAGES Alpaca requests (was always exactly 1), on an endpoint with
-// no rate limit, sharing Alpaca's request budget with quote/ticker-quotes/
-// enrich-symbols.
+// A call can make up to MAX_PAGES Alpaca requests on the budget shared with
+// quote/ticker-quotes/enrich-symbols, so (ruling 2026-10-08, nothing
+// scrapable) it requires a real signed-in user -- verify_jwt alone passes the
+// PUBLIC anon JWT -- then a FAIL-CLOSED per-user limit, and the start date is
+// held to MAX_LOOKBACK_DAYS (_shared/market-guard.ts; paginate.ts clampStart).
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { buildBarsUrl, capSymbols, fetchAllBars, type PageResult } from './paginate.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { checkRateLimits, refusalFor, REFUSAL, resolveUser } from '../_shared/market-guard.ts';
+import { buildBarsUrl, capSymbols, clampStart, fetchAllBars, type PageResult } from './paginate.ts';
 
 let requestOrigin = '';
 
@@ -49,7 +52,18 @@ const TOTAL_DEADLINE_MS = 20000;
 // Symbol cap, raised from the old 20 (which silently dropped overflow with
 // no signal to the caller) to 50, now WITH an explicit truncatedSymbols
 // field reporting anything still dropped.
+// Callers send one user's or one matchup's symbols (Home: two teams; the
+// Money tab: one portfolio; the stock sheet: one symbol), well under 50.
 const MAX_SYMBOLS = 50;
+// Start-date floor. The longest real request is the stock sheet's 1Y chart,
+// today - 400 days (apps/mobile/lib/money/useStockChartData.ts LOOKBACK_DAYS);
+// +7 days of slack for client clock and timezone. Older starts are clamped
+// and reported (startClamped, complete:false), never silently served.
+export const MAX_LOOKBACK_DAYS = 407;
+// Per-user calls per minute. Home polls once per 30 s while live; each stock
+// sheet open is one call; the Money tab one more. 60 is far above a player
+// and far below a bulk exporter.
+export const BARS_LIMIT_PER_MIN = 60;
 
 async function alpacaGet(url: string, key: string, secret: string, timeoutMs: number): Promise<PageResult> {
   let res: Response;
@@ -79,6 +93,18 @@ Deno.serve(async (req) => {
 
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders() });
 
+  // A real signed-in user, then the per-user limit, before any Alpaca call.
+  const SUPABASE_URL = env('SUPABASE_URL');
+  const user = await resolveUser(SUPABASE_URL, env('SB_PUBLISHABLE_KEY'), req.headers.get('Authorization'));
+  if (!user) return json(REFUSAL.not_authenticated.body, REFUSAL.not_authenticated.status);
+  const verdict = await checkRateLimits(createClient(SUPABASE_URL, env('SB_SECRET_KEY_INTERNAL')), 'historical-bars', [
+    { subject: `user:${user.id}`, limit: BARS_LIMIT_PER_MIN },
+  ]);
+  if (verdict !== 'ok') {
+    const r = refusalFor(verdict);
+    return json(r.body, r.status);
+  }
+
   const ALPACA_KEY = env('ALPACA_API_KEY');
   const ALPACA_SECRET = env('ALPACA_API_SECRET');
 
@@ -89,7 +115,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const symbols: string[] = body?.symbols || [];
-    const startDate: string = body?.start || ''; // YYYY-MM-DD
+    let startDate: string = body?.start || ''; // YYYY-MM-DD
     const endDate: string = body?.end || ''; // YYYY-MM-DD (optional, defaults to today)
 
     if (!Array.isArray(symbols) || symbols.length === 0) {
@@ -112,6 +138,10 @@ Deno.serve(async (req) => {
     if (endDate && !DATE_RE.test(endDate)) {
       return json({ error: 'invalid_end', message: 'end must be a date in YYYY-MM-DD format' }, 400);
     }
+
+    // Hold the range to MAX_LOOKBACK_DAYS (clamped + reported, not refused).
+    const clampedRange = clampStart(startDate, new Date().toISOString().slice(0, 10), MAX_LOOKBACK_DAYS);
+    startDate = clampedRange.start;
 
     // Limit symbols to prevent abuse. Overflow is reported (truncatedSymbols)
     // instead of silently dropped.
@@ -143,10 +173,11 @@ Deno.serve(async (req) => {
         fn: 'historical-bars', level: 'error', status: result.status, preview: result.preview,
         symbols: limitedSymbols,
       }));
-      return json({ error: 'alpaca_error', status: result.status, preview: result.preview }, 500);
+      // Vendor text stays in the log above; the caller gets the status only.
+      return json({ error: 'alpaca_error', status: result.status }, 500);
     }
 
-    const complete = result.stopReason === 'exhausted' && truncatedSymbols.length === 0;
+    const complete = result.stopReason === 'exhausted' && truncatedSymbols.length === 0 && !clampedRange.clamped;
 
     // Structured log line per call — never logs tokens or keys, only
     // symbols and outcome shape — so a page_cap/deadline hit is visible in
@@ -170,6 +201,7 @@ Deno.serve(async (req) => {
       incompleteSymbols: result.incompleteSymbols,
       pages: result.pages,
       stopReason: result.stopReason,
+      startClamped: clampedRange.clamped,
     });
   } catch (e) {
     console.error('historical-bars error:', e);

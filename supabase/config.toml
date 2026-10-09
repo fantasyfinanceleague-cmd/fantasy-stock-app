@@ -1,4 +1,6 @@
 
+# verify_jwt passes the PUBLIC anon JWT too, so quote also requires a real user
+# in code (getUser) plus a fail-closed per-user limit (_shared/market-guard.ts).
 [functions.quote]
 enabled = true
 verify_jwt = true
@@ -188,8 +190,10 @@ entrypoint = "./functions/record-trade/index.ts"
 # ============================================================================
 
 # Market data, no per-user credentials — uses the shared server-side
-# ALPACA_API_KEY. verify_jwt=true is the ONLY auth (no in-code guard), so the
-# gateway is the entire boundary for these three.
+# ALPACA_API_KEY. verify_jwt=true passes the PUBLIC anon JWT, so it is NOT the
+# boundary: historical-bars (like quote) requires a real user in code plus a
+# fail-closed per-user limit (_shared/market-guard.ts); symbol-name and
+# symbols-search read symbols AS the caller (signed-in only, 20261114000000).
 [functions.historical-bars]
 enabled = true
 verify_jwt = true

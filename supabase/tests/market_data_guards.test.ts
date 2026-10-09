@@ -166,6 +166,58 @@ Deno.test({
   },
 });
 
+Deno.test({
+  name: 'market data guards: historical-bars',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn(t) {
+    const bars = await load('historical-bars');
+    const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+    await t.step('control: the stock sheet\'s real 1Y request (today - 400 d) is served unclamped', () => withFake(async (f) => {
+      const res = await post(bars, { symbols: ['AAPL'], start: daysAgo(400) });
+      assertEquals(res.status, 200);
+      const b = await res.json();
+      assertEquals(b.bars.AAPL.length, 1);
+      assertEquals(b.startClamped, false);
+      assertEquals(b.complete, true);
+      assertEquals(f.limits, [{ bucket: 'historical-bars', subject: `user:${USER_ID}`, limit: 60 }]);
+      assert(f.alpaca[0].includes(`start=${daysAgo(400)}`));
+    }));
+
+    for (const [label, jwt] of [['the bare anon JWT', ANON_JWT], ['no Authorization at all', null]] as const) {
+      await t.step(`${label} → 401, no limiter bump, no Alpaca`, () => withFake(async (f) => {
+        const res = await post(bars, { symbols: ['AAPL'], start: daysAgo(5) }, { jwt });
+        assertEquals(res.status, 401);
+        assertEquals(f.limits, []);
+        assertEquals(f.alpaca, []);
+      }));
+    }
+
+    for (const mode of ['limited', 'error', 'null'] as const) {
+      await t.step(`limiter ${mode} → refused (fail closed), no Alpaca`, () => withFake(async (f) => {
+        const res = await post(bars, { symbols: ['AAPL'], start: daysAgo(5) });
+        assertEquals(res.status, mode === 'limited' ? 429 : 503);
+        assertEquals(f.alpaca, []);
+      }, (f) => { f.limiter = mode; }));
+    }
+
+    await t.step('a bulk-history start is clamped to 407 days and REPORTED (complete:false)', () => withFake(async (f) => {
+      const b = await (await post(bars, { symbols: ['AAPL'], start: '1990-01-01' })).json();
+      assertEquals(b.startClamped, true);
+      assertEquals(b.complete, false);
+      assertFalse(f.alpaca.some((u) => u.includes('start=1990')), 'the unclamped start reached Alpaca');
+      assert(f.alpaca[0].includes(`start=${daysAgo(407)}`));
+    }));
+
+    await t.step('a vendor failure returns the status only, never vendor text', () => withFake(async () => {
+      const res = await post(bars, { symbols: ['AAPL'], start: daysAgo(5) });
+      assertEquals(res.status, 500);
+      assertFalse((await res.text()).includes(VENDOR_TEXT));
+    }, (f) => { f.alpacaFails = true; }));
+  },
+});
+
 // Put the developer's env back after every test in this file has run.
 globalThis.addEventListener('unload', () => {
   for (const [k, v] of SAVED_ENV) v === undefined ? Deno.env.delete(k) : Deno.env.set(k, v);
