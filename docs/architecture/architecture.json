@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3cbee6a2226cdb600d908914df9691ed0b22a629",
-    "commitShort": "3cbee6a2",
+    "commit": "69b63e01261dabd64fbe4985ec2a5571a559aa7b",
+    "commitShort": "69b63e01",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "security/lockdown-symbols",
+    "branch": "security/lockdown-symbols-stage1",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-09T00:43:41Z",
-    "sourceHash": "sha256:674419bec5695de9d0820a35ccba7580fa5c2d92ffb1c684402bb4069db28aaa",
+    "timestamp": "2026-10-09T00:55:48Z",
+    "sourceHash": "sha256:bde0a29a8bcafe537437abcb49ae31a43c074992eefbe79af0b99ea6efad12f4",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 29,
+    "ageHours": 29.2,
     "ageDays": 1.2,
     "staleAfterDays": 14,
     "stale": false,
@@ -1046,7 +1046,7 @@
           "SB_PUBLISHABLE_KEY",
           "SUPABASE_URL"
         ],
-        "lines": 169
+        "lines": 180
       },
       "db": null,
       "declared": null,
@@ -9757,11 +9757,11 @@
         "symbol,name,is_draftable"
       ],
       "callSites": [
-        "supabase/functions/symbols-search/index.ts:104",
         "supabase/functions/symbols-search/index.ts:113",
-        "supabase/functions/symbols-search/index.ts:124",
-        "supabase/functions/symbols-search/index.ts:135",
-        "supabase/functions/symbols-search/index.ts:146"
+        "supabase/functions/symbols-search/index.ts:122",
+        "supabase/functions/symbols-search/index.ts:133",
+        "supabase/functions/symbols-search/index.ts:144",
+        "supabase/functions/symbols-search/index.ts:155"
       ]
     },
     {
@@ -18018,11 +18018,11 @@
       "supabase/functions/snapshot-week-start/index.ts:626 -> matchups.update",
       "supabase/functions/snapshot-week-start/index.ts:765 -> week_snapshots.upsert",
       "supabase/functions/symbol-name/index.ts:41 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:104 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:113 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:124 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:135 -> symbols.select",
-      "supabase/functions/symbols-search/index.ts:146 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:122 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:133 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:144 -> symbols.select",
+      "supabase/functions/symbols-search/index.ts:155 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:316 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
