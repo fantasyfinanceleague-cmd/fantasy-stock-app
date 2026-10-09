@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside DigitColumn's render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef } from 'react';
-import { Text as RNText } from 'react-native';
+import { StyleSheet, Text as RNText } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, WithSpringConfig } from 'react-native-reanimated';
 import type { withTiming as withTimingType, EasingFunctionFactory } from 'react-native-reanimated';
 
@@ -18,11 +19,12 @@ import { useLeadChangeSpring } from '@/components/sp/game/motion';
 // differ from, by construction — see `prevTextRef` below), so nothing rolls
 // on mount, matching "never on first paint".
 //
-// `DigitColumn` is declared BEFORE `ScoreDigits` (which renders it) so this
-// file needs no eslint-disable: unlike the RN styles-at-bottom idiom, this
-// isn't a value only referenced inside a later render — it's an ordinary
-// forward reference, so it's fixed by reordering, not suppressing (CLAUDE.md
-// "ESLint (mobile)": real TDZ-shaped issues get fixed, not silenced).
+// `DigitColumn` is declared BEFORE `ScoreDigits` (which renders it) — an
+// ordinary forward reference, not the RN styles-at-bottom idiom. The
+// file-top eslint-disable below covers a real instance of that idiom
+// instead (2026-10-07): `styles` (DigitColumn's own `flexShrink: 1`, a
+// ThisWeekCard-overlap follow-up) is declared at the bottom and used
+// inside DigitColumn, which runs after module init, so there's no TDZ.
 
 interface DigitColumnProps {
   entry: DigitDiffEntry;
@@ -77,16 +79,26 @@ function DigitColumn({
   }));
 
   return (
-    <Animated.View style={animatedStyle}>
+    // `flexShrink: 1` here is load-bearing, not just on the parent row
+    // (2026-10-07, a ThisWeekCard follow-up): the row's OWN flexShrink
+    // bounds the ROW's box, but without each COLUMN also being shrinkable,
+    // Yoga gives every column its natural/intrinsic width regardless --
+    // the row's box ends up correctly sized while its children overflow
+    // past it unconstrained, which is what was actually happening (two
+    // ScoreDigits rows overlapping at $1M+ even after their containers
+    // were fixed to a real 50/50 split). With this, a squeeze on the row
+    // actually squeezes each column, so each Text receives a real,
+    // bounded width and adjustsFontSizeToFit below has something to
+    // shrink against.
+    <Animated.View style={[styles.column, animatedStyle]}>
       <RNText
         style={{ fontFamily, fontSize, lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         // Safety net (Design Lead, 2026-09-29): a score must never leave its
         // card, even past the maxFontSizeMultiplier cap above or at an
-        // unusually wide value. The parent row's container applies
-        // flexShrink, which gives each column's Text a real width to shrink
-        // against; adjustsFontSizeToFit then scales it down (never below
-        // 0.6x) rather than letting it overflow.
+        // unusually wide value. adjustsFontSizeToFit scales it down (never
+        // below 0.6x) rather than letting it overflow -- once the column
+        // above actually has a bounded width to measure against.
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.6}
@@ -142,3 +154,7 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  column: { flexShrink: 1 },
+});

@@ -90,7 +90,8 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
                 {record(r)}
               </Text>
               <View style={styles.gainCol}>
-                <Money value={r.pointsFor} size="callout" colorBySign />
+                {/* U-50: season gains carry their sign, like the hero and League's table. */}
+                <Money value={r.pointsFor} size="callout" colorBySign sign="always" />
               </View>
             </Animated.View>
           );

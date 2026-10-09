@@ -565,7 +565,13 @@ export default function Leagues() {
                         </>
                       ) : (
                         <button
-                          onClick={() => leaveLeague(lg.id)}
+                          onClick={async () => {
+                            try {
+                              await leaveLeague(lg.id);
+                            } catch (err) {
+                              toast.error(err.message || 'Could not leave the league');
+                            }
+                          }}
                           style={{
                             padding: '10px 18px',
                             background: 'rgba(239, 68, 68, 0.15)',

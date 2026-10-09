@@ -22,6 +22,7 @@
  */
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
+import { assertReplicaDefaultMatchesProd } from './replica_defaults.ts';
 import { buildPlayoffBracket } from '../functions/process-week-results/season-transition.ts';
 
 const ROOT = new URL('../../', import.meta.url);
@@ -42,7 +43,9 @@ create function auth.uid() returns uuid language sql stable as
 alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
 grant usage on schema public to anon, authenticated, service_role;
 create table leagues (
-  id uuid primary key default gen_random_uuid(), name text, league_type text not null default 'matchup',
+  -- league_type default = PROD's ('duration', 20251230000000); fixtures pass it
+  -- explicitly. replica_defaults.ts guards against drift.
+  id uuid primary key default gen_random_uuid(), name text, league_type text not null default 'duration',
   num_weeks int, current_week int default 1, season_status text default 'active',
   draft_status text default 'completed', playoff_teams int default 4, league_end_date timestamptz,
   constraint valid_playoff_teams check (playoff_teams is null or playoff_teams in (2, 4, 8)));
@@ -73,7 +76,7 @@ Deno.test({
 
     const MEM = ['c', 'a', 'b', 'd'];
     async function league(extra: Record<string, unknown> = {}, members = MEM) {
-      const row = { name: 't', num_weeks: 3, current_week: 3, ...extra };
+      const row = { name: 't', league_type: 'matchup', num_weeks: 3, current_week: 3, ...extra };
       const cols = Object.keys(row);
       const [l] = await q(`insert into leagues (${cols.join(',')}) values (${cols.map((_, i) => '$' + (i + 1)).join(',')}) returning id`,
         Object.values(row));
@@ -93,6 +96,10 @@ Deno.test({
       return { status: l.season_status, week: l.current_week, playoffRows: n };
     };
     const UNTOUCHED = { status: 'active', week: 3, playoffRows: 0 };
+
+    await t.step('replica guard: leagues.league_type default equals the latest migration default (prod)', async () => {
+      await assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type');
+    });
 
     await t.step('grants: DEFINER, service_role only, search_path pinned', async () => {
       const [r] = await q(`select proacl::text a, prosecdef d, proconfig::text c from pg_proc where proname='start_league_playoffs'`);
@@ -169,7 +176,7 @@ Deno.test({
       await assertRejects(() => q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, is_playoff, playoff_round)
         values ($1, 9, 'zz1', 'zz2', true, 'semi')`, [id]), Error, 'matchups_playoff_address');
       // Other leagues are unaffected.
-      const [fresh] = await q(`insert into leagues (name, num_weeks, current_week) values ('x', 3, 3) returning id`);
+      const [fresh] = await q(`insert into leagues (name, league_type, num_weeks, current_week) values ('x', 'matchup', 3, 3) returning id`);
       await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_seed, team2_seed,
         is_playoff, playoff_round, playoff_round_number, bracket_position)
         values ($1, 4, 'zz1', 'zz2', 1, 2, true, 'semi', 1, 0)`, [fresh.id]);

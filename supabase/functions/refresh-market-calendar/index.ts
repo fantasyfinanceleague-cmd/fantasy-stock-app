@@ -29,7 +29,9 @@
 // trusted via a bare await.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { planCalendarUpdate } from './plan.ts';
+import { runCalendarRefresh, type FetchCalendarResult } from './run.ts';
+import { writeJobStatus, type JobStatusRwClient } from '../_shared/job-status-io.ts';
+import { runJob, type JobRun } from '../_shared/run-job.ts';
 
 function env(k: string): string {
   return Deno.env.get(k) ?? '';
@@ -83,6 +85,11 @@ function isoDate(d: Date): string {
 Deno.serve(async (req) => {
   if (!isAuthorized(req)) return json({ error: 'Unauthorized' }, 401);
 
+  const JOB_NAME = 'refresh-market-calendar';
+
+  // Pre-client config guards: no row is written for these (there is no client to
+  // write with, and the 500 itself is the signal). The unauthenticated 401 above
+  // never writes a row either, so a caller cannot forge or spam status rows.
   const ALPACA_KEY = env('ALPACA_API_KEY');
   const ALPACA_SECRET = env('ALPACA_API_SECRET');
   if (!ALPACA_KEY || !ALPACA_SECRET) {
@@ -113,50 +120,54 @@ Deno.serve(async (req) => {
   const fromIso = isoDate(from);
   const throughIso = isoDate(through);
 
-  let raw: unknown;
-  try {
-    const url = `${ALPACA_TRADING_BASE}/calendar?start=${fromIso}&end=${throughIso}`;
-    const res = await fetch(url, {
-      headers: {
-        'APCA-API-KEY-ID': ALPACA_KEY,
-        'APCA-API-SECRET-KEY': ALPACA_SECRET,
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      // A non-2xx is a FETCH failure, not "the calendar has no sessions" —
-      // this must never fall through to planCalendarUpdate as an empty
-      // array (CLAUDE.md "success signals" #1: a 401 must not read as
-      // "market closed").
-      const preview = await res.text().catch(() => '');
-      console.error(`Alpaca calendar fetch failed: ${res.status} ${preview.slice(0, 300)}`);
-      return json({ ok: false, reason: 'alpaca_fetch_failed', status: res.status }, 502);
-    }
-    raw = await res.json();
-  } catch (e) {
-    console.error('Alpaca calendar fetch threw:', e instanceof Error ? e.message : e);
-    return json({ ok: false, reason: 'alpaca_fetch_error' }, 502);
-  }
-
-  const plan = planCalendarUpdate(raw, fromIso, throughIso);
-  if (!plan.ok) {
-    console.error(`Calendar plan rejected: ${plan.reason}`);
-    return json({ ok: false, reason: plan.reason }, 502);
-  }
-
-  // supabase-js resolves .rpc() to { data, error } and does NOT throw on a
-  // Postgres error (CLAUDE.md "success signals" #5) — destructure and check
-  // it explicitly rather than trusting a bare await.
-  const { error } = await supabase.rpc('apply_market_calendar', {
-    p_from: fromIso,
-    p_through: throughIso,
-    p_sessions: plan.sessions,
+  // Exactly one 'running' and one terminal cron_job_status write, by construction
+  // (../_shared/run-job.ts). The decisions live in run.ts with the I/O injected.
+  return await runJob<Response>({
+    attempt: 1,
+    // Cast: checking the full supabase-js client against the writer's narrow slice
+    // trips TS2589 (excessively deep); the writer's tests pin the slice.
+    write: async (status, attempt, message, work) => {
+      await writeJobStatus(supabase as unknown as JobStatusRwClient, JOB_NAME, status, attempt, { message, work });
+    },
+    onThrow: async (e): Promise<JobRun<Response>> => {
+      console.error('Unhandled error:', e);
+      return {
+        outcome: { status: 'failed', attempt: 1, message: `unhandled: ${String(e)}` },
+        response: json({ ok: false, reason: 'unhandled' }, 500),
+      };
+    },
+    body: async (): Promise<JobRun<Response>> => {
+      const run = await runCalendarRefresh({
+        fetchCalendar: async (f, t): Promise<FetchCalendarResult> => {
+          try {
+            const url = `${ALPACA_TRADING_BASE}/calendar?start=${f}&end=${t}`;
+            const res = await fetch(url, {
+              headers: {
+                'APCA-API-KEY-ID': ALPACA_KEY,
+                'APCA-API-SECRET-KEY': ALPACA_SECRET,
+                'Accept': 'application/json',
+              },
+              signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+            });
+            if (!res.ok) {
+              const preview = await res.text().catch(() => '');
+              console.error(`Alpaca calendar fetch failed: ${res.status} ${preview.slice(0, 300)}`);
+              return { ok: false, reason: 'alpaca_fetch_failed', status: res.status };
+            }
+            return { ok: true, raw: await res.json() };
+          } catch (e) {
+            console.error('Alpaca calendar fetch threw:', e instanceof Error ? e.message : e);
+            return { ok: false, reason: 'alpaca_fetch_error' };
+          }
+        },
+        applyCalendar: async (f, t, sessions) => {
+          // supabase-js resolves .rpc() to { data, error } and does NOT throw on a
+          // Postgres error (CLAUDE.md "success signals" #5): run.ts checks `error`.
+          const { error } = await supabase.rpc('apply_market_calendar', { p_from: f, p_through: t, p_sessions: sessions });
+          return { error };
+        },
+      }, fromIso, throughIso);
+      return { outcome: run.outcome, response: json(run.response.body, run.response.status) };
+    },
   });
-  if (error) {
-    console.error('apply_market_calendar failed:', error);
-    return json({ ok: false, reason: 'apply_failed', message: error.message }, 500);
-  }
-
-  return json({ ok: true, from: fromIso, through: throughIso, sessions: plan.sessions.length });
 });

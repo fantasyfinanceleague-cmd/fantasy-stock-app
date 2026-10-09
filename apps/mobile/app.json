@@ -44,6 +44,13 @@
           "icon": "./assets/images/icon.png",
           "color": "#3b82f6"
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "experiments": {

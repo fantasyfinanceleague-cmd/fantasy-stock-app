@@ -9,6 +9,22 @@ cleanly proves nothing about its function bodies (`CLAUDE.md`).
 They are **deliberately outside `supabase/functions/`**. That keeps
 `deno test supabase/functions/` offline and hermetic, with no npm fetch and no WASM.
 
+## replica_defaults.ts (shared guard, not a test)
+
+Most suites hand-declare a minimal `leagues` table. If a replica's column default differs from prod's, a fixture that omits the column tests a different branch from the one prod runs.
+
+This happened on 2026-10-06. The leave-league replica defaulted `league_type` to `'matchup'`, but prod's default is `'duration'`. So the effect test's S4 passed in PGlite and failed in prod.
+
+`assertReplicaDefaultMatchesProd(q, 'leagues', 'league_type')` compares the replica's `information_schema` default with the default the latest migration leaves. Four suites call it as a step:
+- `leave_league`
+- `start_league_playoffs`
+- `flexible_playoffs`
+- `season_result`
+
+Each of them declares `default 'duration'`, like prod, and passes `league_type` explicitly wherever a matchup path is under test.
+
+**When a new suite declares `league_type`, call the guard too.**
+
 ## finalize_league_draft.pglite.test.ts
 
 What it does:
@@ -52,6 +68,34 @@ It covers:
   recursive subgroups), byes, unscored and playoff games ignored
 - the pre-season join-order key, the playoff-cutoff case, ranks exactly 1..N
 - RLS (member / non-member / anon) and `complete_league_season`'s snapshot
+
+## league_standings_through_week.pglite.test.ts
+
+What it does:
+- Loads `20261011000000` (the 1-arg ranking) and then `20261112000000` (the
+  through-week overload) **verbatim**, on the real `is_member()` helper and the
+  league-wide SELECT policies from production.
+- Derives `league_standings` from `matchups` the way process-week-results
+  writes it (a bye adds points only; playoff rows add nothing), so the two
+  rankings must agree by construction.
+
+It covers:
+- through the latest scored week equals the 1-arg ranking; playoff week excluded
+- a bye adds points only; exact rows and `points_against` at week 2
+- the week-1 order (a tie decided by join order)
+- ranks 1..N; the 1-arg ACL unchanged by the migration
+- grants: authenticated and service_role present, anon and PUBLIC absent, on
+  both overloads and the private core
+- call-time: a member gets the ranking, a non-member gets zero rows (RLS), anon
+  is refused, a NULL or negative week raises
+
+Head-to-head: covered for a win-% tie that head-to-head separates (join order
+and season gain both point the other way), and for an unbalanced set that
+falls through to season gain. Both assert through-latest equals the 1-arg.
+
+Known gap (accepted for 1.2.0): the roster comes from `league_standings`, as in
+the 1-arg. A manager whose standings row failed to write is dropped by both
+overloads. The follow-up fix must change both together.
 
 ## start_league_playoffs.pglite.test.ts
 
@@ -415,6 +459,168 @@ drops the 12-arg overload, adds `p_slot_id`) and drives it through the real
 Mutation-checked: reverting the validator's occupancy to drafts-only fails 7 hermetic
 tests including the repro (`draft-validation.test.ts`, "tier trades: ...").
 
+## freeze_league_rules.pglite.test.ts
+
+What it does:
+- Loads, **verbatim** and in prod order:
+  - the `drafts` RLS (`20251205110000`, including the live "Commissioners can delete
+    picks" policy) and its INSERT-policy drop (`20260811000003`);
+  - the B1 helpers and the `leagues` / `league_members` RLS (`20260712000000`/`01`/`02`,
+    including [I5] delete-self);
+  - `league_draft_slots` with its interim commissioner policies (`20260810000004`);
+  - the F1 member column guard (`20260925000000`) and the pick clock (`20261010000000`);
+  - the `playoff_teams` freeze (`20261012000002`) and draft order modes
+    (`20261013000000`);
+  - then `20261104000000_freeze_league_rules_after_draft_start`.
+
+  So every prod trigger on `leagues` and `league_members` fires here, in prod's order.
+- Builds `leagues` by **replaying every `CREATE TABLE` / `ALTER TABLE … ADD|DROP|RENAME
+  COLUMN` on it** from `supabase/migrations/` (FK `REFERENCES` stripped). The triggers
+  therefore run against the real column set, types and inline CHECKs.
+- Runs writes as `authenticated` with a JWT sub, so the real interim policies admit the
+  commissioner and the new triggers are what refuse them. The service role is
+  `service_role` (bypassrls) with no sub.
+
+It covers:
+- **replay completeness**: every migration statement that mentions `table leagues` is
+  either replayed or a known non-column form (constraints, RLS, column defaults). An
+  `ADD x` without `COLUMN`, a quoted name, or DDL inside a `DO` block fails the test, so
+  the replay can't silently miss a column.
+- **classification**: every `leagues` column is classified as `frozen`, `stamp_once`,
+  `guarded` (with the named trigger) or deliberately `editable`. **A new column fails
+  this test until it is classified**, so a future rule column cannot silently stay
+  commissioner-writable. The editable set is exercised post-draft, and `id` is pinned.
+- the season-state columns (`season_status`, `current_week`, `current_season_id`,
+  `commissioner_id`) and the retired `budget_mode` frozen like the rules; `league_start_date` / `league_end_date`
+  stamp-once, exactly F1's carve-out: NULL → value only in the completing UPDATE
+  (`in_progress` → `completed`). The member and commissioner completion shapes pass. A
+  rewrite, a clear, or a hindsight stamp at any other time is refused.
+- the "guarded elsewhere" columns are proven post-draft: `draft_order_mode` and
+  `pick_seconds` are refused, and `pick_clock_enabled` / `draft_started_at` are reverted
+- no probing: a non-commissioner writing a slot into someone else's league gets the RLS
+  error, not `league_slots_locked`. The DEFINER trigger only reads and locks the caller's
+  own leagues.
+- leaving the league ([I5], interim guard): a member and the commissioner refused with
+  `league_membership_locked` in `in_progress` and `completed`; pre-draft leave unchanged;
+  the service role may remove a member post-draft, but mid-draft it still meets the
+  older all-roles `draft_in_progress`; deleting a started league cascades its members,
+  slots and draft order; two leaves in one transaction complete (single connection only).
+  The lock MODES (`FOR NO KEY UPDATE` for leaves, `FOR SHARE` scoped to the caller's
+  leagues for slots) are pinned statically from `pg_proc.prosrc`, because one connection
+  can't tell them apart.
+- draft picks: the commissioner's pick DELETE is refused in `in_progress` and `completed`
+  (`draft_picks_locked`). A pre-draft delete is allowed. A member's delete and any user
+  UPDATE match 0 rows (there are no such policies). The service role may delete, and
+  deleting a started league cascades its picks.
+- pre-draft: the commissioner inserts, updates and deletes slots and edits every rule
+- `in_progress` and `completed`: every slot write (and the delete-then-insert client
+  save) refused with `league_slots_locked`; each of the 14 frozen columns refused on
+  its own (and set to NULL) with `league_rules_locked` naming the column; nothing written
+- the same-value patch shapes of mobile `league-settings.tsx` and web `Leagues.jsx`
+  (with an unscaled `budget_amount`) still saving after the draft
+- one UPDATE that changes a rule and starts the draft (judged on OLD, allowed)
+- the `draft_status` transition table: the three forward moves, every backward move
+  refused for the commissioner (`league_draft_status_locked`) but allowed for the
+  service role, and the rewind bypass closed end to end
+- re-parenting a slot into or out of a started league; the commissioner deleting a
+  completed league (the slot cascade); a member still refused by RLS
+- the lock: a slot write row-locks its league (`xmax`), and both same-transaction
+  orders complete. Two-transaction races need two connections, so that argument is in
+  the migration header.
+- fail closed: an unknown or NULL `draft_status` (with the CHECK dropped) freezes
+  everything and allows no move
+- `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
+- the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
+  **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
+  all 28 lines PASS, including F2 (`drafts.league_id` cascades; prints REVIEW in prod if
+  the prod-only FK differs), F1 (the only FK touching `league_members` is its
+  `league_id` cascade) and C1 (every live `leagues` column classified; its list must
+  equal the test's `CLASSIFICATION`), and nothing persists
+
+**PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
+test was written), `renew_league` and `start_renewed_season` write slots and rules with
+the commissioner's JWT, so this freeze applies to them. Both touch only `not_started`
+leagues, so they pass as written. When #94 lands, add a step here that runs them against
+this trigger. #94 also adds `leagues` columns (`previous_league_id`, `lineage_id`,
+`season_number`), so on rebase this test FAILS until they are classified. They are
+guarded by #94's own `enforce_league_lineage_columns` trigger.
+
+Mutation-checked: 25 mutations, 23 of which fail at least one step. They cover:
+- each guard branch;
+- the leave guard disabled, its cascade allowance removed, its service-role exemption
+  removed, and its lock swapped to `FOR SHARE`;
+- the drafts guard disabled, its cascade allowance removed, and its scope removed;
+- the slot trigger's commissioner scope removed;
+- a state column dropped, and `budget_mode` dropped;
+- stamp-once refusing NULL → value, and stamp-once widened back to any time;
+- three probe migrations: an unclassified column, an `ADD` without `COLUMN`, and an
+  `ADD COLUMN` inside a `DO` block.
+
+The two survivors are equivalent, not gaps. They remove the slot and drafts triggers'
+explicit `auth.uid() IS NULL` exemption, which changes nothing: their commissioner scope
+(`commissioner_id = auth.uid()::text`) already matches no league when the uid is NULL.
+
+#94 compatibility was checked once, in a scratch copy of this suite, against
+`20261105000004_run_it_back_gate.sql` @ `f450e78`, all passing:
+- the renewal self-leave while `not_started` is allowed and its sync sets the reply to `out`;
+- the gate's `num_participants` rewrite on the start UPDATE is allowed (judged on OLD);
+- after the start, the freeze and the leave guard hold.
+
+Make that a committed step when #94 lands.
+
+## leave_league.pglite.test.ts
+
+What it does:
+- Loads the leave-league migrations `20261107000000`–`06` **verbatim**. Underneath them, also verbatim, are the real objects they meet in prod:
+  - PR #9's leagues column guard;
+  - the pick clock;
+  - flexible playoffs;
+  - the draft-order chain `20261013000000`, whose member trigger closes the order gap on a leave;
+  - the display-name and Home RPCs, with the ranking they read;
+  - `join_league_by_code`, for the rejoin case.
+- Simulates Supabase's default API-role grants, so the `proacl` assertions prove the explicit revokes work.
+- Runs `docs/security/leave-league-effect-test.sql`, the prod effect check, and requires all 25 lines to PASS and the fixture to roll back.
+
+It covers:
+- the leave window:
+  - random mode before the reveal;
+  - an open manual order;
+  - inside the hour, by time;
+  - a finalized order with `draft_date` moved later, by state;
+  - mid-draft and mid-season;
+  - a TBD date;
+- refusals writing nothing;
+- the reconfirm row across two leaves and a rejoin;
+- `confirm_league_roster` with P above, at and below the member count;
+- the commissioner hand-over and the successor refusals;
+- `sole_manager`;
+- hide/unhide plus `get_home_summary` skipping hidden leagues (ACL byte-identical);
+- `[I5]` gone (a client DELETE removes nothing).
+- the board's reconfirmation:
+  - "Invite someone new" is cleared by a HUMAN join through `join_league_by_code`, never by a bot, never on a pending row, and never while P > members;
+  - a new departure re-opens the choice;
+  - a repeat leave sends no second notice;
+- the draft order WAITING past T−1h while a reconfirmation is owed, and set the moment it clears (on confirm, or on an invite cleared by a join);
+- the start gate binding the commissioner's raw flip and the service role;
+- `draft_order_notify_due` ignoring stranded `member_left` rows.
+- Q4 = A (`20261110000000`–`02`):
+  - the commissioner is always refused `transfer_first`;
+  - `transfer_commissioner`'s who/whom/when refusals (the locked middle; both open windows);
+  - the post-season transfer on the service path with #123 loaded;
+  - a user session can never write `commissioner_id` directly;
+  - transfer then leave;
+  - a transfer while a confirmation is owed;
+  - the renewal transfer: the old commissioner leaves as an invitee.
+
+The second `Deno.test` boots a fresh database with `fixtures/run_it_back_398da84_membership.sql`, a verbatim copy of PR #94's renewal response table and its `trg_league_members_renewal_sync_delete`. It proves three things:
+- an invitee's leave is an `out` reply with no reconfirm row;
+- a newcomer's leave writes one;
+- the renewal commissioner is refused.
+
+**When #94 merges, delete the fixture and load #94's migrations instead.**
+
+Run: `deno test --allow-read --allow-env supabase/tests/leave_league.pglite.test.ts`
+
 ## migration_cli_split.test.ts
 
 What it does:
@@ -478,3 +684,165 @@ NOT covered here (their own suites or still open):
 - the PR #9 member column guard (not loaded), so the trigger-order claim is untested;
 - `join_league_by_code`'s `league_full` cap for newcomers (not loaded);
 - races are sequential: the FOR UPDATE locks are structural, not exercised in parallel.
+## autopick_cron_wiring.test.ts, autopick_cron_predicate.pglite.test.ts
+
+The auto-pick cron (`20261106000000`) cannot run in PGlite (`pg_cron`, `pg_net` and `vault` do not exist
+there), so two tests cover what a header comment cannot enforce.
+- `autopick_cron_wiring.test.ts` (hermetic, `--allow-read` only): schedule and cadence, vault key with no key
+  literal, explicit `timeout_milliseconds := 180000`, the stall throttle window equals `STALL_COOLDOWN_MS`
+  and does not throttle `vendor_outage`, the purge job is plain SQL, the stamps are in order, nothing is left
+  in `deferred/`.
+- `autopick_cron_predicate.pglite.test.ts`: slices the cron's actual `where exists (...)` out of the migration and
+  executes it against a stubbed `overdue_draft_turns()` and a `draft_stalls` replica (11 cases).
+
+## refuse_new_skip.pglite.test.ts
+
+Loads `20261106000002` verbatim onto a `drafts` table that already holds legacy SKIP rows: SKIP/skip INSERT and an
+UPDATE-to-SKIP are refused with `23514`, normal picks insert, legacy rows stay readable and editable on other
+columns, and the function is not executable by anon/authenticated.
+
+## autopick_runbook_sql.pglite.test.ts
+
+Runs `docs/security/autopick-live-test-proof.sql` and `docs/security/refuse-new-skip-effect-test.sql` **verbatim**
+(the SQL-editor scripts of `docs/migrations/AUTOPICK_CRON_LIVE.md`): PASS on a good fixture, then one mutation per
+check must flip exactly its own line to FAIL, and each script must leave nothing behind.
+## cron_timeouts.pglite.test.ts
+
+What it does:
+- Stubs `cron.job` / `cron.schedule` / `cron.unschedule` (pg_cron semantics: upsert by
+  name) and seeds the live rows from `docs/architecture/db-snapshot.json` plus the two
+  heal-cron migrations that postdate it.
+- Runs `20261108000000_cron_explicit_timeouts.sql` over them and asserts every job keeps
+  its schedule and its command (modulo the timeout), gains `timeout_milliseconds :=
+  180000`, and is not duplicated; the key still comes from the vault.
+- Proves the migration is ONE statement (run through `db.query`, which refuses more
+  than one command, as the CLI's per-statement sends do), that a failure mid-sequence
+  rolls every job back, and that its pre-flight aborts, changing nothing, when a job is
+  missing, on another schedule, or paused.
+- Loads the prior `schedule_snapshot_retry` verbatim, then `20261108000001`, and shows the
+  generated one-shot jobs gain the timeout while `search_path`, `SECURITY DEFINER` and
+  the 'retrying' write are unchanged.
+- GUARD: replays every `supabase/migrations/*.sql` (not `deferred/`) and fails any cron
+  still scheduled without a timeout above 150 s. Jobs unscheduled and never rescheduled
+  are ignored; the guard is itself tested on synthetic input.
+
+Re-run it against the next `db-snapshot.json` re-capture: a live command that differs
+from the migration's (timeout aside) fails the "same command" test.
+
+## cron_status_handlers.test.ts
+
+Drives the REAL `index.ts` of process-week-results, snapshot-week-start/-end and
+refresh-market-calendar (Deno.serve captured, `fetch` replaced by an in-memory PostgREST)
+through each exit, and asserts the `cron_job_status` writes: one `running`, one terminal,
+the same-day no-op rule (a heal never erases earlier work or a failure), and that a
+rejected status write cannot change the HTTP response. Hermetic (no network, no DB):
+`deno test --allow-read --allow-env supabase/tests/cron_status_handlers.test.ts`.
+## draft_auto_start.pglite.test.ts
+
+What it does: loads, verbatim and in prod order, every migration whose triggers
+fire on a `leagues` / `league_members` / `league_notifications` write (the freeze
+test's chain, plus `draft_stalls`, participant names, and #126's reconfirm table +
+real start gate), then `20261111000000` (auto-start) and `20261111000001`
+(`draft_status` server-only + the draft-time guard). The chain is loaded in two
+halves around legacy fixtures, so the one-off backfills run on real rows.
+`leagues` is replayed from the migrations' DDL, so the compare-and-swap is judged
+against real column types; the expectation is built by the real
+`buildStartExpect`. Every case sets `draft_date` relative to `now()`, so the
+gate / room / reminder windows run for real.
+
+It covers (Giorgio's decisions, 2026-10-06):
+- the one-off backfills: past `not_started` leagues postponed silently (`legacy`,
+  no notices, date untouched); #67's undelivered `draft_order_set` pushes settled
+- grants (service_role only) / security mode / `search_path` for every function;
+  both state tables RLS-on and service_role SELECT-only; the lock clauses
+  (start + postpone `FOR UPDATE`, the watch `FOR SHARE`); the postponement row
+  written before the date is cleared
+- the policy pin: SQL `draft_start_policy()` = TS `SQL_POLICY`
+- the kind CHECK union (+ #67, #94, #126); `draft_order_set` is in-app only
+- the watch: no verdict, a join or settings edit, stale inside 24 h only; the
+  commissioner warned ONCE per blocked episode, the T-2h reminder once (a first
+  warning inside T-2h counts as it); unknown keeps the verdict; CAS + staleness
+- the gate: clear clears it; unknown only at the room time; blocked postpones
+  (date cleared, watch gone, every human told, bots skipped, #67 not finalized)
+- rooms: `open_due_draft_rooms` finalizes + one notice per human, idempotent,
+  late joiners, never without a cleared gate
+- the start: postponed leagues never due; the room must have opened; the floor;
+  CAS; started (order locked, clock anchored, `draft_started` per human);
+  idempotent; #126's REAL gate and a #94 stand-in are `blocked`, others re-raise
+- `draft_notice_context`; the draft-time guard (quarter hours, 55 min, locked once
+  the room opens, postponed and legacy-postponed allowed, the reschedule trigger
+  clears the postponement, INSERT judged, service role exempt, started inert)
+- server-only `draft_status` (UPDATE + INSERT); clients denied everything
+- both cron guards, sliced from the LATEST schedules and executed
+- `docs/security/draft-auto-start-effect-test.sql`, verbatim, rolled back
+
+Negative controls (run 2026-10-06, each made the named steps fail): CAS off; the
+gate lead changed; no room check at start; warn on every blocked verdict; a
+postponement that keeps the date; `draft_order_set` pushes not skipped; no
+room-open lock on the time; no quarter-hour rule; rooms ignoring the gate; no
+legacy backfill; the sweep without the watch guard; server-only off; the
+reschedule trigger keeping the postponement; the gate catching every 22023;
+postponement notices to bots. Round 2 (after both reviews): finalize ignoring the
+gate; finalize ignoring a postponement; no gate hand-back; postpone without CAS;
+no at-risk flap guard; no postponed-push cooldown; the cron guard not isolated;
+the legacy date kept; the watch without urgency ordering; time-set without the
+debounce re-stamp, skipping the person who made the change, telling bots; the reminder sharing the
+at-risk kind.
+
+Run: `deno test --allow-read --allow-env supabase/tests/draft_auto_start.pglite.test.ts`.
+
+## draft_auto_start_cron_wiring.test.ts
+
+A structural guard (files only). The auto-pick cron (`20261106000000`) and the
+auto-start reschedule (`20261111000002`) both re-schedule `draft_autopick_sweep`,
+and the last one applied wins. So the LATEST migration scheduling the job must
+guard on `overdue_draft_turns()`, `due_draft_starts()` and `draft_watch_due()`,
+and both files must be present with the auto-start one sorting after the
+auto-pick one. It also pins the job contract (10 s, vault key, 180000 ms, URL, no
+key literal, no other job), and that `draft_order_notify` is promoted: scheduled
+once (`20261111000003`), guarded by `draft_order_notify_due() OR
+draft_room_notices_due()`, 180000 ms, gone from `deferred/`.
+
+Run: `deno test --allow-read supabase/tests/draft_auto_start_cron_wiring.test.ts`.
+
+## draft_control_status_wiring.test.ts
+
+A structural guard (files only). draft-control `status` returns `server_now`
+(the mobile lobby's clock offset), taken ONCE from the DB clock
+(`get_draft_clock.server_now`, edge clock as fallback) and used to judge
+`start_state`, so both describe the same instant. `resolveServerNow` itself is
+unit-tested in `functions/_shared/draft-start-policy.test.ts`. Also: starting a
+draft never sends a turn push (#160's `notifyNextPicker` follows recorded picks
+only). The start path imports no push code, and `start_league_draft` writes only
+`draft_started` notices, so the first picker hears "You pick 1st" once.
+
+Run: `deno test --allow-read supabase/tests/draft_control_status_wiring.test.ts`.
+
+## arch_call_sites.test.ts
+
+What it does:
+- Runs `scripts/arch-call-sites.mjs` (the architecture map's wrapper attribution and
+  blind-spot report) over fixtures in `fixtures/arch-seam/`: real seam files copied from
+  `origin/ui/mobile-league-setup` @ 572ada6 (`seamCalls.ts`, `categoryData.ts`,
+  `RenewalRoster.tsx`, `useAllMatchups.ts`, `useDraftRoom.ts`, `QueueEditor.tsx`), minimal
+  skeletons that keep the real call lines (`league.tsx`, `createLeague.tsx`), and synthetic
+  edge cases (dynamic and templated names, a wrapper used as a value, a same-named function
+  from another module, a pure helper that takes a callback).
+- Pins that wrappers are found from their definitions (no list of names), that a caller's
+  name argument is parsed like a direct call, that a ternary of literals is INFERRED, that a
+  callback wrapper's first argument (a fixture key) is never minted into a table, and that
+  everything unattributable is REPORTED.
+- INVARIANT: every call of a wrapper is attributed or reported, never silently dropped.
+- Wiring: the generator hashes the blind spots and qualifies `--check`'s "current".
+
+Hermetic: `deno test --allow-read supabase/tests/arch_call_sites.test.ts`.
+
+## send_notification_types.test.ts
+
+Drives the REAL `send-notification/index.ts` (Deno.serve captured, `fetch` replaced by a
+fake Supabase: an authenticated caller, an allowing rate limit) and pins that `draft_turn`,
+removed from the closed set on 2026-10-06, is refused exactly like an unknown type (400
+`unknown notification type`) before any membership, league or push-token read. The turn
+push is server-side now (`_shared/draft-write.ts` notifyNextPicker), and a callerless
+entry would be a "your turn" spam template any leaguemate could fire. Hermetic:
+`deno test --allow-read --allow-env supabase/tests/send_notification_types.test.ts`.

@@ -5,7 +5,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { draftDateTimeLabel, orderSetLine, countdownLabel } from '../lib/home/draftCountdown.ts';
+import { draftDateTimeLabel, orderSetLine, orderWasSetLine, countdownLabel } from '../lib/home/draftCountdown.ts';
 
 Deno.test('draftDateTimeLabel: "Sat, Oct 3 · 7:00 PM ET" from a real ISO timestamp', () => {
   // 2026-10-03T23:00:00.000Z = 7:00 PM EDT (UTC-4).
@@ -17,9 +17,19 @@ Deno.test('draftDateTimeLabel: null/invalid input returns null, never "Invalid D
   assertEquals(draftDateTimeLabel('not-a-date'), null);
 });
 
-Deno.test('orderSetLine: "Draft order set Sat 6:00 PM ET, an hour before the draft"', () => {
+Deno.test('orderSetLine (Home, before the room opens): "The draft room opens Sat 6:00 PM ET, when the order is set." (board PR #135)', () => {
+  assertEquals(orderSetLine('2026-10-03T22:00:00.000Z'), 'The draft room opens Sat 6:00 PM ET, when the order is set.');
+});
+
+Deno.test('orderWasSetLine (the lobby\'s revealed-order card, after the fact): the earlier wording', () => {
+  assertEquals(orderWasSetLine('2026-10-03T22:00:00.000Z'), 'Draft order set Sat 6:00 PM ET, an hour before the draft');
+  assertEquals(orderWasSetLine(null), null);
+  assertEquals(orderWasSetLine('garbage'), null);
+});
+
+Deno.test('orderSetLine: the old wording is gone from it', () => {
   // 2026-10-03T22:00:00.000Z = 6:00 PM EDT, exactly 1h before the 7:00 PM draft above.
-  assertEquals(orderSetLine('2026-10-03T22:00:00.000Z'), 'Draft order set Sat 6:00 PM ET, an hour before the draft');
+  assertEquals(orderSetLine('2026-10-03T22:00:00.000Z')?.startsWith('Draft order set'), false);
 });
 
 Deno.test('orderSetLine: null (order-set time unknown) returns null', () => {

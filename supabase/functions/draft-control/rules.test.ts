@@ -15,6 +15,7 @@ import {
   type LeagueStartState,
   MIN_DRAFT_MEMBERS,
   nextBotIds,
+  toRosterReconfirm,
 } from './rules.ts';
 
 const NOW = new Date('2026-10-01T00:00:00Z');
@@ -200,3 +201,41 @@ Deno.test('canStartDraft: false while a renewal reply is pending, true once none
   assertEquals(canStartDraft(startState({ renewalRepliesPending: 0 }), NOW), true);
 });
 
+Deno.test('computeStartBlockers: a pending roster reconfirmation blocks, right after the state blocker', () => {
+  const rc = { departed: [{ userId: 'u-sam', name: 'Sam' }], membersBefore: 5, choice: 'pending' as const };
+  assertEquals(computeStartBlockers(startState({ rosterReconfirm: rc }), NOW), [
+    { code: 'roster_reconfirm_required', departed: rc.departed, membersBefore: 5, members: MIN_DRAFT_MEMBERS, choice: 'pending' },
+  ]);
+  // "Invite someone new" still blocks; only the UI copy differs.
+  assertEquals(
+    computeStartBlockers(startState({ rosterReconfirm: { ...rc, choice: 'invite' } }), NOW).map((b) => b.code),
+    ['roster_reconfirm_required'],
+  );
+  assert(!canStartDraft(startState({ rosterReconfirm: rc }), NOW));
+  const codes = computeStartBlockers(
+    startState({ draftStatus: 'in_progress', stakeMode: null, rosterReconfirm: rc }),
+    NOW,
+  ).map((b) => b.code);
+  assertEquals(codes.slice(0, 3), ['not_started_state', 'roster_reconfirm_required', 'no_stake_mode']);
+  // null / absent = nothing owed
+  assertEquals(computeStartBlockers(startState({ rosterReconfirm: null }), NOW), []);
+});
+
+Deno.test('toRosterReconfirm: maps the row; a malformed payload still blocks (fail closed)', () => {
+  assertEquals(toRosterReconfirm(null), null);
+  assertEquals(toRosterReconfirm(undefined), null);
+  assertEquals(
+    toRosterReconfirm({
+      departed: [{ user_id: 'a', name: 'Al', left_at: 'x' }, { user_id: 'b', name: 'Bo' }],
+      members_before: 6,
+      choice: 'invite',
+    }),
+    { departed: [{ userId: 'a', name: 'Al' }, { userId: 'b', name: 'Bo' }], membersBefore: 6, choice: 'invite' },
+  );
+  assertEquals(toRosterReconfirm({ departed: 'garbage', members_before: 'x', choice: 'weird' }),
+    { departed: [], membersBefore: 0, choice: 'pending' });
+  assertEquals(toRosterReconfirm({ departed: [null, 3, { name: 'no id' }], members_before: 4 }),
+    { departed: [], membersBefore: 4, choice: 'pending' });
+  // A row with junk still yields a non-null value, so the blocker fires.
+  assert(computeStartBlockers(startState({ rosterReconfirm: toRosterReconfirm({}) }), NOW).length === 1);
+});

@@ -37,6 +37,10 @@ export const TOKEN_ROWS: readonly TokenRow[] = [
   ['borderStrong', 'Control borders', 3],
   // Disabled/decorative text ONLY, never information — measured, not scored.
   ['text3', 'Disabled / decorative text ONLY, never information', 0],
+  // Medals (§9A, season complete only): each disc is a graphic on the surface.
+  ['medalGold', 'Medal disc, gold, on the surface', 3],
+  ['medalSilver', 'Medal disc, silver, on the surface', 3],
+  ['medalBronze', 'Medal disc, bronze, on the surface', 3],
 ];
 
 /**
@@ -85,4 +89,16 @@ export const PAIRS: readonly ContrastPair[] = [
   ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
   ['onAccent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
   ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
+  // Medals: the rank numeral on each disc (text, 4.5)...
+  ['onMedal', 'medalGold', null, 4.5, 'Medal rank numeral on the gold disc'],
+  ['onMedal', 'medalSilver', null, 4.5, 'Medal rank numeral on the silver disc'],
+  ['onMedal', 'medalBronze', null, 4.5, 'Medal rank numeral on the bronze disc'],
+  // ...and each disc on the caller's you-tint row, composited over the surface (graphic, 3).
+  ['medalGold', 'youTint', 'surface', 3, 'Medal disc, gold, on the you-tint row (graphic)'],
+  ['medalSilver', 'youTint', 'surface', 3, 'Medal disc, silver, on the you-tint row (graphic)'],
+  ['medalBronze', 'youTint', 'surface', 3, 'Medal disc, bronze, on the you-tint row (graphic)'],
+  // Your turn (Design Lead, 2026-10-06; board #your-turn): the flash fills the clock card with
+  // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
+  ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
+  ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
 ];

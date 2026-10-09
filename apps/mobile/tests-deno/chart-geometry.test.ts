@@ -1,9 +1,9 @@
 /**
- * Tests for lib/home/chartGeometry.ts — the Season card's chart math.
+ * Tests for lib/chart/chartGeometry.ts (shared with 3e's stock chart, M2) — the Season card's chart math.
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals, assertAlmostEquals } from 'jsr:@std/assert';
-import { buildChartGeometry, nearestPointIndex } from '../lib/home/chartGeometry.ts';
+import { buildChartGeometry, nearestPointIndex } from '../lib/chart/chartGeometry.ts';
 
 Deno.test('a flat-zero series places the zero line at the bottom of the padded area (min=max=0 -> range defaults to 1, matching the board formula)', () => {
   const g = buildChartGeometry([0, 0, 0], 100, 100, { padTop: 0, padBottom: 0 });

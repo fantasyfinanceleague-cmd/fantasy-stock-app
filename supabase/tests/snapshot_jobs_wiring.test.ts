@@ -31,9 +31,16 @@ for (const file of FILES) {
   });
 
   Deno.test(`${name}: the same-day status write goes through the shared overwrite rule`, async () => {
+    // The writer is shared (_shared/job-status-io.ts): the handler must use it, and it
+    // must read the existing row and consult the rule before writing.
     const src = await read();
-    assert(src.includes('shouldWriteJobStatus('), `${name}: updateJobStatus does not consult shouldWriteJobStatus`);
-    assert(src.includes(".maybeSingle()"), `${name}: updateJobStatus does not read the existing row before writing`);
+    assert(src.includes("from '../_shared/job-status-io.ts'") && src.includes('writeJobStatus('),
+      `${name}: the handler does not write status through the shared writeJobStatus`);
+    const io = await Deno.readTextFile(new URL('../functions/_shared/job-status-io.ts', import.meta.url));
+    assert(io.includes('decideJobStatusWrite('), 'writeJobStatus does not consult the overwrite rule');
+    assert(io.includes('.maybeSingle()'), 'writeJobStatus does not read the existing row before writing');
+    const rule = await Deno.readTextFile(new URL('../functions/_shared/job-status.ts', import.meta.url));
+    assert(rule.includes('shouldWriteJobStatus('), 'the shared rule is gone');
   });
 
   Deno.test(`${name}: no internal error text in a 500 response body`, async () => {
@@ -115,7 +122,7 @@ for (const f of FILES) {
 
 Deno.test('S3: a clean success reports its work count, and the status rule clears a stale retrying (job-status unit tests)', async () => {
   const src = await Deno.readTextFile(FILES[0]);
-  assert(src.includes("'success', retryAttempt, undefined, totalSnapshots);"), 'week-start success does not report its work count');
+  assert(src.includes("outcome: { status: 'success', attempt: retryAttempt, work: totalSnapshots }"), 'week-start success does not report its work count');
   const js = await Deno.readTextFile(new URL('../functions/_shared/job-status.ts', import.meta.url));
   assert(js.includes("existing?.status === 'retrying'"), 'the status rule does not clear a stale retrying');
 });

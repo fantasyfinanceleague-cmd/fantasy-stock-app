@@ -571,13 +571,13 @@
               {landed ? (
                 <>
                   <span className="ks-title">Paolo M. is up</span>
-                  <span className="ks-callout ks-muted">Round 2 · Pick 12, then 13</span>
-                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · next pick 14</span>
+                  <span className="ks-callout ks-muted">Round 2 of {K.LEAGUE.slots} · Pick 12, then 13</span>
+                  <span className="ks-caption" style={{ color: 'var(--c-you-text)' }}>You took AAPL · you're up in 2 picks</span>
                 </>
               ) : (
                 <>
                   <span className="ks-title" style={{ color: 'var(--c-live-text)' }}>You're on the clock</span>
-                  <span className="ks-callout">Round 2 · Pick 11</span>
+                  <span className="ks-callout">Round 2 of {K.LEAGUE.slots} · Pick 11</span>
                   <span className="ks-caption ks-muted">Then Paolo M. picks twice (12, 13)</span>
                   <span className="ks-caption ks-muted">{D.secondsTotal}-second picks · set by the commissioner</span>
                 </>
@@ -657,7 +657,7 @@
           </div>
           <div className="ks-card" style={{ padding: '2px 14px' }}>
             <ul className="ks-rows">
-              <Row k="Draft date" v="Sat, Oct 3 · 7:00 PM ET" />
+              <Row k="Draft time" v="Sat, Oct 3 · 7:00 PM ET" />
               <li className="ks-row" style={{ gridTemplateColumns: '1fr', padding: '13px 0', gap: 8 }}>
                 <span className="ks-callout" style={{ fontWeight: 600 }}>Draft order</span>
                 <div className="ks-seg"><span className="on">Random</span><span>Manual</span></div>
@@ -680,7 +680,7 @@
   // ═════════════════════════════════════════════════════════════════════
   function StockSheet({ open }) {
     const N = K.NVDA;
-    const pts = N.dayPoints;
+    const pts = N.weekPoints;
     const w = 362, h = 120;
     const min = Math.min(...pts) - 1, max = Math.max(...pts) + 1;
     const X = (i) => (i / (pts.length - 1)) * (w - 8);
@@ -702,9 +702,9 @@
               <div className="ks-num" style={{ fontSize: 34, lineHeight: '38px', fontWeight: 800 }}>{$(N.thu)}</div>
               <div className="ks-callout ks-gain ks-num" style={{ fontWeight: 700 }}>{$s(perShare)} · {pct(N.todayPct)} <span className="ks-muted" style={{ fontWeight: 500 }}>today</span></div>
             </div>
-            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA today">
-              <line x1="0" x2={w} y1={Y(N.prev)} y2={Y(N.prev)} stroke="var(--c-border-strong)" strokeDasharray="3 4" />
-              <text x="0" y={Y(N.prev) + 14} fontSize="11" fontWeight="600" fill="var(--c-text-2)">Prev close {$(N.prev)}</text>
+            <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} role="img" aria-label="NVDA, the past week">
+              <line x1="0" x2={w} y1={Y(pts[0])} y2={Y(pts[0])} stroke="var(--c-border-strong)" strokeDasharray="3 4" />
+              <text x="0" y={Y(pts[0]) + 14} fontSize="11" fontWeight="600" fill="var(--c-text-2)">A week ago {$(pts[0])}</text>
               <path d={d} fill="none" stroke="var(--c-gain)" strokeWidth="2.25" strokeLinejoin="round" />
               <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="4" fill="var(--c-gain)" stroke="var(--c-surface)" strokeWidth="2" />
             </svg>

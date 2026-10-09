@@ -76,8 +76,8 @@ import { decideAutoPickGate } from '../_shared/auto-pick.ts';
 import {
   autoPickTurn,
   fetchDraftClock,
+  commitGatedPick,
   finalizeDraft,
-  insertGatedPick,
   loadFeasibility,
   isDraftFull,
   leagueRules,
@@ -347,7 +347,8 @@ Deno.serve(async (req: Request) => {
     }, { state: feasibility.state, open: feasibility.open, cachedPrice, eligibility: eligibleCategories });
     if (!gate.ok) return json({ ok: false, reason: gate.reason }); // 200: game-flow refusal (join-league pattern)
 
-    const ins = await insertGatedPick(admin, gate.pick, 'manual');
+    // Insert, then finalize (last pick) or push the next picker (draft-write.ts).
+    const ins = await commitGatedPick(admin, ctx, gate.pick, 'manual');
     if (!ins.ok) {
       // Unique (league_id, pick_number) index = the race backstop: a
       // concurrent pick — or an auto-pick for an expired clock — got this
@@ -358,18 +359,13 @@ Deno.serve(async (req: Request) => {
       }
       return json({ ok: false, reason: 'unhandled' }, 500);
     }
-    const inserted = ins.row;
-    const decision = gate.pick;
-
-    const complete = decision.pickNumber >= order.length * numRounds;
-    const statusError = complete ? await finalizeDraft(admin, league, order) : null;
     return json({
       ok: true,
-      pick: inserted,
+      pick: ins.row,
       pick_source: 'manual',
       price_source: fill.source,
-      draft_complete: complete,
-      status_update_error: statusError,
+      draft_complete: ins.complete,
+      status_update_error: ins.statusError,
     });
   } catch (_e) {
     return json({ ok: false, reason: 'unhandled' }, 500);

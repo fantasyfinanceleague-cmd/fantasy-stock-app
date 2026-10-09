@@ -1,16 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
+import { PortfolioScreen } from '@/components/money/PortfolioScreen';
 
-import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
-
-// Phase 3b-1 placeholder (spec row 16). Portfolio, the stock sheet and
-// trading are rebuilt in Phase 3e; copy is NEW-PROPOSED pending the Design Lead.
-export default function PortfolioScreen() {
-  return (
-    <PhasePlaceholder
-      title="Portfolio"
-      icon={(p) => <Ionicons name="bar-chart-outline" {...p} />}
-      heading="Your portfolio is on the way"
-      message="Your holdings and trades will live here in the next update."
-    />
-  );
+// Phase 3e: the Portfolio tab. Holdings, value and the trade-history entry
+// come from one league-ledger read (lib/money/usePortfolioData); the stock
+// sheet opens from any row through MoneyHost.
+export default function PortfolioTab() {
+  return <PortfolioScreen />;
 }

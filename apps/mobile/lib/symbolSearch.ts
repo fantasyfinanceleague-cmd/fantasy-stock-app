@@ -90,3 +90,25 @@ export function shapeSearchResults(
     return { ...item, status: 'available', selectable: true, badgeLabel: null };
   });
 }
+
+/**
+ * The outcome of one search attempt (E-1, 3e UX audit): a thrown error and a
+ * clean "no matches" response both end with an empty list on screen, but
+ * must be told apart, since a failure read as "no matches" tells the user
+ * the stock doesn't exist. `items === null` is useSymbolSearch's signal for
+ * "the request itself failed" (its catch block never has an items array to
+ * pass) — everything else, including `[]`, is a real answer from the server.
+ * Pure so this discriminator is Deno-testable without useSymbolSearch's
+ * supabase import.
+ */
+export type SearchAttemptOutcome =
+  | { kind: 'error' }
+  | { kind: 'results'; results: ShapedSearchResult[] };
+
+export function shapeSearchOutcome(
+  items: RawSearchItem[] | null,
+  opts: ShapeSearchResultsOptions = {},
+): SearchAttemptOutcome {
+  if (items === null) return { kind: 'error' };
+  return { kind: 'results', results: shapeSearchResults(items, opts) };
+}
