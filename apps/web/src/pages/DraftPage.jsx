@@ -62,8 +62,6 @@ const BOT_STOCK_POOL = [
 const botPriceCache = new Map(); // symbol -> { price, timestamp }
 const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// ---- Finnhub fallback via Edge Function ----
-
 // ---- Name lookup cache/throttle (new) ----
 const NAME_CACHE_KEY = 'symbolNameCache_v1';
 const NAME_CACHE = (() => {

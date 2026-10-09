@@ -9,7 +9,8 @@
 //     per-user limit;
 //   * an anonymous caller may quote ONLY the ticker tape's own symbols
 //     (TICKER_SYMBOLS, pinned equal to apps/web/src/Ticker.jsx by a test), under
-//     a fail-closed per-IP limit;
+//     a fail-closed per-IP limit AND a global anonymous ceiling (the IP header
+//     may be forgeable);
 //   * anything else is 401, before any cache read or Alpaca call.
 // Alpaca error text is never returned.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
@@ -25,6 +26,11 @@ export const TICKER_SYMBOLS: readonly string[] = [
 // Per IP per minute, anonymous. The tape fetches 10 symbols once a minute per
 // open tab; 60 allows six tabs behind one address.
 export const ANON_LIMIT_PER_IP_PER_MIN = 60;
+// ALL anonymous callers together, per minute. The client IP comes from the
+// first x-forwarded-for hop, which a caller may be able to forge -- so a
+// rotating fake IP must not multiply the anonymous budget. 600/min is sixty
+// open tabs of the tape (which is not even rendered while APP_PAUSED).
+export const ANON_LIMIT_GLOBAL_PER_MIN = 600;
 // Per user per minute, signed in. usePortfolio quotes each held symbol (3 at a
 // time, 2-minute cache) and each stock-sheet open is one call.
 export const USER_LIMIT_PER_MIN = 120;
@@ -136,6 +142,7 @@ Deno.serve(async (req) => {
       ? await checkRateLimits(admin, 'ticker-quotes', [{ subject: `user:${user.id}`, limit: USER_LIMIT_PER_MIN }])
       : await checkRateLimits(admin, 'ticker-quotes-anon', [
         { subject: `ip:${clientIp(req) || 'unknown'}`, limit: ANON_LIMIT_PER_IP_PER_MIN },
+        { subject: 'all', limit: ANON_LIMIT_GLOBAL_PER_MIN },
       ]);
     if (verdict !== 'ok') {
       const r = refusalFor(verdict);

@@ -42,11 +42,14 @@ const json = (b: unknown, s = 200, req?: Request) => {
 
 const BASE = 'https://data.alpaca.markets/v2';
 
-// Per-user calls per minute. The heaviest real caller is web PriceContext,
-// which prices one symbol per call (3 concurrent, 5-minute poll): a first
-// Dashboard load is about one call per held symbol across the user's leagues.
-// Mobile batches (Home polls one batch every 30 s). 120/min covers a player in
-// five full leagues with room to spare; a scraper gets 120 calls, not unlimited.
+// Per-user calls per minute. Mobile batches: Home polls one batch every 30 s,
+// all-matchups is one batch per week view, the rest are single symbols. 120/min
+// is far above that; a scraper gets 120 calls, not unlimited.
+// WEB CAVEAT (latent while APP_PAUSED): web Dashboard (utils/stockData.js
+// fetchQuotesInBatch) and Leaderboard (context/PriceContext.jsx fetchPrices)
+// make ONE call PER SYMBOL across a whole league -- 192+ calls for a 16x12
+// league -- which exceeds 120/min. Before APP_PAUSED=false, move both to the
+// batch form ({ symbols: [...] }, up to MAX_BATCH_SYMBOLS per call).
 export const QUOTE_LIMIT_PER_MIN = 120;
 // Batch cap. The largest real batch is useAllMatchups: every symbol held in one
 // league-week. leagues_num_participants_range caps a league at 16 teams and

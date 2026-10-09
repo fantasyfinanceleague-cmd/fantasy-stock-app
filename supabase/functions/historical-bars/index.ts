@@ -42,8 +42,8 @@ const BASE = 'https://data.alpaca.markets/v2';
 
 // Alpaca's per-page max for /v2/stocks/bars.
 const PAGE_LIMIT = 10000;
-// Hard cap on pages per call. No rate limit exists on this function (see
-// risk note above), so this bounds the worst case at 5 Alpaca requests.
+// Hard cap on pages per call: the worst case is 5 Alpaca requests per call,
+// and the per-user limit below bounds the calls.
 const MAX_PAGES = 5;
 // Per-page network timeout.
 const PAGE_TIMEOUT_MS = 10000;

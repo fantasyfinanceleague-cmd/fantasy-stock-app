@@ -4,7 +4,11 @@
  * Stack.Protected guards -- so it is reachable signed out (a deep link). That
  * is how app/stock-search.tsx sat open. This test enumerates the route files
  * from the generated source manifest, so a NEW route file fails here until it
- * is declared (regenerate the manifest after adding one).
+ * is declared -- ONCE the manifest is regenerated. LIMIT: this suite runs
+ * without --allow-read, so it cannot list app/ itself; a route file added
+ * without regenerating the manifest is invisible here.
+ * `node tests-deno/gen-source-manifest.mjs --check` (exit 1 if stale) closes
+ * that gap and is not yet wired into CI.
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assert, assertEquals } from 'jsr:@std/assert';

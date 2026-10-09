@@ -235,7 +235,11 @@ Deno.test({
     await t.step('control: an anonymous visitor gets the ticker tape (AAPL), limited per IP', () => withFake(async (f) => {
       const res = await post(tq, { symbol: 'aapl' }, { jwt: null, ip: '203.0.113.5' });
       assertEquals(res.status, 200);
-      assertEquals(f.limits, [{ bucket: 'ticker-quotes-anon', subject: 'ip:203.0.113.5', limit: 60 }]);
+      assertEquals(f.limits, [
+        { bucket: 'ticker-quotes-anon', subject: 'ip:203.0.113.5', limit: 60 },
+        // The global anonymous ceiling: a forged, rotating IP cannot multiply the budget.
+        { bucket: 'ticker-quotes-anon', subject: 'all', limit: 600 },
+      ]);
     }));
 
     for (const [label, jwt] of [['no Authorization', null], ['the bare anon JWT', ANON_JWT]] as const) {
@@ -262,7 +266,7 @@ Deno.test({
 
     await t.step('no client IP → one shared ip:unknown bucket, not a free pass', () => withFake(async (f) => {
       await post(tq, { symbol: 'KO' }, { jwt: null });
-      assertEquals(f.limits.map((l) => l.subject), ['ip:unknown']);
+      assertEquals(f.limits.map((l) => l.subject), ['ip:unknown', 'all']);
     }));
 
     await t.step('a vendor failure never echoes vendor text', () => withFake(async () => {
