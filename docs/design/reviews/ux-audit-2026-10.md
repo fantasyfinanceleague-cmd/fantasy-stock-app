@@ -952,6 +952,10 @@ fixed as specified. The game-screens BLOCK is closed.
 - **GS-8b · History doesn't say why the order differs from the records.** Its Season 1 list puts
   Alessandro D. (8–6, silver) above Paolo M. (10–4, bronze) with no "Runner-up" and no "After the
   playoffs", so it reads as a mistake. Fix: the same labels and subtitle as the Standings card.
+  **PASS @ `b855c6cf`** (`gs-league-history-{light,dark,xl}`): Roberto B. "Champion",
+  Alessandro D. "Runner-up" in Standings' wording, "After the playoffs" on the Season 1 card,
+  nothing else in History moved (the app diff is `HistoryList.tsx` only); XL stacks cleanly.
+  The approval carries forward to `fix/fixture-identity` @ `b855c6cf`.
 - Still open from the gate: R-1 (the hero score's shared fit), GS-6 (the bye card's duplicate
   heading), GS-7 (mark the champion in the bracket), GS-9 (your blue in other managers' games),
   and the Run it back items GS-10 to GS-13 (GS-10 and GS-11 block the kill-switch flip).
