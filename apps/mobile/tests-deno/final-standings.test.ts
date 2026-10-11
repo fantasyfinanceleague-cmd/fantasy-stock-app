@@ -115,3 +115,19 @@ Deno.test('seasonCompletePlace: the card\'s place follows the playoffs, never th
   // A league with no playoffs: the regular season decided it.
   assertEquals(seasonCompletePlace({ ...base, myUserId: 'b', regularRank: 2, playoffTeams: null }), 2);
 });
+
+Deno.test('M4 guard: more than one game in the last round read is not a Final (no podium)', () => {
+  // History's check has no team count: semifinals done, the Final not written yet. The last
+  // round read is the semis (two games). Taking its first game as "the Final" would crown a,
+  // and a IS the server's champion here, so only the one-game rule refuses it.
+  assertEquals(playoffPodium(BRACKET4.slice(0, 2), seeds(REG4), { championId: 'a' }), null);
+  // A malformed last round under the team-count check: two games where the plan has one.
+  assertEquals(playoffPodium([g(1, 'a', 'b', 'a'), g(1, 'c', 'd', 'c')], seeds(REG4), { teams: 2 }), null);
+});
+
+Deno.test('M3 guard: a semifinal loser with no seed gives no podium, never a guessed bronze', () => {
+  // b (seed 2) is the better-seeded semifinal loser and earns bronze. Without its seed,
+  // ranking only the losers we CAN seed would hand bronze to d: refuse instead.
+  const noSeedForB = (id: string) => (id === 'b' ? null : seeds(REG4)(id));
+  assertEquals(playoffPodium(BRACKET4, noSeedForB, { teams: 4 }), null);
+});
