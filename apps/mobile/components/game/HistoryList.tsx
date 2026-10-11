@@ -36,7 +36,7 @@ export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; 
             const medal = s.table.medals ? MEDAL[place] : undefined;
             return (
               <View key={st.user_id} style={[styles.row, yourRowTint(st.user_id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${place}, ${st.display_name}${youA11y(st.user_id === myUserId)}${tag ? `, ${tag}` : ''}, ${st.wins}–${st.losses}, ${formatMoney(st.points_for, { sign: 'always' })}`}>
-                <View style={[styles.rankCell, { minWidth: Math.max(24, disc) }]}>
+                <View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>
                   {medal ? <MedalDisc place={place} size={disc} /> : <Text variant="callout" style={styles.rank}>{place}</Text>}
                 </View>
                 {largeText ? (
@@ -70,8 +70,9 @@ const styles = StyleSheet.create({
   stack: { gap: space[3] },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
-  rankCell: { alignItems: 'flex-end' },
-  rank: { textAlign: 'right' },
+  // One fixed-width rank cell, centred, so medal discs and plain places line up (Standings' G-6 rule).
+  rankCell: { alignItems: 'center' },
+  rank: { textAlign: 'center' },
   name: { flex: 1, minWidth: 0 },
   statsLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: space[2] },
   gain: { minWidth: 92, textAlign: 'right' },
