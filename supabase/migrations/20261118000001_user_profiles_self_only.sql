@@ -1,6 +1,19 @@
--- user_profiles becomes SELF ONLY (audit #8, stage 2 of 2). HELD in deferred/:
--- `supabase db push` does not apply this directory. See deferred/README.md for
--- the preconditions; move this file into supabase/migrations/ only when they hold.
+-- user_profiles becomes SELF ONLY (audit #8, stage 2 of 2).
+--
+-- PROMOTED 2026-10-10 from supabase/migrations/deferred/ (git mv; body unchanged).
+-- Preconditions, checked 2026-10-10:
+--   1. 20261118000000 applied: yes (pushed and verified 2026-10-10, 6/6 checks).
+--   2. Clients moved to get_visible_profiles: yes on main (#198); the call-site
+--      guard (supabase/tests/profile_visibility_callsites.test.ts) passes.
+--   3. The live 1.1.0 build: Giorgio is its only user (TestFlight only, never the
+--      App Store) and ACCEPTS its degradation. Verbatim, 2026-10-10: "just me on
+--      1.1.0, go with C". His 1.1.0 shows ids / "Unknown" for other players until
+--      1.2.0 is installed.
+--   Re-audited 2026-10-10: every function or view whose latest definition reads
+--   user_profiles is SECURITY DEFINER (check_usernames, get_visible_profiles,
+--   handle_new_user_profile, participant_display_name, set_username), except the
+--   own-row updated_at trigger. Edge functions read as service_role. None are
+--   affected by this policy.
 --
 -- Giorgio, 2026-10-08 (ruling A, verbatim): "i can only see other names and
 -- avatars of other users im in a leauge with. we cannot allow a user to see any

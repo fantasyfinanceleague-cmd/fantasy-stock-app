@@ -3,7 +3,7 @@
  * avatar of users they share a league with -- nothing else, nobody else.
  * Against REAL Postgres (PGlite). Loads VERBATIM:
  *   stage 1  supabase/migrations/20261118000000_get_visible_profiles.sql
- *   stage 2  supabase/migrations/deferred/20261118000001_user_profiles_self_only.sql
+ *   stage 2  supabase/migrations/20261118000001_user_profiles_self_only.sql
  * over a replica of prod: user_profiles with its three prod policies
  * (db-snapshot.json) and Supabase's default grants, plus the league tables the
  * "ever participated" rule reads.
@@ -17,7 +17,7 @@ import { PGlite } from 'npm:@electric-sql/pglite@0.2';
 
 const ROOT = new URL('../../', import.meta.url);
 const STAGE1 = 'supabase/migrations/20261118000000_get_visible_profiles.sql';
-const STAGE2 = 'supabase/migrations/deferred/20261118000001_user_profiles_self_only.sql';
+const STAGE2 = 'supabase/migrations/20261118000001_user_profiles_self_only.sql';
 
 const A = '00000000-0000-4000-8000-00000000000a';
 const B = '00000000-0000-4000-8000-00000000000b';

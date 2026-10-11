@@ -2,7 +2,7 @@
  * Audit #8 (Giorgio, 2026-10-08, ruling A): clients never read another player's
  * user_profiles row directly. Every other-player name/avatar comes through
  * get_visible_profiles (20261118000000); user_profiles becomes self-only
- * (deferred/20261118000001). This guard walks the web and mobile sources so a
+ * (20261118000001). This guard walks the web and mobile sources so a
  * new direct read of someone else's row fails here, BEFORE the policy flip
  * would silently blank it in the app:
  *   1. every .from('user_profiles') is in a known file and is an OWN-ROW access
