@@ -16,6 +16,7 @@ export const COPY_SOURCES = {
   endsFriday: 'board',
   byeNoResult: 'new',
   allMatchupsLoadFailed: 'new', // the Design Lead's final sweep (S-6), for the copy audit
+  finalTied: 'existing', // the tug's own "Tied"; the game-screens gate (GS-1) asks for it on a finished week
 } as const;
 
 const MINUS = '−';
@@ -36,10 +37,20 @@ export function tiebreakLine(myPct: number, oppPct: number): string {
   return `Tiebreak ${signedPct(myPct)} vs ${signedPct(oppPct)}`;
 }
 
-/** "Roberto B. leads by $123.16" (board). The dollars are the lead's absolute gap. */
+function dollarsMagnitude(dollars: number): string {
+  return Math.abs(dollars).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** "Roberto B. leads by $123.16" (board). The dollars are the lead's absolute gap.
+ * Only while the week is in play: a finished week says wonByLine (GS-1). */
 export function leadLine(leaderName: string, dollars: number): string {
-  const magnitude = Math.abs(dollars).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${leaderName} leads by $${magnitude}`;
+  return `${leaderName} leads by $${dollarsMagnitude(dollars)}`;
+}
+
+/** "Roberto B. won by $390.67" (board, Matchup final: screens.jsx "won by"). A
+ * finished week never says "leads by": that reads as still in play (GS-1). */
+export function wonByLine(winnerName: string, dollars: number): string {
+  return `${winnerName} won by $${dollarsMagnitude(dollars)}`;
 }
 
 /**
@@ -59,4 +70,5 @@ export const COPY = {
   endsFriday: 'Ends Fri 4:00 PM ET',
   byeNoResult: 'Bye week · no result',
   allMatchupsLoadFailed: "This week's matchups didn't load",
+  finalTied: 'Tied',
 } as const;
