@@ -4964,6 +4964,110 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: can a stock you hold, reached from SEARCH, start a sell?
+  // Giorgio, 2026-10-09: "i can only sell what i have... cant sell what you
+  // dont own." Sell is already absent on any stock you don't hold
+  // (fix/sell-only-held: no Buy | Sell control at all). Tier Cup, Roberto
+  // B.'s phone, Thu 1:37 PM ET (open). Sheet copy is the shipped
+  // moneyCopy.ts copy; NVDA's avg entry is SAMPLE (the draft price).
+  // ═════════════════════════════════════════════════════════════════════
+  const SF = {
+    NVDA: { co: 'NVIDIA', price: K.NVDA.thu, prev: K.NVDA.prev, held: { qty: 1, avg: K.NVDA.draft } },
+    SHOP: { co: 'Shopify', price: K.SALE.buy.price, prev: 103.05, held: null },
+  };
+  /** Search "NVDA" in Buy a stock: the row says "You own this" (shipped). */
+  function SellCallSearch() {
+    return (
+      <Device noTabs label="Buy a stock, search NVDA">
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Buy a stock</h2>
+          <SearchBox q="NVDA" focus={false} />
+          <Card><ul className="ks-rows"><ResultRow t="NVDA" kind="mine" last /></ul></Card>
+        </div>
+      </Device>
+    );
+  }
+  /** The stock sheet as 3e ships it, with the variable under call.
+   *  mode: 'sell' (Buy | Sell, Sell pre-selected) | 'buyonly' (no control;
+   *  B's sheet for a stock you hold, from search) | 'free' (a stock you
+   *  don't hold: Buy only, the rule either way). */
+  function SellCallSheet({ t = 'NVDA', mode = 'sell', from = 'search' }) {
+    const S = SF[t];
+    const ch = S.price - S.prev, chPct = (ch / S.prev) * 100;
+    const h = S.held;
+    const gain = h ? S.price * h.qty - h.avg * h.qty : 0;
+    return (
+      <Device tab="portfolio" label={`${t} sheet from ${from}, ${mode}`} overlay={
+        <Sheet top={from === 'search' ? 150 : 170}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t={t} />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption">{S.co}</span></span>
+            <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div>
+            <div className="ks-score ks-num" style={{ fontSize: 34, lineHeight: '38px', fontStretch: '75%' }}>{$(S.price)}</div>
+            <span className="ks-callout ks-num"><span className={tone(ch)} style={{ fontWeight: 700 }}>{$s(ch)} · {pct(chPct)}</span> <span className="ks-muted">today</span></span>
+          </div>
+          {h ? (
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><span className="ks-headline" style={{ fontWeight: 700 }}>Your position</span><span className="ks-caption">Held by you</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }}>
+                {[['Shares', String(h.qty)], ['Avg entry', $(h.avg)], ['Value', $(S.price * h.qty)], ['Gain', `${$s(gain)} · ${pct((gain / (h.avg * h.qty)) * 100)}`]].map(([k, v]) => (
+                  <span key={k}><span className="ks-caption">{k}</span><br /><span className={`ks-callout ks-num ${k === 'Gain' ? tone(gain) : ''}`} style={{ fontWeight: 700 }}>{v}</span></span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <span className="ks-callout ks-muted">No one in Tier Cup owns {t}</span>
+          )}
+          {mode === 'sell' ? (
+            <>
+              <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
+              <span className="ks-callout ks-num">Sell all {h.qty} sh ≈ {$(S.price * h.qty)}</span>
+              <span className="ks-btn">Review sell</span>
+            </>
+          ) : mode === 'buyonly' ? (
+            <>
+              <span className="ks-callout ks-muted">You already hold this stock.</span>
+              <span className="ks-btn" style={{ opacity: 0.45 }} aria-disabled="true">Review buy</span>
+              <span className="ks-callout" style={{ textAlign: 'center', fontWeight: 700, color: 'var(--c-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44 }}>To sell {t}, open it from your Portfolio<Icon d={ICON.right} size={14} width={2.6} /></span>
+            </>
+          ) : (
+            <span className="ks-btn">Review buy</span>
+          )}
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+  /** B's one sell path: Portfolio › the holding row (NVDA pressed). */
+  function SellCallPortfolio() {
+    const rows = [['F', 'Ford', 11.42, -0.61], ['KO', 'Coca-Cola', 68.1, 0.38], ['NVDA', 'NVIDIA', K.NVDA.thu, K.NVDA.todayPct], ['NFLX', 'Netflix', 612.3, 1.24], ['COST', 'Costco', 918.1, -0.27]];
+    return (
+      <Device tab="portfolio" label="Tier Cup portfolio, NVDA holding pressed">
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {rows.map(([t, co, p, c]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', ...(t === 'NVDA' ? { background: 'var(--c-sunken)', margin: '0 -14px', padding: '11px 14px' } : null) }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {TIER.tierOf(p)} slot · 1 sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b><br /><span className={`ks-caption ${tone(c)}`} style={{ fontWeight: 700 }}>{pct(c)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -4976,7 +5080,8 @@
     AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
-    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn, ManagerRowCall,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
+    SellCallSearch, SellCallSheet, SellCallPortfolio, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
@@ -5234,6 +5339,41 @@
               <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
               <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
               <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">Both start the same way</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
+          </div>
+          <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
+            <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
+            <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
+            <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
+            <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
+            <ul>
+              <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
+              <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
+              <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
+              <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
             </ul>
           </div>
         </section>
@@ -5894,7 +6034,7 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-sell-from-search', 'Sell (decided)'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 

@@ -253,6 +253,41 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">Both start the same way</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
+          </div>
+          <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
+            <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
+            <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
+            <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
+            <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
+            <ul>
+              <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
+              <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
+              <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
+              <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
