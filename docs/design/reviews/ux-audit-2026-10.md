@@ -861,8 +861,8 @@ other than the Final reveal frames, and anything a still can't show (S-4, S-5, S
 at source and go on Giorgio's walkthrough). Run it back is behind its kill switch (F4a, off by
 default), so its findings block **flipping that switch**, not the 1.2.0 cut.
 
-**Verdict: BLOCK, narrowly, on GS-1, GS-2 and GS-3.** All three are small. The final-sweep
-BLOCK (S-1 to S-6) is cleared. GS-4 is Giorgio's call, and becomes a P1 if he picks A.
+**Verdict: BLOCK, narrowly, on GS-1, GS-2, GS-3 and GS-4.** All four are small. The final-sweep
+BLOCK (S-1 to S-6) is cleared. GS-4 was Giorgio's call; he picked A on 2026-10-10, so it is a P1.
 
 ### The final-sweep BLOCK, closed
 
@@ -882,16 +882,7 @@ BLOCK (S-1 to S-6) is cleared. GS-4 is Giorgio's call, and becomes a P1 if he pi
 | GS-1 | Matchup (final), All matchups (final) | A finished week still says **"leads by"**: "Roberto B. leads by $390.67" under the Final scoreboard, "Luca V. leads by $0.06" on a Final card. The board says "won by" (`screens.jsx:366`); `gameCopy.ts` and `Scoreboard.tsx` only have "leads by". The result reads as still in play. | When the week is final: "{winner} won by $X" (and "Tied" for a tie), in the scoreboard and on every Final card. |
 | GS-2 | Matchup, the week's ending | The winner banner lost its look. The board's `.ks-winner` is a solid band in your blue, white 800 text, with the record on the right ("W · 5–1"). `FinalBanner` is plain bold callout text with no fill and no record, so the week's ending reads as a stray label (rule 11). | The band: `colors.you` fill and on-accent text when you won; a neutral fill (`sunken`, text colour) when you lost or tied; the record on the right ("W · 5–1" / "L · 4–2" / "T · …"). The rise stays as fixed in `f1b2bdb8`. |
 | GS-3 | Every segmented control at XL | Every label truncates: "My matc… / All matc…", "Stan… / Sche… / History", "Sta… / Sc… / Pla… / His…". You can't tell the League tabs apart at the size that most needs them (§9). | Cap the segment label's text scale the way the tab bar is capped (`maxFontSizeMultiplier` ≈ 1.3, via the sp `Text` type style), so four labels fit at XL. |
-
-### Giorgio's call
-
-**GS-4 · What a medal means once the season is over.** On a finished season, the standings keep
-the regular-season order, so **the gold goes to Paolo M., who lost the Final, and the champion
-(Roberto B.) gets silver.** No rule covers it, and the board never showed it, because in its data
-the champion was also first. **A (recommend):** once the playoffs are done, the medals follow the
-result (champion gold, runner-up silver, bronze to the higher-seeded semifinal loser), as fantasy
-apps' final standings do. **B:** the medals stay regular season, and the champion gets a trophy
-mark on the row. On the board as `#call-medals` (A/B, recommend A); P1 if he picks A.
+| GS-4 | League › Standings (finished season), League › History | **Decided by Giorgio, 2026-10-10: A** (`#call-medals`; PRODUCT_RULES via #191). Once the playoffs are done, the medals follow the result. Today a finished season keeps the regular-season order, so the gold sits next to the manager who lost the Final. | When the season is complete: the standings are **"Final standings · After the playoffs"**, ordered champion (gold, "Champion"), runner-up (silver, "Runner-up"), then the better-seeded semifinal loser (bronze); everyone else keeps their regular-season place. Records and season gains stay the regular season's; the Playoffs tab keeps the seeding. The footnote reads as drawn on the board. No movement column (GS-5). |
 
 ### Rulings
 
@@ -913,7 +904,7 @@ mark on the row. On the board as `#call-medals` (A/B, recommend A); P1 if he pic
 | GS-5 | League › Standings, finished season | ▲/▼ movement still shows on a season that's over. | No movement column once the season is complete. |
 | GS-6 | League › Playoffs | The byes sit in their own card under a duplicate "WILD CARD · PLAYOFF WEEK 1" heading. The board draws them inside the round: "1 Paolo M. · Bye" with "Advances to the Semifinals". | One heading per round; byes as rows of that round, as drawn. |
 | GS-7 | League › Playoffs, finished | The bracket doesn't mark the champion (README question). | Under the Final card, one row: the trophy icon + "Roberto B. · Champion" (the existing "Champion" word; your tint if it's you). |
-| GS-8 | League › History | Season 1's standings have no medals; the board's do (rule 5). | The same `Medal` as the standings, following GS-4's answer. |
+| GS-8 | League › History | Season 1's standings have no medals; the board's do (rule 5). | The same order and medals as GS-4's final standings (champion first with gold); the season card's "Champion {name}" line stays. Do it with GS-4 if cheap. |
 | GS-9 | All matchups | In games you're not in, the left side's bar is your blue, and the left name is in text colour while the right one is grey. Blue means you (rule 7). The board draws it the same way, so both get fixed. | Games without you: a neutral bar for both sides, both names in the same colour. |
 | GS-10 | Run it back, member (kill switch) | The member's roster shows the commissioner's line: "You can set the draft once everyone has replied." (README question). | Members: "{commissioner} sets the draft once everyone has replied. Waiting on Andrea P." **P1 for the switch flip.** |
 | GS-11 | Run it back, commissioner's Season 2 Home (kill switch) | Home's draft card offers an **enabled** "Set draft time" while replies are pending, but League locks the draft until everyone replies (`renewal.ts:49 draftDisabled`); `PreDraftCard` doesn't know about the renewal. Two screens, two answers. | Home applies the same lock: no Set draft time while replies are pending, with the counts card's line as the reason. **P1 for the switch flip.** |

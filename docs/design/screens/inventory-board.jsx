@@ -289,16 +289,16 @@
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
             <div>
-              <h2 id="call-medals-h">Your call: who gets the gold once the season is over</h2>
-              <p className="b-job">From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
+              <h2 id="call-medals-h">Decided: who gets the gold once the season is over</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> Once the playoffs are done, the medals follow the result. From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
             </div>
           </header>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · Medals follow the playoffs" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
-            <Fit caption="B · Medals stay regular season" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
+            <Fit caption="✓ A · Medals follow the playoffs (chosen)" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
+            <Fit caption="B · Medals stay regular season (not chosen)" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
           </div>
           <div className="b-ask">
-            <h3>Your call · recommend A</h3>
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #191)</h3>
             <ul>
               <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
               <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
