@@ -90,7 +90,14 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
             style={styles.segment}
             onPress={() => choose(option.value)}
           >
-            <Text variant="callout" color={selected ? activeTextColor : idleTextColor} numberOfLines={1}>
+            <Text
+              variant="callout"
+              color={selected ? activeTextColor : idleTextColor}
+              numberOfLines={1}
+              maxFontSizeMultiplier={LABEL_MAX_SCALE}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -100,6 +107,12 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
     </View>
   );
 }
+
+/** The labels' Dynamic Type ceiling, the tab bar's (ShellTabBar LABEL_MAX_SCALE). Uncapped,
+ * every control truncated at XL ("Stan… / Sche…", game-screens gate GS-3), so the League
+ * tabs couldn't be told apart at the size that most needs them. adjustsFontSizeToFit is
+ * only the safety net for a narrow phone: a label shrinks a little rather than truncate. */
+const LABEL_MAX_SCALE = 1.3;
 
 /** The track's inner padding (§9B). The indicator and the segment widths both respect it. */
 const TRACK_PADDING = 2;
@@ -114,7 +127,9 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: space[3],
+    paddingHorizontal: space[1],
     alignItems: 'center',
     justifyContent: 'center',
   },
