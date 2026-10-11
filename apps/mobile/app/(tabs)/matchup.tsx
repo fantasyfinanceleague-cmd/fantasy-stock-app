@@ -21,6 +21,7 @@ import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLine
 import type { AllMatchupRow } from '@/lib/game/allMatchups';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { FinalBanner } from '@/components/game/FinalBanner';
+import { buildFinalBanner } from '@/lib/game/finalBanner';
 import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
@@ -219,7 +220,15 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
       {isFinal && final && reveal.decided ? (
         <FinalBanner
           play={reveal.play}
-          text={final.me === final.opp ? `Tied in Week ${week}` : final.me > final.opp ? `${youName} wins Week ${week}` : `${live.opp?.name ?? ''} wins Week ${week}`}
+          model={buildFinalBanner({
+            week,
+            me: final.me,
+            opp: final.opp,
+            youName,
+            oppName: live.opp?.name ?? '',
+            record: derived.myRecord,
+            isPlayoff: phase?.kind === 'scored' ? phase.isPlayoff : false,
+          })}
         />
       ) : null}
       <MatchScoreboard
