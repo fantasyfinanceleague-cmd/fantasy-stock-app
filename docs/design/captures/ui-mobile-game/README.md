@@ -70,3 +70,24 @@ default: F4a). `RENEWAL_FIXTURE` picks who you are.
   once everyone has replied").
 - **The league sheet lists Season 2 as plain "Summer Cup · Pre-draft"**, with no season label.
 - **RenewalReview's "Teams" sub-line indents under the value column.**
+
+## Game-screens gate fixes (GS-1 to GS-4), 2026-10-10
+
+iPhone 17e, Expo Go SDK 54. Base env as above (`SHELL_FIXTURE=leagues`, `GAME_SEAM=1`) plus
+`HOME_FIXTURE=scored`. XL = `accessibility-extra-large` (Light). The lost and tied Finals use
+the capture-only knob `EXPO_PUBLIC_SCORED_OUTCOME=lost|tied` (DEV only; it swaps or equalises
+week 6's posted gains under `scored`, and your and Gianluigi's records count that result).
+
+| File | Shows | Navigation |
+|---|---|---|
+| `gs-matchup-final-won-{light,dark,xl}` | GS-1 "Roberto B. won by $390.67"; GS-2 the band in your colour, "W · 5–1" (it wraps at XL) | Matchup |
+| `gs-matchup-final-lost-{light,dark}` | GS-2 the neutral sunken band, "L · 4–2"; "Gianluigi B. won by $390.67". No lineups: the swapped capture gains don't reconcile with the per-stock rows, so the screen correctly hides them | Matchup, `SCORED_OUTCOME=lost` |
+| `gs-matchup-final-tied-light` | GS-2 neutral band "Tied in Week 6 · T · 4–1–1"; GS-1 "Tied" under the scores | Matchup, `SCORED_OUTCOME=tied` |
+| `gs-all-matchups-final-{light,dark}` | GS-1 every Final card says "won by" (incl. "Luca V. won by $0.06") | Matchup → All matchups |
+| `gs-league-final-standings-{light,dark}` | GS-4 "Final standings · After the playoffs": you (champion) gold, Paolo (1st seed, lost the Final) silver "Runner-up", Luca (the better-seeded semifinal loser) bronze; the footnote; no move column | Summer Cup → League → Standings |
+| `gs-league-final-standings-xl` | GS-3 all four League segments fit at XL; GS-4 stacked at XL | same, XL |
+| `gs-league-playoffs-{light,dark}` | The Playoffs tab keeps the seeding (Paolo 1). The duplicate Wild card heading is GS-6 (P2, not in this pass) | League → Playoffs |
+| `gs-league-history-{light,dark}` | GS-8 Season 1 by its playoffs (fixture `get_season_matchups`): you gold, Alessandro (3rd seed, lost the Final) silver, Paolo bronze; the rest in frozen order | League → History |
+
+Not captured: the season-complete card (its headline place now comes from the same order;
+covered by `final-standings.test.ts` `seasonCompletePlace`).

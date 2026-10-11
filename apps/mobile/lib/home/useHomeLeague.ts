@@ -52,6 +52,7 @@ import {
   FIXTURE_WEEK6_END,
   fixtureQty,
   isDraftingFixture,
+  SCORED_OUTCOME,
 } from './devFixture';
 
 export type HomeLeagueStatus = 'loading' | 'ready' | 'error' | 'no-league';
@@ -158,9 +159,18 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // every earlier week) is necessarily already scored by then -- never
   // the live/unscored shape.
   const isScored = fixture === 'scored' || regularSeasonComplete;
-  const week6Gains = isScored
-    ? { team1_gain: cents(robRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)), team2_gain: cents(giaRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0)) }
-    : { team1_gain: null, team2_gain: null };
+  // GS-2 re-gate captures: EXPO_PUBLIC_SCORED_OUTCOME picks how week 6 ended under 'scored'
+  // (lost: the two gains swapped; tied: equal). Every other fixture: you won, as before.
+  const outcome = fixture === 'scored' ? SCORED_OUTCOME : 'won';
+  const robGain6 = cents(robRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0));
+  const giaGain6 = cents(giaRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0));
+  const week6Gains = !isScored
+    ? { team1_gain: null, team2_gain: null }
+    : outcome === 'lost' ? { team1_gain: giaGain6, team2_gain: robGain6 }
+    : outcome === 'tied' ? { team1_gain: robGain6, team2_gain: robGain6 }
+    : { team1_gain: robGain6, team2_gain: giaGain6 };
+  // Your and Gianluigi's records count week 6 once it is scored (their real game).
+  const w6 = { won: outcome === 'won' ? 1 : 0, lost: outcome === 'lost' ? 1 : 0, tied: outcome === 'tied' ? 1 : 0 };
 
   const week6 = {
     week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
@@ -321,7 +331,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
           // points_for includes week 6's gain too.
           {
             user_id: FIXTURE_USER_ID, rank: 2,
-            wins: regularSeasonComplete ? 5 : 4, losses: 1, ties: 0,
+            wins: isScored ? 4 + w6.won : 4, losses: isScored ? 1 + w6.lost : 1, ties: isScored ? w6.tied : 0,
             points_for: regularSeasonComplete ? cents(129.99 + (week6Gains.team1_gain ?? 0)) : 129.99,
             display_name: 'Roberto B.', is_bot: false,
           },
@@ -345,7 +355,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
           },
           {
             user_id: 'gianluigi', rank: 6,
-            wins: 1, losses: regularSeasonComplete ? 5 : 4, ties: 0,
+            wins: isScored ? 1 + w6.lost : 1, losses: isScored ? 4 + w6.won : 4, ties: isScored ? w6.tied : 0,
             points_for: regularSeasonComplete ? cents(-142.35 + (week6Gains.team2_gain ?? 0)) : -142.35,
             display_name: 'Gianluigi B.', is_bot: false,
           },
