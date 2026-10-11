@@ -3028,6 +3028,110 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: can a stock you hold, reached from SEARCH, start a sell?
+  // Giorgio, 2026-10-09: "i can only sell what i have... cant sell what you
+  // dont own." Sell is already absent on any stock you don't hold
+  // (fix/sell-only-held: no Buy | Sell control at all). Tier Cup, Roberto
+  // B.'s phone, Thu 1:37 PM ET (open). Sheet copy is the shipped
+  // moneyCopy.ts copy; NVDA's avg entry is SAMPLE (the draft price).
+  // ═════════════════════════════════════════════════════════════════════
+  const SF = {
+    NVDA: { co: 'NVIDIA', price: K.NVDA.thu, prev: K.NVDA.prev, held: { qty: 1, avg: K.NVDA.draft } },
+    SHOP: { co: 'Shopify', price: K.SALE.buy.price, prev: 103.05, held: null },
+  };
+  /** Search "NVDA" in Buy a stock: the row says "You own this" (shipped). */
+  function SellCallSearch() {
+    return (
+      <Device noTabs label="Buy a stock, search NVDA">
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Buy a stock</h2>
+          <SearchBox q="NVDA" focus={false} />
+          <Card><ul className="ks-rows"><ResultRow t="NVDA" kind="mine" last /></ul></Card>
+        </div>
+      </Device>
+    );
+  }
+  /** The stock sheet as 3e ships it, with the variable under call.
+   *  mode: 'sell' (Buy | Sell, Sell pre-selected) | 'buyonly' (no control;
+   *  B's sheet for a stock you hold, from search) | 'free' (a stock you
+   *  don't hold: Buy only, the rule either way). */
+  function SellCallSheet({ t = 'NVDA', mode = 'sell', from = 'search' }) {
+    const S = SF[t];
+    const ch = S.price - S.prev, chPct = (ch / S.prev) * 100;
+    const h = S.held;
+    const gain = h ? S.price * h.qty - h.avg * h.qty : 0;
+    return (
+      <Device tab="portfolio" label={`${t} sheet from ${from}, ${mode}`} overlay={
+        <Sheet top={from === 'search' ? 150 : 170}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t={t} />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption">{S.co}</span></span>
+            <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div>
+            <div className="ks-score ks-num" style={{ fontSize: 34, lineHeight: '38px', fontStretch: '75%' }}>{$(S.price)}</div>
+            <span className="ks-callout ks-num"><span className={tone(ch)} style={{ fontWeight: 700 }}>{$s(ch)} · {pct(chPct)}</span> <span className="ks-muted">today</span></span>
+          </div>
+          {h ? (
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><span className="ks-headline" style={{ fontWeight: 700 }}>Your position</span><span className="ks-caption">Held by you</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }}>
+                {[['Shares', String(h.qty)], ['Avg entry', $(h.avg)], ['Value', $(S.price * h.qty)], ['Gain', `${$s(gain)} · ${pct((gain / (h.avg * h.qty)) * 100)}`]].map(([k, v]) => (
+                  <span key={k}><span className="ks-caption">{k}</span><br /><span className={`ks-callout ks-num ${k === 'Gain' ? tone(gain) : ''}`} style={{ fontWeight: 700 }}>{v}</span></span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <span className="ks-callout ks-muted">No one in Tier Cup owns {t}</span>
+          )}
+          {mode === 'sell' ? (
+            <>
+              <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
+              <span className="ks-callout ks-num">Sell all {h.qty} sh ≈ {$(S.price * h.qty)}</span>
+              <span className="ks-btn">Review sell</span>
+            </>
+          ) : mode === 'buyonly' ? (
+            <>
+              <span className="ks-callout ks-muted">You already hold this stock.</span>
+              <span className="ks-btn" style={{ opacity: 0.45 }} aria-disabled="true">Review buy</span>
+              <span className="ks-callout" style={{ textAlign: 'center', fontWeight: 700, color: 'var(--c-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44 }}>To sell {t}, open it from your Portfolio<Icon d={ICON.right} size={14} width={2.6} /></span>
+            </>
+          ) : (
+            <span className="ks-btn">Review buy</span>
+          )}
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+  /** B's one sell path: Portfolio › the holding row (NVDA pressed). */
+  function SellCallPortfolio() {
+    const rows = [['F', 'Ford', 11.42, -0.61], ['KO', 'Coca-Cola', 68.1, 0.38], ['NVDA', 'NVIDIA', K.NVDA.thu, K.NVDA.todayPct], ['NFLX', 'Netflix', 612.3, 1.24], ['COST', 'Costco', 918.1, -0.27]];
+    return (
+      <Device tab="portfolio" label="Tier Cup portfolio, NVDA holding pressed">
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {rows.map(([t, co, p, c]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', ...(t === 'NVDA' ? { background: 'var(--c-sunken)', margin: '0 -14px', padding: '11px 14px' } : null) }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {TIER.tierOf(p)} slot · 1 sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b><br /><span className={`ks-caption ${tone(c)}`} style={{ fontWeight: 700 }}>{pct(c)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -3040,7 +3144,8 @@
     AutoLobby, CommishBlocked, MemberPostponed, HomeAuto, DateAfterRoom, DraftDatePicker, LockPush,
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
-    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn, ManagerRowCall,
+    BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
+    SellCallSearch, SellCallSheet, SellCallPortfolio, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
