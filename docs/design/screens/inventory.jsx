@@ -3127,6 +3127,55 @@
               ))}
             </ul></div>
           </div>
+  // GIORGIO'S CALL (game-screens gate GS-4, 2026-10-10): what a medal means
+  // once the season is over. Summer Cup, Season 1 finished (SAMPLE season
+  // that mirrors the device capture): Paolo M. tops the regular season,
+  // Roberto B. beats him in the Final. 6 teams, top 2 seeds bye.
+  // ═════════════════════════════════════════════════════════════════════
+  const SC = (() => {
+    const reg = [
+      { id: 'paolo', w: 11, l: 3, pf: 1744.1 }, { id: 'roberto', w: 10, l: 4, pf: 1962.4 },
+      { id: 'alessandro', w: 8, l: 6, pf: 1203.55 }, { id: 'francesco', w: 7, l: 7, pf: 612.8 },
+      { id: 'gianluigi', w: 5, l: 9, pf: -148.25 }, { id: 'andrea', w: 1, l: 13, pf: -402.9 },
+    ].map((r, i) => ({ ...r, seed: i + 1, name: K.byId[r.id].name, you: !!K.byId[r.id].you }));
+    // Wild card: 3 beat 6, 4 beat 5. Semis: 1 beat 4, 2 beat 3. Final: 2 beat 1.
+    const result = ['roberto', 'paolo', 'alessandro', 'francesco', 'gianluigi', 'andrea'];
+    const tag = { roberto: 'Champion', paolo: 'Runner-up' };
+    return { reg, result, tag };
+  })();
+  function MedalsCall({ v = 'A' }) {
+    const rows = v === 'A' ? SC.result.map((id) => SC.reg.find((r) => r.id === id)) : SC.reg;
+    return (
+      <Device tab="league" label={`Finished season standings, option ${v}`}>
+        <Head name="Summer Cup" chip={<span className="ks-chip ks-chip--final">Season 1 · Final</span>} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-seg"><span className="on">Standings</span><span>Schedule</span><span>Playoffs</span><span>History</span></div>
+          <Card pad="6px 14px">
+            <div className="ks-section-h" style={{ padding: '6px 0' }}><h3>{v === 'A' ? 'Final standings' : 'Standings'}</h3><span className="ks-caption">{v === 'A' ? 'After the playoffs' : 'Regular season'}</span></div>
+            <ul className="ks-rows">
+              {rows.map((r, i) => {
+                const champ = r.id === 'roberto';
+                return (
+                  <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 6px', background: r.you ? 'var(--c-you-tint)' : undefined, borderRadius: r.you ? 8 : 0 }}>
+                    <Medal rank={i + 1} />
+                    <span>
+                      <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        {r.name}
+                        {v === 'B' && champ ? <span aria-label="Champion" style={{ display: 'inline-flex', color: 'var(--c-medal-gold)' }}><Icon d={TROPHY} size={15} width={2.2} /></span> : null}
+                      </span>
+                      {v === 'A' && SC.tag[r.id] ? <><br /><span className="ks-caption">{SC.tag[r.id]}</span></> : null}
+                      {v === 'B' && champ ? <><br /><span className="ks-caption">Champion · won the Final</span></> : null}
+                    </span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 82, textAlign: 'right' }}>{$s(r.pf)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            <span className="ks-caption" style={{ display: 'block', padding: '6px 0 8px' }}>{v === 'A'
+              ? 'The playoffs decide the top three: the champion, the runner-up, then the higher seed of the two semifinal losers. Everyone else keeps their regular-season place. Records and gains are the regular season’s.'
+              : 'Ranked by win percentage, then head-to-head, then season gain. This was also the playoff seeding.'}</span>
+          </Card>
         </div>
       </Device>
     );
@@ -3145,7 +3194,7 @@
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
-    SellCallSearch, SellCallSheet, SellCallPortfolio, ManagerRowCall,
+    SellCallSearch, SellCallSheet, SellCallPortfolio, MedalsCall, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();

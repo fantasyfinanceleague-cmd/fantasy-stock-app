@@ -891,7 +891,7 @@ the regular-season order, so **the gold goes to Paolo M., who lost the Final, an
 the champion was also first. **A (recommend):** once the playoffs are done, the medals follow the
 result (champion gold, runner-up silver, bronze to the higher-seeded semifinal loser), as fantasy
 apps' final standings do. **B:** the medals stay regular season, and the champion gets a trophy
-mark on the row. To the board as an A/B call; P1 if he picks A.
+mark on the row. On the board as `#call-medals` (A/B, recommend A); P1 if he picks A.
 
 ### Rulings
 

@@ -285,6 +285,25 @@
               <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
               <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
               <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+        <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-medals-h">Your call: who gets the gold once the season is over</h2>
+              <p className="b-job">From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · Medals follow the playoffs" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
+            <Fit caption="B · Medals stay regular season" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
+              <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
+              <li><b>Nothing is lost in A.</b> Records and season gains stay the regular season's, and the Playoffs tab keeps the seeding.</li>
+              <li>Either way, the same medals then show in League › History and on the season-complete card, so every screen tells the same story.</li>
             </ul>
           </div>
         </section>
