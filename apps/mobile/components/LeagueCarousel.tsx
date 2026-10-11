@@ -76,9 +76,11 @@ export default function LeagueCarousel() {
               const { data: profiles } = await supabase
                 .rpc('get_visible_profiles', { p_user_ids: userIds });
 
-              if (profiles) {
-                const champProfile = profiles.find(p => p.id === season.champion_user_id);
-                const runnerProfile = profiles.find(p => p.id === season.runner_up_user_id);
+              // get_visible_profiles returns table (id uuid, username text, avatar text).
+              const visible = (profiles ?? []) as { id: string; username: string | null; avatar: string | null }[];
+              if (visible.length) {
+                const champProfile = visible.find(p => p.id === season.champion_user_id);
+                const runnerProfile = visible.find(p => p.id === season.runner_up_user_id);
                 championName = champProfile?.username || null;
                 runnerUpName = runnerProfile?.username || null;
               }
