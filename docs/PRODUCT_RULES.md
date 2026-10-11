@@ -198,6 +198,13 @@ building anything, and don't reopen a rule without him.
   conventions (Robinhood) apply only to money surfaces (portfolio value, a stock's price and
   chart, buy/sell mechanics). Giorgio: "i need you to research fantasy football so that this
   doesnt come up." Reference: [`design/FANTASY_CONVENTIONS.md`](design/FANTASY_CONVENTIONS.md).
+- **You can only sell what you own** (2026-10-09, on seeing 1.1.0's trade
+  screen): "the sell option still has a search bar...thats not correct. i can only sell what
+  i have so it should be a dropdown list or something. i shouldnt be able to search any
+  stock, only see what i haave. cant sell what you dont own." So: you can only sell a stock
+  you hold; the sheet of a stock you don't own does not offer Sell at all (enforced in 1.2.0
+  by fix/sell-only-held); the 1.1.0 search-to-sell screen is retired with 1.2.0. Open
+  (2026-10-10): whether your own held stock, reached via search, may start a sell.
 
 ## League lifecycle
 
