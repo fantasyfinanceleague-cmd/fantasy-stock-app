@@ -23,6 +23,7 @@ import { ChampBanner } from '@/components/game/ChampBanner';
 import { championBanner } from '@/lib/game/history';
 import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
+import { useSeasonPlayoffs } from '@/lib/game/useSeasonPlayoffs';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import { DraftCountdownCard } from '@/components/game/DraftCountdownCard';
@@ -46,7 +47,8 @@ import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useCallback, useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
-import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
+import { buildStandingsRows, standingsView, type StandingsRow } from '@/lib/game/standings';
+import { COPY as GAME_COPY } from '@/lib/game/gameCopy';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
@@ -92,14 +94,18 @@ export default function LeagueScreen() {
   const preDraft = (screen === 'lobby' || screen === 'renewal') && activeLeagueId !== null;
   const inSeason = screen === 'season';
   const history = useLeagueHistory(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
+  // GS-8: each finished season in History is ordered by its playoff result, as Standings is.
+  const seasonPlayoffs = useSeasonPlayoffs(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
   const { colors, elevation } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
   const { user } = useAuth();
+  const completed = phase === 'completed';
   const bracket = useBracket(
     inSeason ? activeLeagueId : null,
     activeLeague?.playoff_teams ?? null,
     st.standings.map((x) => ({ user_id: x.user_id, rank: x.rank, display_name: x.display_name })),
-    segment === 'playoffs',
+    // GS-4: a finished season's Standings follow the playoff result, so they read the bracket too.
+    segment === 'playoffs' || (completed && segment === 'standings'),
   );
 
   // R2: a finished season's commissioner starts the renewal. The server returns the
@@ -135,6 +141,7 @@ export default function LeagueScreen() {
       return <PhasePlaceholder title="League" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
     }
     const rows = buildStandingsRows(st.standings, user?.id ?? '', st.previousRanks);
+    const standings = standingsView({ rows, completed, playoffTeams: activeLeague?.playoff_teams ?? null, bracketStatus: bracket.status, playoffRows: bracket.rows });
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ShellHeader title="League" showAvatar />
@@ -157,7 +164,7 @@ export default function LeagueScreen() {
                 onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : v === 'history' ? 'history' : 'standings')}
               />
               {segment === 'history' ? (
-                history.status === 'ready' ? <HistoryList rows={history.rows} myUserId={user?.id ?? ''} /> : null
+                history.status === 'ready' ? <HistoryList rows={history.rows} myUserId={user?.id ?? ''} playoffs={seasonPlayoffs.status === 'ready' ? seasonPlayoffs.byLeague : null} /> : null
               ) : segment === 'playoffs' ? (
                 bracket.bracket ? (
                   <BracketView
@@ -167,7 +174,18 @@ export default function LeagueScreen() {
                   />
                 ) : null
               ) : segment === 'standings' ? (
-                <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} onPinChange={setPinnedRow} />
+                standings.kind === 'final' ? (
+                  <StandingsTable
+                    rows={standings.rows}
+                    header={{ title: GAME_COPY.finalStandingsTitle, subtitle: GAME_COPY.finalStandingsSubtitle }}
+                    caption={GAME_COPY.finalStandingsCaption}
+                    seasonComplete
+                    showMove={false}
+                    onPinChange={setPinnedRow}
+                  />
+                ) : standings.kind === 'regular' ? (
+                  <StandingsTable rows={standings.rows} caption={STANDINGS_CAPTION} seasonComplete={standings.medals} onPinChange={setPinnedRow} />
+                ) : null
               ) : (
                 <ScheduleList
                   rows={buildSchedule({ myUserId: user?.id ?? '', currentWeek: st.week ?? 1, numWeeks: activeLeague?.num_weeks ?? 0, names: st.standings.map((x) => ({ user_id: x.user_id, display_name: x.display_name })), matchups: st.data?.matchups ?? [] })}
@@ -190,7 +208,7 @@ export default function LeagueScreen() {
           <View style={styles.pinned} pointerEvents="box-none">
             {/* A View, not Card: Card clips (overflow hidden), which would cut the shadow. */}
             <View style={[styles.pinnedCard, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}>
-              <StandingsRowView r={pinnedRow} seasonComplete={phase === 'completed'} />
+              <StandingsRowView r={pinnedRow} seasonComplete={standings.kind === 'final' || (standings.kind === 'regular' && standings.medals)} showMove={standings.kind !== 'final'} />
             </View>
           </View>
         ) : null}

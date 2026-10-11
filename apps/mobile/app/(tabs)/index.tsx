@@ -143,6 +143,8 @@ function HomeBody({
         seasonNumber={null}
         finalRank={myStanding?.rank ?? 0}
         standingsCount={standings.length}
+        myUserId={myUserId}
+        standings={standings}
         wins={myStanding?.wins ?? 0}
         losses={myStanding?.losses ?? 0}
         ties={myStanding?.ties ?? 0}

@@ -36,6 +36,26 @@ export function fixtureHistory() {
   ];
 }
 
+/** Season 1's playoff games (get_season_matchups rows, SQL shape; the playoff rows only:
+ * History reads nothing else from it). 6 teams, seeds 1–2 bye. Wild card: Alessandro (3)
+ * beats Andrea (6), Francesco (4) beats Gianluigi (5). Semifinals: you (1) beat Francesco,
+ * Alessandro beats Paolo (2). Final: you beat Alessandro. So History's final standings
+ * read you (Champion), Alessandro (Runner-up), Paolo (the better-seeded semifinal loser),
+ * then Francesco, Gianluigi, Andrea: GS-8's reorder is visible. */
+export function fixtureSeasonPlayoffs() {
+  const game = (round: number, position: number, t1: string, t2: string, winner: string) => ({
+    league_id: 'fixture-season-1', season_number: 1, is_playoff: true, playoff_round_number: round, bracket_position: position,
+    team1_user_id: t1, team2_user_id: t2, winner_user_id: winner,
+  });
+  return [
+    game(1, 0, 'alessandro', 'andrea', 'alessandro'),
+    game(1, 1, 'francesco', 'gianluigi', 'francesco'),
+    game(2, 0, SEAM_ME, 'francesco', SEAM_ME),
+    game(2, 1, 'paolo', 'alessandro', 'alessandro'),
+    game(3, 0, SEAM_ME, 'alessandro', SEAM_ME),
+  ];
+}
+
 /** The draft board's clock and order (the board's Serie A / Stock Scudetto draft). */
 function fixtureDraftRoom(roomVariant: DraftRoomVariant = 'on_clock') {
   const order = ['paolo', SEAM_ME, 'alessandro', 'francesco', 'gianluigi', 'andrea'];
@@ -69,6 +89,7 @@ export function fixtureFor(name: string, args: Record<string, unknown>, roomVari
     // ---- Run it back: reads ----
     case 'get_renewal_roster': return { data: fixtureRoster('commissioner', new Date()), error: null };
     case 'get_league_history': return { data: fixtureHistory(), error: null };
+    case 'get_season_matchups': return { data: fixtureSeasonPlayoffs(), error: null };
     // The through-week ranking (the League tab's movement): last week's order.
     case 'league_standings_ranked': return typeof args.p_through_week === 'number' ? { data: seamPreviousRanks(), error: null } : null;
     // ---- the draft room: reads ----

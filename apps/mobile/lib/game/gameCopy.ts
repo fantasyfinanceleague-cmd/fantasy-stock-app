@@ -17,6 +17,12 @@ export const COPY_SOURCES = {
   byeNoResult: 'new',
   allMatchupsLoadFailed: 'new', // the Design Lead's final sweep (S-6), for the copy audit
   finalTied: 'existing', // the tug's own "Tied"; the game-screens gate (GS-1) asks for it on a finished week
+  // GS-4, board #call-medals frame A (Giorgio chose A, 2026-10-10): verbatim.
+  finalStandingsTitle: 'board',
+  finalStandingsSubtitle: 'board',
+  champion: 'board',
+  runnerUp: 'board',
+  finalStandingsCaption: 'board',
 } as const;
 
 const MINUS = '−';
@@ -71,4 +77,10 @@ export const COPY = {
   byeNoResult: 'Bye week · no result',
   allMatchupsLoadFailed: "This week's matchups didn't load",
   finalTied: 'Tied',
+  finalStandingsTitle: 'Final standings',
+  finalStandingsSubtitle: 'After the playoffs',
+  champion: 'Champion',
+  runnerUp: 'Runner-up',
+  finalStandingsCaption:
+    'The playoffs decide the top three: the champion, the runner-up, then the higher seed of the two semifinal losers. Everyone else keeps their regular-season place. Records and gains are the regular season’s.',
 } as const;

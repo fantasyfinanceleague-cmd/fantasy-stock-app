@@ -5,18 +5,23 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { radius, space } from '@/constants/tokens';
-import { historySeasons, type HistoryRow } from '@/lib/game/history';
+import { historySeasons, historyStandings, type HistoryRow } from '@/lib/game/history';
+import type { PodiumGameRow } from '@/lib/game/finalStandings';
+import { MEDAL, MedalDisc, useMedalDiscSize } from '@/components/game/MedalDisc';
 import { useLargeText } from '@/components/sp/useLargeText';
 import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 /** League › History (R10): every season of the lineage, its champion, and its frozen
- * final standings, newest first. An unfinished season shows no champion. */
-export function HistoryList({ rows, myUserId }: { rows: HistoryRow[]; myUserId: string }) {
+ * final standings, newest first. An unfinished season shows no champion. A finished
+ * season is ordered by its playoff result with medals, as League › Standings is
+ * (GS-8 = GS-4): `playoffs` holds each season's playoff games (get_season_matchups). */
+export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; myUserId: string; playoffs: Map<string, PodiumGameRow[]> | null }) {
   const { colors } = useTheme();
-  const seasons = historySeasons(rows);
+  const seasons = historySeasons(rows).map((s) => ({ ...s, table: historyStandings(s, playoffs?.get(s.leagueId) ?? null) }));
   const gainColor = (v: number) => (v > 0 ? colors.gain : v < 0 ? colors.loss : colors.text);
   // Large text: the record and gain go under the name (one line squeezed it to a letter per line).
   const largeText = useLargeText();
+  const disc = useMedalDiscSize();
   return (
     <View style={styles.stack}>
       <Text variant="title">History</Text>
@@ -27,26 +32,31 @@ export function HistoryList({ rows, myUserId }: { rows: HistoryRow[]; myUserId: 
             {s.myRecord ? <Text variant="callout" tone="secondary">{s.myRecord}</Text> : null}
           </View>
           {s.champion ? <Text variant="caption" tone="secondary">{`Champion ${s.champion}`}</Text> : <Text variant="caption" tone="secondary">Not finished yet</Text>}
-          {s.standings.map((st) => (
-            <View key={st.user_id} style={[styles.row, yourRowTint(st.user_id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${st.rank}, ${st.display_name}${youA11y(st.user_id === myUserId)}, ${st.wins}–${st.losses}, ${formatMoney(st.points_for, { sign: 'always' })}`}>
-              <Text variant="callout" style={styles.rank}>{st.rank}</Text>
-              {largeText ? (
-                <View style={styles.name}>
-                  <Text variant="callout" style={yourNameStyle(st.user_id === myUserId)}>{st.display_name}</Text>
-                  <View style={styles.statsLine}>
-                    <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
-                    <Text variant="callout" style={{ color: gainColor(st.points_for) }}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
-                  </View>
+          {s.table.places.map(({ standing: st, place, tag }) => {
+            const medal = s.table.medals ? MEDAL[place] : undefined;
+            return (
+              <View key={st.user_id} style={[styles.row, yourRowTint(st.user_id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${place}, ${st.display_name}${youA11y(st.user_id === myUserId)}${tag ? `, ${tag}` : ''}, ${st.wins}–${st.losses}, ${formatMoney(st.points_for, { sign: 'always' })}`}>
+                <View style={[styles.rankCell, { minWidth: Math.max(24, disc) }]}>
+                  {medal ? <MedalDisc place={place} size={disc} /> : <Text variant="callout" style={styles.rank}>{place}</Text>}
                 </View>
-              ) : (
-                <>
-                  <Text variant="callout" style={[styles.name, yourNameStyle(st.user_id === myUserId)]}>{st.display_name}</Text>
-                  <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
-                  <Text variant="callout" style={[styles.gain, { color: gainColor(st.points_for) }]}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
-                </>
-              )}
-            </View>
-          ))}
+                {largeText ? (
+                  <View style={styles.name}>
+                    <Text variant="callout" style={yourNameStyle(st.user_id === myUserId)}>{st.display_name}</Text>
+                    <View style={styles.statsLine}>
+                      <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
+                      <Text variant="callout" style={{ color: gainColor(st.points_for) }}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <Text variant="callout" style={[styles.name, yourNameStyle(st.user_id === myUserId)]}>{st.display_name}</Text>
+                    <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
+                    <Text variant="callout" style={[styles.gain, { color: gainColor(st.points_for) }]}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
+                  </>
+                )}
+              </View>
+            );
+          })}
         </Card>
       ))}
     </View>
@@ -60,7 +70,8 @@ const styles = StyleSheet.create({
   stack: { gap: space[3] },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
-  rank: { minWidth: 24, textAlign: 'right' },
+  rankCell: { alignItems: 'flex-end' },
+  rank: { textAlign: 'right' },
   name: { flex: 1, minWidth: 0 },
   statsLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: space[2] },
   gain: { minWidth: 92, textAlign: 'right' },

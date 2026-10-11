@@ -2,30 +2,102 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "cc6fa17a9b0dca3806739f00e590b24ac5d21712",
-    "commitShort": "cc6fa17a",
+    "commit": "aa22f7f808d33e7a3105de64e0aa9c23f3a7acc3",
+    "commitShort": "aa22f7f8",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "fix/fixture-identity",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/DraftComplete.tsx"
+        "path": "apps/mobile/app/(tabs)/index.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/HistoryList.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/components/game/MedalDisc.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/StandingsTable.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/home/SeasonCompleteCard.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/game/finalStandings.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/gameCopy.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/history.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamFixtures.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/standings.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/useBracket.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/game/useSeasonPlayoffs.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/node_modules"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/final-standings-screens.test.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/final-standings.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-standings.test.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/manager-row.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-11T05:44:33Z",
-    "sourceHash": "sha256:5458cbcf185727332b1c4d2a5bc24dd77c3cd1cb43593a0c2aa606764a8c2408",
+    "timestamp": "2026-10-11T05:50:57Z",
+    "sourceHash": "sha256:fb5ea746b0fdbf61fa29560ac10fb2d8a873458c8bde27739bfb6cae06d2130d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 82,
+    "ageHours": 82.2,
     "ageDays": 3.4,
     "staleAfterDays": 14,
     "stale": false,
@@ -7781,6 +7853,23 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.game.useSeasonPlayoffs",
+      "label": "useSeasonPlayoffs.ts",
+      "sublabel": "mobile/lib/game/useSeasonPlayoffs.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useSeasonPlayoffs.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.game.useWeekOne",
       "label": "useWeekOne.ts",
       "sublabel": "mobile/lib/game/useWeekOne.ts",
@@ -15345,7 +15434,7 @@
         "playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useBracket.ts:29"
+        "apps/mobile/lib/game/useBracket.ts:31"
       ]
     },
     {
@@ -15641,6 +15730,21 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.game.useSeasonPlayoffs->pg.get_season_matchups",
+      "from": "ui.game.useSeasonPlayoffs",
+      "to": "pg.get_season_matchups",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_season_matchups')",
+      "callSites": [
+        "apps/mobile/lib/game/useSeasonPlayoffs.ts:29"
+      ],
+      "via": [
+        "seamRpc"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.game.useWeekOne->tbl.matchups",
       "from": "ui.game.useWeekOne",
       "to": "tbl.matchups",
@@ -15819,7 +15923,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:109"
+        "apps/mobile/app/(tabs)/league.tsx:115"
       ],
       "via": [
         "seamRpc"
@@ -18675,18 +18779,6 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "pg.get_season_matchups",
-      "label": "get_season_matchups()",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261115000003_run_it_back_rpcs.sql:720",
-      "outbound": [
-        "tbl.league_members",
-        "tbl.leagues",
-        "tbl.matchups"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg.participant_display_name",
       "label": "participant_display_name(p_user_id text)",
       "kind": "pg-function",
@@ -19292,12 +19384,12 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 253,
-    "edges": 622,
+    "nodes": 254,
+    "edges": 623,
     "flows": 8,
     "drift": 61,
     "driftHigh": 34,
-    "deadCode": 44,
+    "deadCode": 43,
     "unverified": 51
   },
   "sourceIndex": {
@@ -19368,7 +19460,7 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:109 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/league.tsx:115 -> renew_league (via seamRpc)",
       "apps/mobile/components/game/QueueEditor.tsx:39 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:25 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
@@ -19386,6 +19478,7 @@
       "apps/mobile/lib/game/useLeagueStandings.ts:50 -> league_standings_ranked (via seamRpc)",
       "apps/mobile/lib/game/useLeaveLeague.ts:29 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/game/useRenewalRoster.ts:45 -> get_renewal_roster (via seamRpc)",
+      "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
       "apps/mobile/lib/home/useHomeLeague.ts:563 -> get_home_league",
@@ -19478,7 +19571,7 @@
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
-      "apps/mobile/lib/game/useBracket.ts:29 -> matchups.select",
+      "apps/mobile/lib/game/useBracket.ts:31 -> matchups.select",
       "apps/mobile/lib/game/useDraftAutoStart.ts:101 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:149 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftQueue.ts:22 -> draft_queue.select",
