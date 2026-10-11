@@ -15,6 +15,14 @@ export const COPY_SOURCES = {
   preSeasonChyron: 'board',
   endsFriday: 'board',
   byeNoResult: 'new',
+  allMatchupsLoadFailed: 'new', // the Design Lead's final sweep (S-6), for the copy audit
+  finalTied: 'existing', // the tug's own "Tied"; the game-screens gate (GS-1) asks for it on a finished week
+  // GS-4, board #call-medals frame A (Giorgio chose A, 2026-10-10): verbatim.
+  finalStandingsTitle: 'board',
+  finalStandingsSubtitle: 'board',
+  champion: 'board',
+  runnerUp: 'board',
+  finalStandingsCaption: 'board',
 } as const;
 
 const MINUS = '−';
@@ -35,10 +43,20 @@ export function tiebreakLine(myPct: number, oppPct: number): string {
   return `Tiebreak ${signedPct(myPct)} vs ${signedPct(oppPct)}`;
 }
 
-/** "Roberto B. leads by $123.16" (board). The dollars are the lead's absolute gap. */
+function dollarsMagnitude(dollars: number): string {
+  return Math.abs(dollars).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** "Roberto B. leads by $123.16" (board). The dollars are the lead's absolute gap.
+ * Only while the week is in play: a finished week says wonByLine (GS-1). */
 export function leadLine(leaderName: string, dollars: number): string {
-  const magnitude = Math.abs(dollars).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${leaderName} leads by $${magnitude}`;
+  return `${leaderName} leads by $${dollarsMagnitude(dollars)}`;
+}
+
+/** "Roberto B. won by $390.67" (board, Matchup final: screens.jsx "won by"). A
+ * finished week never says "leads by": that reads as still in play (GS-1). */
+export function wonByLine(winnerName: string, dollars: number): string {
+  return `${winnerName} won by $${dollarsMagnitude(dollars)}`;
 }
 
 /**
@@ -57,4 +75,12 @@ export const COPY = {
   preSeasonChyron: (startLabel: string) => `Week 1 starts ${startLabel}. No leader until the market opens.`,
   endsFriday: 'Ends Fri 4:00 PM ET',
   byeNoResult: 'Bye week · no result',
+  allMatchupsLoadFailed: "This week's matchups didn't load",
+  finalTied: 'Tied',
+  finalStandingsTitle: 'Final standings',
+  finalStandingsSubtitle: 'After the playoffs',
+  champion: 'Champion',
+  runnerUp: 'Runner-up',
+  finalStandingsCaption:
+    'The playoffs decide the top three: the champion, the runner-up, then the higher seed of the two semifinal losers. Everyone else keeps their regular-season place. Records and gains are the regular season’s.',
 } as const;

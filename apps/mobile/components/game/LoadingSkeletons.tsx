@@ -53,6 +53,51 @@ export function HomeSkeleton() {
   );
 }
 
+/** Matchup (S-6): the score row (two names, two scores, the tug) and the two lineups. */
+export function MatchupSkeleton() {
+  return (
+    <View style={styles.stack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
+      <Card style={styles.card}>
+        <Skeleton width={110} height={12} />
+        <View style={styles.scoreRow}>
+          <Skeleton width={120} height={36} />
+          <Skeleton width={120} height={36} />
+        </View>
+        <Skeleton height={8} borderRadius={radius.sm} />
+        <Skeleton width={160} height={14} />
+      </Card>
+      <View style={styles.scoreRow}>
+        {[0, 1].map((col) => (
+          <Card key={col} style={[styles.card, styles.lineupCard]}>
+            <Skeleton width={90} height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+            <Skeleton height={14} />
+          </Card>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** All matchups (S-6): the week's games, as compact score rows. */
+export function AllMatchupsSkeleton() {
+  return (
+    <View style={styles.stack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
+      {[0, 1, 2].map((r) => (
+        <Card key={r} style={styles.card}>
+          <Skeleton width={100} height={12} />
+          <View style={styles.scoreRow}>
+            <Skeleton width={110} height={20} />
+            <Skeleton width={110} height={20} />
+          </View>
+          <Skeleton height={6} borderRadius={radius.sm} />
+        </Card>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   stack: {
     gap: space[3],
@@ -65,5 +110,13 @@ const styles = StyleSheet.create({
   boardRow: {
     flexDirection: 'row',
     gap: space[2],
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: space[3],
+  },
+  lineupCard: {
+    flex: 1,
   },
 });

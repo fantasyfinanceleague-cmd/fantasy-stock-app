@@ -31,8 +31,8 @@ export function useLeagueStandings(leagueId: string | null): LeagueStandingsStat
     if (!leagueId || !user?.id) return;
     let cancelled = false;
     (async () => {
-      // Under the capture seam the board's scored league stands in for the read, and the
-      // through-week call is skipped: no movement is guessed (3c).
+      // Under the capture seam the board's scored league stands in for the read; the
+      // through-week call goes through the seam like any other (its fixture is last week's order).
       const seamData = SEAM_ON ? (fixtureHomeLeague('scored').data as unknown) : null;
       const { data, error } = SEAM_ON ? { data: seamData, error: null } : await seamRpc('get_home_league', { p_league_id: leagueId });
       if (cancelled) return;
@@ -47,9 +47,7 @@ export function useLeagueStandings(leagueId: string | null): LeagueStandingsStat
       if (week > 1) {
         // Movement needs last week's order. Until the through-week ranking is
         // deployed this call errors, and the arrows stay hidden.
-        const { data: prev, error: prevError } = SEAM_ON
-          ? { data: null, error: { message: 'seam' } }
-          : await seamRpc('league_standings_ranked', { p_league_id: leagueId, p_through_week: week - 1 });
+        const { data: prev, error: prevError } = await seamRpc('league_standings_ranked', { p_league_id: leagueId, p_through_week: week - 1 });
         if (!prevError && Array.isArray(prev)) {
           previousRanks = new Map(prev.map((r: { user_id: string; rank: number }) => [String(r.user_id), Number(r.rank)]));
         }

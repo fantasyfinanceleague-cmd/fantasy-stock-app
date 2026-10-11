@@ -87,12 +87,13 @@ import { SOURCES } from './sourceManifest.generated.ts';
 
 Deno.test('the pinned copy is the SAME row component, and the table reads the move with moveA11y (source guards)', () => {
   const table = SOURCES['components/game/StandingsTable.tsx'];
-  assertEquals(table.includes('<StandingsRowView r={r} seasonComplete={seasonComplete} />'), true);
+  assertEquals(table.includes('<StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} />'), true);
   assertEquals(table.includes('const move = moveA11y(r.move);'), true);
   assertEquals(table.includes('`, up ${Math.abs(r.move)}`'), false); // the old "up" for a down move
   assertEquals(table.includes('shouldPinYourRow({'), true);
   const screen = SOURCES['app/(tabs)/league.tsx'];
-  assertEquals(screen.includes('<StandingsRowView r={pinnedRow} seasonComplete={phase === \'completed\'} />'), true);
+  // The pinned copy shows the same medals and move column as the table (GS-4's final standings drop the move).
+  assertEquals(screen.includes("<StandingsRowView r={pinnedRow} seasonComplete={standings.kind === 'final' || (standings.kind === 'regular' && standings.medals)} showMove={standings.kind !== 'final'} />"), true);
   assertEquals(screen.includes('onPinChange={setPinnedRow}'), true);
 });
 

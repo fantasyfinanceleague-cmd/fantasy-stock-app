@@ -117,7 +117,9 @@ Deno.test('the room: the ending replaces the room once every pick is in; the han
   assertEquals(room.includes('const stuck = draftDone && room.draftStatus === \'in_progress\';'), true);
   assertEquals(room.includes('setTimeout(refresh, Math.max(0, fullSince + FINALIZE_GRACE_MS - Date.now()))'), true);
   assertEquals(room.includes('if (stuck && !handedOff.current && shouldHandOffToFinalize(fullSince, Date.now())) {'), true);
-  assertEquals(room.includes("router.push('/(tabs)/draft');"), true); // the finalize heal itself is unchanged
+  // S-2: the heal runs in the room now (game-draft-finalize-heal.test.ts), never the legacy screen.
+  assertEquals(room.includes('void finishDraft();'), true);
+  assertEquals(room.includes("router.push('/(tabs)/draft');"), false);
   assertEquals(room.includes('const weekOne = useWeekOne(leagueId, myUserId, draftDone && finished);'), true);
 });
 

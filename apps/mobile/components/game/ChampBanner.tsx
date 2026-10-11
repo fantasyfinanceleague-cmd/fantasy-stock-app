@@ -3,12 +3,12 @@ import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 
 /** R9, the last season's champion, until the next draft: a compact banner. */
 export function ChampBanner({ tag, line }: { tag: string; line: string }) {
   return (
-    <Card>
+    <Card style={styles.card}>
       <View style={styles.row}>
         <Icon name="trophy" size="headline" tone="live" />
         <View style={styles.text}>
@@ -21,6 +21,9 @@ export function ChampBanner({ tag, line }: { tag: string; line: string }) {
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   text: { flex: 1, gap: space[1] },
 });

@@ -15,18 +15,23 @@ import { MatchScoreboard } from '@/components/game/MatchScoreboard';
 import { WeekRace } from '@/components/game/WeekRace';
 import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
-import { useRevealOnce } from '@/lib/game/useRevealOnce';
+import { useRevealOnce, type RevealState } from '@/lib/game/useRevealOnce';
 import { useAllMatchups } from '@/lib/game/useAllMatchups';
 import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLineups';
 import type { AllMatchupRow } from '@/lib/game/allMatchups';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { FinalBanner } from '@/components/game/FinalBanner';
+import { buildFinalBanner } from '@/lib/game/finalBanner';
 import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
 import { nameOf } from '@/lib/game/buildMatchupViewModel';
 import { buildMatchScoreboardModel } from '@/lib/game/matchScoreboardModel';
 import { COPY } from '@/lib/game/gameCopy';
+import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
+import { AllMatchupsSkeleton, MatchupSkeleton } from '@/components/game/LoadingSkeletons';
+import { LoadFailure } from '@/components/money/LoadFailure';
+import { useLargeText } from '@/components/sp/useLargeText';
 import { formatMoney } from '@/components/sp/logic/money';
 import { unpricedNote } from '@/lib/plCoverage';
 import {
@@ -52,7 +57,7 @@ export default function MatchupScreen() {
   const chyron = useLeadChyron(m.derived?.live ?? null, m.quote, m.bars, m.todayIso);
   // G3: the Friday reveal plays once per matchup-week, once the result is posted.
   const revealFinal = m.derived?.view.kind === 'final' && m.derived.final !== null;
-  const revealPlay = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
+  const reveal = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
   // "My matchup" / "All matchups" are the board's labels (key screen 2).
   const [segment, setSegment] = useState<'mine' | 'all'>('mine');
   // The draft's ending on a Week 1 bye opens All matchups (?segment=all). The tab
@@ -83,19 +88,22 @@ export default function MatchupScreen() {
           />
         ) : null}
         {segment === 'all' ? (
-          <AllMatchupsList state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
+          <AllMatchupsList key={activeLeagueId ?? 'none'} state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
         ) : (
-          <MatchupBody status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} revealPlay={revealPlay} finalLines={finalLines} />
+          // S-4: keyed by league, so a league switch mounts a fresh scoreboard, tug and race
+          // instead of rolling league A's score into league B's (Home's H5, HomeLeagueTransition).
+          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} reveal={reveal} finalLines={finalLines} />
         )}
       </BarsRefresh>
     </View>
   );
 }
 
-function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[] }; week: number; myUserId: string }) {
-  if (state.status === 'loading' || state.status === 'idle') return null;
+function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[]; retry: () => void }; week: number; myUserId: string }) {
+  // S-6: loading shows the games' shape (never a blank tab); a failed load says so and offers Try again.
+  if (state.status === 'loading' || state.status === 'idle') return <AllMatchupsSkeleton />;
   if (state.status === 'error') {
-    return <Text variant="callout" tone="secondary">Couldn't load this week's matchups.</Text>;
+    return <LoadFailure title={COPY.allMatchupsLoadFailed} message={MONEY_COPY.loadRetryMessage} onRetry={state.retry} />;
   }
   return (
     <View style={styles.stack}>
@@ -133,19 +141,24 @@ interface BodyProps {
   onRefresh: () => Promise<void>;
   leagueName: string;
   chyron: string | null;
-  revealPlay: boolean;
+  /** The one-time reveal: the banner mounts only once it is decided (useRevealOnce). */
+  reveal: RevealState;
   finalLines: FinalLineupsState;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, finalLines }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalLines }: BodyProps) {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  // At the large text sizes the two lineups stack (side by side they ran into each other).
+  const largeText = useLargeText();
   if (status === 'error') {
     return (
       <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
     );
   }
-  if (status === 'loading' || !derived || !user) return null; // honest empty while loading, never a made-up number
+  if (status === 'no-league') return null;
+  // S-6: the score row's and lineups' shape while loading, never a made-up number.
+  if (status === 'loading' || !derived || !user) return <MatchupSkeleton />;
 
   const { view, live, final, weekEnd, week } = derived;
   const youName = live.me.name;
@@ -203,10 +216,19 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
   return (
     <View style={styles.stack}>
       {!isFinal ? <Chyron message={chyron} /> : null}
-      {isFinal && final ? (
+      {/* Mounted only once the reveal is decided: FinalBanner takes its start pose on mount. */}
+      {isFinal && final && reveal.decided ? (
         <FinalBanner
-          play={revealPlay}
-          text={final.me === final.opp ? `Tied in Week ${week}` : final.me > final.opp ? `${youName} wins Week ${week}` : `${live.opp?.name ?? ''} wins Week ${week}`}
+          play={reveal.play}
+          model={buildFinalBanner({
+            week,
+            me: final.me,
+            opp: final.opp,
+            youName,
+            oppName: live.opp?.name ?? '',
+            record: derived.myRecord,
+            isPlayoff: phase?.kind === 'scored' ? phase.isPlayoff : false,
+          })}
         />
       ) : null}
       <MatchScoreboard
@@ -228,13 +250,13 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, revealPlay, fi
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
       {isFinal ? (
         finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows && live.opp ? (
-          <View style={styles.lineups}>
+          <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
             <Lineup title={youName} rows={finalLines.mine.rows} />
             <Lineup title={live.opp.name} rows={finalLines.theirs.rows} />
           </View>
         ) : null
       ) : live.opp ? (
-        <View style={styles.lineups}>
+        <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
           <Lineup title={youName} rows={live.me.lineup} />
           <Lineup title={live.opp.name} rows={live.opp.lineup} />
         </View>
@@ -260,7 +282,10 @@ function Lineup({ title, rows }: { title: string; rows: LineupRow[] }) {
 const styles = StyleSheet.create({
   stack: { gap: space[4] },
   lineups: { flexDirection: 'row', gap: space[4] },
-  lineup: { flex: 1, gap: space[2] },
-  lineRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  lineupsStacked: { flexDirection: 'column', gap: space[5] },
+  // minWidth 0: a flex column's minimum is otherwise its content's width, so the two
+  // lineups overflowed into each other instead of sharing the row.
+  lineup: { flex: 1, minWidth: 0, gap: space[2] },
+  lineRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[2] },
   symbol: { fontWeight: '600' },
 });

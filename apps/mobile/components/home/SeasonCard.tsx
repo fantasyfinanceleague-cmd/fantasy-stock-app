@@ -78,6 +78,7 @@ export function SeasonCard({ series, weekResults, currentWeek, isLive, numWeeks,
         weekStartIdx={window === 'Season' ? series.weekStartIdx : []}
         onScrubIndex={setScrubIndex}
         skipEntrance={skipEntrance}
+        drawKey={window}
       />
 
       <View style={styles.chipsRow}>

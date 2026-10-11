@@ -67,6 +67,32 @@ Deno.test('a final matchup says final, not live', () => {
 
 Deno.test('a final matchup has no percentages to show, so the tiebreak is omitted, never guessed', () => {
   const m = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Roberto B.', gain: 351.77, pct: null }, opp: { name: 'Gianluigi B.', gain: -38.88, pct: null }, endsLabel: 'Final' });
-  assertEquals(m.leadLine, 'Roberto B. leads by $390.65');
+  assertEquals(m.leadLine, 'Roberto B. won by $390.65'); // GS-1: a finished week never "leads"
   assertEquals(m.tiebreakLine, null);
+});
+
+Deno.test('GS-1: a final names the winner with "won by", whichever side won', () => {
+  const lost = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Roberto B.', gain: -38.88, pct: null }, opp: { name: 'Gianluigi B.', gain: 351.77, pct: null }, endsLabel: 'Final' });
+  assertEquals(lost.leadLine, 'Gianluigi B. won by $390.65');
+  assert(!/leads/.test(lost.leadLine ?? ''));
+  assert(lost.a11yLabel.includes('Gianluigi B. won by $390.65.'));
+  const won = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Roberto B.', gain: 351.77, pct: null }, opp: { name: 'Gianluigi B.', gain: -38.88, pct: null }, endsLabel: 'Final' });
+  assert(won.a11yLabel.includes('You won by $390.65.'));
+});
+
+Deno.test('GS-1: a final tie reads "Tied"; a live tie keeps no lead line', () => {
+  const tie = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Roberto B.', gain: 12.5, pct: null }, opp: { name: 'Luca V.', gain: 12.5, pct: null }, endsLabel: 'Final' });
+  assertEquals(tie.leadLine, 'Tied');
+  const liveTie = buildMatchScoreboardModel({ week: 6, live: true, me: { ...me, gain: 12.5 }, opp: { ...opp, gain: 12.5 }, endsLabel: 'x' });
+  assertEquals(liveTie.leadLine, null);
+});
+
+Deno.test('GS-1: an All matchups Final card (another game) says "won by" too', () => {
+  const card = buildMatchScoreboardModel({ week: 6, live: false, me: { name: 'Luca V.', gain: 100.06, pct: 0.5 }, opp: { name: 'Marco T.', gain: 100, pct: 0.4 }, endsLabel: '' });
+  assertEquals(card.leadLine, 'Luca V. won by $0.06');
+});
+
+Deno.test('a final with no opponent (a bye) still has no lead line', () => {
+  const m = buildMatchScoreboardModel({ week: 4, live: false, me, opp: null, endsLabel: 'x' });
+  assertEquals(m.leadLine, null);
 });

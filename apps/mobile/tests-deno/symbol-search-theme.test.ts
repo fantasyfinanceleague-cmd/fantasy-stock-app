@@ -23,7 +23,8 @@ Deno.test('the ruled tokens: field inset / text / text2 placeholder; results sur
 });
 
 Deno.test('no caller passes its own colours into the field (theming it is safe for all four)', () => {
-  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx', 'components/TradeModal.tsx', 'app/(tabs)/draft.tsx']) {
+  // (The legacy app/(tabs)/draft.tsx is a redirect since S-2: no field there any more.)
+  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx', 'components/TradeModal.tsx']) {
     const src = SOURCES[p];
     const at = src.indexOf('<SymbolSearchField');
     const el = src.slice(at, src.indexOf('/>', at));

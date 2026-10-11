@@ -21,12 +21,21 @@ const asyncStore: KeyValueStore = {
   },
 };
 
-/** Returns true while the reveal should PLAY (the banner rises). */
-export function useRevealOnce(leagueId: string | null, week: number | null, isFinal: boolean): boolean {
-  const [play, setPlay] = useState(false);
+/** The reveal for this league-week: `decided` once the stored "played" flag has been
+ * read (until then the banner must not mount: it takes its start pose from `play` on
+ * mount, so a banner shown before the decision could never rise: capture pass,
+ * 2026-10-08), and `play` when it should rise. Both are for the CURRENT key only, so a
+ * league switch never carries one league's reveal into another's. */
+export interface RevealState {
+  decided: boolean;
+  play: boolean;
+}
+
+export function useRevealOnce(leagueId: string | null, week: number | null, isFinal: boolean): RevealState {
+  const key = leagueId && week !== null && isFinal ? revealKey(leagueId, week) : null;
+  const [state, setState] = useState<{ key: string | null; play: boolean }>({ key: null, play: false });
   useEffect(() => {
-    if (!leagueId || week === null || !isFinal) return;
-    const key = revealKey(leagueId, week);
+    if (!key) return;
     let cancelled = false;
     (async () => {
       let stored: string | null = cache.get(key) ?? null;
@@ -39,14 +48,13 @@ export function useRevealOnce(leagueId: string | null, week: number | null, isFi
         if (stored !== null) cache.set(key, stored);
       }
       if (cancelled) return;
-      if (shouldPlayReveal(asyncStore, key, true)) {
-        markRevealPlayed(asyncStore, key);
-        setPlay(true);
-      }
+      const play = shouldPlayReveal(asyncStore, key, true);
+      if (play) markRevealPlayed(asyncStore, key);
+      setState({ key, play });
     })();
     return () => {
       cancelled = true;
     };
-  }, [leagueId, week, isFinal]);
-  return play;
+  }, [key]);
+  return { decided: key !== null && state.key === key, play: key !== null && state.key === key && state.play };
 }

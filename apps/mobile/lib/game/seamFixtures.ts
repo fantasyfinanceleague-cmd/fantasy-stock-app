@@ -5,7 +5,7 @@
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
 import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
-import { SEAM_ME } from './seamTables';
+import { SEAM_ME, seamLivePrices, seamPreviousRanks } from './seamTables';
 import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
@@ -17,10 +17,10 @@ export function fixtureHistory() {
   return [
     {
       league_id: 'fixture-season-1', season_number: 1, is_current: false, draft_status: 'completed',
-      completed_at: '2026-01-15T00:00:00Z', champion_user_id: 'roberto', champion_display_name: 'Roberto B.',
+      completed_at: '2026-01-15T00:00:00Z', champion_user_id: SEAM_ME, champion_display_name: 'Roberto B.',
       my_rank: 1, my_wins: 11, my_losses: 3, my_ties: 0,
       final_standings: [
-        { user_id: 'roberto', rank: 1, wins: 11, losses: 3, ties: 0, points_for: 1962.4, points_against: 0, display_name: 'Roberto B.' },
+        { user_id: SEAM_ME, rank: 1, wins: 11, losses: 3, ties: 0, points_for: 1962.4, points_against: 0, display_name: 'Roberto B.' },
         { user_id: 'paolo', rank: 2, wins: 10, losses: 4, ties: 0, points_for: 1744.1, points_against: 0, display_name: 'Paolo M.' },
         { user_id: 'alessandro', rank: 3, wins: 8, losses: 6, ties: 0, points_for: 1203.55, points_against: 0, display_name: 'Alessandro D.' },
         { user_id: 'francesco', rank: 4, wins: 6, losses: 8, ties: 0, points_for: 612.8, points_against: 0, display_name: 'Francesco T.' },
@@ -33,6 +33,26 @@ export function fixtureHistory() {
       champion_user_id: null, champion_display_name: null, my_rank: null, my_wins: null, my_losses: null,
       my_ties: null, final_standings: null,
     },
+  ];
+}
+
+/** Season 1's playoff games (get_season_matchups rows, SQL shape; the playoff rows only:
+ * History reads nothing else from it). 6 teams, seeds 1–2 bye. Wild card: Alessandro (3)
+ * beats Andrea (6), Francesco (4) beats Gianluigi (5). Semifinals: you (1) beat Francesco,
+ * Alessandro beats Paolo (2). Final: you beat Alessandro. So History's final standings
+ * read you (Champion), Alessandro (Runner-up), Paolo (the better-seeded semifinal loser),
+ * then Francesco, Gianluigi, Andrea: GS-8's reorder is visible. */
+export function fixtureSeasonPlayoffs() {
+  const game = (round: number, position: number, t1: string, t2: string, winner: string) => ({
+    league_id: 'fixture-season-1', season_number: 1, is_playoff: true, playoff_round_number: round, bracket_position: position,
+    team1_user_id: t1, team2_user_id: t2, winner_user_id: winner,
+  });
+  return [
+    game(1, 0, 'alessandro', 'andrea', 'alessandro'),
+    game(1, 1, 'francesco', 'gianluigi', 'francesco'),
+    game(2, 0, SEAM_ME, 'francesco', SEAM_ME),
+    game(2, 1, 'paolo', 'alessandro', 'alessandro'),
+    game(3, 0, SEAM_ME, 'alessandro', SEAM_ME),
   ];
 }
 
@@ -69,6 +89,9 @@ export function fixtureFor(name: string, args: Record<string, unknown>, roomVari
     // ---- Run it back: reads ----
     case 'get_renewal_roster': return { data: fixtureRoster('commissioner', new Date()), error: null };
     case 'get_league_history': return { data: fixtureHistory(), error: null };
+    case 'get_season_matchups': return { data: fixtureSeasonPlayoffs(), error: null };
+    // The through-week ranking (the League tab's movement): last week's order.
+    case 'league_standings_ranked': return typeof args.p_through_week === 'number' ? { data: seamPreviousRanks(), error: null } : null;
     // ---- the draft room: reads ----
     case 'get_draft_clock': return { data: fixtureDraftRoom(roomVariant).clock, error: null };
     case 'get_draft_order': return { data: fixtureDraftRoom().order, error: null };
@@ -128,7 +151,9 @@ export function invokeFixtureFor(
   }
   if (fn === 'quote') {
     // The board's live prices for the symbols asked for (a fixed sample; never a live quote).
-    const prices: Record<string, number> = { NVDA: 318.37, AAPL: 211.42, AMZN: 236.4, JPM: 215.45, MSFT: 421.0, META: 508.0, AVGO: 184.5, GOOGL: 166.0, PLTR: 65.0, V: 291.4, CRM: 274.1, COIN: 210.0, AMD: 160.0 };
+    // The week-6 holdings' live prices (seamTables: the Home fixture's Thursday prices for your
+    // and Gianluigi's teams) win over the draft sample's, so All matchups matches Matchup.
+    const prices: Record<string, number> = { NVDA: 318.37, AAPL: 211.42, AMZN: 236.4, JPM: 215.45, MSFT: 421.0, META: 508.0, AVGO: 184.5, GOOGL: 166.0, PLTR: 65.0, V: 291.4, CRM: 274.1, COIN: 210.0, AMD: 160.0, ...seamLivePrices() };
     const symbols = Array.isArray(body.symbols) ? (body.symbols as string[]) : [];
     return { data: { prices: Object.fromEntries(symbols.filter((s) => s in prices).map((s) => [s, prices[s]])) }, error: null };
   }

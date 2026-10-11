@@ -18,14 +18,20 @@ export interface AllMatchupsState {
   rows: AllMatchupRow[];
 }
 
+/** The state plus a retry for a failed load (S-6: "Try again"). */
+export interface AllMatchupsResult extends AllMatchupsState {
+  retry: () => void;
+}
+
 export function useAllMatchups(
   leagueId: string | null,
   week: number | null,
   names: { user_id: string; display_name: string; is_bot: boolean }[],
   enabled: boolean,
-): AllMatchupsState {
+): AllMatchupsResult {
   const { user } = useAuth();
   const [state, setState] = useState<AllMatchupsState>({ status: 'idle', rows: [] });
+  const [attempt, setAttempt] = useState(0);
   const namesKey = names.map((n) => `${n.user_id}:${n.display_name}:${n.is_bot}`).join('|');
 
   useEffect(() => {
@@ -103,7 +109,7 @@ export function useAllMatchups(
     };
     // `names` is keyed by namesKey so a new array of the same names doesn't refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, leagueId, week, user?.id, namesKey]);
+  }, [enabled, leagueId, week, user?.id, namesKey, attempt]);
 
-  return state;
+  return { ...state, retry: () => setAttempt((a) => a + 1) };
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { RenewalAsk } from '@/components/game/RenewalAsk';
-import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { screenFor, showsHomeRenewalAsk } from '@/lib/game/renewal';
 
 // 3c-2 (Design Lead; board #run-it-back frame 1): the member's "Are you in for
@@ -18,7 +18,7 @@ export interface HomeRenewalAskProps {
 
 export function HomeRenewalAsk({ successorId, isCommissioner, commissionerName }: HomeRenewalAskProps) {
   const [key, setKey] = useState(0);
-  const st = useRenewalRoster(isCommissioner ? null : successorId, null, key);
+  const st = useRenewalRoster(isCommissioner ? null : successorId, isCommissioner ? null : RENEWAL_FIXTURE_CALLER, key);
   const screen = st.status === 'ready' && st.roster ? screenFor(st.roster) : null;
   if (!showsHomeRenewalAsk({ isCommissioner, successorId, screen })) return null;
   return <RenewalAsk leagueId={successorId} commissionerName={commissionerName} onAnswered={() => setKey((k) => k + 1)} />;

@@ -9,6 +9,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { Money } from '@/components/sp/Money';
 import { useMotion } from '@/components/sp/motion';
 import { STANDINGS_CARD_TITLE, standingsThroughWeekCaption } from '@/lib/home/homeCopy';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 // Stockpile — <StandingsCard> (Phase 3b-2, board "Home"). Top 3 plus the
 // caller's own row if outside it. Rank/record/gain come STRAIGHT from
@@ -78,13 +79,14 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
               key={r.userId}
               entering={entering}
               style={[styles.row, { backgroundColor: r.isYou ? colors.youTint : 'transparent' }]}
+              accessible
+              accessibilityLabel={`${r.rank}, ${r.displayName}${youA11y(r.isYou)}, ${record(r)}`}
             >
               <Text variant="callout" tone="secondary" style={styles.rankCol}>
                 {r.rank}
               </Text>
-              <Text variant="callout" style={styles.nameCol} numberOfLines={1}>
+              <Text variant="callout" style={[styles.nameCol, yourNameStyle(r.isYou)]} numberOfLines={1}>
                 {r.displayName}
-                {r.isYou ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
               </Text>
               <Text variant="callout" tone="secondary" style={styles.recordCol}>
                 {record(r)}

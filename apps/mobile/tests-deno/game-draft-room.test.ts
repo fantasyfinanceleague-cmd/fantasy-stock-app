@@ -392,7 +392,8 @@ Deno.test('the roster grid\'s tiles are a centred 44 pt row, no fixed ratio (sou
 
 Deno.test('standings: one fixed-width rank cell for disc and numeral; the Run it back strip is padded (source guard)', () => {
   const table = SOURCES['components/game/StandingsTable.tsx'];
-  assertEquals(table.includes('<View style={styles.rankCell}>'), true);
+  // The cell widens with the medal disc at large text (large-text-layouts.test.ts), never below 28.
+  assertEquals(table.includes('<View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>'), true);
   assertEquals(table.includes("rankCell: { width: 28, alignItems: 'center' },"), true);
   assertEquals(table.includes("minWidth: 24, textAlign: 'right'"), false);
   const tab = SOURCES['app/(tabs)/league.tsx'];

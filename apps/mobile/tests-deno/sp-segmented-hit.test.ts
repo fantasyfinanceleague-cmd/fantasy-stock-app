@@ -23,3 +23,20 @@ Deno.test('a segment already 44 pt or taller gets no slop', () => {
 Deno.test('an unmeasured height gives no slop, never a guessed one', () => {
   assertEquals(segmentHitSlop(0), { top: 0, bottom: 0 });
 });
+
+// ── The indicator's segment width follows the CURRENT option count ─────────────
+
+import { segmentWidthFor } from '../components/sp/logic/segmentedHit.ts';
+import { SOURCES as SEG_SOURCES } from './sourceManifest.generated.ts';
+
+Deno.test('a segment is the inner width over the current count (3 → 4 options moves the indicator inside the track)', () => {
+  assertEquals(segmentWidthFor(334, 2, 3), 110);
+  assertEquals(segmentWidthFor(334, 2, 4), 82.5);
+  // The 4th segment (index 3) of a 4-option track ends at the track's inner edge, never past it.
+  assertEquals(3 * segmentWidthFor(334, 2, 4) + segmentWidthFor(334, 2, 4), 330);
+  assertEquals(segmentWidthFor(0, 2, 3), 0); // not measured yet
+  assertEquals(segmentWidthFor(334, 2, 0), 0);
+  const src = SEG_SOURCES['components/sp/SegmentedControl.tsx'];
+  assertEquals(src.includes('const segmentWidth = segmentWidthFor(trackWidth, TRACK_PADDING, options.length);'), true);
+  assertEquals(src.includes('setSegmentWidth('), false); // never stored from the last layout
+});
