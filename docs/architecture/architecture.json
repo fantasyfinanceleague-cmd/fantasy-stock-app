@@ -2,39 +2,83 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "533c2cf47a22acef8007a674c5c9a297c888ff54",
-    "commitShort": "533c2cf4",
+    "commit": "d026f3331a5fa520671df5d90548af7dcb9cc37e",
+    "commitShort": "d026f333",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/run-it-back",
+    "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/annotations.json"
+        "path": "apps/mobile/app.json"
       },
       {
         "code": "M",
-        "path": "supabase/functions/symbol-name/index.ts"
+        "path": "apps/mobile/app/_layout.tsx"
       },
       {
         "code": "M",
-        "path": "supabase/functions/symbols-search/index.ts"
+        "path": "apps/mobile/components/money/StockSheetBody.tsx"
       },
       {
         "code": "A",
-        "path": "supabase/migrations/20261114000000_symbols_signed_in_only.sql"
+        "path": "apps/mobile/tests-deno/route-declarations.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/sell-only-held.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/web/src/pages/DraftPage.jsx"
+      },
+      {
+        "code": "M",
+        "path": "supabase/config.toml"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/market-guard.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/_shared/market-guard.ts"
+      },
+      {
+        "code": "D",
+        "path": "supabase/functions/finnhub-quote/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/historical-bars/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/historical-bars/paginate.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/historical-bars/paginate.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/quote/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/ticker-quotes/index.ts"
       }
     ],
-    "timestamp": "2026-10-09T02:14:44Z",
-    "sourceHash": "sha256:6bb310f0ab0665acf900d233e5562dbd86c44174dae774f4c0c4dfde559cdf4e",
+    "timestamp": "2026-10-11T05:37:50Z",
+    "sourceHash": "sha256:7d9a3b62be0e02ac3c4ac40723129013474a4e8395762023535c84f9950e5b3e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 30.5,
-    "ageDays": 1.3,
+    "ageHours": 81.9,
+    "ageDays": 3.4,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b",
@@ -462,7 +506,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:124",
+        "verifyJwtSource": "supabase/config.toml:126",
         "authGuard": "in-code guard (isAuthorized)",
         "localModules": [],
         "tests": [],
@@ -492,7 +536,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:90",
+        "verifyJwtSource": "supabase/config.toml:92",
         "authGuard": null,
         "localModules": [
           "rules.ts"
@@ -526,7 +570,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:135",
+        "verifyJwtSource": "supabase/config.toml:137",
         "authGuard": "in-code guard (isAuthorized)",
         "localModules": [
           "plan.ts"
@@ -558,7 +602,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:100",
+        "verifyJwtSource": "supabase/config.toml:102",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "price-batch.ts"
@@ -594,34 +638,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:208",
-        "authGuard": null,
-        "localModules": [],
-        "tests": [],
-        "envVars": [
-          "FINNHUB_API_KEY"
-        ],
-        "lines": 119
-      },
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "fn.finnhub-quote",
-      "label": "finnhub-quote",
-      "sublabel": "verify_jwt=true",
-      "kind": "edge-function",
-      "source": {
-        "path": "supabase/functions/finnhub-quote/index.ts",
-        "line": 53
-      }
-    },
-    {
-      "layer": "edge",
-      "facts": {
-        "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:193",
+        "verifyJwtSource": "supabase/config.toml:197",
         "authGuard": null,
         "localModules": [
           "paginate.ts"
@@ -631,9 +648,12 @@
         ],
         "envVars": [
           "ALPACA_API_KEY",
-          "ALPACA_API_SECRET"
+          "ALPACA_API_SECRET",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
         ],
-        "lines": 179
+        "lines": 211
       },
       "db": null,
       "declared": null,
@@ -646,14 +666,14 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/historical-bars/index.ts",
-        "line": 77
+        "line": 91
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:70",
+        "verifyJwtSource": "supabase/config.toml:72",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -682,7 +702,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:79",
+        "verifyJwtSource": "supabase/config.toml:81",
         "authGuard": null,
         "localModules": [
           "logic.ts"
@@ -715,7 +735,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:61",
+        "verifyJwtSource": "supabase/config.toml:63",
         "authGuard": null,
         "localModules": [
           "reason.ts",
@@ -750,7 +770,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:17",
+        "verifyJwtSource": "supabase/config.toml:19",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "grouping.ts",
@@ -797,15 +817,18 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:2",
+        "verifyJwtSource": "supabase/config.toml:4",
         "authGuard": null,
         "localModules": [],
         "tests": [],
         "envVars": [
           "ALPACA_API_KEY",
-          "ALPACA_API_SECRET"
+          "ALPACA_API_SECRET",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
         ],
-        "lines": 352
+        "lines": 392
       },
       "db": null,
       "declared": null,
@@ -818,14 +841,14 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/quote/index.ts",
-        "line": 179
+        "line": 206
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:154",
+        "verifyJwtSource": "supabase/config.toml:156",
         "authGuard": null,
         "localModules": [
           "commit.ts",
@@ -862,7 +885,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:112",
+        "verifyJwtSource": "supabase/config.toml:114",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "plan.ts",
@@ -899,7 +922,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:50",
+        "verifyJwtSource": "supabase/config.toml:52",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [],
         "tests": [],
@@ -928,7 +951,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:247",
+        "verifyJwtSource": "supabase/config.toml:252",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -957,7 +980,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:25",
+        "verifyJwtSource": "supabase/config.toml:27",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "close.ts"
@@ -992,7 +1015,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:31",
+        "verifyJwtSource": "supabase/config.toml:33",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "plan.ts"
@@ -1027,7 +1050,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:198",
+        "verifyJwtSource": "supabase/config.toml:202",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1055,7 +1078,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:203",
+        "verifyJwtSource": "supabase/config.toml:207",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1085,15 +1108,18 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:235",
+        "verifyJwtSource": "supabase/config.toml:240",
         "authGuard": null,
         "localModules": [],
         "tests": [],
         "envVars": [
           "ALPACA_API_KEY",
-          "ALPACA_API_SECRET"
+          "ALPACA_API_SECRET",
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
         ],
-        "lines": 224
+        "lines": 274
       },
       "db": null,
       "declared": null,
@@ -1106,14 +1132,14 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/ticker-quotes/index.ts",
-        "line": 74
+        "line": 106
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:145",
+        "verifyJwtSource": "supabase/config.toml:147",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -8989,25 +9015,13 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.fn.finnhub-quote->ext.finnhub",
-      "from": "fn.finnhub-quote",
-      "to": "ext.finnhub",
-      "protocol": "vendor-https",
-      "payload": "https://finnhub.io/api/v1/quote",
-      "callSites": [
-        "supabase/functions/finnhub-quote/index.ts:87"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.fn.historical-bars->ext.alpaca-data",
       "from": "fn.historical-bars",
       "to": "ext.alpaca-data",
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/historical-bars/index.ts:38"
+        "supabase/functions/historical-bars/index.ts:41"
       ]
     },
     {
@@ -9554,7 +9568,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/quote/index.ts:38"
+        "supabase/functions/quote/index.ts:43"
       ]
     },
     {
@@ -10379,7 +10393,7 @@
       "protocol": "vendor-https",
       "payload": "https://data.alpaca.markets/v2",
       "callSites": [
-        "supabase/functions/ticker-quotes/index.ts:30"
+        "supabase/functions/ticker-quotes/index.ts:62"
       ]
     },
     {
@@ -16560,25 +16574,13 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.src.pages.DraftPage.jsx->fn.finnhub-quote",
-      "from": "ui.src.pages.DraftPage.jsx",
-      "to": "fn.finnhub-quote",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('finnhub-quote')",
-      "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:611"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.src.pages.DraftPage.jsx->fn.quote",
       "from": "ui.src.pages.DraftPage.jsx",
       "to": "fn.quote",
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:105"
+        "apps/web/src/pages/DraftPage.jsx:103"
       ]
     },
     {
@@ -16590,9 +16592,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:652",
-        "apps/web/src/pages/DraftPage.jsx:869",
-        "apps/web/src/pages/DraftPage.jsx:899"
+        "apps/web/src/pages/DraftPage.jsx:640",
+        "apps/web/src/pages/DraftPage.jsx:857",
+        "apps/web/src/pages/DraftPage.jsx:887"
       ]
     },
     {
@@ -16604,7 +16606,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_draft_order')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:381"
+        "apps/web/src/pages/DraftPage.jsx:379"
       ]
     },
     {
@@ -16616,7 +16618,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_real_user_ids')",
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:394"
+        "apps/web/src/pages/DraftPage.jsx:392"
       ]
     },
     {
@@ -16633,9 +16635,9 @@
         "id, symbol, user_id, entry_price, pick_number"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:417",
-        "apps/web/src/pages/DraftPage.jsx:528",
-        "apps/web/src/pages/DraftPage.jsx:750"
+        "apps/web/src/pages/DraftPage.jsx:415",
+        "apps/web/src/pages/DraftPage.jsx:526",
+        "apps/web/src/pages/DraftPage.jsx:738"
       ]
     },
     {
@@ -16650,7 +16652,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:232"
+        "apps/web/src/pages/DraftPage.jsx:230"
       ]
     },
     {
@@ -16666,8 +16668,8 @@
         "user_id, role"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:297",
-        "apps/web/src/pages/DraftPage.jsx:361"
+        "apps/web/src/pages/DraftPage.jsx:295",
+        "apps/web/src/pages/DraftPage.jsx:359"
       ]
     },
     {
@@ -16680,7 +16682,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:694"
+        "apps/web/src/pages/DraftPage.jsx:682"
       ]
     },
     {
@@ -16697,9 +16699,9 @@
         "id, name, draft_date, num_rounds, num_participants, budget_mode, budget_amount, stake_mode, notional_per_slot, allow_undraftable, commissioner_id, draft_status, duration_days, league_type, num_weeks"
       ],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:309",
-        "apps/web/src/pages/DraftPage.jsx:350",
-        "apps/web/src/pages/DraftPage.jsx:514"
+        "apps/web/src/pages/DraftPage.jsx:307",
+        "apps/web/src/pages/DraftPage.jsx:348",
+        "apps/web/src/pages/DraftPage.jsx:512"
       ]
     },
     {
@@ -16712,7 +16714,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/web/src/pages/DraftPage.jsx:1140"
+        "apps/web/src/pages/DraftPage.jsx:1128"
       ]
     },
     {
@@ -17912,7 +17914,7 @@
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
-            "apps/web/src/pages/DraftPage.jsx:105"
+            "apps/web/src/pages/DraftPage.jsx:103"
           ]
         },
         {
@@ -19449,8 +19451,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 255,
-    "edges": 632,
+    "nodes": 254,
+    "edges": 630,
     "flows": 8,
     "drift": 61,
     "driftHigh": 34,
@@ -19463,7 +19465,6 @@
       "draft-control[rules.ts]",
       "draft-order-notify[plan.ts]",
       "enrich-symbols[price-batch.ts]",
-      "finnhub-quote[]",
       "historical-bars[paginate.ts]",
       "join-league[]",
       "leave-league[logic.ts]",
@@ -19524,11 +19525,10 @@
       "apps/web/src/components/TradeModal.jsx:63 -> quote",
       "apps/web/src/components/TradeModal.jsx:82 -> symbol-name",
       "apps/web/src/context/PriceContext.jsx:99 -> quote",
-      "apps/web/src/pages/DraftPage.jsx:105 -> quote",
-      "apps/web/src/pages/DraftPage.jsx:611 -> finnhub-quote",
-      "apps/web/src/pages/DraftPage.jsx:652 -> validate-and-record-pick",
-      "apps/web/src/pages/DraftPage.jsx:869 -> validate-and-record-pick",
-      "apps/web/src/pages/DraftPage.jsx:899 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:103 -> quote",
+      "apps/web/src/pages/DraftPage.jsx:640 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:857 -> validate-and-record-pick",
+      "apps/web/src/pages/DraftPage.jsx:887 -> validate-and-record-pick",
       "apps/web/src/pages/JoinLeague.jsx:27 -> preview-league",
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
@@ -19562,8 +19562,8 @@
       "apps/mobile/lib/money/usePortfolioLedger.ts:31 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
-      "apps/web/src/pages/DraftPage.jsx:381 -> get_draft_order",
-      "apps/web/src/pages/DraftPage.jsx:394 -> get_real_user_ids",
+      "apps/web/src/pages/DraftPage.jsx:379 -> get_draft_order",
+      "apps/web/src/pages/DraftPage.jsx:392 -> get_real_user_ids",
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
@@ -19574,6 +19574,7 @@
       "supabase/functions/_shared/draft-write.ts:246 -> finalize_league_draft",
       "supabase/functions/_shared/draft-write.ts:273 -> draft_feasibility_pool",
       "supabase/functions/_shared/draft-write.ts:700 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/market-guard.ts:48 -> check_and_bump_rate_limit",
       "supabase/functions/draft-autopick-sweep/index.ts:104 -> due_draft_starts",
       "supabase/functions/draft-autopick-sweep/index.ts:121 -> draft_watch_due",
       "supabase/functions/draft-autopick-sweep/index.ts:144 -> overdue_draft_turns",
@@ -19677,17 +19678,17 @@
       "apps/web/src/pages/Dashboard.jsx:271 -> matchups.select",
       "apps/web/src/pages/Dashboard.jsx:76 -> league_members.select",
       "apps/web/src/pages/Dashboard.jsx:91 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:1140 -> leagues.update",
-      "apps/web/src/pages/DraftPage.jsx:232 -> league_draft_slots.select",
-      "apps/web/src/pages/DraftPage.jsx:297 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:309 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:350 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:361 -> league_members.select",
-      "apps/web/src/pages/DraftPage.jsx:417 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:514 -> leagues.select",
-      "apps/web/src/pages/DraftPage.jsx:528 -> drafts.select",
-      "apps/web/src/pages/DraftPage.jsx:694 -> league_members.insert",
-      "apps/web/src/pages/DraftPage.jsx:750 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:1128 -> leagues.update",
+      "apps/web/src/pages/DraftPage.jsx:230 -> league_draft_slots.select",
+      "apps/web/src/pages/DraftPage.jsx:295 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:307 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:348 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:359 -> league_members.select",
+      "apps/web/src/pages/DraftPage.jsx:415 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:512 -> leagues.select",
+      "apps/web/src/pages/DraftPage.jsx:526 -> drafts.select",
+      "apps/web/src/pages/DraftPage.jsx:682 -> league_members.insert",
+      "apps/web/src/pages/DraftPage.jsx:738 -> drafts.select",
       "apps/web/src/pages/Leaderboard.jsx:184 -> matchups.select",
       "apps/web/src/pages/Leaderboard.jsx:223 -> leagues.select",
       "apps/web/src/pages/Leaderboard.jsx:269 -> league_members.select",
@@ -20011,7 +20012,6 @@
       "draft-control=true",
       "draft-order-notify=false",
       "enrich-symbols=false",
-      "finnhub-quote=true",
       "historical-bars=true",
       "join-league=true",
       "leave-league=true",

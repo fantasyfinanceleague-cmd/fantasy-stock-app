@@ -686,8 +686,8 @@
         <div className="ks-pad ks-stack" style={{ gap: 12 }}>
           <div className="ks-seg ks-seg--game"><span>My matchup</span><span className="on">All matchups</span></div>
           {live.map((m) => (
-            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, boxShadow: m.you ? 'inset 3px 0 0 var(--c-you)' : undefined }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><b>{m.a}{m.you ? ' (you)' : ''}</b><b>{m.b}</b></div>
+            <div key={m.a} className="ks-raised" style={{ padding: 14, display: 'grid', gap: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }} className="ks-callout"><span style={{ fontWeight: m.you ? 700 : 500 }}>{m.a}</span><span style={{ fontWeight: 500 }}>{m.b}</span></div>
               <Scores left={$s(m.ga)} right={$s(m.gb)} size="md" />
               <Tug you={m.ga} opp={m.gb} />
             </div>
@@ -846,7 +846,7 @@
     );
   }
 
-  /** The revealed draft order (after 6:00 PM), your slot highlighted, with
+  /** The revealed draft order (after 6:00 PM), your row tinted and bold, with
    * what the snake means for you. New copy. */
   /** The in-app "order is set" card (posted at T−1h in either mode, with a
    * push). mode: 'random' | 'manual'. New copy. */
@@ -875,7 +875,7 @@
             <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '18px 28px 1fr', padding: '7px 6px', borderRadius: 8, background: m.you ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-caption ks-num">{i + 1}</span>
               <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-              <span className="ks-callout" style={{ fontWeight: m.you ? 800 : 600, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
+              <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500, whiteSpace: 'nowrap' }}>{m.name}{m.bot ? <span className="ks-caption"> · Bot</span> : null}</span>
             </li>
           ))}
         </ol>
@@ -927,7 +927,7 @@
                   <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '10px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                     <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                     <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                    <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                    <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                     <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : null}</span>
                   </li>
                 ))}
@@ -955,7 +955,7 @@
                 <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto 24px', padding: '10px 6px', ...(i === 2 ? { background: 'var(--c-surface)', boxShadow: 'var(--c-sheet-shadow)', borderRadius: 10, transform: 'scale(1.02) translateY(-4px)', position: 'relative', zIndex: 1 } : {}) }}>
                   <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                   <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                   <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : m.commish ? <span className="ks-chip ks-chip--money">Commish</span> : null}</span>
                   <span className="ks-muted" aria-label="Drag handle" style={{ fontSize: 18, textAlign: 'center' }}>≡</span>
                 </li>
@@ -1024,7 +1024,7 @@
                 <li key={p.n} className="ks-row" style={{ gridTemplateColumns: '22px 36px 1fr', padding: '9px 0' }}>
                   <span className="ks-caption ks-num">{p.n}</span>
                   <Logo t={p.t} game />
-                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· {p.who}{p.you ? ' (you)' : ''}</span><br />
+                  <span><span className="ks-t ks-callout">{p.t}</span> <span className="ks-callout ks-muted">· <span style={p.you ? { fontWeight: 700, color: 'var(--c-text)' } : undefined}>{p.who}</span></span><br />
                     <span className="ks-caption" style={p.how.startsWith('Auto') ? { color: 'var(--c-live-text)', fontWeight: 700 } : undefined}>{p.how}</span></span>
                 </li>
               ))}
@@ -1099,8 +1099,8 @@
     const M = ({ a, b, sa, sb, win, live }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa, win === 0], [b, sb, win === 1]].map(([n, s, w]) => (
-          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1 }} className="ks-callout">
-            <b style={{ color: n.startsWith('Roberto') ? 'var(--c-you-text)' : undefined }}>{n}</b><span className="ks-num">{s}</span>
+          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1, ...(n.startsWith('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
+            <span style={{ fontWeight: n.startsWith('Roberto') ? 700 : 500 }}>{n}</span><span className="ks-num">{s}</span>
           </div>
         ))}
         {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
@@ -1131,8 +1131,8 @@
     const Game = ({ a, b, sa, sb, live, bye, pending }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa], [b, sb]].map(([n, s], i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined }} className="ks-callout">
-            <b style={{ color: n && n.includes('Roberto') ? 'var(--c-you-text)' : bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: bye && i === 1 ? 500 : 700 }}>{n}</b>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined, ...(n && n.includes('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
+            <span style={{ color: bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: n && n.includes('Roberto') ? 700 : 500 }}>{n}</span>
             <span className="ks-num">{s}</span>
           </div>
         ))}
@@ -1511,7 +1511,7 @@
       {S1.rows.slice(0, n).map((r) => (
         <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 1fr auto auto', padding: '9px 0', background: r.you ? 'var(--c-you-tint)' : undefined }}>
           <Medal rank={r.rank} />
-          <span className="ks-callout" style={{ fontWeight: 700 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
+          <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}{r.id === S1.champion ? <span className="ks-muted" style={{ fontWeight: 500 }}> · Champion</span> : null}</span>
           <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
           <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 78, textAlign: 'right' }}>{$s(r.pf)}</span>
         </li>
@@ -1671,9 +1671,9 @@
         {rows.map((r) => {
           const st = state(r.id);
           return (
-            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center' }}>
+            <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '18px 1fr auto', padding: '10px 0', alignItems: 'center', background: r.id === me ? 'var(--c-you-tint)' : undefined }}>
               <span className="ks-t ks-num" style={{ color: st === 'in' ? undefined : 'var(--c-text-2)' }}>{r.rank}</span>
-              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}{r.id === me ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+              <span className="ks-callout" style={{ fontWeight: st === 'in' ? 700 : 500, color: st === 'in' ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.name}</span>
               {st === 'in' ? <span className="ks-callout" style={{ fontWeight: 700, color: 'var(--c-accent)', display: 'flex', gap: 6, alignItems: 'center' }}><Icon d={CHECK} size={14} width={3} />Running back</span> : null}
               {st === 'out' ? <span className="ks-callout ks-muted">Out</span> : null}
               {st === 'none' ? (
@@ -2134,7 +2134,7 @@
                 <li key={m.name} className="ks-row" style={{ gridTemplateColumns: '22px 32px 1fr auto', padding: '9px 6px', background: m.you ? 'var(--c-you-tint)' : undefined }}>
                   <span className="ks-callout ks-num" style={{ fontWeight: 700 }}>{i + 1}</span>
                   <span className={m.you ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{m.init}</span>
-                  <span className="ks-callout" style={{ fontWeight: 700 }}>{m.name}{m.you ? <span className="ks-muted" style={{ fontWeight: 500 }}> (you)</span> : null}</span>
+                  <span className="ks-callout" style={{ fontWeight: m.you ? 700 : 500 }}>{m.name}</span>
                   <span>{m.bot ? <span className="ks-chip ks-chip--money">Bot</span> : q1 === 'B' ? <span className="ks-muted">≡</span> : null}</span>
                 </li>
               ))}
@@ -2985,6 +2985,153 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // S-10 (UX final sweep): ONE manager row everywhere. RULED by Giorgio
+  // 2026-10-08: "just bold the users name. dont need to put the (you), people
+  // know their name. just bold it." + "blue tint as well". Your name 700 on
+  // the you-tint row, everyone else 500; no "(you)". Gains coloured by sign; move arrows on League only.
+  // VoiceOver still says "you" (the label, not the pixels). Data: data.js.
+  // ═════════════════════════════════════════════════════════════════════
+  const ManagerRow = ({ r, move }) => {
+    const rec = `${r.w}–${r.l}${r.t ? `–${r.t}` : ''}`;
+    return (
+      <li className="ks-row" style={{ gridTemplateColumns: move ? '18px 18px 1fr auto auto' : '18px 1fr auto auto', padding: '10px 6px', background: r.you ? 'var(--c-you-tint)' : undefined, borderRadius: r.you ? 8 : 0 }}>
+        <span className="ks-callout ks-num ks-muted">{r.rank}</span>
+        {move ? (
+          <span className="ks-caption ks-num" style={{ display: 'inline-flex', alignItems: 'center', color: r.delta > 0 ? 'var(--c-gain)' : r.delta < 0 ? 'var(--c-loss)' : 'var(--c-text-3)' }}>
+            {r.delta ? <span style={{ display: 'flex', transform: r.delta < 0 ? 'rotate(180deg)' : undefined }}><Icon d={ICON.up} size={10} width={2.6} /></span> : null}
+            {r.delta ? Math.abs(r.delta) : ''}
+          </span>
+        ) : null}
+        <span className="ks-callout" style={{ fontWeight: r.you ? 700 : 500 }}>{r.name}</span>
+        <span className="ks-caption ks-num ks-muted">{rec}</span>
+        <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 600, minWidth: 74, textAlign: 'right' }}>{$s(r.pf)}</span>
+      </li>
+    );
+  };
+  function ManagerRowCall({ where = 'league' }) {
+    const league = where === 'league';
+    const rows = league ? K.STANDINGS_FINAL : (() => {
+      const all = K.STANDINGS_BEFORE; const top = all.slice(0, 3); const me = all.find((r) => r.you);
+      return top.some((r) => r.you) ? top : [...top, me];
+    })();
+    return (
+      <Device tab={league ? 'league' : 'home'} label={`Manager row, ${where}`}>
+        <Head chip={league ? <span className="ks-chip ks-chip--final">Week 6 · Final</span> : null} avatar={!league} />
+        <div className="ks-pad ks-stack">
+          <Card pad="12px 10px">
+            <div className="ks-section-h" style={{ padding: '0 6px 6px' }}><h3>Standings</h3><span className="ks-caption">{league ? 'Week 6 of 14' : 'Through Week 5'}</span></div>
+            <ul className="ks-rows">{rows.map((r) => <ManagerRow key={r.id} r={r} move={league} />)}</ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: can a stock you hold, reached from SEARCH, start a sell?
+  // Giorgio, 2026-10-09: "i can only sell what i have... cant sell what you
+  // dont own." Sell is already absent on any stock you don't hold
+  // (fix/sell-only-held: no Buy | Sell control at all). Tier Cup, Roberto
+  // B.'s phone, Thu 1:37 PM ET (open). Sheet copy is the shipped
+  // moneyCopy.ts copy; NVDA's avg entry is SAMPLE (the draft price).
+  // ═════════════════════════════════════════════════════════════════════
+  const SF = {
+    NVDA: { co: 'NVIDIA', price: K.NVDA.thu, prev: K.NVDA.prev, held: { qty: 1, avg: K.NVDA.draft } },
+    SHOP: { co: 'Shopify', price: K.SALE.buy.price, prev: 103.05, held: null },
+  };
+  /** Search "NVDA" in Buy a stock: the row says "You own this" (shipped). */
+  function SellCallSearch() {
+    return (
+      <Device noTabs label="Buy a stock, search NVDA">
+        <Back label="Portfolio" />
+        <div className="ks-pad ks-stack" style={{ gap: 12 }}>
+          <h2 className="ks-head__title" style={{ fontSize: 28 }}>Buy a stock</h2>
+          <SearchBox q="NVDA" focus={false} />
+          <Card><ul className="ks-rows"><ResultRow t="NVDA" kind="mine" last /></ul></Card>
+        </div>
+      </Device>
+    );
+  }
+  /** The stock sheet as 3e ships it, with the variable under call.
+   *  mode: 'sell' (Buy | Sell, Sell pre-selected) | 'buyonly' (no control;
+   *  B's sheet for a stock you hold, from search) | 'free' (a stock you
+   *  don't hold: Buy only, the rule either way). */
+  function SellCallSheet({ t = 'NVDA', mode = 'sell', from = 'search' }) {
+    const S = SF[t];
+    const ch = S.price - S.prev, chPct = (ch / S.prev) * 100;
+    const h = S.held;
+    const gain = h ? S.price * h.qty - h.avg * h.qty : 0;
+    return (
+      <Device tab="portfolio" label={`${t} sheet from ${from}, ${mode}`} overlay={
+        <Sheet top={from === 'search' ? 150 : 170}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Logo t={t} />
+            <span style={{ flex: 1 }}><span className="ks-headline" style={{ fontWeight: 800 }}>{t}</span><br /><span className="ks-caption">{S.co}</span></span>
+            <span className="ks-muted" style={{ display: 'inline-flex', width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div>
+            <div className="ks-score ks-num" style={{ fontSize: 34, lineHeight: '38px', fontStretch: '75%' }}>{$(S.price)}</div>
+            <span className="ks-callout ks-num"><span className={tone(ch)} style={{ fontWeight: 700 }}>{$s(ch)} · {pct(chPct)}</span> <span className="ks-muted">today</span></span>
+          </div>
+          {h ? (
+            <div className="ks-card" style={{ padding: 14, boxShadow: 'none', background: 'var(--c-sunken)', border: 0, display: 'grid', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}><span className="ks-headline" style={{ fontWeight: 700 }}>Your position</span><span className="ks-caption">Held by you</span></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: 10 }}>
+                {[['Shares', String(h.qty)], ['Avg entry', $(h.avg)], ['Value', $(S.price * h.qty)], ['Gain', `${$s(gain)} · ${pct((gain / (h.avg * h.qty)) * 100)}`]].map(([k, v]) => (
+                  <span key={k}><span className="ks-caption">{k}</span><br /><span className={`ks-callout ks-num ${k === 'Gain' ? tone(gain) : ''}`} style={{ fontWeight: 700 }}>{v}</span></span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <span className="ks-callout ks-muted">No one in Tier Cup owns {t}</span>
+          )}
+          {mode === 'sell' ? (
+            <>
+              <div className="ks-seg" style={{ height: 40 }}><span>Buy</span><span className="on">Sell</span></div>
+              <span className="ks-callout ks-num">Sell all {h.qty} sh ≈ {$(S.price * h.qty)}</span>
+              <span className="ks-btn">Review sell</span>
+            </>
+          ) : mode === 'buyonly' ? (
+            <>
+              <span className="ks-callout ks-muted">You already hold this stock.</span>
+              <span className="ks-btn" style={{ opacity: 0.45 }} aria-disabled="true">Review buy</span>
+              <span className="ks-callout" style={{ textAlign: 'center', fontWeight: 700, color: 'var(--c-accent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44 }}>To sell {t}, open it from your Portfolio<Icon d={ICON.right} size={14} width={2.6} /></span>
+            </>
+          ) : (
+            <span className="ks-btn">Review buy</span>
+          )}
+          <span className="ks-caption" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </Sheet>
+      }>
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+      </Device>
+    );
+  }
+  /** B's one sell path: Portfolio › the holding row (NVDA pressed). */
+  function SellCallPortfolio() {
+    const rows = [['F', 'Ford', 11.42, -0.61], ['KO', 'Coca-Cola', 68.1, 0.38], ['NVDA', 'NVIDIA', K.NVDA.thu, K.NVDA.todayPct], ['NFLX', 'Netflix', 612.3, 1.24], ['COST', 'Costco', 918.1, -0.27]];
+    return (
+      <Device tab="portfolio" label="Tier Cup portfolio, NVDA holding pressed">
+        <Head name="Tier Cup" chip={<Chip kind="live">Live</Chip>} />
+        <div className="ks-pad ks-stack">
+          <div>
+            <div className="ks-section-h"><h3>Holdings</h3><span className="ks-caption">Value · today</span></div>
+            <div className="ks-card" style={{ padding: '2px 14px' }}><ul className="ks-rows">
+              {rows.map(([t, co, p, c]) => (
+                <li key={t} className="ks-row" style={{ gridTemplateColumns: '36px 1fr auto', ...(t === 'NVDA' ? { background: 'var(--c-sunken)', margin: '0 -14px', padding: '11px 14px' } : null) }}>
+                  <Logo t={t} />
+                  <span><span className="ks-t">{t}</span><br /><span className="ks-caption ks-num">{co} · {TIER.tierOf(p)} slot · 1 sh</span></span>
+                  <span className="ks-right ks-num"><b>{$(p)}</b><br /><span className={`ks-caption ${tone(c)}`} style={{ fontWeight: 700 }}>{pct(c)}</span></span>
+                </li>
+              ))}
+            </ul></div>
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -2998,6 +3145,7 @@
     DraftRefused, StartBlocked, DraftStalled, StallPush,
     RibHome, RibLeague, RibPush, RibMemberPrompt, RibHomeCounts, RibReconcile, RibMemberList, RibResolve, RibReview, RibHistory,
     BuyEntryPortfolio, StockSearch, SearchSheet, YourTurn,
+    SellCallSearch, SellCallSheet, SellCallPortfolio, ManagerRowCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
