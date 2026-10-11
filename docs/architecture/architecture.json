@@ -2,102 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "aa22f7f808d33e7a3105de64e0aa9c23f3a7acc3",
-    "commitShort": "aa22f7f8",
+    "commit": "e864b81a08a3e859fd0de88ecfeedd2889f388de",
+    "commitShort": "e864b81a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/fixture-identity",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/HistoryList.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/game/MedalDisc.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/StandingsTable.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/SeasonCompleteCard.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/game/finalStandings.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/gameCopy.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/history.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamFixtures.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/standings.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useBracket.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/game/useSeasonPlayoffs.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/node_modules"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/final-standings-screens.test.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/final-standings.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-standings.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/manager-row.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      }
-    ],
-    "timestamp": "2026-10-11T05:50:57Z",
-    "sourceHash": "sha256:fb5ea746b0fdbf61fa29560ac10fb2d8a873458c8bde27739bfb6cae06d2130d",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-11T06:00:12Z",
+    "sourceHash": "sha256:055d0fcb497ea89f5f329d801e36fb0e21aed6595741fbbdeca687865972caeb",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 82.2,
+    "ageHours": 82.3,
     "ageDays": 3.4,
     "staleAfterDays": 14,
     "stale": false,
@@ -15820,7 +15739,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:607"
+        "apps/mobile/lib/home/useHomeLeague.ts:617"
       ]
     },
     {
@@ -15832,7 +15751,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:590"
+        "apps/mobile/lib/home/useHomeLeague.ts:600"
       ]
     },
     {
@@ -15844,7 +15763,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:563"
+        "apps/mobile/lib/home/useHomeLeague.ts:573"
       ]
     },
     {
@@ -17830,7 +17749,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:590",
+            "apps/mobile/lib/home/useHomeLeague.ts:600",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -17893,7 +17812,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:607",
+            "apps/mobile/lib/home/useHomeLeague.ts:617",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19431,8 +19350,8 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:44 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:590 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:607 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:600 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:617 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
@@ -19481,7 +19400,7 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:563 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:573 -> get_home_league",
       "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
