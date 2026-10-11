@@ -203,8 +203,10 @@ building anything, and don't reopen a rule without him.
   i have so it should be a dropdown list or something. i shouldnt be able to search any
   stock, only see what i haave. cant sell what you dont own." So: you can only sell a stock
   you hold; the sheet of a stock you don't own does not offer Sell at all (enforced in 1.2.0
-  by fix/sell-only-held); the 1.1.0 search-to-sell screen is retired with 1.2.0. Open
-  (2026-10-10): whether your own held stock, reached via search, may start a sell.
+  by fix/sell-only-held); the 1.1.0 search-to-sell screen is retired with 1.2.0. A stock you
+  DO hold can be sold from wherever its sheet opens, including from search (2026-10-10,
+  option A, board #call-sell-from-search): the same stock's sheet looks the same from any
+  entry point.
 
 ## League lifecycle
 
