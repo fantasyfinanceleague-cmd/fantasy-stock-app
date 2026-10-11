@@ -1099,8 +1099,8 @@
     const M = ({ a, b, sa, sb, win, live }) => (
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa, win === 0], [b, sb, win === 1]].map(([n, s, w]) => (
-          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1, ...(n.startsWith('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
-            <span style={{ fontWeight: n.startsWith('Roberto') ? 700 : 500 }}>{n}</span><span className="ks-num">{s}</span>
+          <div key={n} style={{ display: 'flex', justifyContent: 'space-between', opacity: win != null && !w ? 0.55 : 1, ...(n.includes('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
+            <span style={{ fontWeight: w ? 700 : 500 }}>{n}</span><span className="ks-num">{s}</span>
           </div>
         ))}
         {live ? <span className="ks-caption" style={{ color: 'var(--c-live-text)' }}>Live · ends Fri 4:00 PM ET</span> : null}
@@ -1132,7 +1132,7 @@
       <div className="ks-raised" style={{ padding: '10px 12px', display: 'grid', gap: 6 }}>
         {[[a, sa], [b, sb]].map(([n, s], i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: pending && !n ? 'var(--c-text-2)' : undefined, ...(n && n.includes('Roberto') ? { background: 'var(--c-you-tint)', margin: '0 -6px', padding: '2px 6px', borderRadius: 6 } : null) }} className="ks-callout">
-            <span style={{ color: bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: n && n.includes('Roberto') ? 700 : 500 }}>{n}</span>
+            <span style={{ color: bye && i === 1 ? 'var(--c-text-2)' : undefined, fontWeight: 500 }}>{n}</span>
             <span className="ks-num">{s}</span>
           </div>
         ))}

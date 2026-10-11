@@ -851,3 +851,87 @@ are closed and Giorgio's walkthrough list (end of section) is done.
 The haptics, the your-turn chime and the silent switch (3c-2); the M5 holdings re-order (3e); the
 Matchup tab live on a weekday and a Friday close (S-1, S-4); the Home season chart across a few minutes of
 an open market (S-5); and the plan's own five checks.
+
+## Gate · game screens (3c + 3c-2 fixes), 2026-10-10
+
+**Branch:** `fix/fixture-identity` @ `32bdefc2` (24 commits on main). **Evidence:** the 45 device
+captures in `docs/design/captures/ui-mobile-game/` (iPhone 17e, Light / Dark / XL, DEV fixtures
+only) and its README; source review of the S-2, S-4, S-5 and S-6 fixes. **Not seen:** motion
+other than the Final reveal frames, and anything a still can't show (S-4, S-5, S-6 are verified
+at source and go on Giorgio's walkthrough). Run it back is behind its kill switch (F4a, off by
+default), so its findings block **flipping that switch**, not the 1.2.0 cut.
+
+**Verdict: BLOCK, narrowly, on GS-1, GS-2 and GS-3.** All three are small. The final-sweep
+BLOCK (S-1 to S-6) is cleared. GS-4 is Giorgio's call, and becomes a P1 if he picks A.
+
+### The final-sweep BLOCK, closed
+
+| ID | Status | Evidence |
+|---|---|---|
+| S-1 | **PASS** | Every fixture shares one "me" (`6347505a`). Matchup, All matchups, League (standings, schedule, history, a finished bracket), the draft ending and Run it back all render two-sided, with padding, in Light, Dark and XL. |
+| S-2 | **PASS** | `(tabs)/draft.tsx` is a 3-line `<Redirect href="/(tabs)/league" />`; the finalize heal runs in the draft room (`6390ec44`). |
+| S-3 | **PASS** | `home-pre-draft-members-*`: you are marked by id and listed first. |
+| S-4 | **PASS at source** | `MatchupBody` and `AllMatchupsList` are keyed by league (`0167e854`), with a guard (`matchup-league-key.test.ts`). Walkthrough: switch leagues on Matchup. |
+| S-5 | **PASS at source** | The draw-in is keyed on the chart window, not the values (`9f9a7c24`), with a guard. Walkthrough: a few minutes of an open market on Home. |
+| S-6 | **PASS at source** | `MatchupSkeleton` / `AllMatchupsSkeleton` while loading; `LoadFailure` with Try again (`b1eb694c`). Walkthrough: open Matchup on a slow connection. |
+
+### Blocking (P1)
+
+| ID | Screen | Finding | Fix |
+|---|---|---|---|
+| GS-1 | Matchup (final), All matchups (final) | A finished week still says **"leads by"**: "Roberto B. leads by $390.67" under the Final scoreboard, "Luca V. leads by $0.06" on a Final card. The board says "won by" (`screens.jsx:366`); `gameCopy.ts` and `Scoreboard.tsx` only have "leads by". The result reads as still in play. | When the week is final: "{winner} won by $X" (and "Tied" for a tie), in the scoreboard and on every Final card. |
+| GS-2 | Matchup, the week's ending | The winner banner lost its look. The board's `.ks-winner` is a solid band in your blue, white 800 text, with the record on the right ("W · 5–1"). `FinalBanner` is plain bold callout text with no fill and no record, so the week's ending reads as a stray label (rule 11). | The band: `colors.you` fill and on-accent text when you won; a neutral fill (`sunken`, text colour) when you lost or tied; the record on the right ("W · 5–1" / "L · 4–2" / "T · …"). The rise stays as fixed in `f1b2bdb8`. |
+| GS-3 | Every segmented control at XL | Every label truncates: "My matc… / All matc…", "Stan… / Sche… / History", "Sta… / Sc… / Pla… / His…". You can't tell the League tabs apart at the size that most needs them (§9). | Cap the segment label's text scale the way the tab bar is capped (`maxFontSizeMultiplier` ≈ 1.3, via the sp `Text` type style), so four labels fit at XL. |
+
+### Giorgio's call
+
+**GS-4 · What a medal means once the season is over.** On a finished season, the standings keep
+the regular-season order, so **the gold goes to Paolo M., who lost the Final, and the champion
+(Roberto B.) gets silver.** No rule covers it, and the board never showed it, because in its data
+the champion was also first. **A (recommend):** once the playoffs are done, the medals follow the
+result (champion gold, runner-up silver, bronze to the higher-seeded semifinal loser), as fantasy
+apps' final standings do. **B:** the medals stay regular season, and the champion gets a trophy
+mark on the row. To the board as an A/B call; P1 if he picks A.
+
+### Rulings
+
+- **R-1 · The hero score: not `score.lg`; the board's shared fit.** The worker's problem is real
+  (at 56 pt two typical scores don't fit a 390 pt phone, and they shrank to different sizes), but
+  a fixed 40 pt would quietly change an approved screen. The board already answers it: its
+  scoreboard starts at `score.xl` and, if either score overflows, scales **both by the same
+  factor** (`Scores`, `screens.jsx:122`). Build that: one shared scale for the pair, floored at
+  `score.lg`, so the two scores are always the same size. **P2** (a look drift, not wrong
+  information).
+- **R-2 · The bracket marks you by tint only; bold means the winner.** Accepted as the one S-10
+  exception besides the renewal list (where bold means "Running back"): in a bracket, bold already
+  carries the result. The board's brackets are updated to match (this commit).
+
+### P2 (1.2.0 if cheap, else 1.3)
+
+| ID | Screen | Finding | Fix |
+|---|---|---|---|
+| GS-5 | League › Standings, finished season | ▲/▼ movement still shows on a season that's over. | No movement column once the season is complete. |
+| GS-6 | League › Playoffs | The byes sit in their own card under a duplicate "WILD CARD · PLAYOFF WEEK 1" heading. The board draws them inside the round: "1 Paolo M. · Bye" with "Advances to the Semifinals". | One heading per round; byes as rows of that round, as drawn. |
+| GS-7 | League › Playoffs, finished | The bracket doesn't mark the champion (README question). | Under the Final card, one row: the trophy icon + "Roberto B. · Champion" (the existing "Champion" word; your tint if it's you). |
+| GS-8 | League › History | Season 1's standings have no medals; the board's do (rule 5). | The same `Medal` as the standings, following GS-4's answer. |
+| GS-9 | All matchups | In games you're not in, the left side's bar is your blue, and the left name is in text colour while the right one is grey. Blue means you (rule 7). The board draws it the same way, so both get fixed. | Games without you: a neutral bar for both sides, both names in the same colour. |
+| GS-10 | Run it back, member (kill switch) | The member's roster shows the commissioner's line: "You can set the draft once everyone has replied." (README question). | Members: "{commissioner} sets the draft once everyone has replied. Waiting on Andrea P." **P1 for the switch flip.** |
+| GS-11 | Run it back, commissioner's Season 2 Home (kill switch) | Home's draft card offers an **enabled** "Set draft time" while replies are pending, but League locks the draft until everyone replies (`renewal.ts:49 draftDisabled`); `PreDraftCard` doesn't know about the renewal. Two screens, two answers. | Home applies the same lock: no Set draft time while replies are pending, with the counts card's line as the reason. **P1 for the switch flip.** |
+| GS-12 | League sheet (kill switch) | Season 2 is listed as plain "Summer Cup · Pre-draft" (README question). | "Summer Cup · Season 2 · Pre-draft". |
+| GS-13 | Renewal review (kill switch) | The "Teams" sub-line indents under the value column (README question). | The sub-line goes under the label, full width. |
+
+### P3
+
+- Draft ending: each roster row shows a bare price next to "$1,000 per slot". The board does the
+  same; say what it is ("Drafted at $290.10") in both.
+
+### Fixture notes (not findings)
+
+Schedule weeks 8–10 are empty and every week is vs Gianluigi B. (the fixture defines weeks 1–7);
+Summer Cup's standings reuse Stock Scudetto's week-5 records. Check both with real data on the
+walkthrough.
+
+### Giorgio's device walkthrough (add)
+
+A Friday close on Matchup (GS-1, GS-2 once fixed), League at XL (GS-3), and switching leagues on
+Matchup (S-4).

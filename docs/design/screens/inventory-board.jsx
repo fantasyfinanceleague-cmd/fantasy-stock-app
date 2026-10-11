@@ -248,6 +248,7 @@
             <ul>
               <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
               <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+              <li><b>So does the bracket</b> (game-screens gate R-2, 2026-10-10): bold there means the winner of the game, so your line is marked by the tint alone.</li>
               <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
             </ul>
           </div>
