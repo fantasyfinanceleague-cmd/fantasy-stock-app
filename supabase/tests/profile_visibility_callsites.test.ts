@@ -71,11 +71,20 @@ Deno.test('every Realtime subscription on user_profiles is filtered to one id', 
 Deno.test('the moved call sites read other players through get_visible_profiles', () => {
   for (const f of [
     'apps/web/src/context/UserProfilesContext.jsx',
-    'apps/mobile/app/(tabs)/draft.tsx',
     'apps/mobile/components/LeagueCarousel.tsx',
   ]) {
     const src = read(f);
     assertEquals(/\.rpc\(\s*['"]get_visible_profiles['"]\s*,\s*\{\s*p_user_ids:/.test(src), true, f);
     assertEquals(/\.from\(\s*['"]user_profiles['"]/.test(src), false, f);
   }
+});
+
+// The legacy draft screen (one of the original moved call sites) was retired on main
+// (UX final sweep S-2) and is now only a redirect to the League tab. It must stay a
+// redirect that reads no profiles at all; if it ever grows data access again, it has
+// to come back into the list above.
+Deno.test('the retired legacy draft route reads no profiles', () => {
+  const src = read('apps/mobile/app/(tabs)/draft.tsx');
+  assertEquals(/<Redirect\b/.test(src), true, 'draft.tsx is a redirect');
+  assertEquals(/user_profiles|supabase/.test(src), false, 'draft.tsx touches no data');
 });
