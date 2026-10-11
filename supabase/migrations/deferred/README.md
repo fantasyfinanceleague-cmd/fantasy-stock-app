@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261115000008_drop_start_new_league_season.sql`, `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead) and `20261118000001_user_profiles_self_only.sql` (audit #8 stage 2).
+**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261115000008_drop_start_new_league_season.sql` and `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead).
 
 ## How to use it
 
@@ -152,38 +152,9 @@ of exposing the function. Tested: `supabase/tests/revoke_anon_default_grants.pgl
 privilege, no anon-callable function, the default-privilege rules), then the
 signed-in app end to end and a signed-out `GET /rest/v1/<table>` → 401/42501.
 
-### `20261118000001_user_profiles_self_only.sql` — audit #8, stage 2
-
-Flips `user_profiles` SELECT from `TO authenticated USING (true)` to self only
-(`id = auth.uid()`) and revokes anon's table grant. Giorgio's ruling A
-(2026-10-08): a player sees only the name and avatar of users they share a
-league with. Stage 1 (`20261118000000_get_visible_profiles.sql`, in the apply
-path) adds the narrow read path.
-
-**Preconditions (all):**
-1. `20261118000000` is applied:
-   `SELECT version FROM supabase_migrations.schema_migrations WHERE version = '20261118000000';`
-2. The client release that moved every other-player read to
-   `get_visible_profiles` is deployed: web (Vercel, merge of
-   `security/profile-visibility`) and the **mobile build that contains it is the
-   one players run**.
-3. **The live 1.1.0 build (`main@7571d10`) is retired, or Giorgio accepts its
-   degradation.** 1.1.0 reads other players' rows directly in eight places
-   (`(tabs)/draft.tsx`, `(tabs)/index.tsx`, `(tabs)/league.tsx`,
-   `(tabs)/leagues.tsx`, `(tabs)/matchup.tsx`, `player-portfolio.tsx`,
-   `LeagueCarousel.tsx`, `lib/useHomeData.ts`). After the flip those names fall
-   back to raw ids / "Unknown" in 1.1.0. It cannot be fixed by OTA from `main`:
-   `runtimeVersion` is `appVersion` (still 1.1.0 on `main`), but `main` adds
-   native modules (`expo-audio`, `react-native-gesture-handler`) that the 1.1.0
-   binary lacks. The options are a new binary (1.2.0) or an OTA built from a
-   `7571d10` hotfix branch.
-
-**Effect check after applying:** the header's `pg_policies` / grant queries; then,
-signed in, every screen still names leaguemates and leavers; a REST read of
-`/rest/v1/user_profiles?select=id` with a user token returns one row (the caller's).
-Tested: `supabase/tests/profile_visibility.pglite.test.ts`.
-
 ## History
+
+- 2026-10-10: `20261118000001_user_profiles_self_only.sql` (audit #8 stage 2) promoted to the apply path. Giorgio is the only 1.1.0 user and accepted its degradation ("just me on 1.1.0, go with C").
 
 | File | Held for | Resolution |
 |---|---|---|
