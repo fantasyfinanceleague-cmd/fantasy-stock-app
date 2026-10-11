@@ -926,3 +926,40 @@ walkthrough.
 
 A Friday close on Matchup (GS-1, GS-2 once fixed), League at XL (GS-3), and switching leagues on
 Matchup (S-4).
+
+## Re-gate · game screens (GS-1 to GS-4), 2026-10-10
+
+**Branch:** `fix/fixture-identity` @ `7b1e2240` (rebased on main `24fe7c7c`). **Evidence:** the 15
+re-gate captures `docs/design/captures/ui-mobile-game/gs-*.png` (iPhone 17e; won, lost and tied
+Finals; Light, Dark, XL) and a source read of `lib/game/finalStandings.ts`. **Not seen:** All
+matchups at XL, the season-complete card (tests only), and the lost Final's lineups (the fixture
+swaps the totals, so the screen's own consistency check withholds them; real data is a
+walkthrough item).
+
+**Verdict: PASS. DESIGN-APPROVED `fix/fixture-identity` @ `7b1e2240`.** GS-1 to GS-4 are
+fixed as specified. The game-screens BLOCK is closed.
+
+| ID | Status | Evidence |
+|---|---|---|
+| GS-1 | **PASS** | "Roberto B. won by $390.67", "Gianluigi B. won by $390.67", "Tied" under the Final scoreboard; "Luca V. won by $0.06" and every other Final card in All matchups (Light, Dark). |
+| GS-2 | **PASS** | The band is back: your blue with white text and "W · 5–1" when you won; a neutral band with "L · 4–2" when you lost and "T · 4–1–1" when tied. It reads in Dark, and at XL it wraps instead of truncating. |
+| GS-3 | **PASS** | At XL, "My matchup / All matchups" and all four League tabs fit whole. The guard makes every segmented control the one capped component. |
+| GS-4 | **PASS** | "Final standings · After the playoffs": Roberto B. gold "Champion", Paolo M. silver "Runner-up", Luca V. bronze (the better-seeded semifinal loser: seed 3 over Chiara R.'s 4), then regular-season order; no movement column (closes GS-5 for finished seasons). `finalStandings.ts` gives no podium at all from an undecided bracket, never a partial one. Light, Dark, XL. |
+| GS-8 | **PASS, one follow-up** | History's Season 1 uses the same order and medals. |
+
+### Follow-ups (P2, not blocking)
+
+- **GS-8b · History doesn't say why the order differs from the records.** Its Season 1 list puts
+  Alessandro D. (8–6, silver) above Paolo M. (10–4, bronze) with no "Runner-up" and no "After the
+  playoffs", so it reads as a mistake. Fix: the same labels and subtitle as the Standings card.
+  **PASS @ `b855c6cf`** (`gs-league-history-{light,dark,xl}`): Roberto B. "Champion",
+  Alessandro D. "Runner-up" in Standings' wording, "After the playoffs" on the Season 1 card,
+  nothing else in History moved (the app diff is `HistoryList.tsx` only); XL stacks cleanly.
+  The approval carries forward to `fix/fixture-identity` @ `b855c6cf`.
+- Still open from the gate: R-1 (the hero score's shared fit), GS-6 (the bye card's duplicate
+  heading), GS-7 (mark the champion in the bracket), GS-9 (your blue in other managers' games),
+  and the Run it back items GS-10 to GS-13 (GS-10 and GS-11 block the kill-switch flip).
+
+### Giorgio's device walkthrough (add)
+
+A real lost week on Matchup (the lineups show), and League › History on a real finished season.
