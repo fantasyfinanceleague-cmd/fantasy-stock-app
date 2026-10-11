@@ -91,3 +91,14 @@ Deno.test('the three screens read the one order (source guards)', () => {
   // The "Champion"/"Runner-up" sub-labels are the tags the lib sets (finalStandingsOrder).
   assert(SOURCES['lib/game/finalStandings.ts'].includes("tag: i === 0 ? 'Champion' : i === 1 ? 'Runner-up' : null,"));
 });
+
+Deno.test('GS-8b: History labels the playoff order the way Standings does (source guard)', () => {
+  const history = SOURCES['components/game/HistoryList.tsx'];
+  // The same subtitle key as Standings' header, shown only when the playoffs ordered the season.
+  assert(history.includes('{s.table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}'));
+  // The podium tags under the name, in both the regular and the large-text layout.
+  assertEquals((history.match(/\{tag \? <Text variant="caption" tone="secondary">\{tag\}<\/Text> : null\}/g) ?? []).length, 2);
+  // No new copy: History's only strings for this are Standings' keys and the lib's tags.
+  assert(!history.includes("'After the playoffs'") && !history.includes('"After the playoffs"'));
+  assert(SOURCES['components/game/StandingsTable.tsx'].includes('{r.tag ? <Text variant="caption" tone="secondary">{r.tag}</Text> : null}'));
+});

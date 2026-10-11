@@ -87,7 +87,7 @@ week 6's posted gains under `scored`, and your and Gianluigi's records count tha
 | `gs-league-final-standings-{light,dark}` | GS-4 "Final standings · After the playoffs": you (champion) gold, Paolo (1st seed, lost the Final) silver "Runner-up", Luca (the better-seeded semifinal loser) bronze; the footnote; no move column | Summer Cup → League → Standings |
 | `gs-league-final-standings-xl` | GS-3 all four League segments fit at XL; GS-4 stacked at XL | same, XL |
 | `gs-league-playoffs-{light,dark}` | The Playoffs tab keeps the seeding (Paolo 1). The duplicate Wild card heading is GS-6 (P2, not in this pass) | League → Playoffs |
-| `gs-league-history-{light,dark}` | GS-8 Season 1 by its playoffs (fixture `get_season_matchups`): you gold, Alessandro (3rd seed, lost the Final) silver, Paolo bronze; the rest in frozen order | League → History |
+| `gs-league-history-{light,dark,xl}` | GS-8 Season 1 by its playoffs (fixture `get_season_matchups`): you gold, Alessandro (3rd seed, lost the Final) silver, Paolo bronze; the rest in frozen order. GS-8b: "After the playoffs" beside the champion line and the Champion / Runner-up tags, Standings' own copy (XL: they wrap) | League → History |
 
 Not captured: the season-complete card (its headline place now comes from the same order;
 covered by `final-standings.test.ts` `seasonCompletePlace`).

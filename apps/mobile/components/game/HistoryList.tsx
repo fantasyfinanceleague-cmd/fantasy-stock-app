@@ -8,6 +8,7 @@ import { radius, space } from '@/constants/tokens';
 import { historySeasons, historyStandings, type HistoryRow } from '@/lib/game/history';
 import type { PodiumGameRow } from '@/lib/game/finalStandings';
 import { MEDAL, MedalDisc, useMedalDiscSize } from '@/components/game/MedalDisc';
+import { COPY as GAME_COPY } from '@/lib/game/gameCopy';
 import { useLargeText } from '@/components/sp/useLargeText';
 import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
@@ -31,7 +32,12 @@ export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; 
             <Text variant="headline">{`Season ${s.seasonNumber}`}</Text>
             {s.myRecord ? <Text variant="callout" tone="secondary">{s.myRecord}</Text> : null}
           </View>
-          {s.champion ? <Text variant="caption" tone="secondary">{`Champion ${s.champion}`}</Text> : <Text variant="caption" tone="secondary">Not finished yet</Text>}
+          {/* GS-8b: once the playoffs order the season, say so (Standings' own subtitle), so a
+              silver above a better record doesn't read as a mistake. */}
+          <View style={styles.subHead}>
+            {s.champion ? <Text variant="caption" tone="secondary">{`Champion ${s.champion}`}</Text> : <Text variant="caption" tone="secondary">Not finished yet</Text>}
+            {s.table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}
+          </View>
           {s.table.places.map(({ standing: st, place, tag }) => {
             const medal = s.table.medals ? MEDAL[place] : undefined;
             return (
@@ -42,6 +48,7 @@ export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; 
                 {largeText ? (
                   <View style={styles.name}>
                     <Text variant="callout" style={yourNameStyle(st.user_id === myUserId)}>{st.display_name}</Text>
+                    {tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}
                     <View style={styles.statsLine}>
                       <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
                       <Text variant="callout" style={{ color: gainColor(st.points_for) }}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
@@ -49,7 +56,11 @@ export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; 
                   </View>
                 ) : (
                   <>
-                    <Text variant="callout" style={[styles.name, yourNameStyle(st.user_id === myUserId)]}>{st.display_name}</Text>
+                    <View style={styles.name}>
+                      <Text variant="callout" style={yourNameStyle(st.user_id === myUserId)}>{st.display_name}</Text>
+                      {/* GS-8b: the podium's tags, as Standings shows them ("Champion" / "Runner-up"). */}
+                      {tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}
+                    </View>
                     <Text variant="caption" tone="secondary">{`${st.wins}–${st.losses}`}</Text>
                     <Text variant="callout" style={[styles.gain, { color: gainColor(st.points_for) }]}>{formatMoney(st.points_for, { sign: 'always' })}</Text>
                   </>
@@ -69,6 +80,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  subHead: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', columnGap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 44 },
   // One fixed-width rank cell, centred, so medal discs and plain places line up (Standings' G-6 rule).
   rankCell: { alignItems: 'center' },
