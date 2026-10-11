@@ -360,7 +360,14 @@ export function StockSheetBody({
     );
   }
 
-  const selected = choice ?? model.selected;
+  // Giorgio, 2026-10-09: "i can only sell what i have... cant sell what you
+  // dont own." On a stock you don't hold, there is no Sell path at all --
+  // not just a disabled one -- so `selected` ignores `choice` entirely here
+  // rather than merely defaulting to 'buy': a stale 'sell' picked while
+  // this same sheet instance held a different, owned stock must never leak
+  // through once the sheet is showing something you don't hold.
+  const held = data.facts.held != null;
+  const selected = held ? (choice ?? model.selected) : 'buy';
   const action = selected === 'buy' ? model.buy : model.sell;
   const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled;
 
@@ -447,11 +454,13 @@ export function StockSheetBody({
         </>
       )}
 
-      <SegmentedControl
-        options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
-        value={selected}
-        onChange={(v) => setChoice(v as 'buy' | 'sell')}
-      />
+      {held ? (
+        <SegmentedControl
+          options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
+          value={selected}
+          onChange={(v) => setChoice(v as 'buy' | 'sell')}
+        />
+      ) : null}
 
       {selected === 'sell' && model.sell.summary ? (
         <Text variant="callout">{model.sell.summary}</Text>
