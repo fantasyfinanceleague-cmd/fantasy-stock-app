@@ -56,6 +56,12 @@ building anything, and don't reopen a rule without him.
   `league_standings_ranked`): (1) win % = (W + 0.5·T)/GP, byes excluded, 0 GP = 0%;
   (2) a balanced mini-league head-to-head among the tied, only if every pair met equally
   often; (3) season gain; (4) joined_at; (5) user id.
+- **Once the season is over, medals follow the playoffs** (2026-10-10, option A, board
+  `#call-medals`). The finished season's "Final standings" put the champion 1st (gold,
+  "Champion"), the Final's loser 2nd (silver, "Runner-up"), and the better-seeded of the
+  two semifinal losers 3rd (bronze); everyone else keeps their regular-season place.
+  Records and season gains stay the regular season's, and the Playoffs tab keeps the
+  seeding. League › History and the season-complete card show the same medals.
 - **Regular-season byes = no result**: neither a win nor a loss, and not counted in games
   played. No explanation of byes, just a short notice when members/weeks produce uneven
   byes.
