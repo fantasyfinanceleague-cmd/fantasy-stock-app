@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "d026f3331a5fa520671df5d90548af7dcb9cc37e",
-    "commitShort": "d026f333",
+    "commit": "5e85c44ac857a1452ae5031464c25deb98d2d0b5",
+    "commitShort": "5e85c44a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -14,15 +14,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/money/StockSheetBody.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/route-declarations.test.ts"
       },
       {
         "code": "A",
@@ -30,54 +22,122 @@
       },
       {
         "code": "M",
-        "path": "apps/web/src/pages/DraftPage.jsx"
+        "path": "docs/architecture/annotations.json"
       },
       {
         "code": "M",
-        "path": "supabase/config.toml"
+        "path": "supabase/functions/_shared/draft-start.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/draft-start.ts"
       },
       {
         "code": "A",
-        "path": "supabase/functions/_shared/market-guard.test.ts"
+        "path": "supabase/functions/_shared/renewal-copy.test.ts"
       },
       {
         "code": "A",
-        "path": "supabase/functions/_shared/market-guard.ts"
-      },
-      {
-        "code": "D",
-        "path": "supabase/functions/finnhub-quote/index.ts"
+        "path": "supabase/functions/_shared/renewal-copy.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/historical-bars/index.ts"
+        "path": "supabase/functions/draft-control/index.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/historical-bars/paginate.test.ts"
+        "path": "supabase/functions/draft-control/rules.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/historical-bars/paginate.ts"
+        "path": "supabase/functions/draft-control/rules.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/quote/index.ts"
+        "path": "supabase/functions/draft-order-notify/index.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/ticker-quotes/index.ts"
+        "path": "supabase/functions/draft-order-notify/plan.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/draft-order-notify/plan.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/record-trade/commit.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/record-trade/commit.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/record-trade/gate.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/functions/record-trade/gate.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/record-trade/index.ts"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000000_run_it_back_lineage.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000001_run_it_back_notifications.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000002_run_it_back_responses.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000003_run_it_back_rpcs.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000004_run_it_back_gate.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000005_run_it_back_home_summary.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000006_record_trade_season_guard.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/20261115000007_complete_league_season_trade_lock.sql"
+      },
+      {
+        "code": "A",
+        "path": "supabase/migrations/APPLIED.txt"
+      },
+      {
+        "code": "R",
+        "path": "supabase/migrations/deferred/20261115000008_drop_start_new_league_season.sql"
+      },
+      {
+        "code": "UU",
+        "path": "supabase/migrations/deferred/README.md"
       }
     ],
-    "timestamp": "2026-10-11T05:37:50Z",
-    "sourceHash": "sha256:7d9a3b62be0e02ac3c4ac40723129013474a4e8395762023535c84f9950e5b3e",
+    "timestamp": "2026-10-11T06:00:37Z",
+    "sourceHash": "sha256:290fada2e99b80ab82d774133ea03793dfd9877ba86358c1b821ec133eb8fb79",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 81.9,
+    "ageHours": 82.3,
     "ageDays": 3.4,
     "staleAfterDays": 14,
     "stale": false,
@@ -2225,10 +2285,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261007000000_username_write_path.sql:167"
+          "supabase/migrations/20261007000000_username_write_path.sql:167",
+          "supabase/migrations/20261116000000_scrape_hardening.sql:69"
         ],
-        "latestDefinition": "supabase/migrations/20261007000000_username_write_path.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -2238,8 +2299,8 @@
       "sublabel": "SECURITY DEFINER · service_role, authenticated",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261007000000_username_write_path.sql",
-        "line": 167
+        "path": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "line": 69
       }
     },
     {
@@ -2697,7 +2758,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:433"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:432"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2711,7 +2772,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 433
+        "line": 432
       }
     },
     {
@@ -2827,7 +2888,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:331"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:330"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2841,7 +2902,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 331
+        "line": 330
       }
     },
     {
@@ -2906,7 +2967,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:391"
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:390"
         ],
         "latestDefinition": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
         "redefinitions": 1
@@ -2920,7 +2981,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql",
-        "line": 391
+        "line": 390
       }
     },
     {
@@ -3026,7 +3087,7 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:253",
+          "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:252",
           "supabase/migrations/20261111000001_draft_status_server_only.sql:46"
         ],
         "latestDefinition": "supabase/migrations/20261111000001_draft_status_server_only.sql",
@@ -3886,10 +3947,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20250122000000_check_real_users.sql:4"
+          "supabase/migrations/20250122000000_check_real_users.sql:4",
+          "supabase/migrations/20261116000000_scrape_hardening.sql:130"
         ],
-        "latestDefinition": "supabase/migrations/20250122000000_check_real_users.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -3899,8 +3961,8 @@
       "sublabel": "SECURITY DEFINER · authenticated, service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20250122000000_check_real_users.sql",
-        "line": 4
+        "path": "supabase/migrations/20261116000000_scrape_hardening.sql",
+        "line": 130
       }
     },
     {
@@ -11056,7 +11118,8 @@
       "payload": "SELECT user_profiles (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261007000000_username_write_path.sql:193"
+        "supabase/migrations/20261007000000_username_write_path.sql:193",
+        "supabase/migrations/20261116000000_scrape_hardening.sql:105"
       ]
     },
     {
@@ -11567,7 +11630,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:446"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:445"
       ]
     },
     {
@@ -11632,7 +11695,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:360"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:359"
       ]
     },
     {
@@ -11645,7 +11708,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:403"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:402"
       ]
     },
     {
@@ -12336,6 +12399,20 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261113000000_get_portfolio_ledger.sql:102"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.get_real_user_ids->tbl.league_members",
+      "from": "pg.get_real_user_ids",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261116000000_scrape_hardening.sql:139",
+        "supabase/migrations/20261116000000_scrape_hardening.sql:140"
       ]
     },
     {
@@ -14547,7 +14624,7 @@
       "payload": "trigger on drafts",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:470"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:469"
       ]
     },
     {
@@ -14625,7 +14702,7 @@
       "payload": "trigger on league_draft_slots",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:384"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:383"
       ]
     },
     {
@@ -14680,7 +14757,7 @@
       "payload": "trigger on league_members",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:426"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:425"
       ]
     },
     {
@@ -14863,7 +14940,7 @@
       "payload": "trigger on leagues",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:324"
+        "supabase/migrations/20261104000000_freeze_league_rules_after_draft_start.sql:323"
       ]
     },
     {
@@ -19452,7 +19529,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 254,
-    "edges": 630,
+    "edges": 631,
     "flows": 8,
     "drift": 61,
     "driftHigh": 34,
@@ -20005,7 +20082,9 @@
       "20261115000004_run_it_back_gate.sql",
       "20261115000005_run_it_back_home_summary.sql",
       "20261115000006_record_trade_season_guard.sql",
-      "20261115000007_complete_league_season_trade_lock.sql"
+      "20261115000007_complete_league_season_trade_lock.sql",
+      "20261116000000_scrape_hardening.sql",
+      "20261116000001_purge_rate_limit_counters.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
