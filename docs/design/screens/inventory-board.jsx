@@ -158,7 +158,7 @@
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
-          <Fit caption="Draft recap"><I.DraftRecap /></Fit>
+          <Fit caption="Draft recap · 1.3, not in 1.2.0" note="No entry point leads here in 1.2.0."><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
@@ -228,6 +228,87 @@
             <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
             <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
             <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Notes for the build</h3>
+            <ul>
+              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+              <li><b>So does the bracket</b> (game-screens gate R-2, 2026-10-10): bold there means the winner of the game, so your line is marked by the tint alone.</li>
+              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">Both start the same way</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
+          </div>
+          <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
+            <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
+            <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
+            <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
+            <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
+            <ul>
+              <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
+              <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
+              <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
+              <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-medals-h">Decided: who gets the gold once the season is over</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> Once the playoffs are done, the medals follow the result. From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · Medals follow the playoffs (chosen)" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
+            <Fit caption="B · Medals stay regular season (not chosen)" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #191)</h3>
+            <ul>
+              <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
+              <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
+              <li><b>Nothing is lost in A.</b> Records and season gains stay the regular season's, and the Playoffs tab keeps the seeding.</li>
+              <li>Either way, the same medals then show in League › History and on the season-complete card, so every screen tells the same story.</li>
+            </ul>
           </div>
         </section>
 
