@@ -3127,6 +3127,12 @@
               ))}
             </ul></div>
           </div>
+        </div>
+      </Device>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
   // GIORGIO'S CALL (game-screens gate GS-4, 2026-10-10): what a medal means
   // once the season is over. Summer Cup, Season 1 finished (SAMPLE season
   // that mirrors the device capture): Paolo M. tops the regular season,

@@ -285,6 +285,10 @@
               <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
               <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
               <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
