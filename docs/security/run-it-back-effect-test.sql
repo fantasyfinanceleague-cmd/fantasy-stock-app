@@ -46,7 +46,11 @@ BEGIN
 
   -- The gate: a draft date cannot be set while anyone is pending (as the commissioner).
   BEGIN
-    UPDATE leagues SET draft_date = now() + interval '5 days' WHERE id = v_new;
+    -- On the hour: trg_leagues_draft_time (20261111000001) fires BEFORE
+    -- trg_leagues_renewal_gate (BEFORE triggers run in name order), so an
+    -- off-grid time is rejected as draft_time_invalid and never reaches the
+    -- gate. The first prod run (2026-10-10) failed exactly that way.
+    UPDATE leagues SET draft_date = date_trunc('hour', now()) + interval '5 days' WHERE id = v_new;
     v_gate_msg := 'NO ERROR';
   EXCEPTION WHEN OTHERS THEN
     v_gate_msg := SQLERRM;
