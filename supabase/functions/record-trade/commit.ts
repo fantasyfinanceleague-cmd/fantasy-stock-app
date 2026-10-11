@@ -96,6 +96,7 @@ export async function readAllPages<T>(
 /** The leagues columns validation reads, RAW as PostgREST returned them. */
 export interface LeagueRow {
   draft_status: string | null;
+  season_status: string | null;
   stake_mode: string | null;
   budget_amount: number | string | null;
   notional_per_slot: number | string | null;
@@ -333,6 +334,7 @@ export const MAX_ATTEMPTS = 3;
  * membership/league checks). */
 const RPC_REFUSALS: Record<string, number> = {
   draft_not_completed: 200,
+  season_completed: 200,   // Run it back: a finished season is frozen (record-trade/gate.ts)
   proceeds_unavailable: 200,
   not_a_member: 403,
   league_not_found: 404,

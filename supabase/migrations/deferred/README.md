@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 2 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261023000009_drop_start_new_league_season.sql`.
+**Currently held:** 2 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261115000008_drop_start_new_league_season.sql`.
 
 ## How to use it
 
@@ -76,7 +76,7 @@ must return zero rows) and re-run the effect-verify query above against a
 *second* fresh test league to prove drafting still works with the policies
 gone. Then move this section to *History*.
 
-### `20261023000009_drop_start_new_league_season.sql`
+### `20261115000008_drop_start_new_league_season.sql`
 
 Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
 (`20261023000000_lock_start_new_league_season.sql`) already revoked EXECUTE
@@ -108,7 +108,7 @@ then `supabase db push --dry-run` (must list exactly this file) and
    should be removed in the same PR that promotes this file, then
    `node scripts/gen-architecture.mjs` re-run).
 
-**Timestamp note:** if migrations newer than `20261023000009` have been
+**Timestamp note:** if migrations newer than `20261115000008` have been
 applied before this is promoted, rename it to a fresh timestamp rather than
 passing `--include-all`.
 

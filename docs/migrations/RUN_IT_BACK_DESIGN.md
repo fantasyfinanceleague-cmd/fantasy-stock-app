@@ -663,6 +663,18 @@ privileges revoked from anon and authenticated.
 
 ### 2.11 Client contract (for the mobile worker)
 
+**Clients rely on these invariants (the 3c-2 worker, 2026-10-05). Both are PGlite-asserted in
+`supabase/tests/run_it_back.pglite.test.ts`, "client contract":**
+- `renew_league` creates the new season with `draft_date = NULL`.
+- `start_renewed_season` is the ONLY path that sets `draft_date`, and it refuses
+  `renewal_replies_pending` while anyone is pending, and `no_draft_date` without a date.
+
+The app routes a renewed league to the normal draft lobby once `get_renewal_roster` returns the
+full list with `replies_pending = false` AND the league has a `draft_date`. If an explicit
+server flag (for example `season_scheduled`) is wanted instead, it is a small add-on to
+`get_renewal_roster`; not built yet.
+
+
 - **"Run it back"** → `renew_league` → `setActiveLeagueId(new_id)`. The commissioner lands on
   the reconcile view (a3/a4).
 - **Invited players** have no `league_members` row in the new league until they answer. The
@@ -704,7 +716,7 @@ settings screen.
   - **Not dropped yet:** `season_result.pglite.test.ts` slices the function from
     `20260718000000` to build its archived-season fixture, so it keeps working, and the function
     stays restorable if anything unexpected calls it.
-- **Later:** `DROP FUNCTION` in `20261023000009`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
+- **Later:** `DROP FUNCTION` in `20261115000008`, **held in `supabase/migrations/deferred/`** (committed with phase 0)
   until the mobile build without the button ships (CLAUDE.md: a header comment holds nothing).
   The PGlite fixture keeps slicing the historical file, which is never rewritten. **Wrapping it
   was considered and rejected:** nothing in its body is worth keeping under B.
@@ -921,7 +933,7 @@ Week 1 scored.
 | `20261023000006` | `get_renewal_roster`, `get_league_history` | 1 |
 | `20261023000007` | `get_home_summary` + lineage columns (DROP/CREATE, grants re-applied) | 1 |
 | `20261023000008` | (b) keep teams **or** keepers, if chosen | 2 |
-| `20261023000009` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
+| `20261115000008` | `DROP FUNCTION start_new_league_season`, **in `deferred/`** (committed `5c2175c`) | deferred |
 
 If (b) picks both keep teams and keepers, request a second range.
 
@@ -965,13 +977,57 @@ for the minutes in between.
    - Does a **pending/out** player see counts? Assumed no, only their own status.
    Either change is one predicate, with no change to the RLS or RPC shape.
 4. **The nudge rate limit:** 24 h per player (default)?
-5. **Copy needed** for `renewal_removed`, `season_set` and, optionally, a nudge variant (Design
-   Lead).
-6. **Newcomers and Season 1 detail:** frozen standings only (phase 1), or full week-by-week
-   Season 1 too (§4.3)?
+5. ~~**Copy needed**~~ **APPROVED (Giorgio, 2026-10-05):** `renewal_removed` ("{commissioner} set
+   up Season 2 of {league} without you.") and `season_set` ("Season 2 of {league} is set. The draft
+   is {…}."). Source: `_shared/renewal-copy.ts`. A nudge reuses the invite copy.
+6. ~~**Newcomers and Season 1 detail**~~ **RESOLVED (decision 4):** newcomers get the standings and
+   the week-by-week matchups, not the detail card (`get_season_result` stays member-of-that-season)
+   and not the draft recap.
 7. **The superseded league in the switcher** (§4.5).
+
+**Resolved (Giorgio, 2026-10-05):**
+- the visibility ceiling: a caller sees seasons up to the latest one they were in (declining a
+  season closes it);
+- pending invitees hold their seats; newcomers and bots cannot take a reserved seat;
+- a `legacy` draft order is not carried over (the renewal starts as `random`);
+- the newcomer history scope in item 6 above;
+- the two push strings in item 5 above.
 
 **Resolved in rev 3.1:**
 - roster visibility (in players see the full list);
 - Nudge again + Remove (phase 1);
 - in ↔ out flips are free until the draft starts.
+
+---
+
+## 7. Review fixes (2026-10-04, before the first push)
+
+Two read-only reviews (security-reviewer; supabase-reviewer) ran against `feat/run-it-back`.
+The valid findings were fixed in place and are covered by the PGlite suite:
+
+| Finding | Fix | Where |
+|---|---|---|
+| A commissioner could clear `previous_league_id` (switching the gate off) or forge `lineage_id` (reading another lineage) through the self-service RLS policies | `enforce_league_lineage_columns`: a direct client write (`current_user` anon/authenticated) may not set or change the lineage columns. SECURITY INVOKER, so the definer RPCs are exempt | 000004 |
+| The gate keyed on `previous_league_id` | keyed on the pending rows instead | 000004 |
+| A league with a successor could be deleted, silently dropping a season | `previous_league_id` is `on delete restrict` | 000000 |
+| Invitees' seats were not reserved, so newcomers could lock them out | `enforce_renewal_membership` on `league_members` INSERT: a newcomer or bot takes only an unreserved seat (members + pending + 1 <= cap) | 000004 |
+| Removal could be undone by joining with the invite code | the same trigger refuses a commissioner-removed player on ANY insert path | 000004 |
+| A pending invitee who joined by code kept a 'pending' reply | the trigger syncs it to 'in' (decided by the player) | 000004 |
+| Visibility of later seasons persisted after declining | a visibility ceiling: a caller sees seasons up to the latest one they were a member of (**a decision to confirm**) | 000003 |
+| Existence oracle in `renew_league` and `respond_to_renewal` | uniform refusals for non-invitees and missing leagues | 000003 |
+| Bots counted as newcomers in the roster and counts | excluded (`bot-%`) | 000003 |
+| `pick_clock_enabled` silently discarded by the pick-clock guard | removed from the settings whitelist (client writes are always clocked) | 000003 |
+| `add_bots` could fill seats an invitee needs | refused while any reply is pending | draft-control |
+
+Not changed, with reasons:
+- **Stake mode mirror (reported as MED-3):** a false positive. The
+  `leagues_mirror_budget_mode` trigger was dropped by `20260811000001`.
+- **Lock profile (LOW-7):** the affected tables are small, and every existing row
+  satisfies the new constraints. `NOT VALID` plus `VALIDATE` would only matter at
+  scale.
+- **Flip rate limit (LOW-6):** each reply writes one notice. Coalescing is a
+  follow-up.
+- **Seat reservation for join-by-code:** enforced at the table, so it covers every
+  path. The join function's own message still says "league_full" for a full league,
+  and the trigger's message is the one a reserved-seat refusal shows.
+
