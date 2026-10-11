@@ -114,7 +114,8 @@ Deno.test('the commissioner never sees the ask (they have RunItBackCard); no Sea
 
 Deno.test('Home mounts it next to RunItBackCard, for members only, and it re-reads after an answer (source guards)', () => {
   const home = SOURCES2['app/(tabs)/index.tsx'];
-  assertEquals(home.includes('{league?.successor_league_id && league.commissioner_id !== myUserId ? ('), true);
+  // Behind Run it back's kill switch (run-it-back-gate.test.ts) since F4a.
+  assertEquals(home.includes('{RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? ('), true);
   assertEquals(home.includes('<HomeRenewalAsk'), true);
   const ask = SOURCES2['components/game/HomeRenewalAsk.tsx'];
   assertEquals(ask.includes('onAnswered={() => setKey((k) => k + 1)}'), true);

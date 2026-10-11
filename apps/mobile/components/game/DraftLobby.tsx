@@ -3,12 +3,13 @@ import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import type { PreDraftData } from '@/lib/home/usePreDraftData';
 import { countdownLabel, draftDateTimeLabel, orderWasSetLine } from '@/lib/home/draftCountdown';
 import { managersProgressCaption, orderWaitingLine, pickClockLine } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
 import { mySnakePicks } from '@/lib/game/draftLobby';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 
 export interface DraftLobbyProps {
   data: PreDraftData;
@@ -36,7 +37,7 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
   return (
     <View style={styles.stack}>
       {showCountdown ? (
-        <Card>
+        <Card style={styles.card}>
           <Text variant="tag" tone="secondary">Draft starts in</Text>
           <Text variant="score.md" style={styles.countdown}>{countdown ?? '—'}</Text>
           <Text variant="caption" tone="secondary">{when ? `${when} · ${pickClockLine(pickSeconds, rounds)}` : pickClockLine(pickSeconds, rounds)}</Text>
@@ -44,13 +45,13 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
       ) : null}
 
       {data.waiting || !order ? (
-        <Card>
+        <Card style={styles.card}>
           <Text variant="tag" tone="secondary">Draft order · waiting</Text>
           <Text variant="callout">{orderWaitingLine(data.minMembers)}</Text>
           <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text>
         </Card>
       ) : (
-        <Card>
+        <Card style={styles.card}>
           <Text variant="tag" tone="secondary">Draft order</Text>
           {orderWasSetLine(data.finalizeAt) ? <Text variant="caption" tone="secondary">{orderWasSetLine(data.finalizeAt)}</Text> : null}
           {seat > 0 ? (
@@ -61,11 +62,9 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
           ) : null}
           <View style={styles.order}>
             {order.map((id, i) => (
-              <View key={id} style={styles.orderRow}>
+              <View key={id} style={[styles.orderRow, yourRowTint(id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${i + 1}, ${nameOf(id)}${youA11y(id === myUserId)}`}>
                 <Text variant="caption" tone="secondary" style={styles.seatNo}>{i + 1}</Text>
-                <Text variant="callout" style={id === myUserId ? { fontWeight: '700' } : undefined}>
-                  {nameOf(id)}{id === myUserId ? <Text variant="callout" tone="secondary"> (you)</Text> : null}
-                </Text>
+                <Text variant="callout" style={yourNameStyle(id === myUserId)}>{nameOf(id)}</Text>
               </View>
             ))}
           </View>
@@ -76,6 +75,9 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   countdown: { marginVertical: space[1] },
   order: { gap: space[2], marginTop: space[2] },

@@ -41,6 +41,9 @@ import {
   MAX_PUSHES_PER_RUN,
   nextPushStatus,
   type NoticeContext,
+  RENEWAL_KINDS,
+  type RenewalKind,
+  renewalNoticeMessage,
   STALE_SENDING_MS,
 } from './plan.ts';
 
@@ -53,6 +56,8 @@ interface NoticeRow {
   user_id: string;
   kind: string;
   created_at: string;
+  subject_user_id: string | null;
+  detail: Record<string, unknown> | null;
   push_status: string;
   push_attempts: number;
 }
@@ -77,8 +82,8 @@ Deno.serve(async (req: Request) => {
   const staleIso = new Date(Date.now() - STALE_SENDING_MS).toISOString();
   const { data: rows, error: selErr } = await admin
     .from('league_notifications')
-    .select('id, league_id, user_id, kind, created_at, push_status, push_attempts')
-    .in('kind', [...DELIVERED_KINDS])
+    .select('id, league_id, user_id, kind, created_at, subject_user_id, detail, push_status, push_attempts')
+    .in('kind', [...DELIVERED_KINDS, ...RENEWAL_KINDS])
     .or(`push_status.eq.pending,and(push_status.eq.sending,push_attempted_at.lt.${staleIso})`)
     .order('created_at', { ascending: true })
     .limit(MAX_PUSHES_PER_RUN * 4); // oldest first, then shared fairly across leagues (fairOrder)
@@ -90,7 +95,43 @@ Deno.serve(async (req: Request) => {
   const counts: Record<string, number> = {};
   const bump = (k: string) => (counts[k] = (counts[k] ?? 0) + 1);
 
+  // Run it back only: a cached league name lookup (renewalNoticeMessage needs
+  // nothing else). draft_notice_context covers DELIVERED_KINDS' own league info.
+  interface RenewalLeagueInfo { name: string }
+  const renewalLeagues = new Map<string, RenewalLeagueInfo | null>();
+  async function leagueInfo(id: string): Promise<RenewalLeagueInfo | null | undefined> {
+    if (renewalLeagues.has(id)) return renewalLeagues.get(id);
+    const { data, error } = await admin.from('leagues').select('name').eq('id', id).maybeSingle();
+    if (error) return undefined; // lookup failed: not cached, retried next row/tick
+    const info = data ? { name: String(data.name ?? 'Your league') } : null;
+    renewalLeagues.set(id, info);
+    return info;
+  }
+
   async function deliver(row: NoticeRow): Promise<DeliveryOutcome> {
+    // Run it back: renewal notices carry their whole content in `detail`, and
+    // their recipient is not in a draft order and may not be a league member yet
+    // (a pending invitee), so they skip draft_notice_context entirely and use
+    // their own lookup (league name only).
+    if ((RENEWAL_KINDS as readonly string[]).includes(row.kind)) {
+      const rl = await leagueInfo(row.league_id);
+      if (rl === undefined) return 'lookup_failed';
+      if (rl === null) return 'not_in_order';   // league deleted (a cancelled renewal cascades here)
+      const message = renewalNoticeMessage({
+        kind: row.kind as RenewalKind,
+        leagueName: rl.name,
+        leagueId: row.league_id,
+        detail: row.detail ?? {},
+      });
+      if (!message) return 'unknown_kind';
+      const { token, enabled, lookupFailed } = await getTargetToken(admin, row.user_id);
+      if (lookupFailed) return 'lookup_failed';
+      if (!token || !enabled) return 'no_token';
+      const rr = await sendExpoPush(token, message);
+      return rr.sent ? 'sent' : rr.reason;
+    }
+
+    // Every other DELIVERED_KINDS row: the generic auto-start context + decision.
     const { data: ctx, error: ctxErr } = await admin.rpc('draft_notice_context', { p_notice_id: row.id });
     if (ctxErr) return 'lookup_failed';
     if (!ctx) return 'not_in_order'; // league deleted since (cascade would normally remove the row)

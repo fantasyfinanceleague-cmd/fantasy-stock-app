@@ -5,6 +5,20 @@
  * sees are decided here, in one place.
  */
 
+/** Run it back's kill switch (EXPO_PUBLIC_RUN_IT_BACK=1). The UI ships in 1.2.0 but its
+ * backend (renew_league, get_renewal_roster: PR #94) releases later, so it stays OFF until
+ * then: no card, no strip, no renewal routing. Pure (the caller passes the env value in). */
+export function runItBackEnabled(flag: string | undefined): boolean {
+  return flag === '1';
+}
+
+/** "Waiting on Andrea P." as a sentence: names ending in an initial already carry the
+ * period, so the sentence's own period is not added again ("Andrea P.." in the capture). */
+export function waitingOnSentence(names: readonly string[]): string {
+  const list = `Waiting on ${names.join(', ')}`;
+  return list.endsWith('.') ? list : `${list}.`;
+}
+
 export type RenewalGroup = 'in' | 'new' | 'out' | 'pending';
 
 export interface RenewalCounts {

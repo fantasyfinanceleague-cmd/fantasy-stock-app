@@ -23,6 +23,7 @@ import { ChampBanner } from '@/components/game/ChampBanner';
 import { championBanner } from '@/lib/game/history';
 import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
+import { useSeasonPlayoffs } from '@/lib/game/useSeasonPlayoffs';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import { DraftCountdownCard } from '@/components/game/DraftCountdownCard';
@@ -46,16 +47,20 @@ import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { useCallback, useState } from 'react';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
-import { buildStandingsRows, type StandingsRow } from '@/lib/game/standings';
+import { buildStandingsRows, standingsView, type StandingsRow } from '@/lib/game/standings';
+import { COPY as GAME_COPY } from '@/lib/game/gameCopy';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
+import { runItBackEnabled } from '@/lib/game/renewal';
 
 /** The leave flow's kill switch (item 13): members reach League settings (and Leave league) too. */
 const LEAVE_LEAGUE_ON = leaveLeagueEnabled(process.env.EXPO_PUBLIC_LEAVE_LEAGUE);
+/** Run it back stays off until its backend (PR #94) is live: see runItBackEnabled. */
+const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);
 import { QueueEditor } from '@/components/game/QueueEditor';
 import { useDraftQueue } from '@/lib/game/useDraftQueue';
-import { useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 import { renewalReadyForLobby } from '@/lib/game/renewalLobby';
 import { QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 
@@ -84,19 +89,23 @@ export default function LeagueScreen() {
   const onEnding = useCallback(() => setEndingFor(activeLeagueId), [activeLeagueId]);
   const phase = sheetLeagues.find((l) => l.id === activeLeagueId)?.seasonPhase;
   // The screen is the rules' choice for the phase (lib/game/leaguePhase.ts).
-  const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: !!activeLeague.previous_league_id }) : 'placeholder';
+  const screen = activeLeague && phase ? leagueScreenFor({ phase, isRenewal: RUN_IT_BACK_ON && !!activeLeague.previous_league_id }) : 'placeholder';
   const drafting = screen === 'draft_room';
   const preDraft = (screen === 'lobby' || screen === 'renewal') && activeLeagueId !== null;
   const inSeason = screen === 'season';
   const history = useLeagueHistory(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
+  // GS-8: each finished season in History is ordered by its playoff result, as Standings is.
+  const seasonPlayoffs = useSeasonPlayoffs(inSeason ? activeLeagueId : null, segment === 'history' && inSeason);
   const { colors, elevation } = useTheme();
   const st = useLeagueStandings(inSeason ? activeLeagueId : null);
   const { user } = useAuth();
+  const completed = phase === 'completed';
   const bracket = useBracket(
     inSeason ? activeLeagueId : null,
     activeLeague?.playoff_teams ?? null,
     st.standings.map((x) => ({ user_id: x.user_id, rank: x.rank, display_name: x.display_name })),
-    segment === 'playoffs',
+    // GS-4: a finished season's Standings follow the playoff result, so they read the bracket too.
+    segment === 'playoffs' || (completed && segment === 'standings'),
   );
 
   // R2: a finished season's commissioner starts the renewal. The server returns the
@@ -132,13 +141,14 @@ export default function LeagueScreen() {
       return <PhasePlaceholder title="League" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={refresh} />;
     }
     const rows = buildStandingsRows(st.standings, user?.id ?? '', st.previousRanks);
+    const standings = standingsView({ rows, completed, playoffTeams: activeLeague?.playoff_teams ?? null, bracketStatus: bracket.status, playoffRows: bracket.rows });
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ShellHeader title="League" showAvatar />
         <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
           {st.status === 'ready' ? (
             <View style={styles.stack}>
-              {phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
+              {RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
                 <Card style={styles.strip}>
                   <Text variant="headline">You're the commissioner</Text>
                   <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
@@ -154,7 +164,7 @@ export default function LeagueScreen() {
                 onChange={(v) => setSegment(v === 'schedule' ? 'schedule' : v === 'playoffs' ? 'playoffs' : v === 'history' ? 'history' : 'standings')}
               />
               {segment === 'history' ? (
-                history.status === 'ready' ? <HistoryList rows={history.rows} /> : null
+                history.status === 'ready' ? <HistoryList rows={history.rows} myUserId={user?.id ?? ''} playoffs={seasonPlayoffs.status === 'ready' ? seasonPlayoffs.byLeague : null} /> : null
               ) : segment === 'playoffs' ? (
                 bracket.bracket ? (
                   <BracketView
@@ -164,7 +174,18 @@ export default function LeagueScreen() {
                   />
                 ) : null
               ) : segment === 'standings' ? (
-                <StandingsTable rows={rows} caption={STANDINGS_CAPTION} seasonComplete={phase === 'completed'} onPinChange={setPinnedRow} />
+                standings.kind === 'final' ? (
+                  <StandingsTable
+                    rows={standings.rows}
+                    header={{ title: GAME_COPY.finalStandingsTitle, subtitle: GAME_COPY.finalStandingsSubtitle }}
+                    caption={GAME_COPY.finalStandingsCaption}
+                    seasonComplete
+                    showMove={false}
+                    onPinChange={setPinnedRow}
+                  />
+                ) : standings.kind === 'regular' ? (
+                  <StandingsTable rows={standings.rows} caption={STANDINGS_CAPTION} seasonComplete={standings.medals} onPinChange={setPinnedRow} />
+                ) : null
               ) : (
                 <ScheduleList
                   rows={buildSchedule({ myUserId: user?.id ?? '', currentWeek: st.week ?? 1, numWeeks: activeLeague?.num_weeks ?? 0, names: st.standings.map((x) => ({ user_id: x.user_id, display_name: x.display_name })), matchups: st.data?.matchups ?? [] })}
@@ -187,7 +208,7 @@ export default function LeagueScreen() {
           <View style={styles.pinned} pointerEvents="box-none">
             {/* A View, not Card: Card clips (overflow hidden), which would cut the shadow. */}
             <View style={[styles.pinnedCard, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}>
-              <StandingsRowView r={pinnedRow} seasonComplete={phase === 'completed'} />
+              <StandingsRowView r={pinnedRow} seasonComplete={standings.kind === 'final' || (standings.kind === 'regular' && standings.medals)} showMove={standings.kind !== 'final'} />
             </View>
           </View>
         ) : null}
@@ -195,7 +216,7 @@ export default function LeagueScreen() {
     );
   }
 
-  if (preDraft && activeLeagueId && activeLeague?.previous_league_id) {
+  if (RUN_IT_BACK_ON && preDraft && activeLeagueId && activeLeague?.previous_league_id) {
     return <RenewedPreDraft leagueId={activeLeagueId} createdAt={activeLeague.created_at ?? new Date().toISOString()} />;
   }
   if (preDraft && activeLeagueId) {
@@ -219,7 +240,7 @@ export default function LeagueScreen() {
 function RenewedPreDraft({ leagueId, createdAt }: { leagueId: string; createdAt: string }) {
   const { activeLeague, refresh } = useLeagueContext();
   const [rosterKey, setRosterKey] = useState(0);
-  const roster = useRenewalRoster(leagueId, null, rosterKey);
+  const roster = useRenewalRoster(leagueId, RENEWAL_FIXTURE_CALLER, rosterKey);
   const ready = roster.status === 'ready' && renewalReadyForLobby({ roster: roster.roster, draftDate: activeLeague?.draft_date });
   if (ready) return <LeagueLobby leagueId={leagueId} />;
   return (

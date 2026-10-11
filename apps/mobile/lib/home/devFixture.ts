@@ -76,6 +76,13 @@ function parse(raw: string | undefined): HomeFixture | null {
 
 export const HOME_FIXTURE: HomeFixture | null = __DEV__ ? parse(process.env.EXPO_PUBLIC_HOME_FIXTURE) : null;
 
+/** Capture only (game-screens re-gate, GS-2): how week 6 ended under HOME_FIXTURE=scored.
+ * `lost` swaps the two posted gains, `tied` posts equal gains; unset = you won (as before).
+ * Every other fixture ignores it. */
+export type ScoredOutcome = 'won' | 'lost' | 'tied';
+const rawOutcome = __DEV__ ? process.env.EXPO_PUBLIC_SCORED_OUTCOME : undefined;
+export const SCORED_OUTCOME: ScoredOutcome = rawOutcome === 'lost' || rawOutcome === 'tied' ? rawOutcome : 'won';
+
 if (HOME_FIXTURE) {
   console.warn(`[dev] HOME FIXTURE "${HOME_FIXTURE}" — fake league data, no Supabase reads for Home.`);
 }

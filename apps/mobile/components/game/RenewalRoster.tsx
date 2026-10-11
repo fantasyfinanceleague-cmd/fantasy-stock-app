@@ -4,13 +4,14 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import {
-  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction,
-} from '@/lib/game/renewal';
+  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction, waitingOnSentence } from '@/lib/game/renewal';
 import type { RosterResult } from '@/lib/game/useRenewalRoster';
+import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
+import { useAuth } from '@/lib/useAuth';
 
 type FullRoster = Extract<RosterResult, { full_list: true }>;
 
@@ -29,6 +30,8 @@ export interface RenewalRosterProps {
  * in). The order is Season 1's. A non-reply's actions open the native sheet (R7). */
 export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, onChanged }: RenewalRosterProps) {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const myUserId = user?.id ?? '';
   const people = orderRoster(roster.people, season1Order);
   const waiting = roster.people.filter((p) => p.group === 'pending').map((p) => p.display_name);
 
@@ -65,13 +68,14 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
   return (
     <View style={styles.stack}>
       <Text variant="caption" tone="secondary">{countsLine(roster.counts)}</Text>
-      <Card>
+      <Card style={styles.card}>
         {people.map((p) => {
           const copy = groupCopy(p.group);
           return (
-            <View key={p.user_id} style={styles.row}>
+            // Bold here already means "Running back", so the tint alone marks you (board #call-manager-row).
+            <View key={p.user_id} style={[styles.row, yourRowTint(p.user_id === myUserId, colors.youTint)]}>
               <View style={styles.name}>
-                <Text variant="callout" style={p.group === 'in' ? { fontWeight: '700' } : p.group === 'out' ? { color: colors.text2 } : undefined}>{p.display_name}</Text>
+                <Text variant="callout" accessibilityLabel={`${p.display_name}${youA11y(p.user_id === myUserId)}`} style={p.group === 'in' ? { fontWeight: '700' } : p.group === 'out' ? { color: colors.text2 } : undefined}>{p.display_name}</Text>
                 {copy.marker ? <Text variant="tag" tone="secondary">{copy.marker}</Text> : null}
               </View>
               <View style={styles.answer}>
@@ -88,7 +92,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
         })}
       </Card>
 
-      <Card>
+      <Card style={styles.card}>
         <View style={styles.draftRow}>
           <Text variant="callout">Draft time</Text>
           <Text variant="callout" tone="secondary">Not set</Text>
@@ -98,7 +102,7 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
           <Text variant="callout" tone="secondary">Random</Text>
         </View>
         {draftDisabled(roster.replies_pending) ? (
-          <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. Waiting on ${waiting.join(', ')}.`}</Text>
+          <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. ${waitingOnSentence(waiting)}`}</Text>
         ) : null}
       </Card>
     </View>
@@ -106,6 +110,9 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2], flexWrap: 'wrap' },
   name: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[1] },

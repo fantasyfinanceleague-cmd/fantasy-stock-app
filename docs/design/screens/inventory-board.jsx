@@ -158,7 +158,7 @@
           <Fit caption="Draft paused · commissioner" note="Same state for the commissioner, plus the push below. New copy."><I.DraftStalled commish /></Fit>
           <Fit caption="Push · draft paused (commissioner)" note="New copy."><I.StallPush /></Fit>
           <Fit caption="Draft complete" note={'The draft\'s ending (UX audit U-10), shown in the room when the last pick lands, before it becomes the pre-season League tab. New copy: "Draft complete", "Your team is set", "Week 1 starts Mon 9:30 AM ET. You play {opponent}", "See your Week 1 matchup". The roster is the draft\'s picks at their draft prices.'}><I.DraftComplete /></Fit>
-          <Fit caption="Draft recap"><I.DraftRecap /></Fit>
+          <Fit caption="Draft recap · 1.3, not in 1.2.0" note="No entry point leads here in 1.2.0."><I.DraftRecap /></Fit>
           <Fit caption="Playoff bracket · 4 teams" note="Two playoff weeks after the regular season"><I.Playoffs /></Fit>
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
@@ -228,6 +228,164 @@
             <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
             <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
             <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">UX</span>
+            <div>
+              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
+            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Notes for the build</h3>
+            <ul>
+              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+              <li><b>So does the bracket</b> (game-screens gate R-2, 2026-10-10): bold there means the winner of the game, so your line is marked by the tint alone.</li>
+              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">Both start the same way</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
+          </div>
+          <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
+            <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
+            <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
+            <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
+            <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
+            <ul>
+              <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
+              <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
+              <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
+              <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3c</span>
+            <div>
+              <h2 id="call-medals-h">Decided: who gets the gold once the season is over</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> Once the playoffs are done, the medals follow the result. From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
+            </div>
+          </header>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · Medals follow the playoffs (chosen)" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
+            <Fit caption="B · Medals stay regular season (not chosen)" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #191)</h3>
+            <ul>
+              <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
+              <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
+              <li><b>Nothing is lost in A.</b> Records and season gains stay the regular season's, and the Playoffs tab keeps the seeding.</li>
+              <li>Either way, the same medals then show in League › History and on the season-complete card, so every screen tells the same story.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-watchlist" aria-labelledby="call-watchlist-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">3e</span>
+            <div>
+              <h2 id="call-watchlist-h">Decided: the watchlist and daily claims</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-09): C, plus the Design Lead's rulings (a) to (d) below.</b> Giorgio, 2026-10-08: trading stays market hours only; search and save any time; the watchlist is per league ("each one has its own waiver wire"); and a daily waiver wire: "you can claim stocks after the close of each day. if no one else claims that day, you get it. if two or more people claim, then we have the order decide." Drawn to the fantasy-football model (docs/design/FANTASY_CONVENTIONS.md): a star to save, a Claim that settles at the next 9:30 open, a visible waiver order, blind claims, visible holdings. Tier Cup (price tiers; selling DIS left the $100–$200 slot open), Roberto B.'s phone; open = Thu 1:37 PM, closed = Fri 5:00 PM, the run = Mon 9:30 AM ET. Use the Theme switch for Dark. All watchlist and claim copy is new unless a caption says otherwise.</p>
+            </div>
+          </header>
+
+          <h3 className="b-sub">1 · Where it lives: C, both (decided)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit h={1236} caption="A · Watching on Portfolio · open (not chosen alone)" note={'Holdings first, then Watching: the holding row plus one status line saying whether you can get the stock in this league. Buy sits on the available row while the market is open.'}><I.WatchPortfolio /></Fit>
+            <Fit h={1266} caption="A · Watching on Portfolio · closed (not chosen alone)" note={'Closed chip, no live dot, every price "At Fri close". Buy\'s spot reads Claim (the same size and place). Claim also shows on "No free $200–$400 slot", because a claim can name the sale that makes room; a live Buy can\'t.'}><I.WatchPortfolio closed /></Fit>
+            <Fit caption="B · Buy a stock › Watchlist · open (not chosen alone)" note="The list inside the player pool, as ESPN, Sleeper and Yahoo do it. Portfolio stays as it is today."><I.WatchTab /></Fit>
+            <Fit caption="B · Buy a stock › Watchlist · closed (not chosen alone)" note={'The approved "Market closed" card on top; Claim in Buy\'s spot.'}><I.WatchTab closed /></Fit>
+            <Fit h={1334} caption="✓ C · Portfolio (chosen)" note={'C is both, one list. Portfolio shows five, then "See all (12)", which opens Buy a stock on its Watchlist tab.'}><I.WatchPortfolio closed n={12} seeAllTo="See all opens Buy a stock › Watchlist." /></Fit>
+            <Fit caption="✓ C · Buy a stock › Watchlist (chosen)" note="The same list in the player pool, where a fantasy player looks for it."><I.WatchTab closed /></Fit>
+          </div>
+
+          <h3 className="b-sub">2 · Each league has its own list</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit h={1108} caption="Switch to Stock Scudetto with the pill" note={'A different list (AMZN, AMD, SHOP). The same SHOP reads "No free slot" here (every slot is invested) and "Available" in Tier Cup. Owners are this league\'s, from its draft.'}><I.WatchOtherLeague /></Fit>
+          </div>
+
+          <h3 className="b-sub">3 · Claim, the closed-market twin of Buy</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Stock sheet · closed" note={'Where Review buy sits when the market is open, the same button reads Claim. The star stays in the header, far from it. Approved copy: the Market closed card.'}><I.ClaimSheet /></Fit>
+            <Fit caption="The composer (the 3e review, re-labelled)" note={'What you buy, what pays for it (the sale picker; cash in a budget league), the fit as of Friday\'s close, and the fill time on the button. × closes without claiming.'}><I.ClaimComposer /></Fit>
+            <Fit h={1328} caption="After claiming" note={'The status line becomes "Claimed · fills Mon 9:30 AM ET"; the star doesn\'t change; the action spot reads Cancel. A Claims row appears under Buy a stock.'}><I.WatchPortfolio closed claimed /></Fit>
+          </div>
+
+          <h3 className="b-sub">4 · Your claims and the waiver order</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Claims (yours only)" note={'Pending claims with what pays for each, Cancel until the run starts, and your place in the waiver order. It never shows anyone else\'s claims.'}><I.ClaimsList /></Fit>
+            <Fit caption="The waiver order, on tap" note="Visible to the whole league, like the standings. Your row: bold on the light-blue tint (S-10)."><I.ClaimsList order /></Fit>
+          </div>
+
+          <h3 className="b-sub">5 · Endings at the 9:30 open (one each)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Won" note="The position lands at the opening price, paid by the sale you named. The new holding is lit once, then settles."><I.ClaimEnding kind="won" /></Fit>
+            <Fit caption="Lost" note="Names the winner and one short reason (Design Lead ruling, recorded in the plan). The sale did not happen, and the card says so."><I.ClaimEnding kind="lost" /></Fit>
+            <Fit caption="Failed" note={'Named reason, nothing happened. Ruled wording: the brief\'s "No free $100–$200 slot at the open" would say there was no free slot when the slot WAS free; the stock left its tier.'}><I.ClaimEnding kind="failed" /></Fit>
+          </div>
+
+          <h3 className="b-sub">6 · Refusals, in place</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Claim on a sheet left open past 9:30" note={'"Market\'s open: just buy it." The button turns back into Review buy.'}><I.ClaimSheet state="opened" /></Fit>
+            <Fit caption="A 6th claim" note={'"5 claims pending. Cancel one to claim another." The button stays visible, disabled.'}><I.ClaimComposer full /></Fit>
+            <Fit caption="A live buy during the run" note={'"Claims are being processed. Try again in a minute." Live trading waits for the run (at most ten minutes).'}><I.ClaimSheet state="processing" /></Fit>
+            <Fit caption="Watchlist full (50)" note={'"Your watchlist is full (50). Remove one to add another." (the plan\'s line).'}><I.SaveResults full /></Fit>
+          </div>
+
+          <h3 className="b-sub">7 · Save, Home and the draft room</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="Save on a search result" note={'The star, a 44 pt labelled control on every result, open market or not. Tapping flips Save to Saved, and that flip is the whole ending (no toast). No Buy on a result row.'}><I.SaveResults /></Fit>
+            <Fit caption="Saved in the stock sheet header" note="Next to the name, far from Buy. Open market."><I.SaveSheet /></Fit>
+            <Fit caption="Home hook · closed (still open: not part of the C decision)" note={'Stock Scudetto on Thursday evening, so the counts are this league\'s: "Market opens Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist". Taps through to Claims.'}><I.HomeClaimsHook /></Fit>
+            <Fit caption="Draft room: Queue and Save" note={'Two labelled lists with a key. No Claim during a draft: the draft is how you get stocks then.'}><I.DraftQueueSave /></Fit>
+          </div>
+
+          <div className="b-ask">
+            <h3>Decided: C (Giorgio, 2026-10-09)</h3>
+            <ul>
+              <li><b>Both doors, one list.</b> The Watchlist tab in Buy a stock, where fantasy players keep a watch list (ESPN, Sleeper, Yahoo all put it in the player pool), and the Watching section on Portfolio, below Holdings, capped at five rows, so a closed Friday shows your list and Claim on the screen you already open. "See all (N)" on Portfolio opens the tab. The A and B frames stay as the record and still show the row and section designs C uses.</li>
+            </ul>
+            <h3>Design Lead rulings, approved with C</h3>
+            <ul>
+              <li><b>(a) Claim also on "No free … slot" rows</b> (closed only), since the claim names the sale that frees the slot. While open, those rows have no Buy: you sell first, as today.</li>
+              <li><b>(b) The failed ending says what the stock did:</b> "LOW opened at $203.10, above your $100–$200 slot · Nothing was bought." (not "No free $100–$200 slot", which would have said the free slot wasn't free).</li>
+              <li><b>(c) A Watching row is the ticker and one status line</b>, no company name, so a row with Buy or Claim stays two lines; the sheet names the company. A claimed stock's status line is "Claimed · fills Mon 9:30 AM ET"; the star never changes.</li>
+              <li><b>(d) The 9:30 refusals use a stock you could buy</b>, so "Market's open: just buy it." is always true.</li>
+              <li><b>Also drawn as ruled with the Planner:</b> the lost ending names the winner and one reason ("lower in the standings"); the waiver order is visible to the league; claims are blind and holdings visible ("Owned by …" unchanged).</li>
+              <li><b>Sample data.</b> The brief's AAPL examples are drawn with the board's own stocks: AMGN paid by selling NVDA (both in the $200–$400 tier, the swap a tier league allows), and LOW from the budget. The waiver order and Tier Cup's budget are sample.</li>
+            </ul>
           </div>
         </section>
 

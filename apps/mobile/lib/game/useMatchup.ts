@@ -31,6 +31,8 @@ export interface MatchupDerived {
   weekStart: string | null;
   weekEnd: string | null;
   week: number;
+  /** Your standings record (league_standings_ranked), for the final band's "W · 5–1" (GS-2). */
+  myRecord: { wins: number; losses: number; ties: number } | null;
 }
 
 export function useMatchup(leagueId: string | null) {
@@ -60,6 +62,10 @@ export function useMatchup(leagueId: string | null) {
       weekStart: row?.week_start ?? null,
       weekEnd: row?.week_end ?? null,
       week: cw.week_number,
+      myRecord: (() => {
+        const st = raw.data.standings.find((r) => r.user_id === user.id);
+        return st ? { wins: Number(st.wins), losses: Number(st.losses), ties: Number(st.ties) } : null;
+      })(),
     };
   }, [home.viewModel, home.raw, user]);
 

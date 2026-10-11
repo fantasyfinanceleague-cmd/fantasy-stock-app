@@ -28,11 +28,16 @@ export interface DraftCompleteProps {
   /** A Week 1 bye: the button opens All matchups ("See Week 1's matchups"). */
   bye: boolean;
   onSeeMatchup: () => void;
+  /** The room's own finalize didn't go through (S-2): "Finishing the draft…" with Try again. */
+  finishFailed?: boolean;
+  /** A finalize is running (the Try again button waits). */
+  finishing?: boolean;
+  onRetryFinish?: () => void;
 }
 
 export const FINISHING_THE_DRAFT = 'Finishing the draft…'; // existing copy
 
-export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeMatchup }: DraftCompleteProps) {
+export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeMatchup, finishFailed = false, finishing = false, onRetryFinish }: DraftCompleteProps) {
   const { colors } = useTheme();
   return (
     <View style={styles.stack}>
@@ -42,6 +47,10 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
         <Text variant="callout" tone={finished ? undefined : 'secondary'} accessibilityLiveRegion="polite">
           {finished ? weekLine : FINISHING_THE_DRAFT}
         </Text>
+        {/* S-2: the finalize heal lives here now, never on the legacy draft screen. */}
+        {!finished && finishFailed && onRetryFinish ? (
+          <Button label="Try again" variant="secondary" size="sm" onPress={onRetryFinish} status={finishing ? 'loading' : 'idle'} disabled={finishing} />
+        ) : null}
       </Card>
 
       <View style={styles.section}>
@@ -81,7 +90,8 @@ const styles = StyleSheet.create({
   stack: { gap: space[4] },
   hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   section: { gap: space[2] },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  // Wraps at large text (XL capture: the caption ran off the screen).
+  sectionHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: space[2] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3], minHeight: 44 },
   rowText: { flex: 1, gap: 2 },
   ticker: { fontWeight: '700' },

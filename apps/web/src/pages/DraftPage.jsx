@@ -62,8 +62,6 @@ const BOT_STOCK_POOL = [
 const botPriceCache = new Map(); // symbol -> { price, timestamp }
 const PRICE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-// ---- Finnhub fallback via Edge Function ----
-
 // ---- Name lookup cache/throttle (new) ----
 const NAME_CACHE_KEY = 'symbolNameCache_v1';
 const NAME_CACHE = (() => {
@@ -598,24 +596,14 @@ export default function DraftPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [portfolio]);
 
-  // Quote lookup (Alpaca → Finnhub fallback)
+  // Quote lookup (Alpaca via the quote function). The Finnhub fallback was
+  // removed with the finnhub-quote function (2026-10-08 lockdown): it was this
+  // page's only caller, an unguarded second price proxy on another vendor key.
   // Accepts optional symbolOverride for when called from dropdown selection
   async function getQuote(symbolOverride) {
     try {
       const upper = String(symbolOverride || symbol).trim().toUpperCase();
-      let q = await fetchQuoteViaFunction(upper);
-
-      // Fallback to Finnhub via Edge Function if Alpaca didn't return a price
-      if (!q?.price) {
-        try {
-          const { data: fData, error: fErr } = await supabase.functions.invoke('finnhub-quote', {
-            body: { symbol: upper }
-          });
-          if (!fErr && fData?.price) {
-            q = { symbol: upper, price: Number(fData.price) };
-          }
-        } catch { /* ignore */ }
-      }
+      const q = await fetchQuoteViaFunction(upper);
 
       if (!q?.price) {
         setErrorMsg(`No recent data for "${upper}"`);

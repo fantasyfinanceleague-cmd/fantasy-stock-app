@@ -3,7 +3,10 @@
  * Each season is its own frozen record. Nothing here invents a champion or a
  * rank: a season that is not finished has none. The Season 1 order (the frozen
  * final-standings rank of the first season) also orders the renewal roster.
+ * A finished season's standings show the medals the playoffs gave (GS-4/GS-8):
+ * historyStandings, from the same podium rule as League › Standings.
  */
+import { finalStandingsOrder, playoffPodium, type PodiumGameRow, type PodiumTag } from './finalStandings';
 
 export interface FinalStanding {
   user_id: string;
@@ -33,6 +36,8 @@ export interface HistoryRow {
 export interface HistorySeason {
   leagueId: string;
   seasonNumber: number;
+  /** The server's champion (id); the podium is checked against it. */
+  championId: string | null;
   champion: string | null;
   myRecord: string | null;
   standings: FinalStanding[];
@@ -46,6 +51,7 @@ export function historySeasons(rows: HistoryRow[]): HistorySeason[] {
     .map((r) => ({
       leagueId: r.league_id,
       seasonNumber: r.season_number,
+      championId: r.champion_user_id ?? null,
       champion: r.champion_display_name ?? null,
       myRecord: r.my_wins !== null && r.my_losses !== null ? `${r.my_wins}–${r.my_losses}` : null,
       standings: (r.final_standings ?? []).slice().sort((a, b) => a.rank - b.rank),
@@ -72,4 +78,25 @@ export function championBanner(rows: HistoryRow[]): { tag: string; line: string 
   const champ = last.final_standings.find((s) => s.user_id === last.champion_user_id);
   if (!champ) return null;
   return { tag: `Season ${last.season_number} champion`, line: `${champ.display_name} · ${champ.wins}–${champ.losses}` };
+}
+
+export interface HistoryPlace {
+  standing: FinalStanding;
+  /** The final place: the playoff podium first, then the frozen regular-season order. */
+  place: number;
+  tag: PodiumTag | null;
+}
+
+/** One season's standings as History shows them (GS-8 = GS-4's order and medals). With a
+ * finished, readable bracket whose Final the server's champion won: the podium on top,
+ * medals on. Otherwise the frozen regular-season order with NO medals (an unfinished
+ * season, a season with no playoffs, or a bracket we couldn't read), never a guess. */
+export function historyStandings(season: HistorySeason, playoffRows: readonly PodiumGameRow[] | null): { places: HistoryPlace[]; medals: boolean } {
+  const plain = { places: season.standings.map((standing) => ({ standing, place: standing.rank, tag: null })), medals: false };
+  if (!season.championId || !playoffRows || playoffRows.length === 0) return plain;
+  const seed = new Map(season.standings.map((st) => [st.user_id, st.rank]));
+  const podium = playoffPodium(playoffRows, (id) => seed.get(id) ?? null, { championId: season.championId });
+  const order = podium ? finalStandingsOrder(season.standings, (st) => st.user_id, podium) : null;
+  if (!order) return plain;
+  return { places: order.map(({ row, place, tag }) => ({ standing: row, place, tag })), medals: true };
 }

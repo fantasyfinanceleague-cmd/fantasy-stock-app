@@ -108,6 +108,7 @@ function state(over: Partial<LedgerState> = {}): LedgerState {
   return {
     league: {
       draft_status: 'completed',
+      season_status: 'active',
       stake_mode: 'budget_cap',
       budget_amount: 1000,
       notional_per_slot: 1000,
@@ -305,6 +306,7 @@ Deno.test('commit: a raw 23505 on trades_funded_by_trade_id_unique is proceeds_u
 Deno.test('commit: RPC refusals map to the statuses record-trade has always used', async () => {
   const cases: Array<[string, number]> = [
     ['draft_not_completed', 200],
+    ['season_completed', 200],
     ['proceeds_unavailable', 200],
     ['not_a_member', 403],
     ['league_not_found', 404],

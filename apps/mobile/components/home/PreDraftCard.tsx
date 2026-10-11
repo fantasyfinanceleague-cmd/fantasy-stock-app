@@ -12,6 +12,7 @@ import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { draftDateTimeLabel, orderSetLine } from '@/lib/home/draftCountdown';
 import { ordinal } from '@/lib/home/ordinal';
 import { useAuth } from '@/lib/useAuth';
+import { membersYouFirst } from '@/lib/home/preDraftMembers';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useDraftAutoStart } from '@/lib/game/useDraftAutoStart';
 import {
@@ -225,9 +226,10 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           </Text>
         </View>
         <View style={styles.membersRow}>
-          {members.map((m, i) => (
-            <View key={m.userId} style={[styles.avatarCircle, { backgroundColor: i === 0 ? colors.youText : colors.inset }]}>
-              <Text variant="callout" style={{ color: i === 0 ? colors.surface : colors.text }}>
+          {/* S-3: you are marked by your own id and placed first, never "whoever the server listed first". */}
+          {membersYouFirst(members, user?.id).map(({ member: m, isYou }) => (
+            <View key={m.userId} style={[styles.avatarCircle, { backgroundColor: isYou ? colors.youText : colors.inset }]}>
+              <Text variant="callout" style={{ color: isYou ? colors.surface : colors.text }}>
                 {initialsOf(m.displayName)}
               </Text>
             </View>

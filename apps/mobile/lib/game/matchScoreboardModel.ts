@@ -8,7 +8,7 @@
 import { formatMoney } from '../../components/sp/logic/money';
 import { leaderOf, tugRatio, type Leader } from '../../components/sp/logic/tug';
 import { scoreTone, type ScoreTone } from '../home/scoreTone';
-import { leadLine, tiebreakLine } from './gameCopy';
+import { COPY, leadLine, tiebreakLine, wonByLine } from './gameCopy';
 
 export interface ScoreboardSide {
   name: string;
@@ -21,6 +21,9 @@ export interface ScoreboardSide {
 
 export interface MatchScoreboardInput {
   week: number;
+  /** False means the week is FINAL (the result is posted): the lead line then
+   * says "won by" / "Tied", never "leads by" (GS-1). Pre-season passes
+   * `noLeader`, so it has no lead line either way. */
   live: boolean;
   /** Pre-season and any "no leader yet" state: level tug, no lead, no tiebreak. */
   noLeader?: boolean;
@@ -38,6 +41,7 @@ export interface MatchScoreboardModel {
   oppTone: ScoreTone | null;
   tugRatio: number;
   leader: Leader;
+  /** "{leader} leads by $X" while live; "{winner} won by $X" or "Tied" once final. */
   leadLine: string | null;
   tiebreakLine: string | null;
   a11yLabel: string;
@@ -52,11 +56,17 @@ export function buildMatchScoreboardModel(input: MatchScoreboardInput): MatchSco
   const showLead = opp !== null && !noLeader && leader !== 'tie';
   const dollars = Math.abs(me.gain - oppGain);
   const leaderName = leader === 'you' ? me.name : opp?.name ?? '';
-  const lead = showLead ? leadLine(leaderName, dollars) : null;
+  const final = !live;
+  let lead: string | null = null;
+  if (showLead) lead = final ? wonByLine(leaderName, dollars) : leadLine(leaderName, dollars);
+  else if (final && opp !== null && !noLeader) lead = COPY.finalTied; // a finished tie (GS-1)
 
   let a11yLead = '';
   if (opp && !noLeader) {
-    a11yLead = leader === 'tie' ? 'Tied.' : `${leader === 'you' ? 'You lead' : `${opp.name} leads`} by ${formatMoney(dollars, {})}.`;
+    const verb = final
+      ? (leader === 'you' ? 'You won' : `${opp.name} won`)
+      : (leader === 'you' ? 'You lead' : `${opp.name} leads`);
+    a11yLead = leader === 'tie' ? 'Tied.' : `${verb} by ${formatMoney(dollars, {})}.`;
   }
   // Spec wording: "Week 6, live. You +$213.60, Gianluigi B. +$90.44. You lead by …".
   const scores = opp && oppText ? `You ${mineText}, ${opp.name} ${oppText}.` : `You ${mineText}.`;

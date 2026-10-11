@@ -32,10 +32,15 @@ import { USERNAME_RE } from './usernameRules';
  *                league's commissioner, so you are a member; and Serie A
  *                Traders' draft is three days out, so its leave window is
  *                open (the member's League settings and leave sheets, item 13)
+ * leagues-renewal — `leagues`, plus Summer Cup's Season 2 (Run it back, 3c): a
+ *                pre-draft successor (previous_league_id: Summer Cup), so the
+ *                renewal flow routes. EXPO_PUBLIC_RENEWAL_FIXTURE picks who you
+ *                are in it (commissioner by default; in / new / pending / out:
+ *                Paolo is commissioner). Needs EXPO_PUBLIC_RUN_IT_BACK=1.
  */
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting' | 'leagues-member';
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting' | 'leagues-member' | 'leagues-renewal';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting', 'leagues-member'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting', 'leagues-member', 'leagues-renewal'];
 
 /** Fixtures that start signed out. */
 export function fixtureStartsSignedOut(f: ShellFixture): boolean {
@@ -59,7 +64,19 @@ if (SHELL_FIXTURE) {
 }
 
 import { FIXTURE_USER_ID } from './fixtureIds';
+import { FIXTURE_LEAGUE_ID as RENEWAL_LEAGUE_ID, parseRenewalCaller, renewalShellFacts, type RenewalCaller } from '../game/renewalFixture';
 export { FIXTURE_USER_ID };
+
+/** DEV-only: who you are in the renewal fixture (EXPO_PUBLIC_RENEWAL_FIXTURE; unset = commissioner). */
+const RENEWAL_CALLER: RenewalCaller | null = __DEV__ ? parseRenewalCaller(process.env.EXPO_PUBLIC_RENEWAL_FIXTURE) : null;
+
+/** Set when the seam's renew_league answers (lib/game/seamCalls.ts): the fixture then
+ * lists Summer Cup's Season 2, as the real league list would after a renewal, so the
+ * Run it back card lands on it instead of falling back to the first league. */
+let fixtureRenewed = false;
+export function markFixtureRenewed(): void {
+  fixtureRenewed = true;
+}
 export const FIXTURE_EMAIL = 'roberto@example.com';
 /** DEV-only XXXL capture seams (carry-overs 1-2, 2026-10-05): a long fixture
  * email and league name, so the email wrap and the league-pill wrap can be
@@ -115,7 +132,7 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
 }
 
 /** The board's leagues (docs/design/screens/data.js + inventory.jsx "League sheet"). */
-export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; sheet: SheetLeague[] } {
+export function fixtureLeagues(fixture: ShellFixture, renewalCaller: RenewalCaller | null = RENEWAL_CALLER): { leagues: League[]; sheet: SheetLeague[] } {
   if (fixture === 'no-leagues') return { leagues: [], sheet: [] };
   if (fixture === 'drafting') {
     // One league, so it is necessarily the active one (no persisted id wins).
@@ -135,6 +152,8 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
   // leagues-member: someone else is commissioner; the pre-draft league's draft is ahead (23:00Z, three days out).
   const member = fixture === 'leagues-member';
   const memberOver: Partial<League> = member ? { commissioner_id: 'paolo' } : {};
+  // Run it back: Summer Cup has a Season 2 (always in leagues-renewal; in leagues once renewed).
+  const { renewed, commissionerId: renewalCommissioner } = renewalShellFacts(fixture, fixtureRenewed, renewalCaller);
   const memberDraft = new Date(Math.floor((Date.now() + 3 * DAY) / DAY) * DAY + 23 * 60 * 60 * 1000).toISOString();
   const leagues = [
     league({ id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto', ...memberOver }),
@@ -149,7 +168,17 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
       current_week: 1,
       ...memberOver,
     }),
-    league({ id: 'fx-summer', name: 'Summer Cup', num_participants: 8, season_status: 'completed', current_week: 14, num_weeks: 14, ...memberOver }),
+    league({
+      id: 'fx-summer', name: 'Summer Cup', num_participants: 8, season_status: 'completed', current_week: 14, num_weeks: 14, ...memberOver,
+      ...(renewed ? { successor_league_id: RENEWAL_LEAGUE_ID, commissioner_id: renewalCommissioner } : {}),
+    }),
+    ...(renewed
+      ? [league({
+          id: RENEWAL_LEAGUE_ID, name: 'Summer Cup', num_participants: 8, draft_status: 'not_started', draft_date: null,
+          league_start_date: null, current_week: 1, num_weeks: 14, season_status: 'active',
+          previous_league_id: 'fx-summer', commissioner_id: renewalCommissioner,
+        })]
+      : []),
   ];
 
   const byId = new Map(leagues.map((l) => [l.id, l]));
@@ -163,6 +192,9 @@ export function fixtureLeagues(fixture: ShellFixture): { leagues: League[]; shee
     { ...base, ...facts('fx-friday'), id: 'fx-friday', name: 'Friday Night Stocks', seasonPhase: 'regular', rank: 3, rankCount: 8, wins: 1, losses: 0, membersJoined: 8, capacity: 8 },
     { ...base, ...facts('fx-seriea'), id: 'fx-seriea', name: 'Serie A Traders', seasonPhase: 'pre_draft', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 },
     { ...base, ...facts('fx-summer'), id: 'fx-summer', name: 'Summer Cup', seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, membersJoined: 8, capacity: 8, isChampion: true },
+    ...(renewed
+      ? [{ ...base, ...facts(RENEWAL_LEAGUE_ID), id: RENEWAL_LEAGUE_ID, name: 'Summer Cup', seasonLabel: 'Season 2', seasonPhase: 'pre_draft' as const, rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 }]
+      : []),
   ];
 
   return { leagues, sheet };

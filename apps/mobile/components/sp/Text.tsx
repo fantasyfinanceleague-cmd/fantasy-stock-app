@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Text as RNText, TextProps as RNTextProps, StyleSheet, type TextStyle } from 'react-native';
 import Animated, { type AnimatedStyle } from 'react-native-reanimated';
+import { resolveFontFamily } from './logic/fontWeight';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -58,10 +59,14 @@ export function Text({
   const resolvedNumberOfLines = numberOfLines ?? (NEVER_WRAP.has(variant) ? 1 : undefined);
   const resolvedMaxFontSizeMultiplier = maxFontSizeMultiplier ?? typeStyle.maxScale;
 
+  // A caller's fontWeight picks the matching Archivo face (iOS ignores fontWeight on a
+  // single-weight family: logic/fontWeight.ts); the weight itself is then cleared.
+  const callerWeight = (StyleSheet.flatten(style) as TextStyle | undefined)?.fontWeight;
+  const fontFamily = resolveFontFamily(typeStyle.fontFamily, callerWeight);
   const baseStyle = [
     styles.base,
     {
-      fontFamily: typeStyle.fontFamily,
+      fontFamily,
       fontSize: typeStyle.fontSize,
       lineHeight: typeStyle.lineHeight,
       color: resolvedColor,
@@ -70,6 +75,7 @@ export function Text({
     },
     typeStyle.tabularNums ? styles.tabularNums : null,
     style,
+    callerWeight !== undefined && fontFamily !== typeStyle.fontFamily ? styles.weightInFace : null,
   ];
 
   if (animatedStyle) {
@@ -98,5 +104,10 @@ const styles = StyleSheet.create({
   },
   tabularNums: {
     fontVariant: ['tabular-nums'],
+  },
+  // The weight is in the face now (resolveFontFamily); a leftover fontWeight on a named
+  // face can make iOS fall back to the system font.
+  weightInFace: {
+    fontWeight: 'normal',
   },
 });

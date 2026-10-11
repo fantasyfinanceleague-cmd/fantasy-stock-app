@@ -59,8 +59,8 @@ import { resolveTheme } from '@/components/sp/logic/theme';
 // for real. 3c-2 rebuilt create-league and league-settings on sp, and 3c's
 // draft room (components/game/DraftRoom) reads the theme too. Known remainder
 // (screens still importing the legacy constants/Colors, as of 3c-2):
-// join-league and +not-found (3f), player-portfolio and trade-history (3e),
-// and the legacy hidden (tabs)/draft route, kept only for the finalize heal.
+// join-league and +not-found (3f), player-portfolio and trade-history (3e).
+// (The legacy (tabs)/draft screen is gone: S-2 made it a redirect to League.)
 // These render light inside a Dark app until they're rebuilt. Keep
 // resolveTheme's forced path (and sp-theme.test.ts) for any future release
 // that needs it again.

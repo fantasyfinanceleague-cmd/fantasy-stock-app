@@ -27,6 +27,8 @@ import {
   playoffRecordLine, bestWeekLine, SEE_FINAL_STANDINGS,
 } from '@/lib/home/homeCopy';
 import { playoffRoundLabelForWeek } from '@/lib/playoffs';
+import { useBracket } from '@/lib/game/useBracket';
+import { seasonCompletePlace } from '@/lib/game/finalStandings';
 
 // Stockpile — <SeasonCompleteCard> (Phase 3b-2, state 8). Rebuilt to match
 // the board's HomeComplete exactly (Design Lead ruling, 2026-09-30, B6),
@@ -41,8 +43,13 @@ export interface SeasonCompleteCardProps {
   leagueId: string;
   leagueName: string;
   seasonNumber: number | null;
+  /** Your REGULAR-SEASON rank (the "Regular season" tile). The headline's place is the
+   * final standings' (GS-4), worked out here from the playoff result. */
   finalRank: number;
   standingsCount: number;
+  myUserId: string;
+  /** The regular-season standings (the seeding), for the final standings' order. */
+  standings: { user_id: string; rank: number; display_name: string }[];
   wins: number;
   losses: number;
   ties: number;
@@ -52,11 +59,23 @@ export interface SeasonCompleteCardProps {
 }
 
 export function SeasonCompleteCard({
-  leagueId, leagueName, seasonNumber, finalRank, standingsCount, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
+  leagueId, leagueName, seasonNumber, finalRank, standingsCount, myUserId, standings, wins, losses, ties, seasonGain, playoffTeams, numWeeks,
 }: SeasonCompleteCardProps) {
   const { colors } = useTheme();
   const { reduced } = useMotion();
   const result = useSeasonResult(leagueId);
+  // GS-4: the headline's place is the final standings' (League › Standings' order), so a
+  // 1st seed who lost the Final reads "2nd place" here too, never "1st place".
+  const bracket = useBracket(leagueId, playoffTeams, standings, true);
+  const finalPlace = seasonCompletePlace({
+    myUserId,
+    regularRank: finalRank,
+    standings,
+    playoffTeams,
+    playoffResult: result?.playoff_result ?? null,
+    bracketStatus: bracket.status,
+    playoffRows: bracket.rows,
+  });
   const trophyScale = useSharedValue(0);
 
   // H6: the trophy springs in ONCE PER SEASON (a device-local flag,
@@ -122,6 +141,7 @@ export function SeasonCompleteCard({
   // minimum fallback is in play): both of those paths already assume the
   // caller participated, by construction.
   const participated = result ? result.caller_participated : true;
+  const headline = isChampion ? CHAMPION_LABEL : finalPlace !== null ? placeLabel(finalPlace) : null;
   const core = coreCompleteTiles(seasonGain, finalRank, standingsCount, record);
 
   return (
@@ -144,9 +164,12 @@ export function SeasonCompleteCard({
             {/* S3 (Design Lead gate, 2026-10-05): score.md caps at 1.2x while the
                 subtitle below grows freely, so at XXXL the title rendered smaller
                 than its own subtitle. The title's cap now matches the subtitle's reach. */}
-            <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
-              {isChampion ? CHAMPION_LABEL : placeLabel(finalRank)}
-            </Text>
+            {/* GS-4: a place is shown only once the playoff result proves it (never the regular-season rank). */}
+            {headline !== null ? (
+              <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
+                {headline}
+              </Text>
+            ) : null}
             <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
           </>
         ) : (

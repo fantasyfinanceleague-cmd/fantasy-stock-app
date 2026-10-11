@@ -7,7 +7,7 @@ import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { formatMoney } from '@/components/sp/logic/money';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { teamsLine, canSchedule, buildRenewalSettings } from '@/lib/game/renewalReview';
@@ -66,7 +66,7 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
       <Text variant="tag" tone="secondary">{settings.name}</Text>
       <Text variant="title">Season 2</Text>
       <Text variant="callout" tone="secondary">Everything carries over from Season 1. Change anything before the draft.</Text>
-      <Card>
+      <Card style={styles.card}>
         <Row label="Who's in" value={`${counts.in} back · ${counts.new} new`} />
         <Row label="Teams" value={teams.value} sub={teams.sub} />
         <Row label="Draft" value={draftDate ? new Date(draftDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Not set'} onPress={() => setEditingDate((v) => !v)} />
@@ -136,6 +136,9 @@ function Row({ label, value, sub, onPress }: { label: string; value: string; sub
 }
 
 const styles = StyleSheet.create({
+  // The sp Card has no padding or radius of its own (callers set both); bare, the
+  // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 44, paddingVertical: space[1] },
   value: { alignItems: 'flex-end', flexShrink: 1 },

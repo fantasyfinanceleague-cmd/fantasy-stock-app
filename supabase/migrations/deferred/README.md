@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql` and `20261023000009_drop_start_new_league_season.sql`, and `20261118000001_user_profiles_self_only.sql` (audit #8 stage 2).
+**Currently held:** 4 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261115000008_drop_start_new_league_season.sql`, `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead) and `20261118000001_user_profiles_self_only.sql` (audit #8 stage 2).
 
 ## How to use it
 
@@ -76,7 +76,7 @@ must return zero rows) and re-run the effect-verify query above against a
 *second* fresh test league to prove drafting still works with the policies
 gone. Then move this section to *History*.
 
-### `20261023000009_drop_start_new_league_season.sql`
+### `20261115000008_drop_start_new_league_season.sql`
 
 Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
 (`20261023000000_lock_start_new_league_season.sql`) already revoked EXECUTE
@@ -108,7 +108,7 @@ then `supabase db push --dry-run` (must list exactly this file) and
    should be removed in the same PR that promotes this file, then
    `node scripts/gen-architecture.mjs` re-run).
 
-**Timestamp note:** if migrations newer than `20261023000009` have been
+**Timestamp note:** if migrations newer than `20261115000008` have been
 applied before this is promoted, rename it to a fresh timestamp rather than
 passing `--include-all`.
 
@@ -117,6 +117,40 @@ re-capture `docs/architecture/db-snapshot.json` and move this section to
 *History*. (`supabase/tests/season_result.pglite.test.ts` keeps slicing the
 function from the historical `20260718000000` file, which is never
 rewritten, so it is unaffected.)
+
+### `20261116000002_revoke_anon_default_grants.sql` — PROPOSAL (lockdown audit #7)
+
+Revokes every anon privilege on public tables, views and sequences, anon/PUBLIC
+EXECUTE on public functions, and the default privileges that hand both to
+objects migrations create later (ruling 2026-10-08, nothing scrapable). Today
+RLS is the only gate between anon and most tables; this removes the other.
+Not yet decided: it is held for Giorgio's go-ahead as well as its preconditions.
+
+**Preconditions (all four):**
+1. `security/lockdown-symbols` stage 1 (PR #175) is **deployed** — before it,
+   `symbols-search` / `symbol-name` read `symbols` as anon. Prove it by source:
+   `supabase functions download symbols-search` contains
+   `req.headers.get('Authorization')`.
+2. `20261116000000_scrape_hardening.sql` is applied:
+   `SELECT version FROM supabase_migrations.schema_migrations WHERE version = '20261116000000';`
+3. A fresh `db-snapshot.json` captured with the 2026-10-08 `db-snapshot.sql`, read
+   for `storageBuckets` (no public bucket relying on anon table access) and
+   `defaultPrivileges` (the postgres/public rules this edits are present).
+4. The header's read-only function query (precondition 4) has been read row by
+   row: no public function an API role calls relies on the PUBLIC grant.
+   Known limits (header): supabase_admin's own default rules are not edited, and
+   a later `CREATE EXTENSION` as postgres needs explicit grants.
+
+**Product impact (checked 2026-10-08):** none. No pre-sign-in screen reads a
+table or calls an RPC; the one anon write (the `user_profiles` upsert after a
+session-less `signUp`) already fails today with 42501 and fails with the same
+SQLSTATE after. **Process change:** every new function must `GRANT EXECUTE`
+explicitly (already the repo convention) — forgetting now fails loudly instead
+of exposing the function. Tested: `supabase/tests/revoke_anon_default_grants.pglite.test.ts`.
+
+**After applying:** run the header's three checks (no anon table/sequence
+privilege, no anon-callable function, the default-privilege rules), then the
+signed-in app end to end and a signed-out `GET /rest/v1/<table>` → 401/42501.
 
 ### `20261118000001_user_profiles_self_only.sql` — audit #8, stage 2
 

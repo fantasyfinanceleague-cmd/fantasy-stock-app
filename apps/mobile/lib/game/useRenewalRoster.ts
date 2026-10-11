@@ -7,9 +7,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { seamRpc } from './seamCalls';
-import { fixtureRoster } from './renewalFixture';
+import { fixtureRoster, parseRenewalCaller, type RenewalCaller } from './renewalFixture';
 
-export const RENEWAL_FIXTURE: string | undefined = process.env.EXPO_PUBLIC_RENEWAL_FIXTURE;
+/** DEV-only: who the roster fixture answers as (EXPO_PUBLIC_RENEWAL_FIXTURE: commissioner,
+ * commissioner-ready, in, new, pending, out, stranger). Null in a release build and when
+ * unset, so the real get_renewal_roster (or the seam's commissioner answer) stands. */
+export const RENEWAL_FIXTURE_CALLER: RenewalCaller | null = __DEV__ ? parseRenewalCaller(process.env.EXPO_PUBLIC_RENEWAL_FIXTURE) : null;
 
 export type RosterResult =
   | { status: 'not_visible' }
@@ -28,14 +31,14 @@ export type RosterResult =
       }[];
     };
 
-export function useRenewalRoster(successorLeagueId: string | null, fixtureCaller: 'commissioner' | 'in' | 'pending' | 'out' | 'new' | 'stranger' | null, refreshKey: number) {
+export function useRenewalRoster(successorLeagueId: string | null, fixtureCaller: RenewalCaller | null, refreshKey: number) {
   const [state, setState] = useState<{ status: 'idle' | 'loading' | 'ready' | 'error'; roster: RosterResult | null }>({ status: 'idle', roster: null });
   useEffect(() => {
     if (!successorLeagueId && !fixtureCaller) return;
     let cancelled = false;
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
-      if (RENEWAL_FIXTURE && fixtureCaller) {
+      if (fixtureCaller) {
         if (!cancelled) setState({ status: 'ready', roster: fixtureRoster(fixtureCaller, new Date()) as RosterResult });
         return;
       }

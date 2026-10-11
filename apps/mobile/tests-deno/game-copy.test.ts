@@ -5,7 +5,7 @@
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals, assert } from 'jsr:@std/assert';
-import { COPY, signedPct, leadLine, tiebreakLine, leadChangeChyron, COPY_SOURCES } from '../lib/game/gameCopy.ts';
+import { COPY, signedPct, leadLine, wonByLine, tiebreakLine, leadChangeChyron, COPY_SOURCES } from '../lib/game/gameCopy.ts';
 
 Deno.test('signedPct: sign first, U+2212 minus, two decimals', () => {
   assertEquals(signedPct(1.76), '+1.76%');
@@ -19,6 +19,13 @@ Deno.test('tiebreakLine: matches the board\'s wording', () => {
 
 Deno.test('leadLine: names the leader and the dollar gap, with cents', () => {
   assertEquals(leadLine('Roberto B.', 123.16), 'Roberto B. leads by $123.16');
+});
+
+Deno.test('GS-1: a finished week says "won by" (board, Matchup final), with cents', () => {
+  assertEquals(wonByLine('Roberto B.', 390.67), 'Roberto B. won by $390.67');
+  assertEquals(wonByLine('Luca V.', -0.06), 'Luca V. won by $0.06'); // the gap's magnitude
+  assertEquals(wonByLine('Paolo M.', 1234.5), 'Paolo M. won by $1,234.50');
+  assertEquals(COPY.finalTied, 'Tied');
 });
 
 Deno.test('leadChangeChyron: the mover, its day move, and who is ahead (new copy)', () => {
