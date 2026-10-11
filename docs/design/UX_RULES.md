@@ -24,7 +24,11 @@ Each rule has three parts: **what we do**, **what it means here** (this app's sc
 *From: Jakob's law, Mental model.*
 
 **What we do.** Follow iOS conventions and the patterns of the apps our players already use:
-Robinhood for money, Sleeper for leagues. We depart from them only with a stated reason.
+**fantasy football (ESPN / Sleeper / Yahoo) for anything that belongs to a league** (watchlist,
+draft, queues, standings, roster moves), **Robinhood for money surfaces only** (portfolio
+value, a stock's price and chart, buy/sell mechanics). When a feature could be read either
+way, it is a league feature first (Giorgio, 2026-10-08; see `FANTASY_CONVENTIONS.md`). We
+depart from these patterns only with a stated reason.
 Where the product deliberately differs from what a fantasy or brokerage app does, we say so
 **at the moment it matters**, in place, not on a rules page nobody reads.
 

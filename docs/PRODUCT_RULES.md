@@ -149,6 +149,55 @@ building anything, and don't reopen a rule without him.
   $100–$200 slot"). A tier is set by the entry price and never moves. Category slots name
   their category ("Fills your Tech slot"); a slot with neither is "Flex".
 - Trading follows market hours (the server refuses closed-market trades).
+- **Trading window** (2026-10-08): the market-hours rule stays. Giorgio considered a
+  fantasy-style lock (trade only while the market is closed) and ruled against it: "im
+  leaning keeping it like a real portfolio where i cant buy/sell after hours." Decision on
+  the Planner's three options: "Immediate A with C as the long term plan", where A = trade
+  only while the market is open, and C = later, orders placed after hours that fill at the
+  next open (Robinhood-style). C is parked as a future plan, not built now.
+- **Search and save any time** (2026-10-08): "a user should still be able to search a stock
+  when they arent allowed to buy. they should still be able to search and add stocks to a
+  watchlist or something to save for later." Search never depends on market hours; a
+  watchlist exists (plan: [`plans/2026-10-08-trading-window-and-watchlist.md`](plans/2026-10-08-trading-window-and-watchlist.md)).
+- **The watchlist is per league** (2026-10-08): "by league. if im in multiple fantasy football
+  leagues, each one has its own waiver wire. if i want to buy apple in one league, i may not
+  be able to in another if another player has it, i already have it, or it doesnt fit my
+  team by one of the league rules." A per-player list "makes no sense".
+- **The watchlist is not a queue** (2026-10-08): "multiple players can save the same stock,
+  its like a player on the waiver wire. i can want to add them but so can someone else."
+  Saving reserves nothing. Separately, "there should be a way to save stocks to keep an eye
+  on them, and a way to queue them to add the next day that works like the waiver wire."
+- **The waiver wire: daily claims** (2026-10-08). Giorgio chose daily moves over a weekly
+  lineup lock: "a user should be able to trade daily. this is based on fantasy football,
+  doesnt need every same rule. an investor should be able to make moves mid week. so our
+  'waiver wire' will be a daily thing. you can claim stocks after the close of each day. if
+  no one else claims that day, you get it. if two or more people claim, then we have the
+  order decide. the order works like fantasy football, starts as reverse draft order. then
+  shifts based on wins/loss and claims made."
+  - A claim is placed only while the market is closed (Claim is Buy's closed-market twin;
+    during market hours you just Buy). It is processed at the next market open, 9:30 ET, at
+    the opening price, before live trading opens for that day.
+  - A claim is "Buy X, funded by selling Y" (or by cash in a budget-cap league); if the claim
+    loses, Y is not sold. Whole positions only, as always.
+  - Claims are blind: you cannot see who else has claimed a stock or how many. Holdings stay
+    visible ("Owned by …" as shipped); you only ever see leaguemates.
+  - The order: starts as reverse draft order; ANY successful claim (contested or not) moves
+    you to the back of the line; after each week is scored the order resets to reverse
+    standings (last place first, standings tiebreaks apply).
+  - After the run, the loser is told who won and why, in one short clause.
+- **Where the watchlist lives** (2026-10-09, "C and approved", board `#call-watchlist`): a
+  Watchlist tab inside "Buy a stock" (the player pool, as ESPN / Sleeper / Yahoo keep it) plus
+  a "Watching" section on the Portfolio tab ("See all (N)" opens the tab); one list behind
+  both. Rows: ticker + one status line (availability in this league, or "Claimed · fills Mon
+  9:30 AM ET"); Buy only while the market is open; Claim only while closed, also on "No free
+  … slot" rows since the claim names the sale that frees the slot. Names: Save/Saved (star)
+  and Claim/Claims; never "Queue" (the draft's word) or "Order".
+- **League features follow fantasy football, not a brokerage** (2026-10-08): anything that
+  belongs to a league (watchlist, draft, waivers-like queues, standings, trades between
+  managers) is modelled on how ESPN / Sleeper / Yahoo fantasy football do it; brokerage
+  conventions (Robinhood) apply only to money surfaces (portfolio value, a stock's price and
+  chart, buy/sell mechanics). Giorgio: "i need you to research fantasy football so that this
+  doesnt come up." Reference: [`design/FANTASY_CONVENTIONS.md`](design/FANTASY_CONVENTIONS.md).
 
 ## League lifecycle
 
