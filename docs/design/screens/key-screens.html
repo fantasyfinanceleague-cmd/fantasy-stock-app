@@ -7432,6 +7432,41 @@ window.KS_REFS = {
     LLY: 'health', UNH: 'health',
   };
   const SECTOR_LABEL = { tech: 'Tech', comm: 'Comm', cons: 'Cons', fin: 'Fin', health: 'Hlth' };
+  // A category-slot league (Giorgio, 2026-10-12: grouped by category, in the league's slot
+  // order, the category acting as the position label; best week first inside a group).
+  // SAMPLE: Stock Scudetto re-cast with four category slots that both rosters fill legally.
+  // The holdings and every number are data.js's; only the slot names are invented.
+  const CAT_SLOTS = [
+    { name: 'Tech & Media', you: ['NVDA', 'AAPL'], opp: ['AMZN', 'DIS'] },
+    { name: 'Consumer', you: ['COST', 'TSLA'], opp: ['NKE', 'KO'] },
+    { name: 'Financials', you: ['V'], opp: ['JPM'] },
+    { name: 'Flex', you: ['CRM'], opp: ['BA'] },
+  ];
+  // A price-tier league (also slotted, Giorgio 2026-10-12: "$100–$200 ×2", then "$200–$400 ×2").
+  // SAMPLE: data.js's own stocks dealt into identical tier slots for two managers; one share each
+  // (tier leagues buy one share), tier set by the draft price, week gain = Thursday − Monday open.
+  const TIER_SLOTS = [
+    { name: '$200–$400', you: ['NVDA', 'CRM', 'TSLA'], opp: ['V', 'AMZN', 'JPM'] },
+    { name: '$100–$200', you: ['AAPL'], opp: ['BA'] },
+    { name: '$50–$100', you: ['KO'], opp: ['NKE'] },
+  ];
+  const ALL_ROWS = [...K.lineup('roberto', 'thu'), ...K.lineup('gianluigi', 'thu')];
+  const oneShare = (t, final) => {
+    const r = ALL_ROWS.find((x) => x.t === t);
+    const price = final ? r.fri : r.thu;
+    return { ...r, price, weekGain: Math.round((price - r.mon) * 100) / 100 };
+  };
+  function tierMatch(final) {
+    const side = (k) => {
+      const rows = TIER_SLOTS.flatMap((g) => g[k]).map((t) => oneShare(t, final));
+      const gain = Math.round(rows.reduce((a, r) => a + r.weekGain, 0) * 100) / 100;
+      const start = rows.reduce((a, r) => a + r.mon, 0);
+      return { gain, pct: (gain / start) * 100, rows };
+    };
+    return { you: side('you'), opp: side('opp') };
+  }
+  /** "Tech ×3", "Flex": the count shows only when the slot holds more than one (Giorgio's example). */
+  const slotLabel = (g) => (g.you.length > 1 ? `${g.name} ×${g.you.length}` : g.name);
 
   // ── Frame scaling ─────────────────────────────────────────────────────
   /** Scales a 402pt phone (874 tall, or its measured height when full) to its column. */
@@ -7489,20 +7524,20 @@ window.KS_REFS = {
   }
 
   // ── Shared frame pieces ───────────────────────────────────────────────
-  function Phone({ d, tab, label, money, children }) {
+  function Phone({ d, tab, label, money, full, children }) {
     return (
       <div className={`dr dir-${d}`}>
-        <Device tab={tab} label={label} style={money ? { background: 'var(--d-money-bg)' } : undefined}>{children}</Device>
+        <Device tab={tab} label={label} full={full} style={money ? { background: 'var(--d-money-bg)' } : undefined}>{children}</Device>
       </div>
     );
   }
   const Av = ({ init, you, size = 36 }) => (
     <span className={you ? 'dr-av dr-av--you' : 'dr-av'} style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.36)) }}>{init}</span>
   );
-  function Head({ chip }) {
+  function Head({ chip, league = K.LEAGUE.name }) {
     return (
       <div className="ks-head" style={{ paddingInline: G }}>
-        <span className="ks-pill"><span>{K.LEAGUE.name}</span><span className="ks-pill__more">+{K.OTHER_LEAGUES.length}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+        <span className="ks-pill"><span>{league}</span><span className="ks-pill__more">+{K.OTHER_LEAGUES.length}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
         {chip || <Av init="RB" you size={34} />}
       </div>
     );
@@ -7726,8 +7761,9 @@ window.KS_REFS = {
     return a.map((r, i) => [r, b[i]]);
   }
 
-  function Scoreboard({ d, final }) {
-    const s = final ? K.MATCHUP.final : K.MATCHUP.live;
+  function Scoreboard({ d, final, kind }) {
+    const s = kind === 'tier' ? tierMatch(final) : final ? K.MATCHUP.final : K.MATCHUP.live;
+    const opp = kind === 'tier' ? { name: 'Paolo M.', init: 'PM' } : { name: 'Gianluigi B.', init: 'GB' };
     const y = SD(s.you), o = SD(s.opp);
     const youLead = s.you.gain >= s.opp.gain;
     const line = (
@@ -7747,8 +7783,8 @@ window.KS_REFS = {
           borderRadius: d === 'a' ? (mirror ? '0 14px 14px 0' : '14px 0 0 14px') : undefined,
         }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: mirror ? 'row-reverse' : 'row' }}>
-            <Av init={you ? 'RB' : 'GB'} you={you} size={d === 'b' ? 40 : 44} />
-            <span className="dr-call" style={{ fontWeight: you ? 800 : 600, fontSize: 15, color: d === 'b' ? 'var(--d-on-band)' : undefined }}>{you ? 'Roberto B.' : 'Gianluigi B.'}</span>
+            <Av init={you ? 'RB' : opp.init} you={you} size={d === 'b' ? 40 : 44} />
+            <span className="dr-call" style={{ fontWeight: you ? 800 : 600, fontSize: 15, color: d === 'b' ? 'var(--d-on-band)' : undefined }}>{you ? 'Roberto B.' : opp.name}</span>
           </span>
           <span className="dr-score" style={{ fontSize: d === 'b' ? 52 : d === 'c' ? 34 : 32, lineHeight: d === 'b' ? '48px' : '36px', color: scoreColor }}>{sc.primary}</span>
         </div>
@@ -7821,34 +7857,62 @@ window.KS_REFS = {
     const s = SECTOR[r.t];
     return <span className="dr-pillcat" style={{ alignSelf: 'center', background: `var(--d-tile-${s})` }}>{SECTOR_LABEL[s]}</span>;
   }
-  function Roster({ d, final, order = 'gain', mid = 'none', limit }) {
+  /** The group header in a category league: the category is the position label, centred
+   * across the mirror (both managers share the slot, so the two columns pair group by group). */
+  function GroupHead({ d, g }) {
+    const label = slotLabel(g);
+    if (d === 'a') {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 2px' }}>
+          <span className="dr-tag" style={{ padding: '5px 12px', borderRadius: 999, background: 'var(--c-inset)', color: 'var(--c-text)', boxShadow: 'inset 0 0 0 1px var(--d-rim)' }}>{label}</span>
+        </div>
+      );
+    }
+    if (d === 'b') {
+      return <div className="dr-tag" style={{ textAlign: 'center', padding: '7px 0', background: 'var(--c-inset)', color: 'var(--c-text)', borderRadius: 2 }}>{label}</div>;
+    }
+    return <div className="dr-tag dr-muted" style={{ textAlign: 'center', padding: '14px 0 2px' }}>{label}</div>;
+  }
+  function groupedPairs(final, kind) {
+    const s = kind === 'tier' ? tierMatch(final) : final ? K.MATCHUP.final : K.MATCHUP.live;
+    const slots = kind === 'tier' ? TIER_SLOTS : CAT_SLOTS;
+    const pick = (rows, ts) => byGain(rows.filter((r) => ts.includes(r.t)));
+    return slots.map((g) => {
+      const a = pick(s.you.rows, g.you), b = pick(s.opp.rows, g.opp);
+      return { g, pairs: a.map((r, i) => [r, b[i]]) };
+    });
+  }
+  function Roster({ d, final, order = 'gain', mid = 'none', limit, groups }) {
     const ps = pairs(final, order).slice(0, limit || 6);
     const midCol = mid === 'none' ? (d === 'b' ? '4px' : '10px') : 'auto';
+    const line = ([a, b], i) => (
+      <div key={a.t} style={{ display: 'grid', gridTemplateColumns: `minmax(0,1fr) ${midCol} minmax(0,1fr)`, gap: d === 'b' && mid === 'none' ? 0 : 6, alignItems: 'stretch' }}>
+        <Half d={d} r={a} final={final} lit={a.weekGain > b.weekGain} />
+        <Mid d={d} mid={mid} r={a} i={i} />
+        <Half d={d} r={b} final={final} mirror lit={b.weekGain > a.weekGain} />
+      </div>
+    );
     return (
       <div style={{ display: 'grid', gap: d === 'b' ? 4 : d === 'a' ? 6 : 4, background: d === 'b' ? 'var(--d-gutter)' : undefined, margin: d === 'b' ? `0 -${G}px` : 0, padding: d === 'b' ? '4px 4px' : 0 }}>
         {d === 'b' ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', padding: '6px 8px 2px' }} className="dr-tag">
-            <span style={{ color: 'var(--c-you-text)' }}>Roberto B.</span><span className="dr-muted">Week 6</span><span style={{ textAlign: 'right' }} className="dr-muted">Gianluigi B.</span>
+            <span style={{ color: 'var(--c-you-text)' }}>Roberto B.</span><span className="dr-muted">Week 6</span><span style={{ textAlign: 'right' }} className="dr-muted">{groups === 'tier' ? 'Paolo M.' : 'Gianluigi B.'}</span>
           </div>
         ) : null}
-        {ps.map(([a, b], i) => (
-          <div key={a.t} style={{ display: 'grid', gridTemplateColumns: `minmax(0,1fr) ${midCol} minmax(0,1fr)`, gap: d === 'b' && mid === 'none' ? 0 : 6, alignItems: 'stretch' }}>
-            <Half d={d} r={a} final={final} lit={a.weekGain > b.weekGain} />
-            <Mid d={d} mid={mid} r={a} i={i} />
-            <Half d={d} r={b} final={final} mirror lit={b.weekGain > a.weekGain} />
-          </div>
-        ))}
+        {groups
+          ? groupedPairs(final, groups).map(({ g, pairs: gp }) => [<GroupHead key={g.name} d={d} g={g} />, ...gp.map(line)])
+          : ps.map(line)}
       </div>
     );
   }
-  function MatchupFrame({ d, final }) {
+  function MatchupFrame({ d, final, groups }) {
     return (
-      <Phone d={d} tab="matchup" label={`Matchup ${final ? 'final' : 'live'}, direction ${d.toUpperCase()}`}>
-        <Head chip={final ? <FinalChip /> : <LiveChip />} />
+      <Phone d={d} tab="matchup" full={groups} label={`Matchup ${final ? 'final' : 'live'}${groups ? `, ${groups} league` : ''}, direction ${d.toUpperCase()}`}>
+        <Head chip={final ? <FinalChip /> : <LiveChip />} league={groups === 'tier' ? 'Tier Cup' : undefined} />
         <Body gap={d === 'b' ? 0 : 18}>
           <div className="dr-seg" style={{ marginBottom: d === 'b' ? 14 : 0 }}><span className="on">My matchup</span><span>All matchups</span></div>
-          <Scoreboard d={d} final={final} />
-          <Roster d={d} final={final} />
+          <Scoreboard d={d} final={final} kind={groups} />
+          <Roster d={d} final={final} groups={groups} />
         </Body>
       </Phone>
     );
@@ -8163,20 +8227,42 @@ window.KS_REFS = {
           </figure>
         </div>
 
-        <h3 className="b-sub">Your call, later: the order of the rows</h3>
+        <h3 className="b-sub" id="call-direction-order">Decided: the order of the rows (Giorgio, 2026-10-12)</h3>
+        <ul className="b-inv__notes">
+          <li><b>Giorgio, 2026-10-12:</b> "It'll just be ordered by who's performing the best, uh, since there aren't like positions." <b>Unslotted leagues</b> (fixed per-slot, budget-cap; Stock Scudetto is one): one list per side, by week gain, best first, no grouping (a, below, and every Matchup frame above). <b>Slotted leagues</b> (category slots and price tiers) group by slot (next).</li>
+          <li><b>When it updates (decided):</b> "it should be at the end of each day, like the start of the next day, it'll reorder it to show like who's been doing the best. So it doesn't update like live per se, but updates at the end of the day." The order is recomputed once at each market close and holds through the next trading day; nothing re-sorts live. On Monday, before the first close, every week gain is $0.00, so the rows show the draft/slot order.</li>
+        </ul>
         <div className="dr-strip">
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="gain" label="Rows by week gain" /><figcaption><b>a · By week gain, best first on each side (recommended, drawn above)</b><span>The top of the page is the story of the week. It is also (d) "your best against their best": each row is a mini-matchup.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="pick" label="Rows in draft order" /><figcaption><b>b · Draft order</b><span>Your first pick at the top, the roster as drafted. Never moves.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="value" label="Rows by position size" /><figcaption><b>c · By position size</b><span>Your largest holding first. Moves only when prices move a lot.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="gain" label="Rows by week gain" /><figcaption><b>✓ a · By week gain, best first on each side (chosen)</b><span>The top of the page is the story of the week. It is also (d) "your best against their best": each row is a mini-matchup.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="pick" label="Rows in draft order" /><figcaption><b>b · Draft order (not chosen)</b><span>Your first pick at the top, the roster as drafted. Never moves.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="value" label="Rows by position size" /><figcaption><b>c · By position size (not chosen)</b><span>Your largest holding first. Moves only when prices move a lot.</span></figcaption></figure>
         </div>
         <ul className="b-inv__notes">
-          <li><b>A clash to settle with it:</b> the plan says rows never re-sort live and "the order is fixed at the Monday open". At the Monday open every week gain is $0.00, so (a) has nothing to sort by. Proposal: under (a), rows re-order at each market close (never while the market is open), and Monday uses the order at Friday's close. (b) and (c) don't have the problem.</li>
         </ul>
 
-        <h3 className="b-sub">Your call, later: the centre column</h3>
+        <h3 className="b-sub" id="call-direction-categories">Decided: slotted leagues group by slot (categories and price tiers)</h3>
+        <ul className="b-inv__notes">
+          <li><b>The ruling:</b> the roster is grouped by slot group, in the league's slot order ("Tech ×3", then "Autos & Transport ×2", then "Flex"; or "$100–$200 ×2", then "$200–$400 ×2"), the group acting as the position label; inside a group, best week first. Both managers share the slots, so the two columns pair up group by group.</li>
+          <li><b>How the header sits in the mirror:</b> centred across both columns, above its rows, so it reads as the position for the whole group (Sleeper's centre pill, said once per group instead of once per row). The centre column itself stays empty. A as a pill, B as a band, C as small capitals.</li>
+          <li><b>SAMPLE, categories:</b> Stock Scudetto re-cast with four category slots (Tech &amp; Media ×2, Consumer ×2, Financials, Flex) that both rosters fill legally. The holdings and every number are the same as above; only the slot names are invented<NEW />.</li>
+          <li><b>SAMPLE, price tiers:</b> a "Tier Cup" week, Roberto B. vs Paolo M., built from the board's own stocks: one share each (tier leagues buy one share), the tier set by the draft price, the week gain = Thursday's price − Monday's open. Which stocks each manager holds is invented; every price is data.js's.</li>
+        </ul>
+
+        <div className="b-concepts b-concepts--three">
+          {['a', 'b', 'c'].map((d) => (
+            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} groups="category" /></Fit><figcaption><b>{d.toUpperCase()} · Matchup live, a category league (sample slots)</b><span>The whole scroll. Each group: its header, then its rows, best week first.</span></figcaption></figure>
+          ))}
+        </div>
+        <div className="b-concepts b-concepts--three">
+          {['a', 'b', 'c'].map((d) => (
+            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} groups="tier" /></Fit><figcaption><b>{d.toUpperCase()} · Matchup live, a price-tier league (sample)</b><span>Tier Cup: "$200–$400 ×3", then "$100–$200", then "$50–$100", the league's slot order.</span></figcaption></figure>
+          ))}
+        </div>
+
+        <h3 className="b-sub">Your call, later: the centre column (unslotted leagues)</h3>
         <div className="dr-strip">
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or category pill</b><span>Sleeper's position pill, as a price tier ("$100–$200") or category ("Tech") in leagues that have them; empty in leagues that don't. A pill in the centre names the ROW's slot, so it only reads right if rows pair slot against slot (Tech vs Tech), which settles the row order too. Sector colours here are sample.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or sector pill</b><span>In slotted leagues the group header now does this job (above). Elsewhere a pill would name each stock's price tier or sector; but rows pair best against best, not slot against slot, so the two sides' pills would disagree. Sector colours here are sample.</span></figcaption></figure>
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
         </div>
 
@@ -8187,7 +8273,7 @@ window.KS_REFS = {
             <li><b>Why not B:</b> it is the loudest scoreboard, but it needs a league colour the product doesn't have (who picks it, and what it is in Light, would be new decisions), and its panels make every screen denser. It is also the closest to 1.2.0's Game Day idea, which is the look you called bland.</li>
             <li><b>Why not C:</b> it is the cleanest and the best money screen, but the game screens read as a brokerage. The fantasy feeling you asked for lives only in the type.</li>
             <li><b>What A costs:</b> the your-turn flash changes from gold to cyan (an approved look, so it is part of this pick); the Matchup's lit slab and the colour tiles are new components; the money screens use a second, darker page colour.</li>
-            <li><b>When you pick:</b> say which, and anything to take from the others (for example "A, with C's portfolio"). Light comes next from the same roles, then the token spec, then the build (Home first). Two questions ride along for later: the row order and the centre column (above).</li>
+            <li><b>When you pick:</b> say which, and anything to take from the others (for example "A, with C's portfolio"). Light comes next from the same roles, then the token spec, then the build (Home first). The row order and when it updates are decided (above); still open: the centre column in unslotted leagues.</li>
           </ul>
         </div>
       </section>

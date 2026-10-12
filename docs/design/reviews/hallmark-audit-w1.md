@@ -43,7 +43,7 @@ motion (described, not built), VoiceOver.
 | # | Sev | Finding | Where | Why it stays |
 |---|---|---|---|---|
 | O1 | major | The league band floods 12–17% of the frame; on Home it competes with the hero in the squint test | B · Home, Matchup | It IS B (ESPN's frame). The board says so, and that the league colour doesn't exist in the product (a new decision: who picks it, what it is in Light). |
-| O2 | minor | When one side wins every pairing (this week does), the whole left column is lit and the slab stops telling rows apart | A · Matchup | Honest data: Roberto wins all six pairings both live and at the close in this sample. On a mixed week the slab lights rows on both sides and answers "who won this row". A mixed-week frame is worth drawing if A is picked. |
+| O2 | minor | When one side wins every pairing (this week does), the whole left column is lit and the slab stops telling rows apart | A · Matchup | Honest data: Roberto wins all six pairings both live and at the close in this sample. On a mixed week the slab lights rows on both sides and answers "who won this row". The category-league frames (added below) show a mixed week: the Consumer group lights Gianluigi's side. |
 | O3 | minor | C's accent IS the day's colour, so the selected range pill turns orange-red on a down day: a selected state that changes meaning daily | C · Home, Portfolio | Robinhood does exactly this; flagged for the token spec if C is picked. |
 | O4 | minor | The DRAFT pill's visible mark is 34pt tall | all · Draft | Board drawing; the build gives it a 44pt hit area (hitSlop), as §9B requires. |
 
@@ -74,3 +74,21 @@ motion (described, not built), VoiceOver.
 | Draft | S2 tiles, dark text, dark clock cell: yes | S2 grid as panels: partly (no ESPN draft reference was studied) | S2 grid reduced to type: partly |
 | Standings | S1 space-and-surface: yes | S3 density: yes | S4 space: yes |
 | Portfolio | S4: yes | S5 key figures: partly (the hero is B's own) | S4: yes |
+
+## Addendum · the category-league Matchup frames (2026-10-12, after Giorgio's row-order ruling)
+
+Six more frames (A, B, C · Matchup live in a category-slot league and in a price-tier league,
+both SAMPLE, the whole scroll), after Giorgio's final ruling (slotted = categories AND price
+tiers; order recomputed at each market close, never live). Same audit, same tools:
+- **Contrast:** the group header is `--c-text` on `--c-inset` (A 14.79, B 14.26) or
+  `--c-text-2` on `--c-bg` (C 8.37): pass. No new colour roles.
+- **Typography:** the header is the 11pt tag (floor), line-height ≥ 1.0 (gate 55), one line in
+  all three at 402pt ("Tech & Media ×2" is the longest).
+- **Decoration with purpose (45):** the header is the position label Giorgio asked for, said
+  once per group; nothing else was added. The centre column stays empty.
+- **Honest copy (46):** the slot names are invented for this frame and captioned SAMPLE / NEW;
+  holdings and numbers are data.js's.
+  The tier sample deals data.js's stocks into identical tier slots (tier = draft price, one
+  share each); its scores are derived (week gain = Thursday − Monday open: +$24.80 vs +$3.75,
+  checked by hand against the frame). Which stocks each manager holds is the only invention.
+- **Count:** 0 critical · 0 major · 0 minor. It also gives O2 its mixed week.
