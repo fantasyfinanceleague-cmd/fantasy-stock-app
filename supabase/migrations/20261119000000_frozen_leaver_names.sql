@@ -164,7 +164,9 @@ begin
      and p_user_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
     select m.frozen_username into v_name
       from public.league_members m
-     where m.league_id = p_league_id and m.user_id = p_user_id and m.hidden_at is not null;
+     -- lower(): ids are compared case-insensitively, as get_visible_profiles does, so a
+     -- differently-cased id can never fall through to the LIVE name (supabase-reviewer).
+     where m.league_id = p_league_id and lower(m.user_id) = lower(p_user_id) and m.hidden_at is not null;
     if found then
       -- participant_display_name's own missing-username fallback, verbatim.
       if v_name is not null and length(trim(v_name)) > 0 then
