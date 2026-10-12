@@ -67,6 +67,13 @@ Plus the DESIGN_DIRECTION §9B mechanical checks: 44 pt hit areas, the 11 pt
 floor, no glyph-icons, the §4 motion craft lines, the stress fixture, ≤ 4
 choices, and colour-only codes with a twin.
 
+**Block rhythm, measured (from 2026-10-12):** in every capture, measure the gap between
+consecutive blocks (cards, the hero, buttons) in points and compare it with the board's
+section gap. A flush stack is a finding even when it "reads as a grouped list". 1.2.0
+shipped Home with every section touching (the gap sat on a wrapper with one child,
+66d73a71 → PR #217). Every Home capture from 2026-09-30 on showed it, and three gates
+passed it, because none of them measured.
+
 ## Plugin skills in use
 
 Installed at **user scope** on 2026-09-25 (in `~/.claude/`, not the repo), so

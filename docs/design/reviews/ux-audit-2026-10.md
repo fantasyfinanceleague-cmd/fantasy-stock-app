@@ -1062,3 +1062,20 @@ longer block flipping the Run it back switch; GS-12 and GS-13 (P2) remain.
 - With every reply in, the counts line reads "… · 0 no reply yet": drop a zero segment.
 - On the filled "I'm in", the selected state shows only as the check (the border is navy on
   navy); the check carries it, which is enough.
+
+## Check · Home section gap (PR #217), 2026-10-12
+
+**PASS** `fix/home-section-gap` @ `e92dcdcd`. iPhone 17e, Light, `live_open`: 0 pt between
+Home's blocks on main, 20 pt (`space[6]`) on the fix; the board's section gap is 16 px. Only Home has the shape (a
+gap on a scroll container whose one child is a non-gap wrapper around several sections), and
+every Home phase goes through that wrapper, so the one fix covers them all. Captures:
+`~/fantasy-stock-design-review/home-calm/task1/`. The miss and the new gate check: see
+UI-UX-PROGRAM.md, "Block rhythm, measured".
+
+### P3
+
+- Home's load-error state (`app/(tabs)/index.tsx`, `HomeBody`'s `status === 'error'` branch) renders
+  `PhasePlaceholder` with `onRefresh` inside Home's own `BarsRefresh`, so that state nests a
+  scroll view and a second pull-to-refresh inside the first. Render the placeholder in place of
+  `BarsRefresh`, not inside it.
+
