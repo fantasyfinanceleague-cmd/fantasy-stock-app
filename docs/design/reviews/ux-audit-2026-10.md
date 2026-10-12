@@ -1356,3 +1356,25 @@ Measure the block gap in every capture: 24pt.
   - the Saturday order line under a Wednesday draft.
 - **Add to MOBILE_SIMULATOR.md (the worker's find):** Metro's env reload never unsets a variable
   you remove from `.env.local`. Write every fixture variable explicitly and restart with `--clear`.
+
+### F1 re-check · PASS, DESIGN-APPROVED `feat/calm-home` @ `dd58a85c`
+
+Measured from the pixels by the Design Lead, independently of the worker's README:
+
+| Capture | Marks → tab text | Underline → This week |
+|---|---|---|
+| `01-live_open-17e-light` | 8.0pt | 24.0pt |
+| `01-live_open-17pro-light` | 8.0pt | 24.0pt |
+| `04-live_open-xl-17e-light` | 8.0pt | 24.0pt |
+
+The tabs now group with the chart. They don't touch the marks or the live week's dot, and
+nothing else on the first screen moved.
+
+- **Cause:** empty space between the boxes (the chart's strip under the glyphs, plus the label's
+  leading), not padding.
+- **Fix:** the row is pulled up by `rangeTabsPullUp(fontScale)` (16pt at 1×, 14pt at the 1.3×
+  cap) and drawn after the chart. The 44pt hit area is kept with `hitSlop`, verified with taps on
+  the device.
+
+The other in-season stills and recordings predate F1 (tabs 16pt lower), which is acceptable.
+Everything they show is otherwise unchanged.
