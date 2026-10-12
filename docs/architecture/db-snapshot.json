@@ -1,10 +1,30 @@
 {
+    "views": [
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres",
+                "authenticated=r/postgres"
+            ],
+            "kind": "view",
+            "name": "league_activity",
+            "securityInvoker": true
+        }
+    ],
     "tables": [
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "app_config",
             "policies": [
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -14,15 +34,27 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "auto_pick_price_failures",
             "policies": [
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "categories",
             "policies": [
                 {
@@ -37,11 +69,19 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "category_rules",
             "policies": [
                 {
@@ -56,11 +96,19 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "cron_job_status",
             "policies": [
                 {
@@ -75,6 +123,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -84,6 +134,30 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=rm/postgres"
+            ],
+            "name": "draft_postponements",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "columnAcls": {
+            },
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "draft_postponements_stage_check",
+                    "definition": "CHECK ((stage = ANY (ARRAY['room_open'::text, 'start'::text, 'legacy'::text])))"
+                }
+            ]
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=rm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "draft_queue",
             "policies": [
                 {
@@ -98,6 +172,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -115,6 +191,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "draft_sessions",
             "policies": [
                 {
@@ -139,6 +221,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -148,6 +232,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "draft_settings",
             "policies": [
                 {
@@ -172,11 +262,18 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres",
+                "authenticated=r/postgres"
+            ],
             "name": "draft_stalls",
             "policies": [
                 {
@@ -191,20 +288,49 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=rm/postgres"
+            ],
+            "name": "draft_start_watch",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "columnAcls": {
+            },
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "draft_turn_outages",
             "policies": [
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "drafts",
             "policies": [
                 {
@@ -229,6 +355,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -242,6 +370,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=r/postgres",
+                "service_role=r/postgres"
+            ],
             "name": "league_draft_order",
             "policies": [
                 {
@@ -256,6 +389,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -265,6 +400,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=r/postgres",
+                "service_role=r/postgres"
+            ],
             "name": "league_draft_order_meta",
             "policies": [
                 {
@@ -279,6 +419,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -296,6 +438,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "league_draft_slots",
             "policies": [
                 {
@@ -340,6 +488,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -353,6 +503,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "league_invites",
             "policies": [
                 {
@@ -377,6 +533,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -386,6 +544,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "league_members",
             "policies": [
                 {
@@ -405,7 +569,7 @@
                     ],
                     "using": null,
                     "command": "INSERT",
-                    "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))))",
+                    "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))) AND (hidden_at IS NULL))",
                     "permissive": true
                 },
                 {
@@ -420,6 +584,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -429,6 +595,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=r/postgres",
+                "service_role=r/postgres"
+            ],
             "name": "league_notifications",
             "policies": [
                 {
@@ -443,11 +614,25 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+                "push_error": [
+                    "service_role=w/postgres"
+                ],
+                "push_status": [
+                    "service_role=w/postgres"
+                ],
+                "push_attempts": [
+                    "service_role=w/postgres"
+                ],
+                "push_attempted_at": [
+                    "service_role=w/postgres"
+                ]
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
                     "name": "league_notifications_kind_check",
-                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text, 'commissioner_transferred'::text])))"
+                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text, 'commissioner_transferred'::text, 'draft_room_open'::text, 'draft_started'::text, 'draft_at_risk'::text, 'draft_at_risk_reminder'::text, 'draft_postponed'::text, 'draft_time_set'::text])))"
                 },
                 {
                     "name": "league_notifications_push_status_check",
@@ -456,6 +641,42 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=r/postgres"
+            ],
+            "name": "league_renewal_responses",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "columnAcls": {
+            },
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "league_renewal_responses_decided_by_check",
+                    "definition": "CHECK (((decided_by IS NULL) OR (decided_by = ANY (ARRAY['player'::text, 'commissioner'::text]))))"
+                },
+                {
+                    "name": "league_renewal_responses_nudge_check",
+                    "definition": "CHECK ((nudge_count >= 0))"
+                },
+                {
+                    "name": "league_renewal_responses_stamps_check",
+                    "definition": "CHECK ((((status = 'pending'::text) AND (decided_by IS NULL) AND (responded_at IS NULL)) OR ((status <> 'pending'::text) AND (decided_by IS NOT NULL) AND (responded_at IS NOT NULL))))"
+                },
+                {
+                    "name": "league_renewal_responses_status_check",
+                    "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'in'::text, 'out'::text])))"
+                }
+            ]
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=r/postgres",
+                "service_role=r/postgres"
+            ],
             "name": "league_roster_reconfirm",
             "policies": [
                 {
@@ -470,6 +691,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -491,6 +714,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=rxtm/postgres",
+                "authenticated=rxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "league_seasons",
             "policies": [
                 {
@@ -505,11 +734,19 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "league_standings",
             "policies": [
                 {
@@ -524,11 +761,19 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "leagues",
             "policies": [
                 {
@@ -583,6 +828,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -622,6 +869,10 @@
                     "definition": "CHECK ((((pick_seconds >= 30) AND (pick_seconds <= 90)) AND (((pick_seconds)::integer % 15) = 0)))"
                 },
                 {
+                    "name": "leagues_season_number_positive",
+                    "definition": "CHECK ((season_number >= 1))"
+                },
+                {
                     "name": "leagues_season_status_check",
                     "definition": "CHECK ((season_status = ANY (ARRAY['active'::text, 'playoffs'::text, 'completed'::text])))"
                 },
@@ -636,6 +887,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres",
+                "authenticated=r/postgres"
+            ],
             "name": "market_calendar",
             "policies": [
                 {
@@ -650,6 +906,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -659,6 +917,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres",
+                "authenticated=r/postgres"
+            ],
             "name": "market_calendar_coverage",
             "policies": [
                 {
@@ -673,6 +936,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -686,6 +951,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "matchups",
             "policies": [
                 {
@@ -700,6 +971,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -713,6 +986,11 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "push_tokens",
             "policies": [
                 {
@@ -757,24 +1035,42 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "rate_limit_counters",
             "policies": [
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "signup_allowlist",
             "policies": [
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -784,20 +1080,16 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "splits",
             "policies": [
-                {
-                    "name": "splits_select_authenticated",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": "true",
-                    "command": "SELECT",
-                    "withCheck": null,
-                    "permissive": true
-                }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -807,6 +1099,10 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "symbol_category_overrides",
             "policies": [
                 {
@@ -821,17 +1117,36 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+                "id": [
+                    "authenticated=r/postgres"
+                ],
+                "symbol": [
+                    "authenticated=r/postgres"
+                ],
+                "created_at": [
+                    "authenticated=r/postgres"
+                ],
+                "category_id": [
+                    "authenticated=r/postgres"
+                ]
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=rm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "symbols",
             "policies": [
                 {
-                    "name": "read symbols",
+                    "name": "symbols_select_authenticated",
                     "roles": [
-                        "PUBLIC"
+                        "authenticated"
                     ],
                     "using": "true",
                     "command": "SELECT",
@@ -840,11 +1155,19 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "trades",
             "policies": [
                 {
@@ -859,6 +1182,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -884,18 +1209,13 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "user_profiles",
             "policies": [
-                {
-                    "name": "Authenticated users can view profiles",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": "true",
-                    "command": "SELECT",
-                    "withCheck": null,
-                    "permissive": true
-                },
                 {
                     "name": "Users can insert own profile",
                     "roles": [
@@ -915,9 +1235,21 @@
                     "command": "UPDATE",
                     "withCheck": "(auth.uid() = id)",
                     "permissive": true
+                },
+                {
+                    "name": "user_profiles_select_self",
+                    "roles": [
+                        "authenticated"
+                    ],
+                    "using": "(id = auth.uid())",
+                    "command": "SELECT",
+                    "withCheck": null,
+                    "permissive": true
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -927,6 +1259,12 @@
             ]
         },
         {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
             "name": "week_snapshots",
             "policies": [
                 {
@@ -941,6 +1279,8 @@
                 }
             ],
             "rlsForced": false,
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
             ]
@@ -949,12 +1289,21 @@
     "_comment": "Hand-captured from prod. Regenerate with docs/architecture/db-snapshot.sql. Not generated by gen-architecture.mjs.",
     "cronJobs": [
         {
-            "jobid": 32,
+            "jobid": 43,
             "active": true,
-            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/draft-autopick-sweep',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 180000\n  )\n  where exists (\n    select 1\n      from public.overdue_draft_turns() o\n     where not exists (\n       select 1\n         from public.draft_stalls s\n        where s.league_id = o.league_id\n          and s.pick_number = o.pick_number\n          and s.reason <> 'vendor_outage'\n          and s.last_seen_at > now() - interval '60 seconds'\n     )\n  );\n  ",
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/draft-autopick-sweep',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 180000\n  )\n  where exists (\n    select 1\n      from public.overdue_draft_turns() o\n     where not exists (\n       select 1\n         from public.draft_stalls s\n        where s.league_id = o.league_id\n          and s.pick_number = o.pick_number\n          and s.reason <> 'vendor_outage'\n          and s.last_seen_at > now() - interval '60 seconds'\n     )\n  )\n     or public.draft_auto_start_work_due();\n  ",
             "jobname": "draft_autopick_sweep",
             "database": "postgres",
             "schedule": "10 seconds",
+            "username": "postgres"
+        },
+        {
+            "jobid": 44,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/draft-order-notify',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 180000\n  )\n  where public.draft_room_notices_due();\n  ",
+            "jobname": "draft_order_notify",
+            "database": "postgres",
+            "schedule": "* * * * *",
             "username": "postgres"
         },
         {
@@ -1000,6 +1349,15 @@
             "jobname": "purge_cron_run_details",
             "database": "postgres",
             "schedule": "17 4 * * *",
+            "username": "postgres"
+        },
+        {
+            "jobid": 45,
+            "active": true,
+            "command": " delete from public.rate_limit_counters where window_start < now() - interval '2 days' ",
+            "jobname": "purge_rate_limit_counters",
+            "database": "postgres",
+            "schedule": "37 4 * * *",
             "username": "postgres"
         },
         {
@@ -1150,6 +1508,21 @@
         },
         {
             "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_draft_start_inputs",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
                 "postgres=X/postgres"
             ],
             "args": "p_league_id uuid",
@@ -1160,6 +1533,64 @@
             ],
             "searchPath": "public, pg_temp",
             "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_rows jsonb, p_games jsonb",
+            "name": "_league_standings_rank_core",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "_renewal_counts",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "_renewal_invite_code",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "after_leagues_draft_date_change",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
             "securityDefiner": true
         },
         {
@@ -1195,6 +1626,21 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "cancel_league_renewal",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "p_bucket text, p_subject text, p_limit integer, p_window_seconds integer",
@@ -1220,7 +1666,7 @@
                 "search_path=public, pg_temp"
             ],
             "searchPath": "public, pg_temp",
-            "volatility": "stable",
+            "volatility": "volatile",
             "securityDefiner": true
         },
         {
@@ -1258,6 +1704,21 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "",
+            "name": "draft_auto_start_work_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "p_types jsonb, p_draftable_only boolean, p_exclude text[], p_depth integer",
             "name": "draft_feasibility_pool",
             "owner": "postgres",
@@ -1273,8 +1734,83 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "p_notice_id uuid",
+            "name": "draft_notice_context",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "",
             "name": "draft_order_notify_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "draft_room_notices_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "draft_start_policy",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "immutable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "draft_watch_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "due_draft_starts",
             "owner": "postgres",
             "proconfig": [
                 "search_path=public, pg_temp"
@@ -1357,11 +1893,39 @@
         },
         {
             "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_league_lineage_columns",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "",
             "name": "enforce_league_members_frozen_after_draft_start",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_league_renewal_gate",
             "owner": "postgres",
             "proconfig": [
                 "search_path=public, pg_temp"
@@ -1415,6 +1979,34 @@
         },
         {
             "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_leagues_draft_time",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_leagues_insert_not_started",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -1460,10 +2052,35 @@
         },
         {
             "acl": [
-                "=X/postgres",
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_renewal_membership",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "enforce_renewal_response_transitions",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
-                "anon=X/postgres",
-                "authenticated=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "",
@@ -1585,6 +2202,36 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_league_history",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_portfolio_ledger",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "authenticated=X/postgres",
                 "service_role=X/postgres"
             ],
@@ -1603,8 +2250,53 @@
                 "postgres=X/postgres",
                 "authenticated=X/postgres"
             ],
+            "args": "p_league_id uuid",
+            "name": "get_renewal_roster",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "get_season_matchups",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
             "args": "p_league_id uuid, p_season_id uuid",
             "name": "get_season_result",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_user_ids text[]",
+            "name": "get_visible_profiles",
             "owner": "postgres",
             "proconfig": [
                 "search_path=public, pg_temp"
@@ -1677,11 +2369,69 @@
         },
         {
             "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "league_members_freeze_leaver",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "league_notifications_order_set_in_app",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_id text",
+            "name": "league_participant_display_name",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
                 "postgres=X/postgres",
                 "authenticated=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "p_league_id uuid",
+            "name": "league_standings_ranked",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_through_week integer",
             "name": "league_standings_ranked",
             "owner": "postgres",
             "proconfig": [
@@ -1739,6 +2489,36 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_id text",
+            "name": "nudge_renewal",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "open_due_draft_rooms",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "",
@@ -1763,6 +2543,36 @@
             ],
             "searchPath": "public, pg_temp",
             "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_draft_date timestamp with time zone, p_stage text, p_reason text, p_blockers jsonb, p_expect jsonb",
+            "name": "postpone_league_draft",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_draft_date timestamp with time zone, p_expect jsonb, p_blocked boolean, p_blockers jsonb, p_gate boolean",
+            "name": "record_draft_watch",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
             "securityDefiner": true
         },
         {
@@ -1795,6 +2605,51 @@
             "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_user_id text",
+            "name": "remove_renewal_invitee",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid",
+            "name": "renew_league",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_response text",
+            "name": "respond_to_renewal",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
         },
         {
             "acl": [
@@ -1879,6 +2734,21 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "p_league_id uuid, p_expect jsonb",
+            "name": "start_league_draft",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "p_league_id uuid, p_expected_week integer, p_bracket jsonb",
             "name": "start_league_playoffs",
             "owner": "postgres",
@@ -1905,10 +2775,22 @@
         },
         {
             "acl": [
-                "=X/postgres",
                 "postgres=X/postgres",
-                "anon=X/postgres",
-                "authenticated=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_settings jsonb, p_slots jsonb",
+            "name": "start_renewed_season",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "",
@@ -1927,6 +2809,20 @@
             ],
             "args": "",
             "name": "sync_draft_order_on_member_change",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "sync_renewal_on_member_delete",
             "owner": "postgres",
             "proconfig": [
                 "search_path=public, pg_temp"
@@ -2027,10 +2923,7 @@
         },
         {
             "acl": [
-                "=X/postgres",
                 "postgres=X/postgres",
-                "anon=X/postgres",
-                "authenticated=X/postgres",
                 "service_role=X/postgres"
             ],
             "args": "",
@@ -2043,6 +2936,330 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-10-07T19:41:46Z",
-    "postgresVersion": "17.4"
+    "capturedAt": "2026-10-12T03:50:03Z",
+    "publications": [
+        {
+            "table": "drafts",
+            "schema": "public",
+            "columns": [
+                "user_id",
+                "symbol",
+                "draft_date",
+                "entry_price",
+                "quantity",
+                "id",
+                "round",
+                "pick_number",
+                "is_current_pick",
+                "league_id",
+                "status",
+                "current_round",
+                "current_pick",
+                "started_at",
+                "completed_at",
+                "created_at",
+                "alpaca_order_id",
+                "slot_id",
+                "recorded_at",
+                "pick_source"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "league_seasons",
+            "schema": "public",
+            "columns": [
+                "id",
+                "league_id",
+                "season_number",
+                "champion_user_id",
+                "runner_up_user_id",
+                "started_at",
+                "completed_at",
+                "final_standings",
+                "created_at"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "league_standings",
+            "schema": "public",
+            "columns": [
+                "league_id",
+                "user_id",
+                "wins",
+                "losses",
+                "ties",
+                "points_for",
+                "points_against",
+                "updated_at"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "leagues",
+            "schema": "public",
+            "columns": [
+                "id",
+                "name",
+                "commissioner_id",
+                "invite_code",
+                "draft_date",
+                "num_participants",
+                "num_rounds",
+                "budget_mode",
+                "budget_amount",
+                "created_at",
+                "draft_status",
+                "duration_days",
+                "league_start_date",
+                "league_end_date",
+                "league_type",
+                "num_weeks",
+                "current_week",
+                "playoff_teams",
+                "current_season_id",
+                "season_status",
+                "stake_mode",
+                "notional_per_slot",
+                "allow_undraftable",
+                "pick_seconds",
+                "pick_clock_enabled",
+                "draft_started_at",
+                "draft_order_mode",
+                "previous_league_id",
+                "lineage_id",
+                "season_number"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "matchups",
+            "schema": "public",
+            "columns": [
+                "id",
+                "league_id",
+                "week_number",
+                "team1_user_id",
+                "team2_user_id",
+                "team1_gain",
+                "team2_gain",
+                "winner_user_id",
+                "week_start",
+                "week_end",
+                "created_at",
+                "is_playoff",
+                "playoff_round",
+                "team1_seed",
+                "team2_seed",
+                "is_tie",
+                "playoff_round_number",
+                "bracket_position"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "user_profiles",
+            "schema": "public",
+            "columns": [
+                "id",
+                "username",
+                "created_at",
+                "updated_at",
+                "avatar",
+                "notifications_enabled"
+            ],
+            "publication": "supabase_realtime"
+        },
+        {
+            "table": "messages_2026_10_06",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_07",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_08",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_09",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_10",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_11",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_12",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        }
+    ],
+    "storageBuckets": [
+    ],
+    "postgresVersion": "17.4",
+    "defaultPrivileges": [
+        {
+            "acl": [
+                "postgres=rwU/postgres",
+                "anon=rwU/postgres",
+                "authenticated=rwU/postgres",
+                "service_role=rwU/postgres"
+            ],
+            "schema": "public",
+            "grantor": "postgres",
+            "objectType": "S"
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "anon=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "schema": "public",
+            "grantor": "postgres",
+            "objectType": "f"
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres",
+                "anon=arwdDxtm/postgres",
+                "authenticated=arwdDxtm/postgres",
+                "service_role=arwdDxtm/postgres"
+            ],
+            "schema": "public",
+            "grantor": "postgres",
+            "objectType": "r"
+        },
+        {
+            "acl": [
+                "postgres=rwU/supabase_admin",
+                "anon=rwU/supabase_admin",
+                "authenticated=rwU/supabase_admin",
+                "service_role=rwU/supabase_admin"
+            ],
+            "schema": "public",
+            "grantor": "supabase_admin",
+            "objectType": "S"
+        },
+        {
+            "acl": [
+                "postgres=X/supabase_admin",
+                "anon=X/supabase_admin",
+                "authenticated=X/supabase_admin",
+                "service_role=X/supabase_admin"
+            ],
+            "schema": "public",
+            "grantor": "supabase_admin",
+            "objectType": "f"
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/supabase_admin",
+                "anon=arwdDxtm/supabase_admin",
+                "authenticated=arwdDxtm/supabase_admin",
+                "service_role=arwdDxtm/supabase_admin"
+            ],
+            "schema": "public",
+            "grantor": "supabase_admin",
+            "objectType": "r"
+        }
+    ]
 }
