@@ -8,7 +8,7 @@ import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   weekMarks, regularWeekSlots, layoutWeekMarks, marksCollide, regularMarkResults, resultFromGains, seasonChartA11yLabel,
   rangeTabLook, rangeTabHitSlop, marksShownFor, chartLiveEnd, glyphWidth, pipFor, RANGE_TABS, MIN_HIT, BYE_MIN_SLOT, MARK_MAX_FONT_SCALE,
-  PIP_SIZE, PIP_RING_STROKE,
+  PIP_SIZE, PIP_RING_STROKE, rangeTabsPullUp, TAB_TEXT_UNDER_MARKS,
   type WeekMarkInput,
 } from '../lib/home/weekMarks.ts';
 import { buildSeasonGainSeries, type SeasonWeekInput } from '../lib/home/seasonGainSeries.ts';
@@ -260,4 +260,38 @@ Deno.test('range tabs: every hit area is at least 44 × 44, and neighbours never
   assert(block.includes('accessibilityRole="tab"'));
   assert(block.includes('accessibilityState={{ selected }}'));
   assert(!block.includes('SegmentedControl'));
+});
+
+// ── F1 (Design Lead gate, 2026-10-12): the range tabs belong to the chart ──────
+
+Deno.test('F1: the tab labels sit 8pt (±2) under the marks; the 24pt block gap sits under the tabs', () => {
+  assertEquals(TAB_TEXT_UNDER_MARKS, 8);
+  // Device pixels before the fix (capture pass): marks' glyph bottom -> tab glyph top was
+  // 24.3pt at standard text and 22.0pt at the 1.3x cap. The pull-up takes each to ~8.
+  const before = [[1, 24.3], [1.3, 22.0], [3, 22.0]] as const;
+  for (const [scale, gap] of before) {
+    const after = gap - rangeTabsPullUp(scale);
+    assert(Math.abs(after - TAB_TEXT_UNDER_MARKS) <= 2, `${scale}x: ${after}pt`);
+  }
+  assertEquals([rangeTabsPullUp(1), rangeTabsPullUp(1.3), rangeTabsPullUp(3)], [16, 14, 14]);
+  // Wiring: the row is pulled up by exactly that, and draws after the chart (on top of its strip).
+  const block = SOURCES['components/home/HomeSeason.tsx'];
+  assert(block.includes('<View style={[styles.tabs, { marginTop: -rangeTabsPullUp(fontScale) }]} accessibilityRole="tablist">'));
+  assert(block.indexOf('<SeasonChart') < block.indexOf('marginTop: -rangeTabsPullUp(fontScale)'));
+  // The block gap stays on the wrapper (24pt), never on the tabs.
+  assert(SOURCES['app/(tabs)/index.tsx'].includes("style={{ gap: space[7] }}"));
+});
+
+Deno.test('F1: the 44pt hit area comes from hitSlop, never visible padding', () => {
+  const block = SOURCES['components/home/HomeSeason.tsx'];
+  const tab = block.match(/ {2}tab: \{([^}]*)\}/)![1];
+  // Only the underline's own 2pt of air above the label; no vertical padding or minHeight.
+  assert(tab.includes('paddingTop: RANGE_TAB_UNDERLINE,'));
+  for (const banned of ['paddingVertical', 'paddingBottom', 'minHeight', 'height:']) assert(!tab.includes(banned), banned);
+  // The row is the label's height; hitSlop grows each tab to MIN_HIT tall at every scale.
+  for (const scale of [1, 1.3]) {
+    const content = 18 * scale + 2 * 2;
+    const slop = rangeTabHitSlop(content);
+    assert(content + slop.top + slop.bottom >= MIN_HIT);
+  }
 });

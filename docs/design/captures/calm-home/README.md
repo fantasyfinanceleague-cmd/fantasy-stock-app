@@ -27,7 +27,7 @@ bottom, which is the 24 pt gap plus the text line's own descent.
 
 | # | File | Shows | Env / navigation | Gap (pt) |
 |---|---|---|---|---|
-| 1 | `01-live_open-{17e,17pro}-light.png`, `…-fold.png` | Hero → chart (124 pt, W W L W W, the live dot on week 6) → 1W · 1M · Season; This week ("Live", chevron, 28 pt scores); Standings (chevron). Everything, Standings' 3rd row included, sits above the fold on BOTH phones (17e: the Standings card ends at 726 pt, fold 749.7). The `-fold` copies draw the fold. | `HOME_FIXTURE=live_open` | 24.0 · 24.0 |
+| 1 | `01-live_open-{17e,17pro}-light.png`, `…-fold.png` | Hero → chart (124 pt, W W L W W, the live dot on week 6) → 1W · 1M · Season; This week ("Live", chevron, 28 pt scores); Standings (chevron). Everything, Standings' 3rd row included, sits above the fold on BOTH phones (17e, after F1: the Standings card ends at 711 pt, fold 749.7). The `-fold` copies draw the fold. | `HOME_FIXTURE=live_open` | 24.0 · 24.0 (tabs: 8.3 under the marks, F1) |
 | 1D | `01-live_open-17e-dark.png` | Dark spot-check of 1 | same, appearance dark | 24.0 · 24.0 |
 | 2 | `02-live_closed-*` | Week 6 has no mark (closed: no result yet); the line's end is the static dot | `live_closed` | 24.0 · 24.0 |
 | 2 | `02-scoring-*` | 28 pt skeletons, "Scoring…" | `scoring` | 24.0 · 24.0 |
@@ -54,6 +54,28 @@ bottom, which is the 24 pt gap plus the text line's own descent.
 | 9 | `09-complete-member-out-17e-light.png` | Member who said I'm out: the GS-14 "You're out" chip | `RENEWAL_FIXTURE=out`, same | 24.0 |
 | 10 | `10-drafting_on_clock-*` | Unchanged apart from the gap | `drafting_on_clock` | 24.0 |
 | 11 | `11-reduce-motion-17e.mov`, `…-frames.png` | Reduce Motion: the frame after the skeleton already has the line fully drawn (#170 → #174); Season → 1W (#381 → #382) and back (#441 → #442) swap within one frame | `live_open`, Reduce Motion on | — |
+
+## F1 re-check (Design Lead gate on e821bc8e): the range tabs belong to the chart
+
+Before the fix, the tabs floated: marks' glyphs → tab text was 24.3 pt, and underline → This week
+was also 24.0. The cause: the 8 pt layout gap sits between BOXES, and both boxes carry empty space
+of their own (the chart's strip under the marks, the label's line leading). The fix pulls the tabs
+row up (`rangeTabsPullUp`: 16 pt at standard text, 14 pt at the 1.3× cap). The 44 pt hit area stays
+on `hitSlop`; on device a tap 10 pt above "1M" (over the chart's strip) and one 14 pt below "1W"
+both select the tab.
+
+Re-shot after the fix, measured from pixels (`tabgap.py`: the lowest mark pixel → the first
+tab-label pixel; the underline's last row → the card's first row):
+
+| File | Marks → tab text | Underline → This week |
+|---|---|---|
+| `01-live_open-17e-light.png` | **8.3 pt** (319.3 → 327.7) | **24.0 pt** (343.0 → 367.0) |
+| `01-live_open-17pro-light.png` | **8.3 pt** (334.3 → 342.7) | **24.0 pt** (358.0 → 382.0) |
+| `04-live_open-xl-17e-light.png` | **8.0 pt** (572.0 → 580.0) | **24.0 pt** (600.0 → 624.0) |
+
+Only these three were re-shot, as asked. The other in-season stills (2, 3, 5, the Dark 1 and 4, and
+the XL-scrolled/XXXL ones) and the recordings show the tabs as they were before F1, 16 pt lower.
+Nothing else in them changes.
 
 ## R-1 check (score shrink)
 

@@ -10,7 +10,7 @@ import { windowSeries, type SeasonGainSeriesResult, type SeasonWindow } from '@/
 import { HOME_CHART_HEIGHT } from '@/lib/home/calmHome';
 import {
   RANGE_TABS, RANGE_TAB_MAX_FONT_SCALE, RANGE_TAB_UNDERLINE, MIN_HIT, marksShownFor, rangeTabHitSlop, rangeTabLook,
-  regularMarkResults, seasonChartA11yLabel, chartLiveEnd,
+  regularMarkResults, seasonChartA11yLabel, chartLiveEnd, rangeTabsPullUp,
 } from '@/lib/home/weekMarks';
 
 // Stockpile — <HomeSeason> (a calm Home, decided A, 2026-10-12). The old Season
@@ -63,7 +63,9 @@ export function HomeSeason({ series, weekResults, currentWeek, marketOpen, isPla
         drawKey={window}
         height={HOME_CHART_HEIGHT}
       />
-      <View style={styles.tabs} accessibilityRole="tablist">
+      {/* F1 (Design Lead gate): the labels sit 8pt under the marks (rangeTabsPullUp); the row
+          draws after the chart, so its pulled-up box overlaps only the chart's empty strip. */}
+      <View style={[styles.tabs, { marginTop: -rangeTabsPullUp(fontScale) }]} accessibilityRole="tablist">
         {RANGE_TABS.map((t) => {
           const selected = t.value === window;
           const look = rangeTabLook(selected);

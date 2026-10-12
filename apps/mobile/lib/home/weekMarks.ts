@@ -256,6 +256,22 @@ export function chartLiveEnd(marketOpen: boolean, isPlayoff: boolean): boolean {
   return marketOpen && !isPlayoff;
 }
 
+/** The visible space from the marks' glyphs down to the tab labels' glyphs (Design Lead
+ * gate F1, 2026-10-12): the tabs belong to the chart, 8pt under it, while the 24pt block
+ * gap sits between their underline and the next card. */
+export const TAB_TEXT_UNDER_MARKS = 8;
+/** How far the tabs row is pulled up over the chart's bottom edge so the labels sit
+ * TAB_TEXT_UNDER_MARKS under the marks: the 8pt layout gap is between BOXES, and both
+ * boxes carry empty space of their own (the chart's strip under the marks' glyphs, the
+ * label's line leading). Measured from device pixels (capture pass): 24.3pt glyph to
+ * glyph at standard text, 22.0pt at the 1.3x cap, so the pull is 16pt there, 14pt here,
+ * and linear between. The tabs keep their 44pt hit area through hitSlop, not padding,
+ * and draw after the chart, so the overlap never covers a mark. */
+export function rangeTabsPullUp(fontScale: number): number {
+  const s = Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE);
+  return Math.round(16 - ((s - 1) / (RANGE_TAB_MAX_FONT_SCALE - 1)) * 2);
+}
+
 /** The axis marks show in the Season window only (the one with week ticks). */
 export function marksShownFor(range: RangeValue): boolean {
   return range === 'Season';

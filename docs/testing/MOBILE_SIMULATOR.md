@@ -163,6 +163,12 @@ panels too.
   Verified 2026-09-29 against the design gallery's `useMotion().reduced`
   readout: `true` after the write + relaunch, `false` after undoing it. This
   replaces the Settings-switch drag above for scripted captures.
+- **Metro's env reload never unsets a variable.** Editing `.env.local` while Metro runs reloads
+  the bundle with the new values, but a var you DELETE from the file stays set at its old value
+  (Expo CLI only adds and overrides). Found 2026-10-12: a removed `EXPO_PUBLIC_SCORED_OUTCOME=lost`
+  made a "won" capture render lost. Write every fixture var explicitly in each `.env.local`
+  (empty for "unset", e.g. `EXPO_PUBLIC_DRAFT_START_FIXTURE=`), and restart Metro with `--clear`
+  (`npx expo start --go --port <port> --clear < /dev/null`) whenever you switch fixture sets.
 - **`CI=1 npx expo start` disables file watching.** It's the usual way to keep
   a background Metro from prompting, but in CI mode Metro never picks up edits:
   the bundle silently goes stale, and the only trace is one log line, "Metro is
