@@ -78,6 +78,15 @@ building anything, and don't reopen a rule without him.
   There's no "your other leagues" row.
 - **Home hero:** team value is the big number; under it "+$X · +Y% season gain · +$Z today".
   The Home chart plots season gain, week by week.
+- **A calm Home** (2026-10-12, option A "same content, calmer", board `#call-calm-home`),
+  after Giorgio's first look at 1.2.0: "this UI on the home screen is awful. section bubbles
+  are touching, it feels clunky, and there is too much going on". Same content, calmer:
+  team value is the ONE standout number; the season chart sits directly under it (no card,
+  W/L marks on its axis, range as text tabs); This week and Standings are two quiet cards
+  that open Matchup and League › Standings; sections never touch (24pt between blocks);
+  one primary action per screen. Before the draft and after the season follow the same
+  rules (fewer, merged cards; the countdown leads; Run it back or the ask is the only
+  primary). Nothing is removed from Home; repeats are.
 - **Portfolio's gain is "since the draft"** (value − cost). It's deliberately a different
   label from "season gain"; never reuse one for the other.
 - **Stock chart ranges** (2026-10-05, option A): 1W / 1M / 3M / 1Y, with 1W the default.
