@@ -2,7 +2,7 @@
  * UX final sweep S-4 (P1, the H5 class): ScoreDigits keeps its previous text across a
  * re-render (prevTextRef), and nothing keyed the Matchup scoreboard by league, so a
  * league switch rolled league A's score into league B's. The Matchup body (scoreboard,
- * tug, race, lineups) and All matchups are now keyed by the active league id, as Home
+ * tug, lineups) and All matchups are now keyed by the active league id, as Home
  * is (HomeLeagueTransition key={activeLeagueId}).
  * Run: `cd apps/mobile/tests-deno && deno test .`
  */

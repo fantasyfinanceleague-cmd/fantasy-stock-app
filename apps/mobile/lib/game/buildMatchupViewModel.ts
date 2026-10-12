@@ -2,23 +2,19 @@
  * buildMatchupViewModel: the live numbers for the Matchup screen (3c).
  * It feeds the SAME inputs Home feeds liveWeekScore (get_home_league's
  * current_week ledgers, quotes, bars), so Matchup's live score is Home's
- * this-week number by construction. It adds the per-stock lineup rows, the
- * race points and the leader. It decides no phase: the caller picks the
+ * this-week number by construction. It adds the per-stock lineup rows and
+ * the leader. It decides no phase: the caller picks the
  * view from homePhase (matchupPhase.ts).
  */
 import { liveWeekScore } from '../home/liveWeekScore';
-import { toLiveSnapshots, toLiveTrades, type BarsBySymbol, type GetHomeLeagueResult } from '../home/buildHomeViewModel';
+import { toLiveSnapshots, toLiveTrades, type GetHomeLeagueResult } from '../home/buildHomeViewModel';
 import { lineupRows, type LineupRow } from './lineupLedger';
-import { weekRacePoints, type RaceDay, type RacePoint } from './weekRace';
 import { leaderOf, type Leader } from './leadChange';
 
 export interface MatchupInput {
   data: GetHomeLeagueResult;
   myUserId: string;
   quote: (symbol: string) => number | null;
-  bars: BarsBySymbol;
-  /** The matchup week's trading days, in order, with each session's close. */
-  days: { date: string; closeAt: Date }[];
   now: Date;
 }
 
@@ -30,7 +26,6 @@ export interface SideView {
   pct: number;
   unpriced: string[];
   lineup: LineupRow[];
-  race: RacePoint[];
 }
 
 export interface MatchupLiveViewModel {
@@ -48,21 +43,10 @@ export function nameOf(data: GetHomeLeagueResult, userId: string): { name: strin
   return { name: row?.display_name ?? '', isBot: row?.is_bot ?? false };
 }
 
-/** The day's price for a symbol: its own session's close, or null (no bar). */
-function priceOn(bars: BarsBySymbol, symbol: string, date: string): number | null {
-  const bar = bars[symbol]?.find((b) => b.date === date);
-  return bar ? bar.close : null;
-}
-
 function side(input: MatchupInput, userId: string, snapshots: GetHomeLeagueResult['current_week']['my_snapshots'], trades: GetHomeLeagueResult['current_week']['my_trades']): SideView {
   const snaps = toLiveSnapshots(snapshots);
   const tds = toLiveTrades(trades);
   const live = liveWeekScore(snaps, tds, input.quote);
-  const race = weekRacePoints(
-    snaps,
-    tds,
-    input.days.map((d) => ({ ...d, price: (s: string) => priceOn(input.bars, s, d.date) })),
-  );
   const { name, isBot } = nameOf(input.data, userId);
   return {
     userId,
@@ -72,7 +56,6 @@ function side(input: MatchupInput, userId: string, snapshots: GetHomeLeagueResul
     pct: live.pct,
     unpriced: live.unpriced,
     lineup: lineupRows(live.bySymbol, live.gain),
-    race,
   };
 }
 

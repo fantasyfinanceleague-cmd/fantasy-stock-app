@@ -1,10 +1,8 @@
 /**
- * 3c Matchup pure logic: the race (no interpolation), lead-change detection
- * (30 s limit, mover naming), reveal-once persistence, and the phase -> view
- * mapping. Run: `cd apps/mobile/tests-deno && deno test .`
+ * 3c Matchup pure logic: lead-change detection (30 s limit, mover naming),
+ * reveal-once persistence, and the phase -> view mapping. Run: `cd apps/mobile/tests-deno && deno test .`
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { weekRacePoints } from '../lib/game/weekRace.ts';
 import { leaderOf, detectLeadChange, pickMover } from '../lib/game/leadChange.ts';
 import { revealKey, shouldPlayReveal, markRevealPlayed, type KeyValueStore } from '../lib/game/revealOnce.ts';
 import { matchupView } from '../lib/game/matchupPhase.ts';
@@ -14,39 +12,6 @@ const memStore = (): KeyValueStore & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return { data, get: (k) => data.get(k) ?? null, set: (k, v) => void data.set(k, v) };
 };
-
-// ---------------------------------------------------------------------------
-// weekRace
-// ---------------------------------------------------------------------------
-
-const SNAP = [{ symbol: 'NVDA', quantity: 10, weekStartPrice: 100, enteredMidWeek: false }];
-
-Deno.test('weekRace: each day is the score at that day close, from that day\'s price', () => {
-  const pts = weekRacePoints(SNAP, [], [
-    { date: '2026-09-28', closeAt: new Date('2026-09-28T20:00:00Z'), price: () => 102 },
-    { date: '2026-09-29', closeAt: new Date('2026-09-29T20:00:00Z'), price: () => 95 },
-  ]);
-  assertEquals(pts.map((p) => [p.date, Math.round(p.gain * 100) / 100]), [['2026-09-28', 20], ['2026-09-29', -50]]);
-});
-
-Deno.test('weekRace: a trade counts only from the day it happened (no backdating)', () => {
-  const trades = [{ symbol: 'NVDA', action: 'buy' as const, quantity: 5, price: 110, createdAt: new Date('2026-09-29T15:00:00Z') }];
-  const pts = weekRacePoints(SNAP, trades, [
-    { date: '2026-09-28', closeAt: new Date('2026-09-28T20:00:00Z'), price: () => 102 },
-    { date: '2026-09-29', closeAt: new Date('2026-09-29T20:00:00Z'), price: () => 112 },
-  ]);
-  // Monday: no trade yet -> 10 * (102-100). Tuesday: the 5 bought at 110 gain 2 each.
-  assertEquals(Math.round(pts[0].gain * 100) / 100, 20);
-  assertEquals(Math.round(pts[1].gain * 100) / 100, 10 * 12 + 5 * 2);
-});
-
-Deno.test('weekRace: a day with no bar is ABSENT, never a zero or an interpolated point', () => {
-  const pts = weekRacePoints(SNAP, [], [
-    { date: '2026-09-28', closeAt: new Date('2026-09-28T20:00:00Z'), price: () => 102 },
-    { date: '2026-09-29', closeAt: new Date('2026-09-29T20:00:00Z'), price: () => null },
-  ]);
-  assertEquals(pts.map((p) => p.date), ['2026-09-28']);
-});
 
 // ---------------------------------------------------------------------------
 // leadChange

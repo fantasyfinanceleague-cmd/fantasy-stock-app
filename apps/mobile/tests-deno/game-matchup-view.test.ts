@@ -2,7 +2,7 @@
  * 3c Matchup view model: the honesty checks. Matchup's live score must be
  * EXACTLY Home's this-week live number (both call liveWeekScore on the same
  * ledger), the lineup rows must sum to the score, byes have no opponent, and
- * the race and chyron only ever use real data. Run: `deno test .`
+ * the chyron only ever uses real data. Run: `deno test .`
  */
 import { assertEquals, assertAlmostEquals } from 'jsr:@std/assert';
 import { buildMatchupLive, type MatchupInput } from '../lib/game/buildMatchupViewModel.ts';
@@ -33,18 +33,9 @@ function fixture(overrides: Partial<GetHomeLeagueResult['current_week']> = {}, t
 
 const prices: Record<string, number> = { NVDA: 112.5, AAPL: 198, AMZN: 60 };
 const quote = (s: string) => prices[s] ?? null;
-const days = [
-  { date: '2026-09-28', closeAt: new Date('2026-09-28T20:00:00Z') },
-  { date: '2026-09-29', closeAt: new Date('2026-09-29T20:00:00Z') },
-];
-const bars = {
-  NVDA: [{ date: '2026-09-28', close: 105 }, { date: '2026-09-29', close: 110 }],
-  AAPL: [{ date: '2026-09-28', close: 201 }, { date: '2026-09-29', close: 199 }],
-  AMZN: [{ date: '2026-09-28', close: 58 }, { date: '2026-09-29', close: 61 }],
-};
 
 function input(overrides: Partial<MatchupInput> = {}): MatchupInput {
-  return { data: fixture(), myUserId: 'roberto', quote, bars, days, now: new Date('2026-09-29T17:00:00Z'), ...overrides };
+  return { data: fixture(), myUserId: 'roberto', quote, now: new Date('2026-09-29T17:00:00Z'), ...overrides };
 }
 
 Deno.test('honesty: Matchup live gain equals Home\'s this-week live gain (same liveWeekScore inputs)', () => {
@@ -83,35 +74,6 @@ Deno.test('leader and lead: the side ahead, by the dollar gap', () => {
   const vm = buildMatchupLive(input());
   assertEquals(vm.leader, vm.me.gain > vm.opp!.gain ? 'me' : 'opp');
   assertAlmostEquals(vm.leadDollars!, Math.abs(vm.me.gain - vm.opp!.gain), 1e-9);
-});
-
-Deno.test('race: one point per trading day with bars for every held stock; a missing bar drops the day', () => {
-  const vm = buildMatchupLive(input({ bars: { ...bars, AAPL: [{ date: '2026-09-28', close: 201 }] } }));
-  assertEquals(vm.me.race.map((p) => p.date), ['2026-09-28']);
-});
-
-// ---------------------------------------------------------------------------
-// matchupDays: the week's real sessions, from the calendar
-// ---------------------------------------------------------------------------
-import { matchupDays } from '../lib/game/matchupWindow.ts';
-import { resolveWeekWindow, standardWeekSessions } from '../lib/time/marketWeek.ts';
-
-Deno.test('matchupDays: one day per trading session of the matchup week, with its real close', () => {
-  const anchor = '2026-10-02T20:00:00Z'; // a Friday (EDT)
-  const cal = standardWeekSessions(anchor);
-  const win = resolveWeekWindow(anchor, cal)!;
-  const days = matchupDays(cal, win);
-  assertEquals(days.map((d) => d.date), ['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
-  // Monday's close is 16:00 ET (20:00Z in EDT).
-  assertEquals(days[0].closeAt.toISOString(), '2026-09-28T20:00:00.000Z');
-});
-
-Deno.test('matchupDays: a holiday week has no session for the holiday', () => {
-  const anchor = '2026-09-11T20:00:00Z';
-  const cal = standardWeekSessions(anchor).filter((s) => s.sessionDate !== '2026-09-07');
-  const win = resolveWeekWindow(anchor, cal)!;
-  // Monday is Labor Day: Tuesday to Friday, four sessions.
-  assertEquals(matchupDays(cal, win).map((d) => d.date), ['2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']);
 });
 
 // ---------------------------------------------------------------------------

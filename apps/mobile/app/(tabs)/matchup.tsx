@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { matchupSegmentFromParam } from '@/lib/game/draftComplete';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
 
 import { space } from '@/constants/tokens';
@@ -12,7 +12,6 @@ import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { MatchScoreboard } from '@/components/game/MatchScoreboard';
-import { WeekRace } from '@/components/game/WeekRace';
 import { Chyron } from '@/components/sp/game/Chyron';
 import { useLeadChyron } from '@/lib/game/useLeadChyron';
 import { useRevealOnce, type RevealState } from '@/lib/game/useRevealOnce';
@@ -22,7 +21,6 @@ import type { AllMatchupRow } from '@/lib/game/allMatchups';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { FinalBanner } from '@/components/game/FinalBanner';
 import { buildFinalBanner } from '@/lib/game/finalBanner';
-import { raceLayout } from '@/lib/game/raceLayout';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
 import { nameOf } from '@/lib/game/buildMatchupViewModel';
@@ -148,7 +146,6 @@ interface BodyProps {
 
 function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalLines }: BodyProps) {
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
   // At the large text sizes the two lineups stack (side by side they ran into each other).
   const largeText = useLargeText();
   if (status === 'error') {
@@ -212,7 +209,6 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
   });
   const note = isFinal ? null : unpricedNote(live.me.unpriced.length);
 
-  const raceWidth = width - space[6] * 2;
   return (
     <View style={styles.stack}>
       {!isFinal ? <Chyron message={chyron} /> : null}
@@ -240,13 +236,6 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
         oppName={live.opp?.name ?? null}
         statusLine={isFinal ? 'Final' : `Week ${week}, live`}
       />
-      {!isFinal && live.opp && derived.days.length > 0 ? (
-        <WeekRace
-          layout={raceLayout({ days: derived.days.map((d) => d.date), mine: live.me.race, opp: live.opp.race })}
-          width={raceWidth}
-          a11yLabel="Week race: cumulative dollar gain by day"
-        />
-      ) : null}
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
       {isFinal ? (
         finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows && live.opp ? (
