@@ -21,7 +21,12 @@ Screenshot sources (App Store marketing images; view them there, not copied into
 - ESPN Fantasy Sports & More: https://apps.apple.com/us/app/id555376968
 - Yahoo Fantasy Sports: https://apps.apple.com/us/app/id328415391
 - Robinhood: https://apps.apple.com/us/app/id938003185
-- E*TRADE: https://apps.apple.com/us/app/id311627216
+- E*TRADE: https://apps.apple.com/us/app/id313259740 (corrected 2026-10-12; the earlier id311627216 returns 404)
+
+**Studied DNA:** the five reference screens were run through `hallmark study` (W0b) and sampled
+from the pixels; the result is [`design.md`](design.md). Two corrections from that pass: ESPN's
+matchup header has no bars or percentages (that shape is Sleeper's alone), and Sleeper's
+on-the-clock draft cell is near-black, not yellow.
 
 ---
 
