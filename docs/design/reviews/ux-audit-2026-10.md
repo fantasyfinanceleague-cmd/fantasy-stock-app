@@ -1020,3 +1020,45 @@ addition, and it changes nothing about the approved cards.)
   no Change.
 - GS-11: the commissioner's Season 2 Home with one reply pending (no Set draft time, Members and
   invite present), then with every reply in (Set draft time back).
+
+### Rulings during the build (2026-10-11)
+
+- **GS-14 (new, found by the fixer): an out player had no way back in.** `screenFor` sent `'out'`
+  to `'none'` and Season 2 is no longer in their leagues, while the rule and the card's own line
+  say they can change their answer until the draft is set (the server allows it). Ruling: the
+  same ask card stays on the finished league's Home and League tab with the answer marked (chip
+  **"You're out"**, NEW; "I'm out" checked). A player the commissioner removed gets no card.
+  Drawn on the board (`design/rib-out-state` @ `a265e0f1`, frame 1b). Blocks the switch flip,
+  like GS-10 and GS-11.
+- **The answer's refusals, one line each** (NEW copy, in place under the choice): `draft_started`
+  "The draft has started, so answers are locked." (no retry); `removed` "The commissioner removed
+  you from Season 2." (no retry); `league_full` "Season 2 is full. Ask your commissioner if they
+  can make room."; anything else "Your answer didn't go through. Try again." (with Try again).
+- **The Change sheet** reuses the ask's copy verbatim, current answer selected.
+- **Newcomers** (joined by code) get no banner and no "until then" line: they have no answer to
+  change (they can leave before the draft instead).
+
+## Check · Run it back switch-flip blockers (GS-10, GS-11, GS-14), 2026-10-11
+
+**Branch:** `fix/rib-gs10-gs11` @ `329b1c28`. **Evidence:** the 12 captures in
+`docs/design/captures/rib-switch-blockers/` (Light, Dark). **Not seen:** the refusals (the
+fixture always answers `replied`; the four lines are pinned by tests).
+
+**Verdict: PASS. DESIGN-APPROVED `fix/rib-gs10-gs11` @ `329b1c28`.** GS-10, GS-11 and GS-14 no
+longer block flipping the Run it back switch; GS-12 and GS-13 (P2) remain.
+
+| ID | Status | Evidence |
+|---|---|---|
+| GS-10 | **PASS** | Member list: "You're running back" + Change, no draft card, "The draft is set once everyone has replied. You can change your answer until then."; the Change sheet with the ask's copy and "I'm in" checked; after the draft is set, no Change (Light, Dark). |
+| GS-11 | **PASS** | Season 2 Home with a reply pending: no draft-time block, "Build your queue", Members and the invite code kept; with every reply in, Set draft time is back. |
+| GS-14 | **PASS** | The out player's card on the finished league's Home (Light, Dark) and League tab, "You're out" chip and "I'm out" checked; I'm in lands on the member list. |
+
+### P3 (polish, 1.3)
+
+- The Change sheet's I'm out / I'm in are compact pills; the board's ask uses two equal-width
+  buttons.
+- The pending ask has no "Reply" chip (the board's); the member list has no "Who's running back"
+  heading (the board's).
+- With every reply in, the counts line reads "… · 0 no reply yet": drop a zero segment.
+- On the filled "I'm in", the selected state shows only as the check (the border is navy on
+  navy); the check carries it, which is enough.
