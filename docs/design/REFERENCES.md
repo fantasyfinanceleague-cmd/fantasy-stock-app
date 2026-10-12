@@ -17,7 +17,7 @@ went wrong. Structure stays calm (one standout, room to breathe, UX rules 4–7)
 language must be captivating.
 
 Screenshot sources (App Store marketing images; view them there, not copied into the repo):
-- Sleeper · Blitz Studios: https://apps.apple.com/us/app/id987367543
+- Sleeper (fantasy screens): https://sleeper.com/fantasy-football (matchup, SleeperZone feed, mobile and web draft) and App Store shot 1 only: https://apps.apple.com/us/app/id987367543
 - ESPN Fantasy Sports & More: https://apps.apple.com/us/app/id555376968
 - Yahoo Fantasy Sports: https://apps.apple.com/us/app/id328415391
 - Robinhood: https://apps.apple.com/us/app/id938003185
@@ -25,30 +25,50 @@ Screenshot sources (App Store marketing images; view them there, not copied into
 
 ---
 
-## Sleeper (fantasy): the energy and the social texture
+## Sleeper (fantasy): the matchup, the draft board, the social texture
 
-**What's on screen.** Dark by default: a deep blue-to-navy gradient background with a soft
-glow, never flat grey. Saturated colour-coded tiles (teal, pink, orange, purple, blue) for
-positions on the draft board; glassy translucent cards with a 1px light border and rounded
-corners over the gradient. Display type is a heavy, condensed, all-caps grotesque
-("DRAFT", "LOCK-IN", "COMBOS") at hero size, with a lighter weight for body. Player
-avatars everywhere, big; team logos as small round badges. The matchup header is two big
-scores side by side ("100.35 vs 55.44") with each team's avatar, a win-probability chip
-("85% WIN") and a thin progress bar under each score. A persistent chat strip at the
-bottom. A turn clock chip ("YOUR TURN · 00:01:00") pinned above the board. Bottom tab bar
-with five icons on a dark glass bar.
+**Which screens count.** Giorgio (2026-10-12): the App Store listing's picks/betting
+screens "arent as relevant to us"; only the fantasy-football screens are the reference.
+The evidence below is Sleeper's own fantasy-football product page (sleeper.com/fantasy-
+football: the matchup view, the SleeperZone live feed, the mobile draft board, the web
+draft room) plus App Store shot 1 (the draft board). The glowing blue gradient belongs to
+the picks side and is **not** our reference.
+
+**What's on screen (fantasy side).** A **flat deep navy** surface (#0B1424-ish) with
+slightly lighter navy cards; white, heavy, rounded-grotesque type; one **cyan accent**
+for the primary action and the live state ("YOUR TURN", the DRAFT pills, the selected
+tab). **The matchup header:** two big scores ("100.35 · 55.44") with projections under
+them in grey, each team's **avatar** on its outer edge with a **win-% chip and a thin bar
+under it** (green for the leader, pink for the trailer), team names with handles and
+records, a divider badge between them. Under it a **live play strip** ("3Q 10:07 · A. St.
+Brown 4-yd catch · +1.4 · LIVE") and a "Yet to play (12) · QB, 3 RB…" line with dot
+indicators. **Starters** as a mirrored two-column lineup: your player left, theirs right,
+the **position pill in the middle column** colour-coded (QB pink, RB teal, WR blue, TE
+orange), points big, projections small, the game line in green (live/final win) or red,
+and the **active row tinted** in the team colour. A chat strip pinned above the tab bar.
+**The draft board:** a row of participants' avatars with status dots; the board as
+**colour-coded tiles by position** (teal, blue, orange, pink) carrying pick number and
+snake arrows; the **on-the-clock cell in yellow with the timer**; below, tabs
+players / queue / team / chat, filter chips with counts ("ALL 0/8 · QB 0/1"), and rows
+with a cyan **DRAFT** pill, rank, name, position dot, ADP and PTS columns.
 
 **What we take.**
-- The **gradient-and-glow dark surface** for game screens (Home in season, Matchup, Draft,
-  League): depth, not flat charcoal.
-- **Big display type for moments**: the hero number, "YOUR TURN", "FINAL", the week result.
-- **Colour-coded tiles** for slots/tiers in the draft (price tiers and categories map
-  naturally to Sleeper's position colours).
-- The **two-score matchup header with avatars and a lead bar**, which we already have in
-  concept and must render with this much contrast.
-- **Avatars with real presence** (large, round, with a ring for "you" or "live").
+- The **flat deep navy** as the game surface (Home in season, Matchup, Draft, League) with
+  lighter navy cards: depth from value, not from gradients or glow.
+- The **matchup header exactly in this shape**: two scores, projections under, avatars at
+  the edges with win-% chips and bars, names + records, a live line beneath.
+- The **mirrored lineup with a colour-coded middle column**: for us the price tier or
+  category pill between your holding and theirs, with the week gain big and the live price
+  line in green/red; the active (moving) row tinted.
+- **Colour-coded tiles** on the draft board (price tiers / categories as Sleeper's
+  positions), the **on-the-clock cell in yellow with the timer**, and the avatar row with
+  status dots.
+- **"YOUR TURN" as a cyan pill with the clock**, and DRAFT/Buy/Claim as filled pills.
+- **Filter chips with counts** ("ALL 0/8 · Tech 0/2") for slot filling in the draft.
+- **Avatars with presence**: round, large, a coloured ring for you / live / on the clock.
 
-**What we leave.** Betting/DFS surfaces; the five-tab bar (we have four); chat.
+**What we leave.** The picks/betting screens and their gradient-glow look; the chat strip
+(no chat in the product); the six-tab bar.
 
 ## ESPN Fantasy (fantasy): the broadcast scoreboard and the data density
 
@@ -138,9 +158,10 @@ tiles. Dense but ordered; numbers always right-aligned and tabular.
 ## The blend, in one paragraph
 
 Game screens (Home in season, Matchup, Draft, League, Run it back) live on Sleeper's
-gradient dark with ESPN's scoreboard discipline: big display type for the moment, two
-scores with avatars and bars, colour-coded tiles, row tints by outcome, avatars with
-presence. Money screens (Portfolio, the stock sheet, the watchlist, the claim composer)
+flat deep navy with a cyan accent and ESPN's scoreboard discipline: two scores with
+avatars, win-% chips and bars, a mirrored lineup with a colour-coded middle column,
+colour-coded draft tiles with a yellow on-the-clock cell, row tints by outcome, avatars
+with presence, "YOUR TURN" as a lit pill with the clock. Money screens (Portfolio, the stock sheet, the watchlist, the claim composer)
 follow Robinhood: the number and the line as the hero, one meaningful accent, range pills,
 sparklines, E*TRADE's key-figures list for the details. Onboarding, invites and the draft's
 "your turn" moments borrow Yahoo's warmth. The structure stays what the UX rules and the

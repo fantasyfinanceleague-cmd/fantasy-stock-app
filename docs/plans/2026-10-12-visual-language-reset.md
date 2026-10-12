@@ -38,7 +38,7 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 | # | Question | Decision | Board section / date |
 |---|---|---|---|
 | 1 | Design tool | Sleek rejected (bland result; paid plan); design on the board, built in Claude Code | Planner chat, 2026-10-12 |
-| 2 | What the references are and what we take | `docs/design/REFERENCES.md`: Sleeper (gradient dark, glass, display type, tiles, avatars), ESPN (scoreboard header, row tints, dense tables), Yahoo (invites, "your turn", warmth), Robinhood (number + chrome-less line as hero, one meaningful accent, range pills, sparklines), E*TRADE (key-figures list, tabular numbers) | Planner chat, 2026-10-12 |
+| 2 | What the references are and what we take | `docs/design/REFERENCES.md`: Sleeper **fantasy side only** (flat deep navy + cyan, the matchup header with win-% bars, mirrored lineup with a colour-coded middle column, colour-coded draft tiles, "YOUR TURN" pill; Giorgio: the picks/betting screenshots "arent as relevant to us"), ESPN (scoreboard header, row tints, dense tables), Yahoo (invites, "your turn", warmth), Robinhood (number + chrome-less line as hero, one meaningful accent, range pills, sparklines), E*TRADE (key-figures list, tabular numbers) | Planner chat, 2026-10-12 |
 | 3 | Theme order | **Dark first**; Light designed second from the same system; the System / Light / Dark setting stays | AskUserQuestion, 2026-10-12 |
 | 4 | First screens | **Home (in season) + Matchup (live and final) + Draft room**, each in all three directions, so a *system* is judged, not a screen | AskUserQuestion, 2026-10-12 |
 | 5 | Who draws | The **Design Lead resumes**, briefed with `REFERENCES.md` and this plan; the Orchestrator relays | AskUserQuestion, 2026-10-12 |
@@ -122,10 +122,13 @@ content sits in the same order (the calm-Home ruling); it just stops being grey.
 Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md` first.
 
 - **Three directions, named so they can be discussed:**
-  - **A "Game Night"** (Sleeper-led): deep blue→navy gradient with glow; glassy cards with a
-    1px light border; heavy condensed all-caps display type for moments; colour-coded tiles
-    (tiers/categories); large avatars with rings; the two-score header with win chips and
-    bars; money screens on near-black with a bright single-colour line.
+  - **A "Game Night"** (Sleeper-led, fantasy side only): flat deep navy with lighter navy
+    cards; one cyan accent for the primary action and live state; the matchup header
+    exactly in Sleeper's shape (two scores, projections, avatars at the edges with win-%
+    chips and bars, names + records, a live line); the mirrored lineup with a colour-coded
+    middle column; colour-coded draft tiles with the on-the-clock cell in yellow; "YOUR
+    TURN" as a cyan pill with the clock; avatars with rings; money screens on near-black
+    with a bright single-colour line. (The picks-side gradient glow is NOT this direction.)
   - **B "Broadcast"** (ESPN-led): near-black surfaces with ONE league/team colour as the
     frame; a true scoreboard header (scores, avatars, a bar each, record, status) pinned
     over scrolling lineups; row tints by outcome; dense tabular lists; display numerals;
