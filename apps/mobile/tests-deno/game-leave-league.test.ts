@@ -229,6 +229,17 @@ Deno.test('reachable: the League tab shows League settings to members with the f
   assertEquals(tab.includes('isCommissioner={showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id)}'), true);
 });
 
+Deno.test('the transfer picker reads CURRENT members only: a post-season leaver is never offered (source guard)', () => {
+  // transferCandidates takes member ids, so hidden_at never reaches it: the
+  // filter must be in the read. The server refuses a leaver (20261120000000).
+  const hook = SOURCES['lib/game/useLeaveLeague.ts'];
+  assertEquals(hook.includes(
+    "supabase.from('league_members').select('user_id').eq('league_id', leagueId).is('hidden_at', null))",
+  ), true);
+  // Exactly one league_members read feeds memberIds, and it is the filtered one.
+  assertEquals(hook.match(/\.select\('user_id'\)/g)?.length, 1);
+});
+
 Deno.test('a hidden league comes off Your leagues (source guard)', () => {
   assertEquals(SOURCES['lib/LeagueContext.tsx'].includes(".eq('user_id', userId)\n      .is('hidden_at', null);"), true);
 });
