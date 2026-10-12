@@ -52,6 +52,18 @@ building anything, and don't reopen a rule without him.
       the 1.1.0 matchup look is a reference for what to keep.
     - His summary: "these are just some elements that really stuck out of just like, this is
       not how it's supposed to look. from a UI's perspective."
+  - **The Matchup page is a fantasy-football matchup** (2026-10-12, also told to the
+    Orchestrator directly): "the matchup page needs to look like the matchup pages from
+    fantasy football apps, like an ESPN, like a Yahoo, like a sleeper, where it lists your
+    stocks as if they are like a football roster, obviously without the positions, because
+    that's not a thing, but it lists them like that and it shows their performance and it
+    stacks them up so that you can see which maybe stocks are like how your stock is
+    comparing to the other player's stock. We can maybe figure out a way to in, in what
+    order that we list them like later on, but the matchup page should be one of the
+    simpler ones. It should be just our themes, our take on that kind of fantasy football
+    style matchup window." So: a scoreboard header, then a mirrored two-column roster (your
+    stocks left, theirs right, row by row, each row's week performance shown), no position
+    labels; the row ORDER is an open decision for later; keep the page simple.
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",

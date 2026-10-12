@@ -45,10 +45,18 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
   the tint), record, season gain with sign, movement arrow, and rows that read as a league
   table on game night (Sleeper/ESPN's standings density, Robinhood's tabular numerals).
   No bare grid lines; row separation by surface and rhythm.
-- **Matchup** is a head-to-head scoreboard first: the Sleeper/ESPN header shape (two scores,
-  avatars at the edges, win-% chips and bars, record and status under each), the lead bar,
-  then the mirrored lineup. The 1.1.0 matchup screen is pulled up as a reference frame on
-  the board ("what the last one got right") beside the new direction.
+- **Matchup** is a fantasy-football matchup page (Giorgio, 2026-10-12, verbatim in
+  `PRODUCT_RULES.md`): a head-to-head scoreboard first (the Sleeper/ESPN header shape: two
+  scores, avatars at the edges, win-% chips and bars, record and status under each, the lead
+  bar), then **a mirrored two-column roster**: your stocks down the left, theirs down the
+  right, row by row, each row showing that stock's week performance (gain with sign, and
+  the price line in green/red), **no position labels** ("obviously without the positions,
+  because that's not a thing"). The middle column, where Sleeper puts the position pill,
+  carries nothing or at most the tier/category pill (the board shows both; Giorgio picks).
+  "The matchup page should be one of the simpler ones": no extra modules; the scoreboard
+  and the roster are the page. **Row order is an open decision for later** (see Open
+  questions). The 1.1.0 matchup screen is pulled up as a reference frame on the board
+  ("what the last one got right") beside the new direction.
 - **Stock rows** (holdings, search results, watchlist): ticker + name, price, change with a
   sign, a sparkline (Robinhood), the tier/category pill (Sleeper's position colour), and
   the row tinted by outcome where there is one (ESPN).
@@ -70,7 +78,15 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 
 ## Open questions
 
-None blocking the board work. Two for Giorgio when he picks a direction:
+None blocking the board work. Three for Giorgio when he picks a direction:
+
+0. **Matchup roster row order** ("we can maybe figure out a way … later on"). The board
+   shows the Matchup frame with one default and names the alternatives as a "Your call"
+   strip: (a) **by week gain, best first on each side** (recommended: the top of the page
+   is the story of the week); (b) draft order (pick 1 at the top, the roster as drafted);
+   (c) by position size (largest holding first); (d) paired head-to-head, your best vs
+   their best, so each row is a mini-matchup. Rows never re-sort live during the day
+   (the §4 "no reorder on live update" principle); the order is fixed at the Monday open.
 
 1. **Release target.** 1.2.0 is out. The reset lands as **1.3** unless Giorgio wants a 1.2.x
    with Home + Matchup only. Recommendation: 1.3, every screen, so the app never mixes two
