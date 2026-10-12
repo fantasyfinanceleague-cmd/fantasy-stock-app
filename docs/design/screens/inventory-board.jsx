@@ -77,7 +77,7 @@
         <Group id="join-league" code="1.2.0" name="Join a league" job="A new player has an invite code: find the league, see what it is, join it. Replaces the legacy join-league screen. All copy here is new."
           notes={[
             'Reached from "Join with code" in Your leagues, the empty Home and Get started. One field, one button: "Find league" looks the code up (preview-league); nothing is joined until the preview\'s Join button.',
-            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, commissioner, managers (count, not faces), draft time, stakes, season length.',
+            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, managers (count, not faces), draft time, stakes, season length. No commissioner name before joining (Giorgio, 2026-10-11, #call-join-commissioner A).',
             'Every refusal keeps the league on screen when the server found it, so the reason names the league. A bad code is the only error under the field.',
             <>Refusals not framed, same Alert card under the preview: <b>invite_expired</b> "This invite has expired. Ask your commissioner for a new code." · <b>season_completed</b> "{'{League}'}'s season is over. Ask your commissioner whether they're running it back." · <b>no connection</b> "Couldn't reach the league. Check your connection, then try again." (under the field).</>,
             <>Backend: the stakes line needs the per-slot amount from preview-league, not just stake_mode. (A manager who leaves before the draft is deleted and rejoins with the code; nobody leaves after the draft, so there is no "left this season" case.)</>,

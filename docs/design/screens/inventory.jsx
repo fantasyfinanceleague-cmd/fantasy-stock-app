@@ -2488,11 +2488,12 @@
     );
   }
   /** The league preview. block: null (joinable) | 'full' | 'drafted' | 'member'. */
+  // No commissioner name before joining (Giorgio, 2026-10-11, #call-join-commissioner A).
   function JoinPreview({ block = null }) {
     const P = PREVIEW;
     const members = block === 'full' ? P.max : P.members;
     const msg = {
-      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask ${P.commish} if they can make room.`,
+      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask your commissioner if they can make room.`,
       drafted: `${P.name} has already drafted, so it can't take new managers this season.`,
       member: `You're already in ${P.name}.`,
     }[block];
@@ -2503,7 +2504,6 @@
           <div style={{ display: 'grid', gap: 4 }}>
             <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Invite code SERIEA7</span>
             <h2 className="ks-head__title" style={{ fontSize: 30 }}>{P.name}</h2>
-            <span className="ks-callout ks-muted">Run by {P.commish}</span>
           </div>
           <Card><Sum rows={[
             ['Managers', `${members} of ${P.max}`],
