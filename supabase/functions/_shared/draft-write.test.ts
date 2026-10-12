@@ -194,11 +194,12 @@ Deno.test('manual pick in an ODD round pushes the next picker the draft_turn cop
   assertEquals(push.sent.length, 1);
   assertEquals(push.sent[0].token, 'tok-B');
   // The copy is the shared builder's, with the league name from the leagues row.
-  assertEquals(push.sent[0].msg, draftTurnMessage(LEAGUE_NAME));
+  assertEquals(push.sent[0].msg, draftTurnMessage(LEAGUE_NAME, 'L1', 2));
+  // The data carries the app's once-per-turn key: the league and the turn's pick (B's pick 2).
   assertEquals(push.sent[0].msg, {
     title: "It's Your Turn! 🏈",
     body: 'Time to make your pick in Moon League',
-    data: { type: 'draft_turn', screen: 'draft' },
+    data: { type: 'draft_turn', screen: 'draft', league_id: 'L1', pick_number: 2 },
   });
   assertEquals(admin.calls.includes('rpc.finalize_league_draft'), false);
 });
@@ -352,7 +353,7 @@ Deno.test('an AUTO-pick (expired clock) also pushes the next picker', async () =
   assertEquals(res.complete, false);
   assertEquals(push.lookups, ['C']);
   assertEquals(push.sent.map((s) => s.token), ['tok-C']);
-  assertEquals(push.sent[0].msg, draftTurnMessage(LEAGUE_NAME));
+  assertEquals(push.sent[0].msg, draftTurnMessage(LEAGUE_NAME, 'L1', 3));
 });
 
 Deno.test('an AUTO-pick that ends the draft pushes nobody', async () => {
