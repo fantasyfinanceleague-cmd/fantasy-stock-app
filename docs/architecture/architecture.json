@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a5939f33d11bc20c98e073c944954a8e1a3800cb",
-    "commitShort": "a5939f33",
+    "commit": "917c7c3b3043e0ca9dc881b35a3c6eb46b82ddd6",
+    "commitShort": "917c7c3b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T02:03:20Z",
-    "sourceHash": "sha256:f360fd7f0faa1ea383e418d13c9b946a4a5f1a8e5f7a879dc21a979f950eaa7d",
+    "timestamp": "2026-10-12T03:10:15Z",
+    "sourceHash": "sha256:40dfe40965cbfa0922bb9ab6586c22ec46cdb624e4bad704eec1d146d5d2e026",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 102.4,
+    "ageHours": 103.5,
     "ageDays": 4.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -5513,10 +5513,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261110000000_transfer_commissioner.sql:117"
+          "supabase/migrations/20261110000000_transfer_commissioner.sql:117",
+          "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:51"
         ],
-        "latestDefinition": "supabase/migrations/20261110000000_transfer_commissioner.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -5526,8 +5527,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
-        "line": 117
+        "path": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
+        "line": 51
       }
     },
     {
@@ -14599,7 +14600,8 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:141"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:141",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:75"
       ]
     },
     {
@@ -14613,7 +14615,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:151",
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:153"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:153",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:86",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:88"
       ]
     },
     {
@@ -14626,7 +14630,8 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:156"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:156",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:91"
       ]
     },
     {
@@ -14639,7 +14644,8 @@
       "payload": "SELECT league_roster_reconfirm (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:163"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:163",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:98"
       ]
     },
     {
@@ -14652,7 +14658,8 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:128"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:128",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:62"
       ]
     },
     {
@@ -14665,7 +14672,8 @@
       "payload": "UPDATE leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:147"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:147",
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:82"
       ]
     },
     {
@@ -15863,7 +15871,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('leave-league')",
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:44"
+        "apps/mobile/lib/game/useLeaveLeague.ts:47"
       ],
       "via": [
         "seamInvoke"
@@ -15897,8 +15905,8 @@
         "user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:30",
-        "apps/mobile/lib/game/useLeaveLeague.ts:57"
+        "apps/mobile/lib/game/useLeaveLeague.ts:33",
+        "apps/mobile/lib/game/useLeaveLeague.ts:60"
       ]
     },
     {
@@ -19671,7 +19679,7 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
-      "apps/mobile/lib/game/useLeaveLeague.ts:44 -> leave-league (via seamInvoke)",
+      "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
       "apps/mobile/lib/home/useHomeLeague.ts:600 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:617 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
@@ -19821,8 +19829,8 @@
       "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",
       "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
       "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:30 -> league_members.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:57 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:33 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:60 -> league_members.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
@@ -20174,7 +20182,9 @@
       "20261118000000_get_visible_profiles.sql",
       "20261118000001_user_profiles_self_only.sql",
       "20261119000000_frozen_leaver_names.sql",
-      "20261119000001_frozen_leaver_names_callers.sql"
+      "20261119000001_frozen_leaver_names_callers.sql",
+      "20261120000000_transfer_commissioner_refuses_hidden.sql",
+      "20261120000001_league_members_insert_self_not_hidden.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
