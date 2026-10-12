@@ -258,6 +258,7 @@ building anything, and don't reopen a rule without him.
   - The draft can't be set while replies are pending.
   - Newcomers can join by code and aren't blocked by Season 1's team count.
   - It's always a NEW draft (no keepers), and settings carry over.
+  - Ships switched ON in 1.2.0 (Giorgio, 2026-10-11: "run it back on 1.2.0 ON").
 
 ## How decisions get made
 

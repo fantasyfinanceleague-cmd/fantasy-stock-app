@@ -14,7 +14,8 @@
       "channel": "preview",
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://haiaaifjcclsvmkfqgmd.supabase.co"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://haiaaifjcclsvmkfqgmd.supabase.co",
+        "EXPO_PUBLIC_RUN_IT_BACK": "1"
       }
     },
     "production": {
@@ -22,7 +23,8 @@
       "channel": "production",
       "environment": "production",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://haiaaifjcclsvmkfqgmd.supabase.co"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://haiaaifjcclsvmkfqgmd.supabase.co",
+        "EXPO_PUBLIC_RUN_IT_BACK": "1"
       }
     }
   },
