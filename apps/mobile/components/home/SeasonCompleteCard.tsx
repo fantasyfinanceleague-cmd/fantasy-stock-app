@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
-import { Button } from '@/components/sp/Button';
+import { ListRow } from '@/components/sp/ListRow';
 import { Money } from '@/components/sp/Money';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
@@ -38,6 +38,11 @@ import { seasonCompletePlace } from '@/lib/game/finalStandings';
 // errors or returns a non-'complete' status (a league whose current
 // season predates #77, or genuinely inconsistent data) -- never a
 // half-filled tile mixing the two sources.
+//
+// A calm Home (2026-10-12): ONE card. The medallion block (a 60pt disc), a hairline,
+// the tiles, a hairline, then "See the final standings" as a row with a chevron. No
+// filled button: Run it back (commissioner) or the ask (member) is the screen's only
+// primary (lib/home/calmHome seasonOverPrimary).
 
 export interface SeasonCompleteCardProps {
   leagueId: string;
@@ -145,16 +150,17 @@ export function SeasonCompleteCard({
   const core = coreCompleteTiles(seasonGain, finalRank, standingsCount, record);
 
   return (
-    <>
-      <Card style={styles.medallionCard}>
+    <Card style={styles.card}>
         {/* S8 (Design Lead, 2026-09-30): gold is a CHAMPION signal --
             a non-champion (2nd/3rd place) gets a neutral medallion, no
             live-gold wash or circle, so the color itself never implies
             a win that didn't happen. */}
-        {isChampion ? <LinearGradient colors={[colors.liveGlow, 'transparent']} style={styles.wash} pointerEvents="none" /> : null}
-        {/* The medallion draws its own disc (§9B): 36 pt glyph in a 72 pt disc, scaled with Dynamic Type. */}
+        {/* The champion's gold wash fades out by the card's middle. */}
+        {isChampion ? <LinearGradient colors={[colors.liveGlow, 'transparent']} locations={[0, 0.5]} style={styles.wash} pointerEvents="none" /> : null}
+        <View style={styles.medallionBlock}>
+        {/* The medallion draws its own disc (§9B): a 30 pt glyph in a 60 pt disc, scaled with Dynamic Type. */}
         <Animated.View style={trophyStyle}>
-          <Icon name="trophy" size="medallion" tone="surface" discTone={isChampion ? 'live' : 'text2'} />
+          <Icon name="trophy" size="medallion" tone="surface" discTone={isChampion ? 'live' : 'text2'} discPt={60} />
         </Animated.View>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {SEASON_COMPLETE_TITLE}
@@ -180,10 +186,11 @@ export function SeasonCompleteCard({
             <Text variant="callout">{championAnnounceLine(leagueName)}</Text>
           </>
         )}
-      </Card>
+        </View>
 
       {participated ? (
-        <Card style={styles.tilesCard}>
+        <>
+          <View style={[styles.hairline, { backgroundColor: colors.line }]} />
           <View style={styles.tilesGrid}>
             <View style={styles.tile}>
               <Text variant="caption" tone="secondary">{core.seasonGainTitle}</Text>
@@ -212,42 +219,39 @@ export function SeasonCompleteCard({
               </View>
             ) : null}
           </View>
-        </Card>
+        </>
       ) : null}
 
-      <Button label={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} variant="primary" />
+      <View style={[styles.hairline, { backgroundColor: colors.line }]} />
+      <ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} divider={false} />
       {/* B4 (Design Lead gate, 2026-10-05): no "Start next season" here. The
        * start_new_league_season path is revoked, so a button for it is dead;
-       * the "Run it back?" card (3c) owns this slot. */}
-    </>
+       * the "Run it back?" card (3c) owns the primary. */}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  medallionCard: {
-    padding: space[6],
-    gap: space[2],
+  card: {
+    paddingTop: space[6],
+    paddingHorizontal: space[6],
+    paddingBottom: space[2],
+    gap: space[5],
     borderRadius: 14,
-    alignItems: 'center',
     overflow: 'hidden',
+  },
+  medallionBlock: {
+    gap: space[2],
+    alignItems: 'center',
+  },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
   },
   wash: {
     ...StyleSheet.absoluteFillObject,
   },
-  trophyCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headline: {
     textAlign: 'center',
-  },
-  tilesCard: {
-    padding: space[6],
-    gap: space[4],
-    borderRadius: 14,
   },
   tilesGrid: {
     flexDirection: 'row',

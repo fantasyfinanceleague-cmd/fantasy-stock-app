@@ -123,7 +123,10 @@ Deno.test('the commissioner never sees the ask (they have RunItBackCard); no Sea
 Deno.test("Home mounts it next to RunItBackCard, for members only; I'm out re-reads in place, I'm in opens Season 2 (source guards)", () => {
   const home = SOURCES2['app/(tabs)/index.tsx'];
   // Behind Run it back's kill switch (run-it-back-gate.test.ts) since F4a.
-  assertEquals(home.includes('{RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? ('), true);
+  // A calm Home (2026-10-12): the gate is seasonOverPrimary (one primary on the screen),
+  // fed the kill switch; the member's ask needs the successor league too.
+  assertEquals(home.includes('runItBackOn: RUN_IT_BACK_ON,'), true);
+  assertEquals(home.includes("{primary === 'renewal_ask' && league?.successor_league_id ? ("), true);
   assertEquals(home.includes('<HomeRenewalAsk'), true);
   const ask = SOURCES2['components/game/HomeRenewalAsk.tsx'];
   assertEquals(ask.includes("if (afterAskAnswer(response) === 'reread') {\n      setKey((k) => k + 1);"), true);

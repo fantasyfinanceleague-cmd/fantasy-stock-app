@@ -19,6 +19,15 @@ Deno.test('the segment label is capped like the tab bar label (source guard)', (
 Deno.test('every segmented control in the app is the one sp SegmentedControl (so one cap covers them)', () => {
   for (const [path, src] of Object.entries(SOURCES)) {
     if (path === 'components/sp/SegmentedControl.tsx' || path === 'components/shell/ShellTabBar.tsx') continue;
+    // A calm Home (2026-10-12): Home's range is text tabs by the spec, not a segmented
+    // control; they carry the same 1.3x cap themselves (pinned below).
+    if (path === 'components/home/HomeSeason.tsx') continue;
     assert(!src.includes('accessibilityRole="tablist"'), `${path} rolls its own segmented control`);
   }
+});
+
+Deno.test("Home's text range tabs carry the segmented labels' cap (1.3x)", () => {
+  const tabs = SOURCES['components/home/HomeSeason.tsx'];
+  assert(tabs.includes('maxFontSizeMultiplier={RANGE_TAB_MAX_FONT_SCALE}'));
+  assert(SOURCES['lib/home/weekMarks.ts'].includes('export const RANGE_TAB_MAX_FONT_SCALE = 1.3;'));
 });

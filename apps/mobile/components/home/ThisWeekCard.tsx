@@ -2,9 +2,12 @@
 import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
+import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
@@ -15,7 +18,8 @@ import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Skeleton } from '@/components/Skeleton';
 import { scoreTone } from '@/lib/home/scoreTone';
-import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip, thisWeekAccessibilityLabel, SCORING_MESSAGE, sideUnpricedCaption } from '@/lib/home/homeCopy';
+import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, LIVE_CHIP, thisWeekAccessibilityLabel, SCORING_MESSAGE, sideUnpricedCaption } from '@/lib/home/homeCopy';
+import { THIS_WEEK_HREF, OPENS_MATCHUP_HINT } from '@/lib/home/calmHome';
 
 // Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
 // `<Card variant="scoreboard">` — every "game surface" now looks like this
@@ -31,6 +35,10 @@ import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, thisWeekLiveChip,
 // (TugBar's own useLeadChangeSpring `lively`); a leader change crossfades
 // the lead line (via a simple key-based remount + Card's own layout) and
 // this component fades a one-shot accent wash on that same change.
+//
+// A calm Home (2026-10-12): the scores are score.md (28pt) in every state, so team
+// value stays the ONE standout number; the chip reads "Live"; a chevron follows it and
+// the whole card opens Matchup, in every state it shows.
 
 export interface ThisWeekCardProps {
   week: number;
@@ -114,17 +122,26 @@ export function ThisWeekCard({
   const washStyle = useAnimatedStyle(() => ({ opacity: washOpacity.value }));
 
   return (
-    <Card variant="scoreboard" style={styles.card} accessible accessibilityLabel={a11yLabel}>
+    <PressableScale
+      onPress={() => router.push(THIS_WEEK_HREF)}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint={OPENS_MATCHUP_HINT}
+    >
+    <Card variant="scoreboard" style={styles.card}>
       <Animated.View style={[styles.wash, { backgroundColor: colors.accentWash }, washStyle]} pointerEvents="none" />
       <View style={styles.header}>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {tag ?? THIS_WEEK_TAG}
         </Text>
-        <View style={[styles.chip, { backgroundColor: colors.inset }]}>
-          {isLive ? <LiveDot size={7} /> : null}
-          <Text variant="tag" style={{ color: isLive ? colors.liveText : colors.text2 }}>
-            {liveChipLabel ?? thisWeekLiveChip(week)}
-          </Text>
+        <View style={styles.headerRight}>
+          <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+            {isLive ? <LiveDot size={7} /> : null}
+            <Text variant="tag" style={{ color: isLive ? colors.liveText : colors.text2 }}>
+              {liveChipLabel ?? LIVE_CHIP}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.text2} />
         </View>
       </View>
 
@@ -143,19 +160,19 @@ export function ThisWeekCard({
       {scoring ? (
         <View style={styles.scoresRow}>
           <View style={styles.scoreCell}>
-            <Skeleton width="70%" height={38} />
+            <Skeleton width="70%" height={28} />
           </View>
           <View style={[styles.scoreCell, styles.scoreCellRight]}>
-            <Skeleton width="70%" height={38} />
+            <Skeleton width="70%" height={28} />
           </View>
         </View>
       ) : (
         <View style={styles.scoresRow}>
           <View style={styles.scoreCell}>
-            <ScoreDigits text={youText} variant="score.lg" color={preSeason || scoreTone(you.gain, 'you') === 'zero' ? colors.zero : colors.youText} />
+            <ScoreDigits text={youText} variant="score.md" color={preSeason || scoreTone(you.gain, 'you') === 'zero' ? colors.zero : colors.youText} />
           </View>
           <View style={[styles.scoreCell, styles.scoreCellRight]}>
-            <ScoreDigits text={oppText} variant="score.lg" color={preSeason || scoreTone(opponent.gain, 'opp') === 'zero' ? colors.zero : colors.oppText} />
+            <ScoreDigits text={oppText} variant="score.md" color={preSeason || scoreTone(opponent.gain, 'opp') === 'zero' ? colors.zero : colors.oppText} />
           </View>
         </View>
       )}
@@ -193,6 +210,7 @@ export function ThisWeekCard({
         </Text>
       ) : null}
     </Card>
+    </PressableScale>
   );
 }
 
@@ -206,6 +224,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
   },
   chip: {
     flexDirection: 'row',

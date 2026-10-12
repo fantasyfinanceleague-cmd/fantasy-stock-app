@@ -7,7 +7,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeProvider';
 import type { ThemeColors } from '@/constants/tokens/color';
-import { ICON_GLYPHS, iconAccessibility, iconPointSize, medallionDiscPt, type IconName, type IconRole } from './logic/icon';
+import { ICON_GLYPHS, iconAccessibility, iconPointSize, medallionDiscPt, medallionGlyphPt, type IconName, type IconRole } from './logic/icon';
 
 export interface IconProps {
   name: IconName;
@@ -19,9 +19,11 @@ export interface IconProps {
   discTone?: keyof ThemeColors;
   /** Makes the icon accessible; an icon-only control must have one. */
   label?: string;
+  /** The medallion's disc at standard size (default 72; the glyph stays half of it). */
+  discPt?: number;
 }
 
-export function Icon({ name, size, tone, discTone = 'text2', label }: IconProps) {
+export function Icon({ name, size, tone, discTone = 'text2', label, discPt }: IconProps) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const a11y = iconAccessibility(label);
@@ -38,7 +40,7 @@ export function Icon({ name, size, tone, discTone = 'text2', label }: IconProps)
   );
   if (size !== 'medallion') return glyph;
   // The medallion: a glyph in a disc, the disc scaled with the glyph (§9B).
-  const disc = medallionDiscPt(fontScale);
+  const disc = medallionDiscPt(fontScale, discPt);
   return (
     <View
       accessible={a11y.accessible}
@@ -48,7 +50,7 @@ export function Icon({ name, size, tone, discTone = 'text2', label }: IconProps)
     >
       <Ionicons
         name={ICON_GLYPHS[name] as React.ComponentProps<typeof Ionicons>['name']}
-        size={iconPointSize('medallion', fontScale)}
+        size={medallionGlyphPt(fontScale, discPt)}
         color={colors[tone ?? 'surface']}
       />
     </View>

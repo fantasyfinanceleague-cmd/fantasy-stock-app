@@ -2,27 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "580bc33934791b14a8577cc2e971a97d2866d93d",
-    "commitShort": "580bc339",
+    "commit": "ddab31f0f9c4daeb7771596da39f53d07a0d13cc",
+    "commitShort": "ddab31f0",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "docs/db-snapshot-2026-10-12",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      }
-    ],
-    "timestamp": "2026-10-12T03:50:33Z",
-    "sourceHash": "sha256:45522f67da5f12370248e51b3f471ca29060de4a533ec15d10bcfe3ed69199d3",
+    "branch": "feat/calm-home",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-12T06:18:31Z",
+    "sourceHash": "sha256:dbd85587554a63a073dd1a5790987bfbb72561f8e19370eb5349ee26028d0626",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 2.5,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -16666,7 +16661,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:116"
+        "apps/mobile/app/(tabs)/league.tsx:127"
       ],
       "via": [
         "seamRpc"
@@ -19655,7 +19650,7 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:116 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/league.tsx:127 -> renew_league (via seamRpc)",
       "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:39 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
