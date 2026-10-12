@@ -421,28 +421,28 @@
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">1.2.0</span>
             <div>
-              <h2 id="call-leaver-names-h">Your call: managers who left, in past seasons</h2>
-              <p className="b-job">Your rule (2026-10-08): "i can only see other names and avatars of other users im in a leauge with ... or any info about users not in their league." And your leaving rule (2026-10-06): after the season, leaving hides the league for that player, and history is kept. Leaving is only possible before the draft (no record yet) or after the season, so someone who left only ever shows up in a finished season. Stock Scudetto, Season 1; Andrea P. left after it.</p>
+              <h2 id="call-leaver-names-h">Decided: managers who left, in past seasons</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-11): A, with frozen names.</b> Someone who left stays named (name and avatar) in the seasons they played, exactly as they were when they left; a later rename or new avatar never reaches their old leaguemates. No visual marker: it looks exactly like A. Your rule (2026-10-08): "i can only see other names and avatars of other users im in a leauge with ... or any info about users not in their league." And your leaving rule (2026-10-06): after the season, leaving hides the league for that player, and history is kept. Leaving is only possible before the draft (no record yet) or after the season, so someone who left only ever shows up in a finished season. Stock Scudetto, Season 1; Andrea P. left after it.</p>
             </div>
           </header>
-          <h3 className="b-sub">★ A · They stay named in the seasons they played</h3>
+          <h3 className="b-sub">✓ A · They stay named in the seasons they played, frozen (chosen)</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · History, Season 1" note="Andrea P. keeps their name and avatar in the season they played, as ESPN and Sleeper show past owners. Nothing new about them is shown: no profile, no current leagues."><I.LeaverHistory v="A" /></Fit>
-            <Fit caption="★ A · A past matchup" note="Week 3 against Andrea P. reads as it did."><I.LeaverMatchup v="A" /></Fit>
+            <Fit caption="✓ A · History, Season 1 (chosen)" note="Andrea P. keeps their name and avatar in the season they played, as ESPN and Sleeper show past owners. Nothing new about them is shown: no profile, no current leagues."><I.LeaverHistory v="A" /></Fit>
+            <Fit caption="✓ A · A past matchup (chosen)" note="Week 3 against Andrea P. reads as it did."><I.LeaverMatchup v="A" /></Fit>
           </div>
-          <h3 className="b-sub">B · Once they leave, they're "Former manager"</h3>
+          <h3 className="b-sub">B · Once they leave, they're "Former manager" (not chosen)</h3>
           <div className="b-concepts b-concepts--three">
-            <Fit caption="B · History, Season 1" note={'NEW copy: "Former manager", with an empty avatar, in standings, History, past matchups and the draft board.'}><I.LeaverHistory v="B" /></Fit>
-            <Fit caption="B · A past matchup" note={'"Roberto B. won by $250.50" against "Former manager".'}><I.LeaverMatchup v="B" /></Fit>
-            <Fit caption="B · What it breaks" note={'On Paolo M.\'s phone, after three people left (Roberto B., Alessandro D., Andrea P.): "Champion Former manager", and three rows nobody can tell apart.'}><I.LeaverHistory v="B" me="paolo" gone={['roberto', 'alessandro', 'andrea']} /></Fit>
+            <Fit caption="B · History, Season 1 (not chosen)" note={'NEW copy: "Former manager", with an empty avatar, in standings, History, past matchups and the draft board.'}><I.LeaverHistory v="B" /></Fit>
+            <Fit caption="B · A past matchup (not chosen)" note={'"Roberto B. won by $250.50" against "Former manager".'}><I.LeaverMatchup v="B" /></Fit>
+            <Fit caption="B · What it breaks (not chosen)" note={'On Paolo M.\'s phone, after three people left (Roberto B., Alessandro D., Andrea P.): "Champion Former manager", and three rows nobody can tell apart.'}><I.LeaverHistory v="B" me="paolo" gone={['roberto', 'alessandro', 'andrea']} /></Fit>
           </div>
           <div className="b-ask">
-            <h3>Your call · recommend A</h3>
+            <h3>Decided: A, with frozen names (Giorgio, 2026-10-11)</h3>
             <ul>
               <li><b>You already ruled that history is kept</b> when someone leaves after the season. A record of who won and who lost that week, with nobody's name on it, isn't really kept.</li>
               <li><b>B empties the record people care about.</b> A champion who moves on becomes "Champion Former manager"; two or three leavers turn into identical rows; and anyone who looks back at an old season (a newcomer, or you a year later) can no longer tell who they played.</li>
               <li><b>A stays inside your rule's spirit:</b> only the name and avatar, only where they played with you, nothing else (no profile, no other leagues).</li>
-              <li><b>One refinement, your call:</b> today the app shows a leaver's CURRENT name, so if they rename later, their old leaguemates see the new one. We can instead freeze the name as it was when they left, so nothing about them after they left ever reaches you. Recommended with A.</li>
+              <li><b>The refinement, chosen:</b> today the app shows a leaver's CURRENT name, so if they rename later, their old leaguemates see the new one. We can instead freeze the name as it was when they left, so nothing about them after they left ever reaches you. Chosen with A, with no visual marker.</li>
             </ul>
           </div>
         </section>
