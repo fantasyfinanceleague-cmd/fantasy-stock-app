@@ -1079,3 +1079,151 @@ UI-UX-PROGRAM.md, "Block rhythm, measured".
   scroll view and a second pull-to-refresh inside the first. Render the placeholder in place of
   `BarsRefresh`, not inside it.
 
+
+## Build spec · a calmer Home (decided A, 2026-10-12)
+
+**Decision:** Giorgio chose A, "same content, calmer", for every state as drawn (board
+`#call-calm-home`, branch `design/call-calm-home`). The board frames are the visual truth; this
+spec gives the exact changes. **No new copy anywhere.** Every string below already exists in the
+app. Files: `app/(tabs)/index.tsx`, `app/(tabs)/league.tsx` (one param), `components/home/*`,
+`lib/home/homeCopy.ts` (one label function).
+
+### Must NOT change
+
+- The hero: team value is the big number (`score.xl`, RollingMoney); the sub-line stays exactly
+  "+$X · +Y% season gain · +$Z today" (`HERO_SEASON_GAIN_LABEL`, `HERO_TODAY_LABEL`), and so do the
+  meta ("2nd of 6 · 4–1 · Week 6 of 14") and the unpriced caption.
+- The chart still plots **season gain, week by week** (`buildSeasonGainSeries`, `windowSeries`):
+  the zero line, the gain and loss fills, the live dot while the market is open, the H2 draw-in
+  (first open only, `skipEntrance`), S-5 (it updates in place on a poll), the scrub and its haptics.
+- A bye is never green or red (Giorgio, 2026-09-29). Dollars decide. The phase logic, data hooks,
+  `PhaseMessageCard` states (bye, playoff bye, eliminated, missed playoffs) and the drafting state
+  (`DraftingCard`) are unchanged.
+- Every chip except the live one ("Market closed", "Scoring…", "Final", the pre-season chip,
+  "Postponed").
+
+### All states
+
+- **Block gap 24pt:** `HomeLeagueTransition`'s `style={{ gap: space[7] }}` in `index.tsx` (was
+  `space[6]`, PR #217).
+
+### In season (live open/closed, scoring, scored, playoffs, bye weeks, eliminated)
+
+1. **The Season card leaves Home.** `index.tsx` no longer renders `SeasonCard`. Its contents move
+   into the hero block: `HomeHero` (unchanged), then the chart, then the range tabs, stacked with
+   `gap: space[3]` (8pt). They show on the same condition as today's card (`season &&
+   phase.kind !== 'pre_season'`). Pre-season stays hero only. The "Season" title and "Season gain,
+   week by week" caption are not shown on Home (the hero line above already says "season gain").
+   Keep the constants if anything else imports them.
+2. **The chart is 124pt tall.** `SeasonChart` takes a `height` prop (default 148; Home passes
+   124). The 124 includes the axis-mark row at the bottom, where the week ticks already sit.
+3. **Axis W/L marks replace the week chips.** These show only in the Season window, the one that
+   has week ticks. Make it a pure function (`weekMarks(points, weekStartIdx, results, width)` →
+   `{x, glyph, tone}[]`) and unit-test it.
+   - **Placement:** one mark per week, centred under the week's span (its start index to the next
+     week's start, or to the last point). Font: caption 12pt, ExtraBold (800),
+     `maxFontSizeMultiplier` 1.3.
+   - **Glyphs and colours:** "W" in `gain`, "L" in `loss`, "T" in `text2`. A bye is "Bye" in
+     `text2`, or "–" in `text2` when its slot is under 26pt, never coloured. The live week (market
+     open) gets a 6pt `live` dot instead of a letter. A scored current week shows its letter.
+   - **Playoffs:** playoff weeks use the same letters. A 1pt `borderStrong` vertical hairline goes
+     before the first playoff week's slot.
+   - **No overlaps:** marks never overlap or wrap. Add a test with 14 regular weeks + 4 playoff
+     weeks at 350pt.
+   - **Scrub:** the scrubbed week's mark gets a 2pt `accent` underline (this replaces the chip
+     highlight).
+   - **Scrub label:** a playoff week's scrub label names its round ("Wild card", "Semifinals",
+     "Final", via `playoffRoundLabelForWeek`), never "Week 15". This is the B7 rule the chips
+     carried, now carried by `seasonScrubLabel`.
+   - **Accessibility:** the chart's label lists the results: "Season gain: +$343.59. Weeks: W, W, L,
+     W, W, Week 6 live." Bye weeks read "bye".
+4. **Range tabs replace `SegmentedControl`.** "1W · 1M · Season" (same labels, same window logic)
+   as right-aligned text tabs under the chart, callout 13pt.
+   - **Selected:** `text` colour, weight 800, 2pt `text`-colour underline.
+   - **Others:** `text2`, weight 600.
+   - **Spacing and hit area:** about 18pt apart, each hit area ≥ 44×44.
+   - **Accessibility:** `accessibilityRole="tab"` with the selected state.
+5. **This week card (`ThisWeekCard`).**
+   - **Scores:** `score.lg` → `score.md` (28pt) in every state (live, closed, scoring, scored,
+     pre-season, playoff pending). Both sides keep one shared fit (R-1).
+   - **Inner gap:** `space[3]` (8pt).
+   - **Live chip:** in the live-open state it reads "Live" (`PLAYOFF_LIVE_CHIP`; rename it
+     `LIVE_CHIP`), not "Week N · Live". The week stays in the hero meta. `thisWeekChrome` in
+     `index.tsx` passes it.
+   - **Tap:** a `chevron-forward` (Ionicons 16, `text2`) follows the chip. The whole card is a
+     `PressableScale` → `router.push('/(tabs)/matchup')`, `accessibilityRole="button"`, hint "Opens
+     Matchup". This applies in every state the card shows.
+6. **Standings card (`StandingsCard`).**
+   - **Header:** "Standings" left; right, the "Through Week N" caption then the same chevron.
+   - **Tap:** the whole card is a `PressableScale` →
+     `router.push({ pathname: '/(tabs)/league', params: { segment: 'standings' } })`.
+   - **League side:** `league.tsx` reads `segment` with `useLocalSearchParams` and selects it, the
+     way Matchup reads `segment: 'all'`. That way it lands on Standings even if League was left on
+     Schedule.
+   - **Rows:** unchanged.
+
+### Before the draft (`PreDraftCard`)
+
+- **Chip:** remove the "Pre-draft" chip (`PRE_DRAFT_CHIP`). Keep the "Draft" tag. Keep the chip
+  when it reads "Postponed".
+- **Order (countdown state):**
+  - tag
+  - the countdown (`score.lg` → `score.xl`, 56pt, the screen's one big number)
+  - the date (`dateLabel`, `title` → `callout` weight 700)
+  - `pickClockLine`
+  - `orderSetLine` (plain secondary callout; drop the dot)
+  - the button(s) (Set draft time / Build your queue logic unchanged)
+- **No-buying line:** `NO_BUYING_BEFORE_DRAFT` leaves its own card. It becomes a centred `caption`
+  (`text2`) directly under the primary button, inside the draft card, still hidden while waiting
+  for managers.
+- **Unchanged:** the no-date, room-open, starting, postponed and waiting sub-states, the Members
+  card, `AutoStartBlockers` and `RenewalCountsCard`.
+
+### Season over (`SeasonCompleteCard`, `RunItBackCard`, `HomeRenewalAsk`)
+
+- **One card:** the medallion card and the tiles card merge, in this order:
+  - the medallion block (disc 72 → 60pt; tag, headline and line unchanged; the champion's gold
+    wash stays, fading out by the card's middle)
+  - a hairline (`line`)
+  - the tiles grid (unchanged)
+  - a hairline
+  - a `ListRow` "See the final standings" with its chevron → `router.push('/(tabs)/league')`
+- **No filled button:** the filled "See the final standings" `Button` is removed.
+- **Variants:** the runner-up/neutral-disc variant takes the same structure. When there are no
+  tiles (honest minimum), it's the medallion block, a hairline, then the row.
+- **One primary:** `RunItBackCard` (commissioner) and `HomeRenewalAsk` (member) are unchanged. They
+  are now the screen's only primary.
+
+### The fold on the iPhone 17e
+
+- **The risk:** on the 17 Pro (402×874) the in-season Home fits the first screen. The 17e is
+  30pt shorter, so the Standings card's last row (or your pinned row, when you're 4th or lower)
+  can sit at or under the fold.
+- **The ruling: accept it.** Do NOT compress anything to win it back: not the chart below 124pt,
+  not the gap below 24pt, not the type. Your rank is already on the first screen in the hero meta
+  ("2nd of 6"), and Standings is a second look that is one tap from League.
+- **What IS a finding:**
+  - the This week card cut by the fold on either phone at Large text;
+  - anything above Standings needing a scroll on the 17 Pro.
+
+### Captures for the gate
+
+17e and 17 Pro, Light, Large text unless noted. A Dark spot-check of 1, 4 and 9 on the 17e.
+Measure the block gap in every capture: 24pt.
+
+1. `live_open`: top (both phones), with where the fold falls.
+2. `live_closed`, `scoring`, `scored` (won and lost), `pre_season` (no chart), `bye`, `eliminated`.
+3. `playoff_live`: 7+ week marks, the playoff hairline, the round name on scrub.
+4. XL text (`accessibility-extra-large`) on `live_open`: marks don't collide, range tabs fit,
+   28pt scores fit; plus XXXL sanity (F1).
+5. `xl_million`: the hero value and the 28pt scores fit.
+6. Recording: scrub across weeks (label, mark underline, haptic ticks); then Season → 1W → 1M
+   (marks only in Season).
+7. Recording: tap This week → Matchup; leave League on Schedule, go Home, tap Standings → League
+   on Standings.
+8. `pre_draft` (with a draft time; and commissioner with no time → Set draft time primary),
+   `pre_draft_waiting`, the renewed Season 2 pre-draft (`leagues-renewal`, commissioner).
+9. `complete` (champion, commissioner + Run it back), `complete_runner_up`, member with the ask
+   pending, member out (the GS-14 chip).
+10. `drafting_on_clock` (unchanged apart from the gap).
+11. Reduce Motion: open Home (the chart appears drawn; tabs swap instantly).

@@ -457,8 +457,8 @@
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.2.1</span>
           <div>
-            <h2 id="call-calm-home-h">Your call: a calmer Home</h2>
-            <p className="b-job"><b>Giorgio on 1.2.0, 2026-10-12:</b> "this UI on the home screen is awful. section bubbles are touching, it feels clunky, and there is too much going on". The touching sections were a bug (the gap sat on a wrapper that held one child), fixed by PR #217 and drawn fixed below. The rest is design: four equal cards, three big numbers fighting for attention, the same facts said two or three times, a control inside a card, and nothing to tap. Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone. Every frame shows the whole scroll; the dashed line is where the first screen ends. Use the Theme switch for Dark.</p>
+            <h2 id="call-calm-home-h">Decided: a calmer Home (A)</h2>
+            <p className="b-job"><b>Decided by Giorgio (2026-10-12): A, same content, calmer, in every state as drawn (in season, before the draft, season over).</b> Build spec: ux-audit-2026-10.md, "Build spec · a calmer Home". <b>Giorgio on 1.2.0, 2026-10-12:</b> "this UI on the home screen is awful. section bubbles are touching, it feels clunky, and there is too much going on". The touching sections were a bug (the gap sat on a wrapper that held one child), fixed by PR #217 and drawn fixed below. The rest is design: four equal cards, three big numbers fighting for attention, the same facts said two or three times, a control inside a card, and nothing to tap. Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone. Every frame shows the whole scroll; the dashed line is where the first screen ends. Use the Theme switch for Dark.</p>
           </div>
         </header>
 
@@ -473,29 +473,29 @@
         <CountTable />
         <div className="b-concepts b-concepts--three">
           <FitFull caption="Today · 1.2.0 with the gap fixed" note="Hero, This week, Season, Standings: four blocks of equal weight. Three condensed numbers (the value and two 40pt scores in blue and orange) compete for the eye. The Season card adds a title, a caption, a chart, six chips and a segmented control. Standings starts below the fold."><Today /></FitFull>
-          <FitFull caption="★ A · Same content, calmer" note="The chart joins the hero, with no card, title or chips (the Robinhood pattern: the number, then its line). The week results are W/L marks on the axis, and the range is text tabs. The This week scores drop to 28pt, so the value is the one standout. Two quiet cards, both tappable. The gap is 24pt. It all fits on the first screen."><OptionA /></FitFull>
-          <FitFull caption="B · Fewer things on Home" note="Hero, This week, Standings, and nothing else; it all fits on the first screen. The season chart and the week-by-week results move to League › Standings (next frame). The cards are the same as A's."><OptionB /></FitFull>
-          <FitFull caption="B · where the chart goes: League › Standings" note="The same Season card as today's Home, above the table. Under B it's one tap from Home's Standings card."><OptionBLeague /></FitFull>
+          <FitFull caption="✓ A · Same content, calmer (chosen)" note="The chart joins the hero, with no card, title or chips (the Robinhood pattern: the number, then its line). The week results are W/L marks on the axis, and the range is text tabs. The This week scores drop to 28pt, so the value is the one standout. Two quiet cards, both tappable. The gap is 24pt. It all fits on the first screen."><OptionA /></FitFull>
+          <FitFull caption="B · Fewer things on Home (not chosen)" note="Hero, This week, Standings, and nothing else; it all fits on the first screen. The season chart and the week-by-week results move to League › Standings (next frame). The cards are the same as A's."><OptionB /></FitFull>
+          <FitFull caption="B · where the chart goes: League › Standings (not chosen)" note="The same Season card as today's Home, above the table. Under B it's one tap from Home's Standings card."><OptionBLeague /></FitFull>
         </div>
 
         <h3 className="b-sub">Before the draft · calmer under A or B alike</h3>
         <div className="b-concepts b-concepts--three">
           <FitFull caption="Before the draft · today" note="Three cards. The tag and the chip both say draft; the date (title size) outranks the countdown's meaning; the no-buying note is a card of its own."><PreDraftToday /></FitFull>
-          <FitFull caption="Before the draft · calmer" note={'Rule 6: the question is "when is the draft?", so the countdown is the big number and the date sits under it. The "Pre-draft" chip goes (the tag says Draft). The no-buying line moves under the button it explains. Two cards, no new copy.'}><PreDraftCalm /></FitFull>
+          <FitFull caption="✓ Before the draft · calmer (chosen)" note={'Rule 6: the question is "when is the draft?", so the countdown is the big number and the date sits under it. The "Pre-draft" chip goes (the tag says Draft). The no-buying line moves under the button it explains. Two cards, no new copy.'}><PreDraftCalm /></FitFull>
         </div>
 
         <h3 className="b-sub">Season over, with Run it back · today, A, B</h3>
         <div className="b-concepts b-concepts--three">
           <FitFull caption="Today · commissioner" note="Four blocks and two filled primary buttons (See the final standings, Run it back); rule 2 allows one. The medal card and the tiles card say one thing in two cards."><CompleteToday /></FitFull>
-          <FitFull caption="★ A · commissioner" note="The medal and the season's four numbers are one card; See the final standings is a row inside it. Run it back is the only primary. Two blocks."><CompleteA /></FitFull>
-          <FitFull caption="★ A · member" note="Same card; the I'm in / I'm out ask (unchanged) in Run it back's place, with I'm in the one primary."><CompleteA member /></FitFull>
-          <FitFull caption="B · commissioner" note="The result shrinks to one tappable line (it opens the final standings); the action leads. The four numbers move to the final standings (next frame)."><CompleteB /></FitFull>
-          <FitFull caption="B · member" note="The same line, then the ask."><CompleteB member /></FitFull>
-          <FitFull caption="B · where the numbers go: the final standings" note="Season gain, best week, regular season and playoffs above the medal-ordered table (League)."><CompleteBLeague /></FitFull>
+          <FitFull caption="✓ A · commissioner (chosen)" note="The medal and the season's four numbers are one card; See the final standings is a row inside it. Run it back is the only primary. Two blocks."><CompleteA /></FitFull>
+          <FitFull caption="✓ A · member (chosen)" note="Same card; the I'm in / I'm out ask (unchanged) in Run it back's place, with I'm in the one primary."><CompleteA member /></FitFull>
+          <FitFull caption="B · commissioner (not chosen)" note="The result shrinks to one tappable line (it opens the final standings); the action leads. The four numbers move to the final standings (next frame)."><CompleteB /></FitFull>
+          <FitFull caption="B · member (not chosen)" note="The same line, then the ask."><CompleteB member /></FitFull>
+          <FitFull caption="B · where the numbers go: the final standings (not chosen)" note="Season gain, best week, regular season and playoffs above the medal-ordered table (League)."><CompleteBLeague /></FitFull>
         </div>
 
         <div className="b-ask">
-          <h3>Design Lead recommends A</h3>
+          <h3>Decided: A (Giorgio, 2026-10-12). The Design Lead's recommendation, kept for the record:</h3>
           <ul>
             <li><b>Why A:</b> what made 1.2.0 feel clunky was not how much Home knows; it was four cards of equal weight, three big numbers, every fact said twice, and a dashboard you can't tap. A fixes all of that and keeps the chart, which is your own call (D1) and the one thing on Home that tells the season's story. Merging it into the hero is how Robinhood does it: the number, then its line.</li>
             <li><b>Why not B (yet):</b> B is the calmest Home, but it reopens "The Home chart plots season gain, week by week", and it sends the season's shape to a tab you visit less. If A still feels busy on your phone, B is a one-step follow-up: the A cards are the same.</li>
