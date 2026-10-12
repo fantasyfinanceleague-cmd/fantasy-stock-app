@@ -15,7 +15,7 @@ import { buildChartGeometry, partialLinePath } from '@/lib/chart/chartGeometry';
 import { useChartScrub } from '@/lib/chart/useChartScrub';
 import { useDrawIn } from '@/lib/chart/useDrawIn';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
-import { weekMarks, MARK_MAX_FONT_SCALE, LIVE_MARK_SIZE, PIP_SIZE, type WeekMarkInput, type WeekMarkTone } from '@/lib/home/weekMarks';
+import { weekMarks, MARK_MAX_FONT_SCALE, LIVE_MARK_SIZE, PIP_SIZE, PIP_RING_STROKE, type WeekMark, type WeekMarkInput, type WeekMarkTone } from '@/lib/home/weekMarks';
 
 // Height the scrub label needs at the top edge (S1): a point above this line
 // flips its label below the point.
@@ -167,9 +167,9 @@ export function SeasonChart({
               // RN Text (not SVG) so the marks follow Dynamic Type, capped at 1.3x. A wide,
               // centred box: the glyph is centred on the mark's x whatever its true width.
               <View key={m.week} pointerEvents="none" style={[styles.mark, { left: m.x - MARK_BOX / 2, top: tickTop + 2 }]}>
-                {m.glyph === 'live' || m.glyph === 'pip' ? (
+                {m.glyph === 'live' || m.glyph === 'pipDot' || m.glyph === 'pipRing' || m.glyph === 'pipDash' ? (
                   <View style={styles.markRow}>
-                    <View style={{ width: m.w, height: m.w, borderRadius: m.w / 2, backgroundColor: toneColor(m.tone) }} />
+                    <View style={shapeStyle(m, toneColor(m.tone))} />
                   </View>
                 ) : (
                   <Text variant="caption" maxFontSizeMultiplier={MARK_MAX_FONT_SCALE} numberOfLines={1} style={[styles.markText, { color: toneColor(m.tone) }]}>
@@ -206,6 +206,13 @@ export function SeasonChart({
       ) : null}
     </View>
   );
+}
+
+/** A shape mark: the live dot, or a dense season's dot / ring / dash (never colour alone). */
+function shapeStyle(m: WeekMark, color: string) {
+  if (m.glyph === 'pipRing') return { width: m.w, height: m.w, borderRadius: m.w / 2, borderWidth: PIP_RING_STROKE, borderColor: color };
+  if (m.glyph === 'pipDash') return { width: m.w, height: 2, borderRadius: 1, backgroundColor: color };
+  return { width: m.w, height: m.w, borderRadius: m.w / 2, backgroundColor: color };
 }
 
 // The box each axis mark is centred in (wider than any glyph, even "Bye" at 1.3x).

@@ -7,7 +7,8 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   weekMarks, regularWeekSlots, layoutWeekMarks, marksCollide, regularMarkResults, resultFromGains, seasonChartA11yLabel,
-  rangeTabLook, rangeTabHitSlop, marksShownFor, chartLiveEnd, glyphWidth, RANGE_TABS, MIN_HIT, BYE_MIN_SLOT, MARK_MAX_FONT_SCALE,
+  rangeTabLook, rangeTabHitSlop, marksShownFor, chartLiveEnd, glyphWidth, pipFor, RANGE_TABS, MIN_HIT, BYE_MIN_SLOT, MARK_MAX_FONT_SCALE,
+  PIP_SIZE, PIP_RING_STROKE,
   type WeekMarkInput,
 } from '../lib/home/weekMarks.ts';
 import { buildSeasonGainSeries, type SeasonWeekInput } from '../lib/home/seasonGainSeries.ts';
@@ -86,13 +87,48 @@ Deno.test('the live week (market open) is a 6pt live dot; a closed or scoring we
   assertEquals(closed.length, 5);
 });
 
-Deno.test('past what the width can hold side by side, letters become pips in their colours, still never overlapping', () => {
-  const { series, geo } = season(40, 350);
-  const results = Array.from({ length: 40 }, (_, i) => W(i + 1, i % 2 ? 'L' : 'W'));
+// ── Dense seasons: shapes, never colour alone (Design Lead, 2026-10-12; §9B) ───
+
+const allW = (n: number) => Array.from({ length: n }, (_, i) => W(i + 1, 'W' as const));
+
+Deno.test('the switch point: letters while they fit side by side (23 W at 350pt), shapes from the next week on', () => {
+  for (const [n, expectLetters] of [[23, true], [24, false]] as const) {
+    const { series, geo } = season(n, 350);
+    const marks = weekMarks(geo.points, series.weekStartIdx, allW(n), 350);
+    assertEquals(marks.every((m) => m.glyph === 'W'), expectLetters, `${n} weeks`);
+    assertEquals(marks.every((m) => m.glyph === 'pipDot'), !expectLetters, `${n} weeks`);
+    assertEquals(marksCollide(marks, 350), false);
+  }
+  // The rule is the row's width, so capped text switches sooner (18 fit at 1.3x, 19 don't).
+  for (const [n, expectLetters] of [[18, true], [19, false]] as const) {
+    const { series, geo } = season(n, 350);
+    assertEquals(weekMarks(geo.points, series.weekStartIdx, allW(n), 350, 1.3).every((m) => m.glyph === 'W'), expectLetters, `${n} at 1.3x`);
+  }
+});
+
+Deno.test('each dense-season shape: W a filled gain dot, L a hollow loss ring, T a filled text2 dot, a bye a text2 dash; 5pt each', () => {
+  assertEquals([pipFor('W'), pipFor('L'), pipFor('T'), pipFor('Bye'), pipFor('–'), pipFor('live')], ['pipDot', 'pipRing', 'pipDot', 'pipDash', 'pipDash', 'live']);
+  const kinds = ['W', 'L', 'T', 'BYE'] as const;
+  const results = [...Array.from({ length: 39 }, (_, i) => W(i + 1, kinds[i % 4])), W(40, 'LIVE')];
+  const { series, geo } = season(39, 350, { liveDays: 2 });
   const marks = weekMarks(geo.points, series.weekStartIdx, results, 350, 1.3);
-  assert(marks.every((m) => m.glyph === 'pip'));
-  assertEquals(marks.slice(0, 2).map((m) => m.tone), ['gain', 'loss']);
+  assertEquals(marks.slice(0, 4).map((m) => [m.glyph, m.tone, m.w]), [
+    ['pipDot', 'gain', 5], ['pipRing', 'loss', 5], ['pipDot', 'text2', 5], ['pipDash', 'text2', 5],
+  ]);
+  // A bye's dash is never green or red; the live week keeps its 6pt live dot.
+  assert(marks.filter((m) => m.glyph === 'pipDash').every((m) => m.tone === 'text2'));
+  assertEquals([marks[39].glyph, marks[39].w], ['live', 6]);
   assertEquals(marksCollide(marks, 350), false);
+  // The scrub and a11y labels still name each week (they read the results, not the shapes).
+  assert(seasonChartA11yLabel(10, results).startsWith('Season gain: +$10.00. Weeks: W, L, T, bye, W'));
+});
+
+Deno.test('the shapes are drawn as shapes: a 1.5pt ring for a loss, a short dash for a bye (source guard)', () => {
+  assertEquals([PIP_SIZE, PIP_RING_STROKE], [5, 1.5]);
+  const chart = SOURCES['components/home/SeasonChart.tsx'];
+  assert(chart.includes("if (m.glyph === 'pipRing') return { width: m.w, height: m.w, borderRadius: m.w / 2, borderWidth: PIP_RING_STROKE, borderColor: color };"));
+  assert(chart.includes("if (m.glyph === 'pipDash') return { width: m.w, height: 2, borderRadius: 1, backgroundColor: color };"));
+  assert(chart.includes('<View style={shapeStyle(m, toneColor(m.tone))} />'));
 });
 
 Deno.test('the mark font never scales past 1.3x', () => {
@@ -110,8 +146,8 @@ Deno.test('18 regular weeks at 350pt: letters only, never overlapping, at standa
     const marks = weekMarks(geo.points, series.weekStartIdx, results, 350, scale);
     assertEquals(marks.length, 18);
     assertEquals(marksCollide(marks, 350), false, `collide at ${scale}x`);
-    // No letter is reduced to a pip; the byes read "–" (their slots are under 26pt).
-    assert(marks.every((m) => m.glyph !== 'pip'), `a pip at ${scale}x`);
+    // No letter is reduced to a shape; the byes read "–" (their slots are under 26pt).
+    assert(marks.every((m) => !m.glyph.startsWith('pip')), `a shape at ${scale}x`);
     assert(marks.filter((_, i) => i % 4 === 3).every((m) => m.glyph === '–'));
   }
 });

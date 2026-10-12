@@ -30,7 +30,9 @@ export interface WeekMarkInput {
   result: WeekMarkResult | null;
 }
 
-export type WeekMarkGlyph = 'W' | 'L' | 'T' | 'Bye' | '–' | 'live' | 'pip';
+/** `pipDot`/`pipRing`/`pipDash`: the dense-season shapes (W a filled gain dot, L a hollow
+ * loss ring, T a filled text2 dot, a bye a short text2 dash), never colour alone (§9B). */
+export type WeekMarkGlyph = 'W' | 'L' | 'T' | 'Bye' | '–' | 'live' | 'pipDot' | 'pipRing' | 'pipDash';
 export type WeekMarkTone = 'gain' | 'loss' | 'text2' | 'live';
 
 export interface WeekMark {
@@ -55,10 +57,13 @@ export const MARK_MAX_FONT_SCALE = 1.3;
 export const BYE_MIN_SLOT = 26;
 /** The live week's dot. */
 export const LIVE_MARK_SIZE = 6;
-/** When the letters can't all fit across the chart side by side, every letter becomes a
- * 4pt pip in its own colour (only past ~23 weeks at 350pt, beyond any season the spec
- * draws), so marks still never overlap. */
-export const PIP_SIZE = 4;
+/** When the marks can't all fit across the chart side by side as text, every week becomes
+ * a 5pt shape (only past ~23 weeks at 350pt, beyond any season the spec draws), so marks
+ * still never overlap. The shape, not just its colour, carries the result (Design Lead,
+ * 2026-10-12, DESIGN_DIRECTION §9B): see pipFor. */
+export const PIP_SIZE = 5;
+/** The loss ring's stroke. */
+export const PIP_RING_STROKE = 1.5;
 /** The least air between two marks. */
 export const MARK_GAP = 2;
 
@@ -67,7 +72,7 @@ const GLYPH_WIDTH_12: Record<'W' | 'L' | 'T' | 'Bye' | '–', number> = { W: 13,
 
 export function glyphWidth(glyph: WeekMarkGlyph, fontScale = 1): number {
   if (glyph === 'live') return LIVE_MARK_SIZE;
-  if (glyph === 'pip') return PIP_SIZE;
+  if (glyph === 'pipDot' || glyph === 'pipRing' || glyph === 'pipDash') return PIP_SIZE;
   return GLYPH_WIDTH_12[glyph] * Math.min(Math.max(fontScale, 1), MARK_MAX_FONT_SCALE);
 }
 
@@ -99,7 +104,17 @@ function pick(result: WeekMarkResult, slotWidth: number, fontScale: number): { g
   return { glyph: result, tone };
 }
 
-function rowWidth(marks: WeekMark[]): number {
+/** The dense-season shape for a text mark: W and T filled dots (gain, text2), L a hollow
+ * loss ring, a bye a short dash (text2, never green or red). The live dot is unchanged. */
+export function pipFor(glyph: WeekMarkGlyph): WeekMarkGlyph {
+  if (glyph === 'W' || glyph === 'T') return 'pipDot';
+  if (glyph === 'L') return 'pipRing';
+  if (glyph === 'Bye' || glyph === '–') return 'pipDash';
+  return glyph;
+}
+
+/** The width the marks need side by side, with MARK_GAP between them. */
+export function rowWidth(marks: { w: number }[]): number {
   return marks.reduce((sum, m) => sum + m.w, 0) + MARK_GAP * Math.max(0, marks.length - 1);
 }
 
@@ -117,13 +132,11 @@ export function layoutWeekMarks(weeks: WeekMarkInput[], slots: WeekSlot[], width
     const { glyph, tone } = pick(wk.result, slot.end - slot.start, fontScale);
     marks.push({ week: wk.week, x: (slot.start + slot.end) / 2, w: glyphWidth(glyph, fontScale), glyph, tone });
   }
-  // Too many letters for the width: pips, never an overlap.
+  // Too many marks for the width as text: every week a 5pt shape, never an overlap.
   if (rowWidth(marks) > width) {
     for (const m of marks) {
-      if (m.glyph === 'W' || m.glyph === 'L' || m.glyph === 'T') {
-        m.glyph = 'pip';
-        m.w = PIP_SIZE;
-      }
+      m.glyph = pipFor(m.glyph);
+      m.w = glyphWidth(m.glyph, fontScale);
     }
   }
   // Inside the chart's own edges.
