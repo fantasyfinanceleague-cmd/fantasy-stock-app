@@ -9,7 +9,7 @@ Replace the app's visual language, not its structure. 1.2.0 shipped the right sk
 (one standout per screen, sections that breathe, the UX rulebook) with a bland skin:
 grey cards, hairlines, a thin teal line for a chart. Giorgio's bar is the feeling of
 opening Sleeper or ESPN on game night and Robinhood on a green day. This plan gets three
-fully rendered directions in front of him (Home, Matchup, Draft room; dark first), lets him
+fully rendered directions in front of him (Home, Matchup, Draft room; Light and Dark together), lets him
 pick by seeing, then rebuilds the screens to the chosen direction with every gate judged
 against the real reference apps side by side.
 
@@ -69,7 +69,7 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 |---|---|---|---|
 | 1 | Design tool | Sleek rejected (bland result; paid plan); design on the board, built in Claude Code | Planner chat, 2026-10-12 |
 | 2 | What the references are and what we take | `docs/design/REFERENCES.md`: Sleeper **fantasy side only** (flat deep navy + cyan, the matchup header with win-% bars, mirrored lineup with a colour-coded middle column, colour-coded draft tiles, "YOUR TURN" pill; Giorgio: the picks/betting screenshots "arent as relevant to us"), ESPN (scoreboard header, row tints, dense tables), Yahoo (invites, "your turn", warmth), Robinhood (number + chrome-less line as hero, one meaningful accent, range pills, sparklines), E*TRADE (key-figures list, tabular numbers) | Planner chat, 2026-10-12 |
-| 3 | Theme order | **Dark first**; Light designed second from the same system; the System / Light / Dark setting stays | AskUserQuestion, 2026-10-12 |
+| 3 | Theme order | ~~Dark first~~ **Both themes together, neither first** (Giorgio, 2026-10-12, overruling the morning's "dark first": "it doesn't matter what mode you're in, it's going to be built for either"). Every board frame, token, screen and gate in Light AND Dark; nothing approved in one theme without the other; the System / Light / Dark setting stays | Giorgio, 2026-10-12 (revised) |
 | 4 | First screens | **Home (in season) + Matchup (live and final) + Draft room**, each in all three directions, so a *system* is judged, not a screen | AskUserQuestion, 2026-10-12 |
 | 5 | Who draws | A **fresh "Design Lead" session with a handoff note** from the current one (Giorgio: "2, fresh design lead with a handoff"). Reason: skills load at session start, so the paused Design Lead cannot invoke Hallmark; a fresh one also carries no memory of the quiet-and-grey vocabulary. The Orchestrator relays; it stays as is | Giorgio, 2026-10-12 (revised from "resume") |
 | 6 | How screens are judged from now on | Against a reference screenshot side by side on the board and in every gate ("reference check"); adjectives never decide | `PRODUCT_RULES.md`, 2026-10-12 |
@@ -98,12 +98,12 @@ None blocking the board work. Two for Giorgio when he picks a direction (the row
 
 **In:**
 - `REFERENCES.md` (done) and the ruling (done).
-- The board: three directions × three screens, dark, each next to its reference, with a
+- The board: three directions × three screens, each in Light AND Dark, each next to its reference, with a
   recommendation. A fourth frame per direction shows the money treatment (Portfolio hero)
   so the brokerage half is judged too.
-- The chosen direction's **token spec v3** (dark first): surfaces (gradient/glow or black),
-  the display type, the accent system (team colour vs money colour), tiles, row tints,
-  chart style; then Light from the same roles.
+- The chosen direction's **token spec v3**, both themes at once: the same roles with a Light
+  and a Dark value each (surfaces, the display type, the accent system (team colour vs
+  money colour), tiles, row tints, chart style); the contrast PAIRS check runs on both.
 - Rebuilding the screens to it, in order: Home → Matchup → Draft room → League → Portfolio
   and the stock sheet → the watchlist/claims surfaces (when built) → onboarding/invites.
 - The gate: a "reference check" step and the rule that the squint test runs against the
@@ -140,7 +140,7 @@ content sits in the same order (the calm-Home ruling); it just stops being grey.
    the five references"), which the three directions and the token spec build on.
    `REFERENCES.md` stays the human-readable record; `design.md` is the machine-readable one.
 1. **Board, "Your call: direction"** (Design Lead; brief below). Three directions, each
-   rendered for Home, Matchup, Draft room and a Portfolio hero, dark, with real data from
+   rendered for Home, Matchup, Draft room and a Portfolio hero, in Light AND Dark, with real data from
    `docs/design/screens/data.js`, each frame beside the reference screenshot it borrows
    from, with the trait named. The Design Lead recommends one. Giorgio picks on the board.
 2. **Token spec v3** (Design Lead → `DESIGN_DIRECTION.md` new §9C, superseding §9/§9A):
@@ -157,8 +157,10 @@ content sits in the same order (the calm-Home ruling); it just stops being grey.
    Matchup (live/final/reveal), Draft room + lobby, League (standings/schedule/history),
    Portfolio + stock sheet + search, onboarding/invite/join, then the watchlist/claims
    surfaces when their plan builds.
-5. **Light theme**: after the dark screens are approved, the same roles in Light, judged
-   against E*TRADE/Yahoo light surfaces; no screen mixes.
+5. **Both themes at every step** (Giorgio, 2026-10-12): there is no "Light pass". Every
+   primitive, screen and gate ships Light and Dark together; a screen is DESIGN-APPROVED only
+   with both captured. Light is judged against E*TRADE/Yahoo light surfaces, Dark against
+   Sleeper/ESPN/Robinhood; no screen mixes.
 6. **Gate change** (`UI-UX-PROGRAM.md`): step (3) squint test is run against the reference
    screenshot named for that screen; a new step "reference check" lists, per screen, the
    reference and the borrowed traits present/absent; the `ux-reviewer` adds a row
@@ -192,7 +194,7 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
     pills and emphasis; the number and the chrome-less line as every hero; sparklines on
     rows; game screens get the scoreboard but in the same minimal chrome; Sleeper's energy
     only in type scale and avatars.
-- **Per direction, five frames, dark:** Home in season (the calm-Home structure: pill +
+- **Per direction, five frames, each in Light AND Dark (ten renders):** Home in season (the calm-Home structure: pill +
   status, hero + change line, chart, This week card, Standings card, tab bar); Matchup live
   (scoreboard header + two lineups) and the Final reveal state; Draft room on the clock
   ("YOUR TURN · 0:42", the board, the queue strip); **League › Standings in full** (the
@@ -228,8 +230,9 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
 - **Token churn across live branches.** The watchlist/claims work (approved plan) and any
   P2 follow-ups build on the current tokens; the primitives worker lands first, and
   screens rebase on it, so no screen is built twice.
-- **Light theme lag.** Light comes second; until it lands, Light users see the old skin.
-  Acceptable for a 1.3 cut only if both ship together; the plan's done-means requires both.
+- **Two themes, one effort.** Designing both at once roughly doubles the frames and the
+  captures per gate; the trade is deliberate (Giorgio's ruling) and removes the risk of a
+  Light user ever seeing a half-skinned app. Gates reject a branch that captures one theme.
 - **The Sleek key.** `~/.sleek_api_key` and `~/.agents/skills/sleek-design-mobile-apps`
   remain on Giorgio's machine; harmless, free tier; removable on request.
 
@@ -244,7 +247,7 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
       rate with the new surfaces.
 - [ ] Every key screen rebuilt and DESIGN-APPROVED with a reference check; `ux-reviewer`
       row "resembles its reference" present in each gate.
-- [ ] Light theme approved; no screen mixes skins.
+- [ ] Every screen approved in Light AND Dark (both captured at its gate); no screen mixes skins.
 - [ ] Dead-controls audit (W8) complete: `tappables.md` on main, the static check green, the simulator pass recorded, zero silent no-ops.
 - [ ] Giorgio's check by hand, on his phone, Dark then Light: Home in season, Matchup live,
       the draft room on his turn, Portfolio. His word is the acceptance: it either makes him
@@ -260,10 +263,10 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
 | W2 | Giorgio picks; Planner records; token spec v3 (§9C) + contrast PAIRS | W1 | Design Lead, Planner |
 | W3 | Primitives + tokens + charts rebuilt; device frame-rate check | W2 | mobile worker |
 | W4 | Screens in order (Home → Matchup → Draft → League → Portfolio/sheet → onboarding); one gate each with the reference check | W3 | mobile workers (2 in parallel max) |
-| W5 | Light theme from the same roles; gates | W4 | mobile worker, Design Lead |
+| W5 | ~~Light theme~~ (folded into W2–W4: both themes at every step) | — | — |
 | W6 | Gate template + `ux-reviewer` "reference check" row; `UI-UX-PROGRAM.md` | W2 | Orchestrator (docs), Giorgio (`.claude/agents/ux-reviewer.md` edit by hand) |
-| W7 | 1.3 cut: Giorgio's device check, EAS build | W4, W5 | Giorgio |
-| W8 | **Dead-controls audit** (Giorgio, 2026-10-12: "we can't have buttons that don't do anything, links that don't do anything"): (1) an inventory of every tappable element in `apps/mobile` (Pressable, TouchableOpacity, Button, Link, `sp.*` buttons, list rows with `onPress`, tab items, header actions) with its handler and destination, generated by a script in `scripts/` and committed as `docs/design/reviews/tappables.md`; (2) a static check that fails on a no-op handler (`() => {}`, `undefined`, `noop`, TODO) outside `design-gallery.tsx`, wired into `npm run lint` or a Deno test; (3) a simulator pass per screen and state (phase, open/closed market, empty states) tapping everything, recorded; (4) every finding fixed as "does its job" or "not shown / disabled with the reason" (the rule), never left; (5) the `ux-reviewer` checklist gains "every tappable element acts" as a standing row. Runs after W4+W5 and before the 1.3 cut. | W4, W5 | mobile worker (Sonnet after an Opus plan turn); `ux-reviewer`; Giorgio taps through on his phone |
+| W7 | 1.3 cut: Giorgio's device check in BOTH themes, EAS build | W4 | Giorgio |
+| W8 | **Dead-controls audit** (Giorgio, 2026-10-12: "we can't have buttons that don't do anything, links that don't do anything"): (1) an inventory of every tappable element in `apps/mobile` (Pressable, TouchableOpacity, Button, Link, `sp.*` buttons, list rows with `onPress`, tab items, header actions) with its handler and destination, generated by a script in `scripts/` and committed as `docs/design/reviews/tappables.md`; (2) a static check that fails on a no-op handler (`() => {}`, `undefined`, `noop`, TODO) outside `design-gallery.tsx`, wired into `npm run lint` or a Deno test; (3) a simulator pass per screen and state (phase, open/closed market, empty states) tapping everything, recorded; (4) every finding fixed as "does its job" or "not shown / disabled with the reason" (the rule), never left; (5) the `ux-reviewer` checklist gains "every tappable element acts" as a standing row. Runs after W4 (Light and Dark built together; there is no separate Light pass) and before the 1.3 cut. | W4 | mobile worker (Sonnet after an Opus plan turn); `ux-reviewer`; Giorgio taps through on his phone |
 
 ## Models
 
@@ -275,6 +278,5 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
 | W2 token spec | Design Lead on Opus; contrast script runs are mechanical (Haiku worker) | Judgement vs mechanical |
 | W3 primitives | Worker turn 1 on Opus (gradient/perf design), then Sonnet | The performance trade-offs need judgement; the token plumbing doesn't |
 | W4 screens | Turn 1 on Opus, then Sonnet; **Opus for the gate** (Design Lead) | Well-specified from the board; the gate is judgement |
-| W5 Light | Sonnet after an Opus plan turn | Role mapping is specified by then |
 | `ux-reviewer` | Sonnet | Checklist |
 | Recon | Haiku | Read-only |
