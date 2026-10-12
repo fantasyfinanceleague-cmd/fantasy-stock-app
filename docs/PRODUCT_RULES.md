@@ -21,6 +21,23 @@ building anything, and don't reopen a rule without him.
 - **The bar** (2026-09-27): judge UI against Apple / Stripe / Linear (web) and Robinhood /
   Sleeper / Revolut / Arc (mobile). Correctness, honesty, tokens and reduced motion are
   table stakes, not the goal.
+- **Captivating, not bland** (2026-10-12, after seeing 1.2.0 and a Sleek trial of Home):
+  "everything I'm seeing is just so bland. It's not creative. It's not inspiring. It's,
+  you know, you're not opening up an app and being like, wow. You're opening up an app and
+  just seeing bland charts and bland everything. I want something that is captivating,
+  something that is creative. I want to emulate other fantasy football apps and and make
+  that bridge between them and investing apps. I want to create a, a kind of a, a blend
+  between a, a, a sleeper and ESPN fantasy football with a Robin Hood or... Another sort of
+  app like that. That's what I want." "Even the chart, like that's such an ugly chart."
+  - The references, his list: fantasy = **Sleeper, ESPN Fantasy Football, Yahoo Fantasy
+    Football**; investing = **Robinhood, E*TRADE**. What each does on screen and what we
+    take is in [`design/REFERENCES.md`](design/REFERENCES.md).
+  - Every direction and every screen is judged against those references side by side on the
+    board, never against adjectives. "Calm" governs structure (one standout, room to
+    breathe, UX rules 4–7); it never governs the visual language.
+  - **Sleek (sleek.design) is rejected** for this app: "let's maybe not use Sleek, especially
+    if it's going to charge us. Let's just maybe try to figure this out just in Claude Code."
+    Design happens on the board, built here.
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",
