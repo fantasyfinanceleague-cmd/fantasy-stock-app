@@ -44,6 +44,7 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 | 5 | Who draws | The **Design Lead resumes**, briefed with `REFERENCES.md` and this plan; the Orchestrator relays | AskUserQuestion, 2026-10-12 |
 | 6 | How screens are judged from now on | Against a reference screenshot side by side on the board and in every gate ("reference check"); adjectives never decide | `PRODUCT_RULES.md`, 2026-10-12 |
 | 7 | The three directions and the winner | To Giorgio as "Your call: direction" (brief below) | pending |
+| 8 | Hallmark (github.com/nutlope/hallmark, MIT, pure markdown) | **Adopted as a tool for the Design Lead, never as the designer** (Giorgio, 2026-10-12): (a) `hallmark study` on the five reference screens first, producing a DNA diagnosis + `design.md` the token spec builds on (its gate 57 then forbids drifting back to a generic theme); (b) its slop gates and six disciplines adopted into our gate via an adopt/adapt/skip table, like impeccable; (c) `hallmark audit` on every board frame before Giorgio sees it, beside the `ux-reviewer`. Installed at `~/.agents/skills/hallmark`; `.hallmark/` gitignored. Its own web themes and page machinery are not used | Planner chat, 2026-10-12 |
 
 ## Open questions
 
@@ -92,6 +93,15 @@ content sits in the same order (the calm-Home ruling); it just stops being grey.
 
 ### The system's side
 
+0. **Hallmark `study` pass** (Design Lead, before any frame is drawn). Run `hallmark study`
+   on, in order: Sleeper's matchup view, Sleeper's mobile draft board, ESPN's matchup
+   scoreboard, Robinhood's portfolio screen, E*TRADE's account header (the screenshots
+   linked in `REFERENCES.md`; public references for our own product, so emission is
+   allowed). Each yields a diagnosis (surface lightness band, accent hue + chroma,
+   type-pairing roles, density, motion, rhythm, and the two anti-patterns NOT to carry).
+   The Design Lead merges them into one `docs/design/design.md` ("studied-DNA, source:
+   the five references"), which the three directions and the token spec build on.
+   `REFERENCES.md` stays the human-readable record; `design.md` is the machine-readable one.
 1. **Board, "Your call: direction"** (Design Lead; brief below). Three directions, each
    rendered for Home, Matchup, Draft room and a Portfolio hero, dark, with real data from
    `docs/design/screens/data.js`, each frame beside the reference screenshot it borrows
@@ -115,7 +125,15 @@ content sits in the same order (the calm-Home ruling); it just stops being grey.
 6. **Gate change** (`UI-UX-PROGRAM.md`): step (3) squint test is run against the reference
    screenshot named for that screen; a new step "reference check" lists, per screen, the
    reference and the borrowed traits present/absent; the `ux-reviewer` adds a row
-   "resembles its reference?" with evidence.
+   "resembles its reference?" with evidence. Plus, from Hallmark: (a) every board frame
+   gets a `hallmark audit` punch list before Giorgio sees it (read-only, HTML); (b) the
+   Design Lead writes `docs/design/reviews/hallmark-notes.md`, an adopt/adapt/skip table
+   over its 58 gates and six disciplines (the impeccable pattern), and the adopted ones
+   join the gate: at least the pre-emit self-critique scores, tinted neutrals (no
+   zero-chroma greys), accent-by-area, section rhythm variety, decoration-with-purpose,
+   honest copy, locked tokens, no italic headers. Hallmark's page/web machinery
+   (macrostructures, nav/footer archetypes, its 21 themes, responsive-web gates) is
+   skipped; §9B stays the native authority.
 
 ### The board brief: "Your call: direction" (W1)
 
@@ -195,7 +213,8 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
 | # | Workstream | Depends on | Who |
 |---|---|---|---|
 | W0 | Push this branch (+ the two earlier unpushed ones, with Giorgio's go); docs PR | Giorgio's go | Orchestrator |
-| W1 | "Your call: direction" board: 3 × 4 frames beside references; recommendation | W0 | Design Lead (resumed) |
+| W0b | Hallmark `study` on the five reference screens → `docs/design/design.md` (studied DNA); `hallmark-notes.md` adopt/adapt/skip table | W0 | Design Lead (resumed) |
+| W1 | "Your call: direction" board: 3 × 4 frames beside references, each frame `hallmark audit`-ed; recommendation | W0b | Design Lead (resumed) |
 | W2 | Giorgio picks; Planner records; token spec v3 (§9C) + contrast PAIRS | W1 | Design Lead, Planner |
 | W3 | Primitives + tokens + charts rebuilt; device frame-rate check | W2 | mobile worker |
 | W4 | Screens in order (Home → Matchup → Draft → League → Portfolio/sheet → onboarding); one gate each with the reference check | W3 | mobile workers (2 in parallel max) |
