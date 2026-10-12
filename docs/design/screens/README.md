@@ -19,6 +19,12 @@ the landing disagree, this folder wins until Giorgio changes it.
 | `board.jsx`, `index.html` | The review board: each screen with its notes, playable motion moments, open questions, and a ledger computed from `data.js`. |
 | `key-screens.html` | Single-file build of the board for publishing (`node docs/design/screens/build.mjs`). |
 
+## How the board is laid out (Giorgio, 2026-10-12)
+
+1. **Waiting on you:** the top nav (`OPEN` in `board.jsx`) and the opening sections list ONLY the "Your call" sections still awaiting Giorgio, newest first.
+2. **Approved screens:** the key screens and every other screen, the reference the app is built from.
+3. **Archive:** every decided call, collapsed, newest first, stamped with the decision, the date and the PR that recorded it (`ARCHIVE` in `board.jsx`; the sections themselves live in `window.KSArchivedCalls` in `inventory-board.jsx`, `KSHomeCalm`, `KSRowOrder`). A call moves to the Archive the moment its decision is recorded in PRODUCT_RULES: remove it from `OPEN`, add its stamp to `ARCHIVE`.
+
 ## Using them
 
 - **Landing (3a):** port `screens.jsx` into `apps/web/src/pages/landing/` as TSX (drop the IIFE, `export` each screen, turn `data.js` into the landing's `sampleData.ts`). Use the foundation's `ScoreDigits` and `TugBar` where they exist. The phone shows these screens and nothing invented.

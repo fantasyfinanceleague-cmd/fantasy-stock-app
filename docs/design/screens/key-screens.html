@@ -832,6 +832,23 @@
     .b-fit__in { box-shadow: 0 0 0 6px #0B0F16, 0 20px 40px -20px rgba(13, 27, 46, .45); }
     .b-canon div { border-right: 0; border-bottom: 1px solid var(--c-line); }
   }
+  .b-open { display: grid; gap: 10px; padding: 16px 18px; border-radius: 14px; background: var(--c-warn-tint); border: 1px solid var(--c-warn-line); }
+  .b-open__lbl { font-size: 12px; font-weight: 800; font-stretch: 125%; letter-spacing: .06em; text-transform: uppercase; color: var(--c-warn-text); }
+  .b-open .b-toc { margin: 0; }
+  .b-open__more { margin: 0; font-size: 14px; color: var(--c-text-2); }
+  .b-open__more a { color: var(--c-text); font-weight: 700; }
+  .b-archive__list { display: grid; gap: 10px; }
+  .b-arch { border: 1px solid var(--c-border); border-radius: 14px; background: var(--c-surface); }
+  .b-arch > summary { cursor: pointer; list-style: none; display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 6px 18px; align-items: baseline; padding: 14px 18px; }
+  .b-arch > summary::-webkit-details-marker { display: none; }
+  .b-arch > summary::before { content: '›'; position: absolute; margin-left: -12px; color: var(--c-text-2); }
+  .b-arch[open] > summary { border-bottom: 1px solid var(--c-border); }
+  .b-arch__t { font-weight: 800; }
+  .b-arch__d { color: var(--c-text-2); font-size: 15px; }
+  .b-arch__m { color: var(--c-text-2); font-size: 13px; text-align: right; }
+  .b-arch__body { padding: 0 18px 18px; }
+  .b-arch__body .b-sec { border-top: 0; margin-top: 0; }
+  @media (max-width: 800px) { .b-arch > summary { grid-template-columns: 1fr; } .b-arch__m { white-space: normal; } }
 </style>
 
 <script>try { document.documentElement.dataset.ksTheme = localStorage.getItem('ks-theme') || 'light'; } catch (e) { document.documentElement.dataset.ksTheme = 'light'; }</script>
@@ -6049,6 +6066,559 @@
     );
   }
 
+  // Decided calls, archived (Giorgio, 2026-10-12: "there should be like an archive of picks
+  // that have been decided"). board.jsx renders each one, collapsed, in the Archive.
+  const ARCHIVED = {
+    'run-it-back': () => (
+          <section className="b-sec" id="run-it-back" aria-labelledby="run-it-back-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3c</span>
+              <div>
+                <h2 id="run-it-back-h">Run it back</h2>
+                <p className="b-job">Season 1 is over; the commissioner renews the league so the group plays Season 2. Decided by Giorgio (2026-10-04); all copy here is approved. Built in 3c (League tab + the Home cards) on the backend in feat/run-it-back.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>Only the commissioner</b> runs it back: the "Run it back?" card on the season-complete Home and the League tab action. Season 2 is a new league linked to Season 1, which stays frozen and complete.</li>
+              <li><b>Opt-in.</b> Every Season 1 player gets "Roberto B. is running it back. Are you in for Season 2?" (push + a card on Home and the League tab). Answers can flip in ↔ out until the draft is set.</li>
+              <li><b>The commissioner hears every reply</b> and reconciles on "Who's running back": Season 1 order, "Running back" (name bold), "Out" (muted), "No reply yet" with <b>Nudge again</b> (once a day) or <b>Remove</b>; new joiners last ("New", "Joining").</li>
+              <li><b>A player who is in</b> goes straight to the same list, read-only, with "You're running back · Change". Players who are out or haven't answered don't see it.</li>
+              <li><b>The draft can't be set</b> while anyone is "No reply yet": the draft rows stay disabled with the reason inline (the server enforces it too).</li>
+              <li><b>New players</b> join with the invite code, not capped by Season 1's size (up to 16 until the draft), and see Season 1's history.</li>
+              <li><b>Teams start with a new draft</b>; every setting carries over and the commissioner can edit it on the review. Keepers / keep teams were not chosen.</li>
+              <li><b>History:</b> a Season 1 champion banner on the League tab until Season 2's draft; League › History lists every season with its final standings, matchups and draft.</li>
+            </ul>
+
+            <h3 className="b-sub">Starting it (commissioner only)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Home · season complete (commissioner)" note='"Start next season" becomes a "Run it back?" card. Members see the champion card without it.'><I.RibHome /></Fit>
+              <Fit caption="League tab · season over (commissioner)" note="The champion banner, the commissioner's action, and Season 1's final standings."><I.RibLeague /></Fit>
+              <Fit caption="Push · every Season 1 player" note="Sent the moment the commissioner runs it back; opens the I'm in / I'm out card."><I.RibPush mode="ask" /></Fit>
+            </div>
+
+            <h3 className="b-sub">Who's in: opt-in, the commissioner reconciles</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
+              <Fit caption="1b · Member who said I'm out (GS-14)" note={'Design Lead ruling, 2026-10-11: an out player keeps the same card on the finished league\'s Home and League tab, with their answer marked, so they can change it until the draft is set (they are no longer in Season 2, so this is the only place it can live). New copy: the chip "You\'re out". A player the commissioner removed gets no card.'}><I.RibMemberPrompt answered="out" /></Fit>
+              <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
+              <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
+              <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
+              <Fit caption="4b · A member who said I'm in" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. Players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
+              <Fit caption="5 · Clearing a non-reply" note='"Nudge again" re-sends the ask (once a day); "Remove" takes them out of Season 2 and tells them.'><I.RibResolve /></Fit>
+              <Fit caption="6 · After everyone has replied: the review" note="Every Season 1 setting carried over and editable; teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Schedule the draft = start_renewed_season."><I.RibReview /></Fit>
+            </div>
+
+            <h3 className="b-sub">History</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
+              <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
+            </div>
+          </section>
+    ),
+    'your-turn': () => (
+          <section className="b-sec" id="your-turn" aria-labelledby="your-turn-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3c</span>
+              <div>
+                <h2 id="your-turn-h">Your turn must be unmissable (decided)</h2>
+                <p className="b-job"><b>Giorgio, 2026-10-06:</b> the top of the screen should "flash a color when they're up just to make sure that they're they really notice it", with text "that's very hard to miss", plus "a sound notification or a buzz". Spec by the Design Lead. Stock Scudetto, Roberto B.'s phone: Alessandro D. picks 10, then it's Roberto's pick 11.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>When:</b> the moment the server's clock makes it your turn, once per turn. Never on a refreshed screen that was already your turn (no replay on re-open).</li>
+              <li><b>The flash:</b> the clock card fills with <code>live</code> gold, its text in navy (<code>on-live</code>, new token: #0D1B2E in both themes; 5.1:1 on Light gold, 11.0:1 on Dark gold). Two flashes, then it rests: on 90 ms, hold 220 ms, off to the resting tint 160 ms, on again 90 ms, hold 220 ms, settle 160 ms. About 0.95 s in all, two flashes in that second (under the 3-per-second seizure threshold), never blocking input, never looping.</li>
+              <li><b>At rest, for the whole turn:</b> the card keeps a <code>warn-tint</code> fill and a 2 pt <code>live</code> border; the clock is in score type at 44 pt; "You're on the clock" is 30 pt, weight 900, in <code>liveText</code>. It is the largest text on the screen.</li>
+              <li><b>Buzz and sound, with the flash:</b> <code>Haptics.notificationAsync(Warning)</code> and one short chime (under 0.5 s). The chime respects the silent switch (<code>playsInSilentModeIOS: false</code>) and mixes with other audio, never stopping it. Both fire whenever the app is in front; the flash shows when the draft room is on screen (elsewhere, Home's drafting card already says it's your turn).</li>
+              <li><b>Last 10 seconds:</b> one more Warning haptic at 10 s left. No sound, no second flash: the clock's turn to <code>loss</code> red is the visual.</li>
+              <li><b>Reduce Motion:</b> no flash. The card switches straight to its resting state (tint, border, the big title) with no fade; the haptic and the chime stay, since they aren't motion.</li>
+            </ul>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Before: someone else is up" note="The card is quiet; your next pick is named."><I.YourTurn phase="before" /></Fit>
+              <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
+              <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
+              <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
+            </div>
+          </section>
+    ),
+    'call-manager-row': () => (
+          <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">UX</span>
+              <div>
+                <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
+                <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
+              </div>
+            </header>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
+              <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
+            </div>
+            <div className="b-ask">
+              <h3>Notes for the build</h3>
+              <ul>
+                <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
+                <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
+                <li><b>So does the bracket</b> (game-screens gate R-2, 2026-10-10): bold there means the winner of the game, so your line is marked by the tint alone.</li>
+                <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-sell-from-search': () => (
+          <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3e</span>
+              <div>
+                <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
+              </div>
+            </header>
+            <h3 className="b-sub">Both start the same way</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
+            </div>
+            <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
+              <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+            </div>
+            <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
+              <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
+              <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
+              <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
+            </div>
+            <div className="b-ask">
+              <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
+              <ul>
+                <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
+                <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
+                <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
+                <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-medals': () => (
+          <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3c</span>
+              <div>
+                <h2 id="call-medals-h">Decided: who gets the gold once the season is over</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> Once the playoffs are done, the medals follow the result. From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
+              </div>
+            </header>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="✓ A · Medals follow the playoffs (chosen)" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
+              <Fit caption="B · Medals stay regular season (not chosen)" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
+            </div>
+            <div className="b-ask">
+              <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #191)</h3>
+              <ul>
+                <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
+                <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
+                <li><b>Nothing is lost in A.</b> Records and season gains stay the regular season's, and the Playoffs tab keeps the seeding.</li>
+                <li>Either way, the same medals then show in League › History and on the season-complete card, so every screen tells the same story.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-watchlist': () => (
+          <section className="b-sec" id="call-watchlist" aria-labelledby="call-watchlist-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3e</span>
+              <div>
+                <h2 id="call-watchlist-h">Decided: the watchlist and daily claims</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-09): C, plus the Design Lead's rulings (a) to (d) below.</b> Giorgio, 2026-10-08: trading stays market hours only; search and save any time; the watchlist is per league ("each one has its own waiver wire"); and a daily waiver wire: "you can claim stocks after the close of each day. if no one else claims that day, you get it. if two or more people claim, then we have the order decide." Drawn to the fantasy-football model (docs/design/FANTASY_CONVENTIONS.md): a star to save, a Claim that settles at the next 9:30 open, a visible waiver order, blind claims, visible holdings. Tier Cup (price tiers; selling DIS left the $100–$200 slot open), Roberto B.'s phone; open = Thu 1:37 PM, closed = Fri 5:00 PM, the run = Mon 9:30 AM ET. Use the Theme switch for Dark. All watchlist and claim copy is new unless a caption says otherwise.</p>
+              </div>
+            </header>
+
+            <h3 className="b-sub">1 · Where it lives: C, both (decided)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit h={1236} caption="A · Watching on Portfolio · open (not chosen alone)" note={'Holdings first, then Watching: the holding row plus one status line saying whether you can get the stock in this league. Buy sits on the available row while the market is open.'}><I.WatchPortfolio /></Fit>
+              <Fit h={1266} caption="A · Watching on Portfolio · closed (not chosen alone)" note={'Closed chip, no live dot, every price "At Fri close". Buy\'s spot reads Claim (the same size and place). Claim also shows on "No free $200–$400 slot", because a claim can name the sale that makes room; a live Buy can\'t.'}><I.WatchPortfolio closed /></Fit>
+              <Fit caption="B · Buy a stock › Watchlist · open (not chosen alone)" note="The list inside the player pool, as ESPN, Sleeper and Yahoo do it. Portfolio stays as it is today."><I.WatchTab /></Fit>
+              <Fit caption="B · Buy a stock › Watchlist · closed (not chosen alone)" note={'The approved "Market closed" card on top; Claim in Buy\'s spot.'}><I.WatchTab closed /></Fit>
+              <Fit h={1334} caption="✓ C · Portfolio (chosen)" note={'C is both, one list. Portfolio shows five, then "See all (12)", which opens Buy a stock on its Watchlist tab.'}><I.WatchPortfolio closed n={12} seeAllTo="See all opens Buy a stock › Watchlist." /></Fit>
+              <Fit caption="✓ C · Buy a stock › Watchlist (chosen)" note="The same list in the player pool, where a fantasy player looks for it."><I.WatchTab closed /></Fit>
+            </div>
+
+            <h3 className="b-sub">2 · Each league has its own list</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit h={1108} caption="Switch to Stock Scudetto with the pill" note={'A different list (AMZN, AMD, SHOP). The same SHOP reads "No free slot" here (every slot is invested) and "Available" in Tier Cup. Owners are this league\'s, from its draft.'}><I.WatchOtherLeague /></Fit>
+            </div>
+
+            <h3 className="b-sub">3 · Claim, the closed-market twin of Buy</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Stock sheet · closed" note={'Where Review buy sits when the market is open, the same button reads Claim. The star stays in the header, far from it. Approved copy: the Market closed card.'}><I.ClaimSheet /></Fit>
+              <Fit caption="The composer (the 3e review, re-labelled)" note={'What you buy, what pays for it (the sale picker; cash in a budget league), the fit as of Friday\'s close, and the fill time on the button. × closes without claiming.'}><I.ClaimComposer /></Fit>
+              <Fit h={1328} caption="After claiming" note={'The status line becomes "Claimed · fills Mon 9:30 AM ET"; the star doesn\'t change; the action spot reads Cancel. A Claims row appears under Buy a stock.'}><I.WatchPortfolio closed claimed /></Fit>
+            </div>
+
+            <h3 className="b-sub">4 · Your claims and the waiver order</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Claims (yours only)" note={'Pending claims with what pays for each, Cancel until the run starts, and your place in the waiver order. It never shows anyone else\'s claims.'}><I.ClaimsList /></Fit>
+              <Fit caption="The waiver order, on tap" note="Visible to the whole league, like the standings. Your row: bold on the light-blue tint (S-10)."><I.ClaimsList order /></Fit>
+            </div>
+
+            <h3 className="b-sub">5 · Endings at the 9:30 open (one each)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Won" note="The position lands at the opening price, paid by the sale you named. The new holding is lit once, then settles."><I.ClaimEnding kind="won" /></Fit>
+              <Fit caption="Lost" note="Names the winner and one short reason (Design Lead ruling, recorded in the plan). The sale did not happen, and the card says so."><I.ClaimEnding kind="lost" /></Fit>
+              <Fit caption="Failed" note={'Named reason, nothing happened. Ruled wording: the brief\'s "No free $100–$200 slot at the open" would say there was no free slot when the slot WAS free; the stock left its tier.'}><I.ClaimEnding kind="failed" /></Fit>
+            </div>
+
+            <h3 className="b-sub">6 · Refusals, in place</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Claim on a sheet left open past 9:30" note={'"Market\'s open: just buy it." The button turns back into Review buy.'}><I.ClaimSheet state="opened" /></Fit>
+              <Fit caption="A 6th claim" note={'"5 claims pending. Cancel one to claim another." The button stays visible, disabled.'}><I.ClaimComposer full /></Fit>
+              <Fit caption="A live buy during the run" note={'"Claims are being processed. Try again in a minute." Live trading waits for the run (at most ten minutes).'}><I.ClaimSheet state="processing" /></Fit>
+              <Fit caption="Watchlist full (50)" note={'"Your watchlist is full (50). Remove one to add another." (the plan\'s line).'}><I.SaveResults full /></Fit>
+            </div>
+
+            <h3 className="b-sub">7 · Save, Home and the draft room</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Save on a search result" note={'The star, a 44 pt labelled control on every result, open market or not. Tapping flips Save to Saved, and that flip is the whole ending (no toast). No Buy on a result row.'}><I.SaveResults /></Fit>
+              <Fit caption="Saved in the stock sheet header" note="Next to the name, far from Buy. Open market."><I.SaveSheet /></Fit>
+              <Fit caption="Home hook · closed (still open: not part of the C decision)" note={'Stock Scudetto on Thursday evening, so the counts are this league\'s: "Market opens Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist". Taps through to Claims.'}><I.HomeClaimsHook /></Fit>
+              <Fit caption="Draft room: Queue and Save" note={'Two labelled lists with a key. No Claim during a draft: the draft is how you get stocks then.'}><I.DraftQueueSave /></Fit>
+            </div>
+
+            <div className="b-ask">
+              <h3>Decided: C (Giorgio, 2026-10-09)</h3>
+              <ul>
+                <li><b>Both doors, one list.</b> The Watchlist tab in Buy a stock, where fantasy players keep a watch list (ESPN, Sleeper, Yahoo all put it in the player pool), and the Watching section on Portfolio, below Holdings, capped at five rows, so a closed Friday shows your list and Claim on the screen you already open. "See all (N)" on Portfolio opens the tab. The A and B frames stay as the record and still show the row and section designs C uses.</li>
+              </ul>
+              <h3>Design Lead rulings, approved with C</h3>
+              <ul>
+                <li><b>(a) Claim also on "No free … slot" rows</b> (closed only), since the claim names the sale that frees the slot. While open, those rows have no Buy: you sell first, as today.</li>
+                <li><b>(b) The failed ending says what the stock did:</b> "LOW opened at $203.10, above your $100–$200 slot · Nothing was bought." (not "No free $100–$200 slot", which would have said the free slot wasn't free).</li>
+                <li><b>(c) A Watching row is the ticker and one status line</b>, no company name, so a row with Buy or Claim stays two lines; the sheet names the company. A claimed stock's status line is "Claimed · fills Mon 9:30 AM ET"; the star never changes.</li>
+                <li><b>(d) The 9:30 refusals use a stock you could buy</b>, so "Market's open: just buy it." is always true.</li>
+                <li><b>Also drawn as ruled with the Planner:</b> the lost ending names the winner and one reason ("lower in the standings"); the waiver order is visible to the league; claims are blind and holdings visible ("Owned by …" unchanged).</li>
+                <li><b>Sample data.</b> The brief's AAPL examples are drawn with the board's own stocks: AMGN paid by selling NVDA (both in the $200–$400 tier, the swap a tier league allows), and LOW from the budget. The waiver order and Tier Cup's budget are sample.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-join-commissioner': () => (
+          <section className="b-sec" id="call-join-commissioner" aria-labelledby="call-join-commissioner-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">1.2.0</span>
+              <div>
+                <h2 id="call-join-commissioner-h">Decided: the commissioner's name before you join</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-11): A.</b> No commissioner name before joining. Your rule (2026-10-08): "we cannot allow a user to see any information outside of the name/avatar of another member in their league (email, etc) or any info about users not in their league." Someone holding an invite code isn't in the league yet, but today's Join preview shows "Run by {'{commissioner}'}", and the full-league message names them too. Serie A Traders, previewed with code SERIEA7.</p>
+              </div>
+            </header>
+            <h3 className="b-sub">✓ A · No name before joining (chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="✓ A · No name before joining (chosen)" note={'The "Run by" line goes; nothing replaces it (the code above the title already says how you got here). Everything else is unchanged.'}><I.JoinCommishCall v="A" /></Fit>
+              <Fit caption="✓ A · League full (chosen)" note={'NEW copy: "Ask your commissioner if they can make room." ("your commissioner" as in the app\'s other pre-join messages, e.g. "Ask your commissioner for a new code.")'}><I.JoinCommishCall v="A" full /></Fit>
+            </div>
+            <h3 className="b-sub">B · Keep the name (not chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="B · Keep the name (not chosen)" note={'"Run by Roberto B." stays, on the grounds that the code came from them. No copy change.'}><I.JoinCommishCall v="B" /></Fit>
+              <Fit caption="B · League full (not chosen)" note={'"Ask Roberto B. if they can make room." No copy change.'}><I.JoinCommishCall v="B" full /></Fit>
+            </div>
+            <div className="b-ask">
+              <h3>Decided: A (Giorgio, 2026-10-11)</h3>
+              <ul>
+                <li><b>A is your rule as written.</b> Before joining, the commissioner is a user not in your league, so their name is out. B adds an exception ("the code came from them") the rule doesn't have, and a code can be forwarded by anyone.</li>
+                <li><b>Nothing you need is lost.</b> The name, managers, draft time, stakes and season are all still there to decide on. You see the commissioner's name the moment you join.</li>
+                <li><b>For the build, A is a server change as well as copy:</b> the preview's data stops carrying the commissioner's name, so no client can show it. Hiding it only on screen would still send it to the phone. It also retires the app's "Ask Unknown if they can make room" fallback (final sweep S-13).</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-leaver-names': () => (
+          <section className="b-sec" id="call-leaver-names" aria-labelledby="call-leaver-names-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">1.2.0</span>
+              <div>
+                <h2 id="call-leaver-names-h">Decided: managers who left, in past seasons</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-11): A, with frozen names.</b> Someone who left stays named (name and avatar) in the seasons they played, exactly as they were when they left; a later rename or new avatar never reaches their old leaguemates. No visual marker: it looks exactly like A. Your rule (2026-10-08): "i can only see other names and avatars of other users im in a leauge with ... or any info about users not in their league." And your leaving rule (2026-10-06): after the season, leaving hides the league for that player, and history is kept. Leaving is only possible before the draft (no record yet) or after the season, so someone who left only ever shows up in a finished season. Stock Scudetto, Season 1; Andrea P. left after it.</p>
+              </div>
+            </header>
+            <h3 className="b-sub">✓ A · They stay named in the seasons they played, frozen (chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="✓ A · History, Season 1 (chosen)" note="Andrea P. keeps their name and avatar in the season they played, as ESPN and Sleeper show past owners. Nothing new about them is shown: no profile, no current leagues."><I.LeaverHistory v="A" /></Fit>
+              <Fit caption="✓ A · A past matchup (chosen)" note="Week 3 against Andrea P. reads as it did."><I.LeaverMatchup v="A" /></Fit>
+            </div>
+            <h3 className="b-sub">B · Once they leave, they're "Former manager" (not chosen)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="B · History, Season 1 (not chosen)" note={'NEW copy: "Former manager", with an empty avatar, in standings, History, past matchups and the draft board.'}><I.LeaverHistory v="B" /></Fit>
+              <Fit caption="B · A past matchup (not chosen)" note={'"Roberto B. won by $250.50" against "Former manager".'}><I.LeaverMatchup v="B" /></Fit>
+              <Fit caption="B · What it breaks (not chosen)" note={'On Paolo M.\'s phone, after three people left (Roberto B., Alessandro D., Andrea P.): "Champion Former manager", and three rows nobody can tell apart.'}><I.LeaverHistory v="B" me="paolo" gone={['roberto', 'alessandro', 'andrea']} /></Fit>
+            </div>
+            <div className="b-ask">
+              <h3>Decided: A, with frozen names (Giorgio, 2026-10-11)</h3>
+              <ul>
+                <li><b>You already ruled that history is kept</b> when someone leaves after the season. A record of who won and who lost that week, with nobody's name on it, isn't really kept.</li>
+                <li><b>B empties the record people care about.</b> A champion who moves on becomes "Champion Former manager"; two or three leavers turn into identical rows; and anyone who looks back at an old season (a newcomer, or you a year later) can no longer tell who they played.</li>
+                <li><b>A stays inside your rule's spirit:</b> only the name and avatar, only where they played with you, nothing else (no profile, no other leagues).</li>
+                <li><b>The refinement, chosen:</b> today the app shows a leaver's CURRENT name, so if they rename later, their old leaguemates see the new one. We can instead freeze the name as it was when they left, so nothing about them after they left ever reaches you. Chosen with A, with no visual marker.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-leave': () => (
+          <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3c</span>
+              <div>
+                <h2 id="call-leave-h">Your call: leaving a league</h2>
+                <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q4 = A (transfer the title first); Q3 and Q5 don't apply. All decided. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>Today a leave is an unguarded delete</b> that anyone can do at any time, the commissioner included. After the draft it leaves a "zombie" team that still scores but can't trade, and it stalls the playoffs (<code>bracket_non_member</code>). Every option below replaces it.</li>
+              <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
+              <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
+              <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
+              <li><b>The sheet's buttons</b> (Giorgio, 2026-10-06: "I want stay as a button"): "Leave league" is the filled red button; "Stay" is a real button under it, in the secondary (outlined) style, full width. This overrules the Design Lead's G-3, which had made Stay a text button.</li>
+            </ul>
+
+            <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Leave sheet · member, before the draft" note="Tells the leaver what happens next and until when they can come back."><I.LeaveSheet mode="pre" /></Fit>
+              <Fit caption="After Move forward" note="The leaver's row is removed (A) and the order closes the gap."><I.OrderAfterLeave q1="A" /></Fit>
+              <Fit caption="B · Remove + reopen the order (not chosen)" note="Superseded: the reconfirmation below covers the whole league, not just the order."><I.OrderAfterLeave q1="B" /></Fit>
+            </div>
+
+            <h3 className="b-sub">Q1 · The reconfirmation (decided, new frames)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
+              <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The deadline is the room-open time (6:00 PM ET); still unchosen then, the draft is postponed (see The draft starts by itself).`}><I.ReconfirmHome /></Fit>
+              <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (The draft starts by itself), with the room-open time as the deadline."><I.ReconfirmStartBlocked /></Fit>
+              <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
+              <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
+            </div>
+
+            <h3 className="b-sub">Q2 · Leaving after the draft · decided: C</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="A · Soft leave: the sheet (not chosen)" note="The team keeps its stocks and plays out the season, buy-and-hold."><I.LeaveSheet mode="A" /></Fit>
+              <Fit caption="A · The opponent's Home (not chosen)" note='"Gianluigi B. (left) · Auto-managed" with a real live score: Roberto still has to beat a portfolio.'><I.DepartedMatchup q2="A" /></Fit>
+              <Fit caption="A · Standings for everyone else (not chosen)" note="The row stays in place, labelled, muted. Scoring is unchanged."><I.DepartedStandings /></Fit>
+              <Fit caption="B · Forfeit: the sheet (not chosen)" note="Stocks are sold back to the pool; every remaining matchup is a loss."><I.LeaveSheet mode="B" /></Fit>
+              <Fit caption="B · Forfeit: the opponent's Home (not chosen)" note="A free W. Whoever faces the leaver late in the season gets free wins."><I.DepartedMatchup q2="B" /></Fit>
+              <Fit caption="✓ C · Locked in (chosen)" note="Final copy. Leave league stays disabled, with the reason on the row, from an hour before the draft until the season ends."><I.LeaveRefused kind="season" /></Fit>
+            </div>
+
+            <h3 className="b-sub">Q3 · Playoffs with a departed team · not applicable (Q2 = C)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="★ A · Departed teams stay eligible" note="Seeding unchanged; the 4th seed plays on autopilot and could win the title."><I.DepartedBracket q3="A" /></Fit>
+              <Fit caption="B · Skip departed teams in seeding" note="Seeds shift: 5th moves up to the 4th seed. Fewer than 2 active teams: no playoffs."><I.DepartedBracket q3="B" /></Fit>
+            </div>
+
+            <h3 className="b-sub">After the season · leaving hides the league (decided)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
+            </div>
+
+            <h3 className="b-sub">Q4 · The commissioner leaving · decided: A, transfer first</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="✓ A · Transfer first (chosen)" note="Leave is disabled for the commissioner: first make someone else commissioner from the Commissioner row, then leave as a member. A transfer is allowed only before the draft room opens or after the season (PR #132)."><I.LeaveRefused kind="commish" /></Fit>
+              <Fit caption="B · Pick a successor in the leave sheet (not chosen)" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
+              <Fit caption="C · Auto-transfer (not chosen)" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
+            </div>
+
+            <h3 className="b-sub">Q5 · What the leaver sees, and rejoining · not applicable (Q2 = C)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="★ A · League tab after leaving" note="Read-only: history stays visible, no trading, no rejoin this season."><I.LeaverLeague q5="A" /></Fit>
+              <Fit caption="B · Reclaim my team" note="Until the season ends, the leaver can undo; trading reopens."><I.LeaverLeague q5="B" /></Fit>
+              <Fit caption="A and B · Home skips the league" note="On Gianluigi B.'s phone (their other league is sample data). The league leaves the single-league Home and sits under a new 'You left' group in Your leagues."><I.LeaverSheet /></Fit>
+            </div>
+
+            <h3 className="b-sub">Refusals</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="From an hour before the draft (decided)" note="The same locked-in line as mid-season: the lock starts when the draft order is set."><I.LeaveRefused kind="drafting" /></Fit>
+              <Fit caption="Only manager left (Q4)" note="Before the draft, everyone else is a bot: delete the league instead."><I.LeaveRefused kind="sole" /></Fit>
+              <Fit caption="Rejoin after leaving (not applicable)" note="Kept for the record: with Q2 = C nobody leaves after the draft, and a pre-draft leaver rejoins with the code."><I.LeaveRefused kind="rejoin" /></Fit>
+            </div>
+
+            <div className="b-ask">
+              <h3>Decided: the leave window, Q2 = C, Q1 = reconfirm, Q4 = A (transfer first)</h3>
+              <ul>
+                <li><b>Edges:</b> (1) not chosen in time and (2) the invite deadline are settled by auto-start: the deadline is when the draft room opens, and if the teams still aren't confirmed then, the draft is postponed. Still open: (3) after a post-season leave, does Run it back still ask that player (recommend no)? (4) Can they unhide the league (recommend not in 1.2.0)?</li>
+              </ul>
+              <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
+              <ul>
+                <li><b>Q2-A is the anchor.</b> The leaver's opponents still play a real portfolio, nobody gets free wins, and nobody is trapped in a league. It also needs no change to scoring, snapshots or the playoffs: the departed team scores exactly the way a bot does today. B puts a new branch into the scoring pipeline that was just hardened (S1–S9). C turns "you can't leave" into a support ticket.</li>
+                <li><b>Q3-A follows from Q2-A.</b> An autopilot team had to earn its seed, and a departed seed still makes the bracket start. The cost is honest and rare: a departed team could win the title, and its champion line would read "Francesco T. (left)". B shifts seeds and byes late, and it rewrites the playoff guard.</li>
+                <li><b>Q4-B, with one design condition:</b> no successor is preselected. Leaving is destructive, and a default choice would let one tap hand the league to someone nobody chose. The button stays disabled until a pick, then reads "Leave and hand over to Paolo M.". The successor gets a push. A (transfer first, then leave) is the fallback if the picker slips; a standalone "Make commissioner" is useful anyway.</li>
+                <li><b>Q1-A:</b> closing the gap is what everyone expects, and the commissioner sees why the order changed. Keep the existing refusal at draft start when playoff teams outnumber managers; don't silently clamp it.</li>
+                <li><b>Q5-A:</b> one state ("left") is simpler to explain than "left, then back". The league stays readable, so history isn't lost.</li>
+                <li><b>Still open (not on the worker's list):</b> should the opponent get a push when their manager leaves ("Gianluigi B. left Stock Scudetto. Their team plays on, auto-managed.")? Recommend yes, to everyone in the league, once.</li>
+                <li><b>Backend:</b> the "(left)" label needs a departed flag from <code>get_league_display_names</code>. Home has to skip departed leagues (<code>get_home_summary</code>). "Delete the league instead" points at a delete that is still client-side (<code>[I3]</code>).</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-auto-start': () => (
+          <section className="b-sec" id="call-auto-start" aria-labelledby="call-auto-start-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3c</span>
+              <div>
+                <h2 id="call-auto-start-h">The draft starts by itself (decided)</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-06).</b> The draft starts at the minute the commissioner set; the room opens an hour before; there's no Start button. <b>The gate is the room-open time:</b> if the league still isn't ready an hour before, the room doesn't open, the draft is postponed for everyone, and the commissioner fixes it and picks a new time. There's no late start. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}, room 6:00 PM ET. Sofia F. left, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>Rejected:</b> the 15-minute grace (★A+15), "start whenever it's fixed" (A) and the automatic fixes (C). Nothing starts late, and the server never changes league rules on its own.</li>
+              <li><b>Superseded by this section:</b> every "Start the draft?" sheet and the leave board's Q1 "What blocks the start". Their fix-it content lives in the commissioner's blockers card.</li>
+              <li><b>The phase comes from the server's clock</b> (scheduled, at risk, room open, started, postponed), never the phone's.</li>
+              <li><b>Draft times:</b> 15-minute steps, at least an hour ahead. Changing the time is refused once the room opens; a postponed draft is the one exception, since it needs a new time.</li>
+              <li><b>Pushes need the scheduler:</b> the room-open, at-risk, reminder and postponed pushes all ride the order-notify job, still in <code>migrations/deferred/</code>. No copy may promise them until it's live.</li>
+            </ul>
+
+            <h3 className="b-sub">Everyone: the countdown · the on-time case</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder."><I.AutoLobby phase="scheduled" /></Fit>
+              <Fit caption="Room open · your position" note='"Draft room open · starts in …" with the order and "You pick 4th".'><I.AutoLobby phase="open" /></Fit>
+              <Fit caption="At 0:00" note="Any member's phone asks the server to start; the server's sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
+              <Fit caption="Push · the draft room is open (everyone, 6:00 PM)" note="With your position."><I.LockPush time="6:00" label="Push, draft room open" body="The draft room is open. You pick 4th. The draft starts at 7:00 PM ET." /></Fit>
+              <Fit caption="Push · the draft has started (everyone, 7:00 PM)"><I.LockPush time="7:00" label="Push, draft started" body="The draft has started. You pick 4th." /></Fit>
+            </div>
+
+            <h3 className="b-sub">Before the room opens: the commissioner is warned</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Push · as soon as the league is blocked" note="Here: when Sofia F. leaves, on Thursday."><I.LockPush time="3:12" day="Thursday, October 1" label="Push, draft at risk" body="The draft room can't open yet: Sofia F. left the league. Fix it before Sat 6:00 PM ET, or the draft is postponed." /></Fit>
+              <Fit caption="Push · reminder, about two hours before" note="Only if it's still blocked."><I.LockPush time="5:00" label="Push, at-risk reminder" body="One hour left to fix your league. If it isn't ready by 6:00 PM ET, the draft is postponed." /></Fit>
+              <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices and the playoff-teams stepper. The countdown is to the room opening, the real deadline."><I.CommishBlocked phase="risk" /></Fit>
+            </div>
+
+            <h3 className="b-sub">Still blocked at 6:00 PM: postponed for everyone</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Push · postponed (everyone)" note="Members get this one; the commissioner gets their own version (in the strings list below)."><I.LockPush time="6:00" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
+              <Fit caption="Commissioner · postponed" note="Fix first, then a new time with at least an hour's notice; the room-open check runs again before it."><I.CommishBlocked phase="postponed" /></Fit>
+              <Fit caption="Members · postponed" note="Who decides, and how much notice they'll get."><I.MemberPostponed /></Fit>
+            </div>
+
+            <h3 className="b-sub">Home's draft card (decided, matches 3c-2's build with three corrections)</h3>
+            <ul className="b-inv__notes">
+              <li><b>Corrections to the build</b> (ui/mobile-league-setup @ 55f4f68): (1) the order line becomes "The draft room opens Sat 6:00 PM ET, when the order is set." (was "Draft order set … an hour before the draft"). (2) Once the room is open, the button is "Go to the draft room", not "Build your queue": the queue lives in the room. (3) On Home, the members' postponed line drops "and on your Home": "You'll see it here, with at least an hour's notice."</li>
+            </ul>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Scheduled" note="The same card as the pre-draft Home, with the room-opening line."><I.HomeAuto phase="scheduled" /></Fit>
+              <Fit caption="Room open" note={'"Draft room open · starts in" and your position; the button goes to the room.'}><I.HomeAuto phase="open" /></Fit>
+              <Fit caption="At 0:00" note="Home never asks the server to start (the lobby and the server do); it just shows the state."><I.HomeAuto phase="starting" /></Fit>
+              <Fit caption="Commissioner · at risk" note="The blockers card sits on top of the draft card."><I.HomeAuto phase="risk" commish /></Fit>
+              <Fit caption="Commissioner · postponed" note="The blockers card replaces the draft card until a new time is set."><I.HomeAuto phase="postponed" commish /></Fit>
+              <Fit caption="Members · postponed" note={'Tag "Draft postponed", chip "Postponed".'}><I.HomeAuto phase="postponed" /></Fit>
+              <Fit caption="No draft time yet · commissioner" note={'Members read "Roberto B. will set the draft time."'}><I.HomeAuto phase="nodate" commish /></Fit>
+            </div>
+
+            <h3 className="b-sub">Draft time (decided)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Draft time sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
+              <Fit caption="After the room opens" note="The time can't change. A postponed draft is the exception: its room never opened."><I.DateAfterRoom /></Fit>
+            </div>
+
+            <div className="b-ask">
+              <h3>New push copy (flagged: new strings, all to Serie A Traders' members unless noted)</h3>
+              <ul>
+                <li><b>Room open</b> (everyone, T−1h): "The draft room is open. You pick 4th. The draft starts at 7:00 PM ET."</li>
+                <li><b>Started</b> (everyone, T): "The draft has started. You pick 4th."</li>
+                <li><b>At risk</b> (commissioner, as soon as it's blocked): "The draft room can't open yet: {'{first blocker}'}. Fix it before {'{Sat 6:00 PM ET}'}, or the draft is postponed."</li>
+                <li><b>Reminder</b> (commissioner, about T−2h, only if still blocked): "One hour left to fix your league. If it isn't ready by {'{6:00 PM ET}'}, the draft is postponed."</li>
+                <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
+                <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
+                <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
+                <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
+                <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-ux-pass1': () => (
+          <section className="b-sec" id="call-ux-pass1" aria-labelledby="call-ux-pass1-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">UX</span>
+              <div>
+                <h2 id="call-ux-pass1-h">Two fixes from the UX audit (decided: B, B)</h2>
+                <p className="b-job"><b>Decided by Giorgio (2026-10-06): B for both.</b> From the pass-1 audit against the UX rules (docs/design/reviews/ux-audit-2026-10.md). Both are about where the one action that matters sits. A is what 3c-2 builds today (the decided auto-start frames); B is the Design Lead's proposal. New copy is listed in the box at the end, never on the phone. Sample: Serie A Traders, Roberto B. is the commissioner.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>Rule 3, reachable targets:</b> a screen's primary action sits in the bottom third or is full width. "Set draft time" is named in the rule.</li>
+              <li><b>Rule 10, leave a hook:</b> anything waiting on you stays on Home until it's done, and Home should let you do it, not send you to find it.</li>
+              <li>Neither changes a product rule: the 15-minute steps, the one-hour minimum and Set later all stay.</li>
+            </ul>
+
+            <h3 className="b-sub">1 · The draft time sheet: where is the confirm?</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="A · Done in the header (not chosen)" note="The confirm is a small text link in the top corner, the hardest place to reach one-handed. The only full-width button is Set later, so the biggest target is the one that does NOT set a time."><I.DraftDatePicker /></Fit>
+              <Fit caption="✓ B · Set draft time at the bottom (chosen)" note="The confirm is the full-width button at the bottom, named for what it does. Close (×) dismisses without saving; Set later becomes a text button under it, still 44 pt tall. Where a time is required (a postponed draft), Set later is absent, as today."><I.DraftDatePicker variant="B" /></Fit>
+            </div>
+
+            <h3 className="b-sub">2 · Home, no draft time yet (commissioner)</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="A · Points to League settings (not chosen)" note="The only thing blocking the league is the draft time, but the button builds your queue, and the line sends you to another tab to find the setting."><I.HomeAuto phase="nodate" commish /></Fit>
+              <Fit caption="✓ B · Set draft time, right here (chosen)" note="The primary opens the same Draft time sheet in place. Build your queue moves to secondary. Members' card is unchanged (Roberto B. will set the draft time + Build your queue)."><I.HomeAuto phase="nodate" commish setFirst /></Fit>
+            </div>
+
+            <div className="b-ask">
+              <h3>Decided · B for both (Giorgio, 2026-10-06)</h3>
+              <ul>
+                <li><b>1-B:</b> the action that commits the draft time becomes the biggest, lowest thing on the sheet, and its label says what it does. A swipe or × no longer half-saves a time you were still scrolling to (today the picker writes as it spins and Done only closes). Familiar: Calendar's new-event sheet confirms at the top, but our sheets confirm at the bottom everywhere else (Review sell, Join), so B is consistent with the rest of the app.</li>
+                <li><b>2-B:</b> the commissioner can finish the one task blocking the league in two taps from Home, without hunting for League settings. Members see no change.</li>
+                <li><b>New copy (flagged):</b> "Set draft time" (sheet button), "Pick a time, and the countdown starts here." and "Set draft time" (Home, the same words as the sheet). The countdown claim is true by your rule: it shows as soon as a draft time is set. No push is promised.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+    'call-tier-trades': () => (
+          <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
+            <header className="b-sec__head">
+              <span className="b-sec__n b-sec__n--code">3e</span>
+              <div>
+                <h2 id="call-tier-trades-h">Your call: which tier a traded stock fills</h2>
+                <p className="b-job">Price-tier leagues (one share per tier). Today tiers are only counted from the draft, so after a sale a manager can buy a second stock into a tier that is already filled; only the roster cap stops them. Pick how a trade buy fits the tiers. Sample: "Tier Cup", six one-share tiers. Roberto sold DIS ($102.90), his $100–$200 stock. All copy in these frames is new.</p>
+              </div>
+            </header>
+            <ul className="b-inv__notes">
+              <li><b>Already decided (A, 2026-09-30):</b> one share per buy and the whole position per sell. The review says "1 share" and the slot's tier. This choice only decides <i>which</i> tier a buy may fill.</li>
+              <li><b>A · Replace in the same tier.</b> Selling frees that stock's tier slot. A buy must fit a free tier slot; the review says "Fills your $100–$200 slot". If no free tier fits, the buy is refused with the reason.</li>
+              <li><b>B · Any open tier, re-fit by price.</b> A holding's tier comes from its entry price, first fit across every holding. A buy is legal if all holdings plus the new one still fit the tier layout.</li>
+              <li><b>C · Tiers are a draft rule only.</b> Trades ignore tiers; only the roster cap and the budget apply. The review shows no tier.</li>
+              <li><b>Budget rows are unchanged:</b> the decided one-share review keeps "Budget now" and "Budget left after"; these frames leave them out to show only the tier line.</li>
+              <li><b>Either way, a tier is set by the entry price</b> (draft price or buy price) and never moves if the stock's price drifts out of its bracket later.</li>
+            </ul>
+
+            <h3 className="b-sub">A · Replace in the same tier</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Portfolio · the open slot" note="Each row names its slot; the freed slot is a row with Fill, which opens the stock list."><I.TierPortfolio mode="A" /></Fit>
+              <Fit caption="Review buy · SHOP $104.20" note='"Fills your $100–$200 slot", next to the already-decided "1 share" rule.'><I.TierReview mode="A" /></Fit>
+              <Fit caption="Refused · AAPL $211.42" note="Shown before the review, from the stock sheet's Buy. The reason names the price and the open slot's range."><I.TierRefused mode="A" /></Fit>
+            </div>
+
+            <h3 className="b-sub">B · Any open tier, re-fit by price</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Portfolio · tiers by entry price" note="Rows show the tier their entry price falls in. The gap is described by the whole layout, not one slot."><I.TierPortfolio mode="B" /></Fit>
+              <Fit caption="Review buy · SHOP $104.20" note="The tier is computed from today's price, so the review can only say where it lands."><I.TierReview mode="B" /></Fit>
+              <Fit caption="Refused · AAPL $211.42" note="The reason has to explain the whole layout, not one slot."><I.TierRefused mode="B" /></Fit>
+            </div>
+
+            <h3 className="b-sub">C · Tiers are a draft rule only</h3>
+            <div className="b-concepts b-concepts--three">
+              <Fit caption="Portfolio · after selling DIS, buying AAPL" note="Two stocks between $200 and $400, none between $100 and $200. No tier labels after the draft."><I.TierPortfolio mode="C" /></Fit>
+              <Fit caption="Review buy · AAPL $211.42" note="No tier line: only the roster cap and the budget can refuse."><I.TierReview mode="C" /></Fit>
+            </div>
+
+            <div className="b-ask">
+              <h3>Your call · recommend A</h3>
+              <ul>
+                <li><b>A keeps the league's shape.</b> The tier layout the commissioner chose stays true all season: every roster always holds one cheap stock, one mid-priced stock and one expensive stock. A trade is a swap inside a tier ("sell my $100–$200 stock, buy a better $100–$200 stock"), which is easy to explain on one line and easy to refuse with a reason.</li>
+                <li><b>B plays the same as A</b> while tiers don't overlap (the layout above): each one-share tier holds exactly one stock, so "re-fit everything" always lands back on "fill the open tier". It only differs with overlapping brackets, and there its refusals have to explain the whole roster ("two stocks in $200–$400 and none in $100–$200"). It costs more to explain for the same play.</li>
+                <li><b>C changes what tiers mean.</b> They become a draft-room constraint that dissolves on the first trade: by mid-season a tier league can be five $800+ stocks, the same game as a plain budget league. If that is the intent, a tier league doesn't need its own format.</li>
+                <li><b>Backend (A or B):</b> trade buys need a slot. Tiers today count only <code>drafts.slot_id</code>; a buy in record-trade would carry the freed <code>slot_id</code> (A) or re-check every holding's entry price (B), and refuse with <code>tier_full</code> / <code>tier_mismatch</code>. C needs no backend change.</li>
+              </ul>
+            </div>
+          </section>
+    ),
+  };
+
   function Inventory() {
     const [card, setCard] = useState(0);
     return (
@@ -6172,541 +6742,6 @@
           <Fit caption="Playoff bracket · 6 teams" note="3 weeks; seeds 1–2 get first-round byes (new copy; round names decided)"><I.Playoffs6 /></Fit>
         </Group>
 
-        <section className="b-sec" id="run-it-back" aria-labelledby="run-it-back-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3c</span>
-            <div>
-              <h2 id="run-it-back-h">Run it back</h2>
-              <p className="b-job">Season 1 is over; the commissioner renews the league so the group plays Season 2. Decided by Giorgio (2026-10-04); all copy here is approved. Built in 3c (League tab + the Home cards) on the backend in feat/run-it-back.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>Only the commissioner</b> runs it back: the "Run it back?" card on the season-complete Home and the League tab action. Season 2 is a new league linked to Season 1, which stays frozen and complete.</li>
-            <li><b>Opt-in.</b> Every Season 1 player gets "Roberto B. is running it back. Are you in for Season 2?" (push + a card on Home and the League tab). Answers can flip in ↔ out until the draft is set.</li>
-            <li><b>The commissioner hears every reply</b> and reconciles on "Who's running back": Season 1 order, "Running back" (name bold), "Out" (muted), "No reply yet" with <b>Nudge again</b> (once a day) or <b>Remove</b>; new joiners last ("New", "Joining").</li>
-            <li><b>A player who is in</b> goes straight to the same list, read-only, with "You're running back · Change". Players who are out or haven't answered don't see it.</li>
-            <li><b>The draft can't be set</b> while anyone is "No reply yet": the draft rows stay disabled with the reason inline (the server enforces it too).</li>
-            <li><b>New players</b> join with the invite code, not capped by Season 1's size (up to 16 until the draft), and see Season 1's history.</li>
-            <li><b>Teams start with a new draft</b>; every setting carries over and the commissioner can edit it on the review. Keepers / keep teams were not chosen.</li>
-            <li><b>History:</b> a Season 1 champion banner on the League tab until Season 2's draft; League › History lists every season with its final standings, matchups and draft.</li>
-          </ul>
-
-          <h3 className="b-sub">Starting it (commissioner only)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Home · season complete (commissioner)" note='"Start next season" becomes a "Run it back?" card. Members see the champion card without it.'><I.RibHome /></Fit>
-            <Fit caption="League tab · season over (commissioner)" note="The champion banner, the commissioner's action, and Season 1's final standings."><I.RibLeague /></Fit>
-            <Fit caption="Push · every Season 1 player" note="Sent the moment the commissioner runs it back; opens the I'm in / I'm out card."><I.RibPush mode="ask" /></Fit>
-          </div>
-
-          <h3 className="b-sub">Who's in: opt-in, the commissioner reconciles</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="1 · Member: Home (and the League tab)" note="The same card sits on the League tab. I'm in opens the full list (4b). An answer can change until the draft is set."><I.RibMemberPrompt /></Fit>
-            <Fit caption="1b · Member who said I'm out (GS-14)" note={'Design Lead ruling, 2026-10-11: an out player keeps the same card on the finished league\'s Home and League tab, with their answer marked, so they can change it until the draft is set (they are no longer in Season 2, so this is the only place it can live). New copy: the chip "You\'re out". A player the commissioner removed gets no card.'}><I.RibMemberPrompt answered="out" /></Fit>
-            <Fit caption="2 · Commissioner: a push for each reply" note="Every answer notifies the commissioner, with the running count."><I.RibPush mode="reply" /></Fit>
-            <Fit caption="3 · Commissioner: Home while replies come in" note="Counts and who's still to reply; opens the reconcile view."><I.RibHomeCounts /></Fit>
-            <Fit caption="4 · Commissioner: League tab, reconcile" note={`Standings-style, in Season 1 order: "Running back" (Giorgio's copy) with the name in bold; "Out" muted; "No reply yet" with "Nudge again · Remove" (Giorgio's words) on the row; new joiners last with a New marker and "Joining". Draft rows stay disabled until nobody is left without a reply. Needs backend: replies, and joins during renewal.`}><I.RibReconcile /></Fit>
-            <Fit caption="4b · A member who said I'm in" note="Answering I'm in opens this: the same list with every answer and no actions, plus 'Change'. Players who are out or haven't answered don't see it."><I.RibMemberList /></Fit>
-            <Fit caption="5 · Clearing a non-reply" note='"Nudge again" re-sends the ask (once a day); "Remove" takes them out of Season 2 and tells them.'><I.RibResolve /></Fit>
-            <Fit caption="6 · After everyone has replied: the review" note="Every Season 1 setting carried over and editable; teams = who's in + new joins (here 4 + 1 = 5, up to 16), with the uneven-bye heads-up. Schedule the draft = start_renewed_season."><I.RibReview /></Fit>
-          </div>
-
-          <h3 className="b-sub">History</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="League tab · Season 2, before the draft" note="The Season 1 champion banner stays until Season 2's draft; History is one tap away."><I.RibHistory /></Fit>
-            <Fit caption="League › History" note="Every season, its champion and final standings; matchups and the draft recap too. New players see it as well."><I.RibHistory view="list" /></Fit>
-          </div>
-        </section>
-
-        <section className="b-sec" id="your-turn" aria-labelledby="your-turn-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3c</span>
-            <div>
-              <h2 id="your-turn-h">Your turn must be unmissable (decided)</h2>
-              <p className="b-job"><b>Giorgio, 2026-10-06:</b> the top of the screen should "flash a color when they're up just to make sure that they're they really notice it", with text "that's very hard to miss", plus "a sound notification or a buzz". Spec by the Design Lead. Stock Scudetto, Roberto B.'s phone: Alessandro D. picks 10, then it's Roberto's pick 11.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>When:</b> the moment the server's clock makes it your turn, once per turn. Never on a refreshed screen that was already your turn (no replay on re-open).</li>
-            <li><b>The flash:</b> the clock card fills with <code>live</code> gold, its text in navy (<code>on-live</code>, new token: #0D1B2E in both themes; 5.1:1 on Light gold, 11.0:1 on Dark gold). Two flashes, then it rests: on 90 ms, hold 220 ms, off to the resting tint 160 ms, on again 90 ms, hold 220 ms, settle 160 ms. About 0.95 s in all, two flashes in that second (under the 3-per-second seizure threshold), never blocking input, never looping.</li>
-            <li><b>At rest, for the whole turn:</b> the card keeps a <code>warn-tint</code> fill and a 2 pt <code>live</code> border; the clock is in score type at 44 pt; "You're on the clock" is 30 pt, weight 900, in <code>liveText</code>. It is the largest text on the screen.</li>
-            <li><b>Buzz and sound, with the flash:</b> <code>Haptics.notificationAsync(Warning)</code> and one short chime (under 0.5 s). The chime respects the silent switch (<code>playsInSilentModeIOS: false</code>) and mixes with other audio, never stopping it. Both fire whenever the app is in front; the flash shows when the draft room is on screen (elsewhere, Home's drafting card already says it's your turn).</li>
-            <li><b>Last 10 seconds:</b> one more Warning haptic at 10 s left. No sound, no second flash: the clock's turn to <code>loss</code> red is the visual.</li>
-            <li><b>Reduce Motion:</b> no flash. The card switches straight to its resting state (tint, border, the big title) with no fade; the haptic and the chime stay, since they aren't motion.</li>
-          </ul>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Before: someone else is up" note="The card is quiet; your next pick is named."><I.YourTurn phase="before" /></Fit>
-            <Fit caption="Your turn: the flash" note="The peak of the two flashes: gold fill, navy text. With the buzz and the chime."><I.YourTurn phase="flash" /></Fit>
-            <Fit caption="Your turn: at rest" note="After the flash, for the rest of the turn: tint, gold border, the 30 pt title."><I.YourTurn phase="rest" /></Fit>
-            <Fit caption="Your turn: Reduce Motion" note="No flash; the resting state from the first frame. Buzz and chime unchanged."><I.YourTurn phase="rm" /></Fit>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-manager-row" aria-labelledby="call-manager-row-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">UX</span>
-            <div>
-              <h2 id="call-manager-row-h">Decided: one manager row everywhere</h2>
-              <p className="b-job">From the 1.2.0 final sweep (S-10). Giorgio ruled 2026-10-08: "just bold the users name. dont need to put the (you), people know their name. just bold it." Asked about the tint: "blue tint as well". So: your name bold on a light-blue row, everyone else in the regular weight; no "(you)". Gains are coloured by sign; the move arrows appear on League only. This one row now serves League standings, Home's excerpt, League › History, the draft lobby and order screens, the pick log, the bracket and All matchups; columns come and go, the look doesn't. Stock Scudetto, Roberto B.'s phone.</p>
-            </div>
-          </header>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="League standings" note="Rank, move, name, record, gain. Your row tinted, your name bold."><I.ManagerRowCall where="league" /></Fit>
-            <Fit caption="Home's standings excerpt" note="Top 3, plus you if you're lower. The same row without the move column."><I.ManagerRowCall where="home" /></Fit>
-          </div>
-          <div className="b-ask">
-            <h3>Notes for the build</h3>
-            <ul>
-              <li><b>VoiceOver still says "you".</b> The row's accessibility label keeps it ("1st, Roberto B., you, …"); only the visible label goes.</li>
-              <li><b>The renewal list keeps its own bold.</b> There, bold already means "Running back" (his earlier ruling), so your row is marked by the tint alone.</li>
-              <li><b>So does the bracket</b> (game-screens gate R-2, 2026-10-10): bold there means the winner of the game, so your line is marked by the tint alone.</li>
-              <li><b>Leave-option frames that weren't chosen keep their old look</b> as a record of what was offered.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-sell-from-search" aria-labelledby="call-sell-from-search-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3e</span>
-            <div>
-              <h2 id="call-sell-from-search-h">Decided: selling a stock you own, found through search</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> A stock you hold opens on Sell wherever you find it. Your rule (2026-10-09): "i can only sell what i have... cant sell what you dont own." That part is built: a stock you don't hold has no Sell at all. The open question is a stock you DO hold that you reach from Buy a stock's search, here NVDA in Tier Cup. Roberto B.'s phone, Thu 1:37 PM ET, market open. Sheet copy is what the app ships today.</p>
-            </div>
-          </header>
-          <h3 className="b-sub">Both start the same way</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Search NVDA" note={'The row already says "You own this" (shipped, in your colour).'}><I.SellCallSearch /></Fit>
-          </div>
-          <h3 className="b-sub">✓ A · Yes, sell from there (chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="✓ A · NVDA's sheet from search (chosen)" note="Buy | Sell, with Sell pre-selected, exactly as from Portfolio. It is your stock, so this is selling what you own."><I.SellCallSheet mode="sell" /></Fit>
-            <Fit caption="A · A stock you don't hold (SHOP)" note="No Buy | Sell control, Buy only. Your rule, unchanged."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
-          </div>
-          <h3 className="b-sub">B · Sell only from Portfolio (not chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="B · NVDA's sheet from search (not chosen)" note={'No Buy | Sell control. Buy is the only action, and it can\'t work: you already hold NVDA (shipped copy). The line under it points to Portfolio. New copy: "To sell NVDA, open it from your Portfolio".'}><I.SellCallSheet mode="buyonly" /></Fit>
-            <Fit caption="B · Portfolio › NVDA (not chosen)" note="The one way to sell: back out of search, open Portfolio, tap the holding."><I.SellCallPortfolio /></Fit>
-            <Fit caption="B · NVDA's sheet from Portfolio (not chosen)" note="The same sheet as A's, Sell pre-selected. So in B, one stock's sheet changes depending on where you opened it."><I.SellCallSheet mode="sell" from="portfolio" /></Fit>
-            <Fit caption="B · A stock you don't hold (SHOP) (not chosen)" note="Buy only, the same as in A."><I.SellCallSheet t="SHOP" mode="free" /></Fit>
-          </div>
-          <div className="b-ask">
-            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #188)</h3>
-            <ul>
-              <li><b>A follows your rule as written.</b> You own NVDA, so you can sell it; a stock you don't own still has no Sell anywhere. What you objected to, a search for any stock in order to sell, stays gone either way.</li>
-              <li><b>B leaves a dead end.</b> From search, NVDA's sheet would offer only Buy, and Buy is off because you already hold it. You'd have to leave, open Portfolio and find it again.</li>
-              <li><b>One stock, one sheet</b> (UX rule 5). In A, NVDA's sheet looks the same wherever you open it. In B it changes with the screen you came from, which players can't see and won't predict.</li>
-              <li>Fantasy apps work this way too: tap your own player anywhere (search, the player list, the roster) and you get Drop; you never have to go back to the roster first.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-medals" aria-labelledby="call-medals-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3c</span>
-            <div>
-              <h2 id="call-medals-h">Decided: who gets the gold once the season is over</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-10): A.</b> Once the playoffs are done, the medals follow the result. From the game-screens gate (GS-4). In a finished season the standings keep the regular-season order, so the medals follow it, and the device capture shows the gold next to the manager who LOST the Final while the champion gets silver. No rule covers this yet. Summer Cup, Season 1 finished: Paolo M. topped the regular season (11–3); Roberto B. (you) beat him in the Final. Sample season, drawn to match the capture.</p>
-            </div>
-          </header>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="✓ A · Medals follow the playoffs (chosen)" note={'The champion is first with the gold, the runner-up silver, bronze to the better-seeded semifinal loser; everyone else keeps their regular-season place. New copy: "Final standings", "After the playoffs", "Champion", "Runner-up", the caption.'}><I.MedalsCall v="A" /></Fit>
-            <Fit caption="B · Medals stay regular season (not chosen)" note={'The table is unchanged; the champion gets a trophy next to their name and "Champion · won the Final". New copy: that line.'}><I.MedalsCall v="B" /></Fit>
-          </div>
-          <div className="b-ask">
-            <h3>Decided: A (Giorgio, 2026-10-10; PRODUCT_RULES, #191)</h3>
-            <ul>
-              <li><b>The gold should go to whoever won the league.</b> In B the first thing on the screen, a gold medal, sits next to the manager who lost the Final; the trophy has to argue with it.</li>
-              <li><b>Fantasy apps do A.</b> Once the playoffs are done, ESPN and Sleeper rank the final standings by playoff finish: the champion is 1st.</li>
-              <li><b>Nothing is lost in A.</b> Records and season gains stay the regular season's, and the Playoffs tab keeps the seeding.</li>
-              <li>Either way, the same medals then show in League › History and on the season-complete card, so every screen tells the same story.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-watchlist" aria-labelledby="call-watchlist-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3e</span>
-            <div>
-              <h2 id="call-watchlist-h">Decided: the watchlist and daily claims</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-09): C, plus the Design Lead's rulings (a) to (d) below.</b> Giorgio, 2026-10-08: trading stays market hours only; search and save any time; the watchlist is per league ("each one has its own waiver wire"); and a daily waiver wire: "you can claim stocks after the close of each day. if no one else claims that day, you get it. if two or more people claim, then we have the order decide." Drawn to the fantasy-football model (docs/design/FANTASY_CONVENTIONS.md): a star to save, a Claim that settles at the next 9:30 open, a visible waiver order, blind claims, visible holdings. Tier Cup (price tiers; selling DIS left the $100–$200 slot open), Roberto B.'s phone; open = Thu 1:37 PM, closed = Fri 5:00 PM, the run = Mon 9:30 AM ET. Use the Theme switch for Dark. All watchlist and claim copy is new unless a caption says otherwise.</p>
-            </div>
-          </header>
-
-          <h3 className="b-sub">1 · Where it lives: C, both (decided)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit h={1236} caption="A · Watching on Portfolio · open (not chosen alone)" note={'Holdings first, then Watching: the holding row plus one status line saying whether you can get the stock in this league. Buy sits on the available row while the market is open.'}><I.WatchPortfolio /></Fit>
-            <Fit h={1266} caption="A · Watching on Portfolio · closed (not chosen alone)" note={'Closed chip, no live dot, every price "At Fri close". Buy\'s spot reads Claim (the same size and place). Claim also shows on "No free $200–$400 slot", because a claim can name the sale that makes room; a live Buy can\'t.'}><I.WatchPortfolio closed /></Fit>
-            <Fit caption="B · Buy a stock › Watchlist · open (not chosen alone)" note="The list inside the player pool, as ESPN, Sleeper and Yahoo do it. Portfolio stays as it is today."><I.WatchTab /></Fit>
-            <Fit caption="B · Buy a stock › Watchlist · closed (not chosen alone)" note={'The approved "Market closed" card on top; Claim in Buy\'s spot.'}><I.WatchTab closed /></Fit>
-            <Fit h={1334} caption="✓ C · Portfolio (chosen)" note={'C is both, one list. Portfolio shows five, then "See all (12)", which opens Buy a stock on its Watchlist tab.'}><I.WatchPortfolio closed n={12} seeAllTo="See all opens Buy a stock › Watchlist." /></Fit>
-            <Fit caption="✓ C · Buy a stock › Watchlist (chosen)" note="The same list in the player pool, where a fantasy player looks for it."><I.WatchTab closed /></Fit>
-          </div>
-
-          <h3 className="b-sub">2 · Each league has its own list</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit h={1108} caption="Switch to Stock Scudetto with the pill" note={'A different list (AMZN, AMD, SHOP). The same SHOP reads "No free slot" here (every slot is invested) and "Available" in Tier Cup. Owners are this league\'s, from its draft.'}><I.WatchOtherLeague /></Fit>
-          </div>
-
-          <h3 className="b-sub">3 · Claim, the closed-market twin of Buy</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Stock sheet · closed" note={'Where Review buy sits when the market is open, the same button reads Claim. The star stays in the header, far from it. Approved copy: the Market closed card.'}><I.ClaimSheet /></Fit>
-            <Fit caption="The composer (the 3e review, re-labelled)" note={'What you buy, what pays for it (the sale picker; cash in a budget league), the fit as of Friday\'s close, and the fill time on the button. × closes without claiming.'}><I.ClaimComposer /></Fit>
-            <Fit h={1328} caption="After claiming" note={'The status line becomes "Claimed · fills Mon 9:30 AM ET"; the star doesn\'t change; the action spot reads Cancel. A Claims row appears under Buy a stock.'}><I.WatchPortfolio closed claimed /></Fit>
-          </div>
-
-          <h3 className="b-sub">4 · Your claims and the waiver order</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Claims (yours only)" note={'Pending claims with what pays for each, Cancel until the run starts, and your place in the waiver order. It never shows anyone else\'s claims.'}><I.ClaimsList /></Fit>
-            <Fit caption="The waiver order, on tap" note="Visible to the whole league, like the standings. Your row: bold on the light-blue tint (S-10)."><I.ClaimsList order /></Fit>
-          </div>
-
-          <h3 className="b-sub">5 · Endings at the 9:30 open (one each)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Won" note="The position lands at the opening price, paid by the sale you named. The new holding is lit once, then settles."><I.ClaimEnding kind="won" /></Fit>
-            <Fit caption="Lost" note="Names the winner and one short reason (Design Lead ruling, recorded in the plan). The sale did not happen, and the card says so."><I.ClaimEnding kind="lost" /></Fit>
-            <Fit caption="Failed" note={'Named reason, nothing happened. Ruled wording: the brief\'s "No free $100–$200 slot at the open" would say there was no free slot when the slot WAS free; the stock left its tier.'}><I.ClaimEnding kind="failed" /></Fit>
-          </div>
-
-          <h3 className="b-sub">6 · Refusals, in place</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Claim on a sheet left open past 9:30" note={'"Market\'s open: just buy it." The button turns back into Review buy.'}><I.ClaimSheet state="opened" /></Fit>
-            <Fit caption="A 6th claim" note={'"5 claims pending. Cancel one to claim another." The button stays visible, disabled.'}><I.ClaimComposer full /></Fit>
-            <Fit caption="A live buy during the run" note={'"Claims are being processed. Try again in a minute." Live trading waits for the run (at most ten minutes).'}><I.ClaimSheet state="processing" /></Fit>
-            <Fit caption="Watchlist full (50)" note={'"Your watchlist is full (50). Remove one to add another." (the plan\'s line).'}><I.SaveResults full /></Fit>
-          </div>
-
-          <h3 className="b-sub">7 · Save, Home and the draft room</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Save on a search result" note={'The star, a 44 pt labelled control on every result, open market or not. Tapping flips Save to Saved, and that flip is the whole ending (no toast). No Buy on a result row.'}><I.SaveResults /></Fit>
-            <Fit caption="Saved in the stock sheet header" note="Next to the name, far from Buy. Open market."><I.SaveSheet /></Fit>
-            <Fit caption="Home hook · closed (still open: not part of the C decision)" note={'Stock Scudetto on Thursday evening, so the counts are this league\'s: "Market opens Fri 9:30 AM ET · 1 claim pending · 3 on your watchlist". Taps through to Claims.'}><I.HomeClaimsHook /></Fit>
-            <Fit caption="Draft room: Queue and Save" note={'Two labelled lists with a key. No Claim during a draft: the draft is how you get stocks then.'}><I.DraftQueueSave /></Fit>
-          </div>
-
-          <div className="b-ask">
-            <h3>Decided: C (Giorgio, 2026-10-09)</h3>
-            <ul>
-              <li><b>Both doors, one list.</b> The Watchlist tab in Buy a stock, where fantasy players keep a watch list (ESPN, Sleeper, Yahoo all put it in the player pool), and the Watching section on Portfolio, below Holdings, capped at five rows, so a closed Friday shows your list and Claim on the screen you already open. "See all (N)" on Portfolio opens the tab. The A and B frames stay as the record and still show the row and section designs C uses.</li>
-            </ul>
-            <h3>Design Lead rulings, approved with C</h3>
-            <ul>
-              <li><b>(a) Claim also on "No free … slot" rows</b> (closed only), since the claim names the sale that frees the slot. While open, those rows have no Buy: you sell first, as today.</li>
-              <li><b>(b) The failed ending says what the stock did:</b> "LOW opened at $203.10, above your $100–$200 slot · Nothing was bought." (not "No free $100–$200 slot", which would have said the free slot wasn't free).</li>
-              <li><b>(c) A Watching row is the ticker and one status line</b>, no company name, so a row with Buy or Claim stays two lines; the sheet names the company. A claimed stock's status line is "Claimed · fills Mon 9:30 AM ET"; the star never changes.</li>
-              <li><b>(d) The 9:30 refusals use a stock you could buy</b>, so "Market's open: just buy it." is always true.</li>
-              <li><b>Also drawn as ruled with the Planner:</b> the lost ending names the winner and one reason ("lower in the standings"); the waiver order is visible to the league; claims are blind and holdings visible ("Owned by …" unchanged).</li>
-              <li><b>Sample data.</b> The brief's AAPL examples are drawn with the board's own stocks: AMGN paid by selling NVDA (both in the $200–$400 tier, the swap a tier league allows), and LOW from the budget. The waiver order and Tier Cup's budget are sample.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-join-commissioner" aria-labelledby="call-join-commissioner-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">1.2.0</span>
-            <div>
-              <h2 id="call-join-commissioner-h">Decided: the commissioner's name before you join</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-11): A.</b> No commissioner name before joining. Your rule (2026-10-08): "we cannot allow a user to see any information outside of the name/avatar of another member in their league (email, etc) or any info about users not in their league." Someone holding an invite code isn't in the league yet, but today's Join preview shows "Run by {'{commissioner}'}", and the full-league message names them too. Serie A Traders, previewed with code SERIEA7.</p>
-            </div>
-          </header>
-          <h3 className="b-sub">✓ A · No name before joining (chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="✓ A · No name before joining (chosen)" note={'The "Run by" line goes; nothing replaces it (the code above the title already says how you got here). Everything else is unchanged.'}><I.JoinCommishCall v="A" /></Fit>
-            <Fit caption="✓ A · League full (chosen)" note={'NEW copy: "Ask your commissioner if they can make room." ("your commissioner" as in the app\'s other pre-join messages, e.g. "Ask your commissioner for a new code.")'}><I.JoinCommishCall v="A" full /></Fit>
-          </div>
-          <h3 className="b-sub">B · Keep the name (not chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="B · Keep the name (not chosen)" note={'"Run by Roberto B." stays, on the grounds that the code came from them. No copy change.'}><I.JoinCommishCall v="B" /></Fit>
-            <Fit caption="B · League full (not chosen)" note={'"Ask Roberto B. if they can make room." No copy change.'}><I.JoinCommishCall v="B" full /></Fit>
-          </div>
-          <div className="b-ask">
-            <h3>Decided: A (Giorgio, 2026-10-11)</h3>
-            <ul>
-              <li><b>A is your rule as written.</b> Before joining, the commissioner is a user not in your league, so their name is out. B adds an exception ("the code came from them") the rule doesn't have, and a code can be forwarded by anyone.</li>
-              <li><b>Nothing you need is lost.</b> The name, managers, draft time, stakes and season are all still there to decide on. You see the commissioner's name the moment you join.</li>
-              <li><b>For the build, A is a server change as well as copy:</b> the preview's data stops carrying the commissioner's name, so no client can show it. Hiding it only on screen would still send it to the phone. It also retires the app's "Ask Unknown if they can make room" fallback (final sweep S-13).</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-leaver-names" aria-labelledby="call-leaver-names-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">1.2.0</span>
-            <div>
-              <h2 id="call-leaver-names-h">Decided: managers who left, in past seasons</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-11): A, with frozen names.</b> Someone who left stays named (name and avatar) in the seasons they played, exactly as they were when they left; a later rename or new avatar never reaches their old leaguemates. No visual marker: it looks exactly like A. Your rule (2026-10-08): "i can only see other names and avatars of other users im in a leauge with ... or any info about users not in their league." And your leaving rule (2026-10-06): after the season, leaving hides the league for that player, and history is kept. Leaving is only possible before the draft (no record yet) or after the season, so someone who left only ever shows up in a finished season. Stock Scudetto, Season 1; Andrea P. left after it.</p>
-            </div>
-          </header>
-          <h3 className="b-sub">✓ A · They stay named in the seasons they played, frozen (chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="✓ A · History, Season 1 (chosen)" note="Andrea P. keeps their name and avatar in the season they played, as ESPN and Sleeper show past owners. Nothing new about them is shown: no profile, no current leagues."><I.LeaverHistory v="A" /></Fit>
-            <Fit caption="✓ A · A past matchup (chosen)" note="Week 3 against Andrea P. reads as it did."><I.LeaverMatchup v="A" /></Fit>
-          </div>
-          <h3 className="b-sub">B · Once they leave, they're "Former manager" (not chosen)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="B · History, Season 1 (not chosen)" note={'NEW copy: "Former manager", with an empty avatar, in standings, History, past matchups and the draft board.'}><I.LeaverHistory v="B" /></Fit>
-            <Fit caption="B · A past matchup (not chosen)" note={'"Roberto B. won by $250.50" against "Former manager".'}><I.LeaverMatchup v="B" /></Fit>
-            <Fit caption="B · What it breaks (not chosen)" note={'On Paolo M.\'s phone, after three people left (Roberto B., Alessandro D., Andrea P.): "Champion Former manager", and three rows nobody can tell apart.'}><I.LeaverHistory v="B" me="paolo" gone={['roberto', 'alessandro', 'andrea']} /></Fit>
-          </div>
-          <div className="b-ask">
-            <h3>Decided: A, with frozen names (Giorgio, 2026-10-11)</h3>
-            <ul>
-              <li><b>You already ruled that history is kept</b> when someone leaves after the season. A record of who won and who lost that week, with nobody's name on it, isn't really kept.</li>
-              <li><b>B empties the record people care about.</b> A champion who moves on becomes "Champion Former manager"; two or three leavers turn into identical rows; and anyone who looks back at an old season (a newcomer, or you a year later) can no longer tell who they played.</li>
-              <li><b>A stays inside your rule's spirit:</b> only the name and avatar, only where they played with you, nothing else (no profile, no other leagues).</li>
-              <li><b>The refinement, chosen:</b> today the app shows a leaver's CURRENT name, so if they rename later, their old leaguemates see the new one. We can instead freeze the name as it was when they left, so nothing about them after they left ever reaches you. Chosen with A, with no visual marker.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3c</span>
-            <div>
-              <h2 id="call-leave-h">Your call: leaving a league</h2>
-              <p className="b-job"><b>Ruled by Giorgio (2026-10-06).</b> The leave window: open until the draft order is set (an hour before the draft), locked from then until the season ends, open again after the season (where leaving hides the league). Q2 = C (locked in); Q1 = the commissioner reconfirms; Q4 = A (transfer the title first); Q3 and Q5 don't apply. All decided. Five decisions, from LEAVE_LEAGUE_OPTIONS.md (feat/leave-league). ★ marks the worker's recommendation; the Design Lead's view is in the box at the end. All copy inside these frames is new. Samples: before the draft, Sofia F. leaves Serie A Traders; mid-season, Gianluigi B. (Roberto's Week 6 opponent) leaves Stock Scudetto on Tuesday; in the playoffs, Francesco T. left in Week 9 and still finished 4th.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>Today a leave is an unguarded delete</b> that anyone can do at any time, the commissioner included. After the draft it leaves a "zombie" team that still scores but can't trade, and it stalls the playoffs (<code>bracket_non_member</code>). Every option below replaces it.</li>
-            <li><b>The key fact for Q2:</b> bots already are buy-and-hold teams. So "auto-managed" and "frozen portfolio" are the same mechanics; the scoring path is the one bots use today.</li>
-            <li><b>Locked in (decided):</b> from an hour before the draft (when the order is set) until the season ends, "Leave league" stays in League settings, disabled, with the reason on the row: "Teams are locked in from an hour before the draft until the season ends." The same line before the draft, mid-draft and mid-season, for members and the commissioner. Before the lock, the row says until when you can leave.</li>
-            <li><b>Where it lives:</b> "Leave league" sits at the bottom of League settings, in red, the way "Sign out" sits at the bottom of Profile. It opens a sheet that is the confirmation; there's no second alert.</li>
-            <li><b>The sheet's buttons</b> (Giorgio, 2026-10-06: "I want stay as a button"): "Leave league" is the filled red button; "Stay" is a real button under it, in the secondary (outlined) style, full width. This overrules the Design Lead's G-3, which had made Stay a text button.</li>
-          </ul>
-
-          <h3 className="b-sub">Q1 · Leaving before the draft · decided: the commissioner reconfirms</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Leave sheet · member, before the draft" note="Tells the leaver what happens next and until when they can come back."><I.LeaveSheet mode="pre" /></Fit>
-            <Fit caption="After Move forward" note="The leaver's row is removed (A) and the order closes the gap."><I.OrderAfterLeave q1="A" /></Fit>
-            <Fit caption="B · Remove + reopen the order (not chosen)" note="Superseded: the reconfirmation below covers the whole league, not just the order."><I.OrderAfterLeave q1="B" /></Fit>
-          </div>
-
-          <h3 className="b-sub">Q1 · The reconfirmation (decided, new frames)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Before the lock · Leave league is open" note="The row says until when: the draft order time (T−1h)."><I.LeaveOpenRow /></Fit>
-            <Fit caption="1 · Commissioner Home: Needs you" note={`Giorgio's two choices as buttons: "Move forward with 7" (one fewer team) or "Invite someone new" (to replace). Also pushed to the commissioner. The deadline is the room-open time (6:00 PM ET); still unchosen then, the draft is postponed (see The draft starts by itself).`}><I.ReconfirmHome /></Fit>
-            <Fit caption="2 · What blocks the start (superseded)" note="Superseded by auto-start: there is no Start button. The same two choices now sit in the commissioner's blockers card (The draft starts by itself), with the room-open time as the deadline."><I.ReconfirmStartBlocked /></Fit>
-            <Fit caption="3 · Invite someone new" note="The card turns into the invite. When someone joins, it clears on its own; the commissioner can still switch to moving forward."><I.ReconfirmHome mode="inviting" /></Fit>
-            <Fit caption="Members meanwhile" note="Everyone else sees why the draft is waiting (on Giulia V.'s phone)."><I.ReconfirmMember /></Fit>
-          </div>
-
-          <h3 className="b-sub">Q2 · Leaving after the draft · decided: C</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="A · Soft leave: the sheet (not chosen)" note="The team keeps its stocks and plays out the season, buy-and-hold."><I.LeaveSheet mode="A" /></Fit>
-            <Fit caption="A · The opponent's Home (not chosen)" note='"Gianluigi B. (left) · Auto-managed" with a real live score: Roberto still has to beat a portfolio.'><I.DepartedMatchup q2="A" /></Fit>
-            <Fit caption="A · Standings for everyone else (not chosen)" note="The row stays in place, labelled, muted. Scoring is unchanged."><I.DepartedStandings /></Fit>
-            <Fit caption="B · Forfeit: the sheet (not chosen)" note="Stocks are sold back to the pool; every remaining matchup is a loss."><I.LeaveSheet mode="B" /></Fit>
-            <Fit caption="B · Forfeit: the opponent's Home (not chosen)" note="A free W. Whoever faces the leaver late in the season gets free wins."><I.DepartedMatchup q2="B" /></Fit>
-            <Fit caption="✓ C · Locked in (chosen)" note="Final copy. Leave league stays disabled, with the reason on the row, from an hour before the draft until the season ends."><I.LeaveRefused kind="season" /></Fit>
-          </div>
-
-          <h3 className="b-sub">Q3 · Playoffs with a departed team · not applicable (Q2 = C)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · Departed teams stay eligible" note="Seeding unchanged; the 4th seed plays on autopilot and could win the title."><I.DepartedBracket q3="A" /></Fit>
-            <Fit caption="B · Skip departed teams in seeding" note="Seeds shift: 5th moves up to the 4th seed. Fewer than 2 active teams: no playoffs."><I.DepartedBracket q3="B" /></Fit>
-          </div>
-
-          <h3 className="b-sub">After the season · leaving hides the league (decided)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Leave a finished league" note="On Andrea P.'s phone. The league comes off Home and Your leagues; its History keeps their record for everyone. Open: whether a later Run it back still asks them, and whether they can unhide it."><I.LeaveFinished /></Fit>
-          </div>
-
-          <h3 className="b-sub">Q4 · The commissioner leaving · decided: A, transfer first</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="✓ A · Transfer first (chosen)" note="Leave is disabled for the commissioner: first make someone else commissioner from the Commissioner row, then leave as a member. A transfer is allowed only before the draft room opens or after the season (PR #132)."><I.LeaveRefused kind="commish" /></Fit>
-            <Fit caption="B · Pick a successor in the leave sheet (not chosen)" note="Before the draft. Human members only, one atomic step. Shown after picking: nothing is preselected, and the button names the successor once one is picked."><I.CommishLeave q4="B" /></Fit>
-            <Fit caption="C · Auto-transfer (not chosen)" note="The longest-standing manager becomes commissioner and gets a push."><I.CommishLeave q4="C" /></Fit>
-          </div>
-
-          <h3 className="b-sub">Q5 · What the leaver sees, and rejoining · not applicable (Q2 = C)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="★ A · League tab after leaving" note="Read-only: history stays visible, no trading, no rejoin this season."><I.LeaverLeague q5="A" /></Fit>
-            <Fit caption="B · Reclaim my team" note="Until the season ends, the leaver can undo; trading reopens."><I.LeaverLeague q5="B" /></Fit>
-            <Fit caption="A and B · Home skips the league" note="On Gianluigi B.'s phone (their other league is sample data). The league leaves the single-league Home and sits under a new 'You left' group in Your leagues."><I.LeaverSheet /></Fit>
-          </div>
-
-          <h3 className="b-sub">Refusals</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="From an hour before the draft (decided)" note="The same locked-in line as mid-season: the lock starts when the draft order is set."><I.LeaveRefused kind="drafting" /></Fit>
-            <Fit caption="Only manager left (Q4)" note="Before the draft, everyone else is a bot: delete the league instead."><I.LeaveRefused kind="sole" /></Fit>
-            <Fit caption="Rejoin after leaving (not applicable)" note="Kept for the record: with Q2 = C nobody leaves after the draft, and a pre-draft leaver rejoins with the code."><I.LeaveRefused kind="rejoin" /></Fit>
-          </div>
-
-          <div className="b-ask">
-            <h3>Decided: the leave window, Q2 = C, Q1 = reconfirm, Q4 = A (transfer first)</h3>
-            <ul>
-              <li><b>Edges:</b> (1) not chosen in time and (2) the invite deadline are settled by auto-start: the deadline is when the draft room opens, and if the teams still aren't confirmed then, the draft is postponed. Still open: (3) after a post-season leave, does Run it back still ask that player (recommend no)? (4) Can they unhide the league (recommend not in 1.2.0)?</li>
-            </ul>
-            <p className="b-job" style={{ margin: '0 0 6px' }}>The Design Lead's original view, recommending the ★ package, is kept below for the record.</p>
-            <ul>
-              <li><b>Q2-A is the anchor.</b> The leaver's opponents still play a real portfolio, nobody gets free wins, and nobody is trapped in a league. It also needs no change to scoring, snapshots or the playoffs: the departed team scores exactly the way a bot does today. B puts a new branch into the scoring pipeline that was just hardened (S1–S9). C turns "you can't leave" into a support ticket.</li>
-              <li><b>Q3-A follows from Q2-A.</b> An autopilot team had to earn its seed, and a departed seed still makes the bracket start. The cost is honest and rare: a departed team could win the title, and its champion line would read "Francesco T. (left)". B shifts seeds and byes late, and it rewrites the playoff guard.</li>
-              <li><b>Q4-B, with one design condition:</b> no successor is preselected. Leaving is destructive, and a default choice would let one tap hand the league to someone nobody chose. The button stays disabled until a pick, then reads "Leave and hand over to Paolo M.". The successor gets a push. A (transfer first, then leave) is the fallback if the picker slips; a standalone "Make commissioner" is useful anyway.</li>
-              <li><b>Q1-A:</b> closing the gap is what everyone expects, and the commissioner sees why the order changed. Keep the existing refusal at draft start when playoff teams outnumber managers; don't silently clamp it.</li>
-              <li><b>Q5-A:</b> one state ("left") is simpler to explain than "left, then back". The league stays readable, so history isn't lost.</li>
-              <li><b>Still open (not on the worker's list):</b> should the opponent get a push when their manager leaves ("Gianluigi B. left Stock Scudetto. Their team plays on, auto-managed.")? Recommend yes, to everyone in the league, once.</li>
-              <li><b>Backend:</b> the "(left)" label needs a departed flag from <code>get_league_display_names</code>. Home has to skip departed leagues (<code>get_home_summary</code>). "Delete the league instead" points at a delete that is still client-side (<code>[I3]</code>).</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-auto-start" aria-labelledby="call-auto-start-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3c</span>
-            <div>
-              <h2 id="call-auto-start-h">The draft starts by itself (decided)</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-06).</b> The draft starts at the minute the commissioner set; the room opens an hour before; there's no Start button. <b>The gate is the room-open time:</b> if the league still isn't ready an hour before, the room doesn't open, the draft is postponed for everyone, and the commissioner fixes it and picks a new time. There's no late start. Sample: Serie A Traders, draft {'Sat, Oct 3 · 7:00 PM ET'}, room 6:00 PM ET. Sofia F. left, so the teams aren't confirmed and 8 playoff teams no longer fit 7 teams. All copy here is new.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>Rejected:</b> the 15-minute grace (★A+15), "start whenever it's fixed" (A) and the automatic fixes (C). Nothing starts late, and the server never changes league rules on its own.</li>
-            <li><b>Superseded by this section:</b> every "Start the draft?" sheet and the leave board's Q1 "What blocks the start". Their fix-it content lives in the commissioner's blockers card.</li>
-            <li><b>The phase comes from the server's clock</b> (scheduled, at risk, room open, started, postponed), never the phone's.</li>
-            <li><b>Draft times:</b> 15-minute steps, at least an hour ahead. Changing the time is refused once the room opens; a postponed draft is the one exception, since it needs a new time.</li>
-            <li><b>Pushes need the scheduler:</b> the room-open, at-risk, reminder and postponed pushes all ride the order-notify job, still in <code>migrations/deferred/</code>. No copy may promise them until it's live.</li>
-          </ul>
-
-          <h3 className="b-sub">Everyone: the countdown · the on-time case</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Before the room opens" note="The start time is the promise; the countdown is the reminder."><I.AutoLobby phase="scheduled" /></Fit>
-            <Fit caption="Room open · your position" note='"Draft room open · starts in …" with the order and "You pick 4th".'><I.AutoLobby phase="open" /></Fit>
-            <Fit caption="At 0:00" note="Any member's phone asks the server to start; the server's sweep starts it anyway if nobody is watching."><I.AutoLobby phase="starting" /></Fit>
-            <Fit caption="Push · the draft room is open (everyone, 6:00 PM)" note="With your position."><I.LockPush time="6:00" label="Push, draft room open" body="The draft room is open. You pick 4th. The draft starts at 7:00 PM ET." /></Fit>
-            <Fit caption="Push · the draft has started (everyone, 7:00 PM)"><I.LockPush time="7:00" label="Push, draft started" body="The draft has started. You pick 4th." /></Fit>
-          </div>
-
-          <h3 className="b-sub">Before the room opens: the commissioner is warned</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Push · as soon as the league is blocked" note="Here: when Sofia F. leaves, on Thursday."><I.LockPush time="3:12" day="Thursday, October 1" label="Push, draft at risk" body="The draft room can't open yet: Sofia F. left the league. Fix it before Sat 6:00 PM ET, or the draft is postponed." /></Fit>
-            <Fit caption="Push · reminder, about two hours before" note="Only if it's still blocked."><I.LockPush time="5:00" label="Push, at-risk reminder" body="One hour left to fix your league. If it isn't ready by 6:00 PM ET, the draft is postponed." /></Fit>
-            <Fit caption="Lobby · the blockers card" note="Each blocker carries its own fix: the reconfirm choices and the playoff-teams stepper. The countdown is to the room opening, the real deadline."><I.CommishBlocked phase="risk" /></Fit>
-          </div>
-
-          <h3 className="b-sub">Still blocked at 6:00 PM: postponed for everyone</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Push · postponed (everyone)" note="Members get this one; the commissioner gets their own version (in the strings list below)."><I.LockPush time="6:00" label="Push, draft postponed" body="The draft is postponed. Roberto B. will pick a new time." /></Fit>
-            <Fit caption="Commissioner · postponed" note="Fix first, then a new time with at least an hour's notice; the room-open check runs again before it."><I.CommishBlocked phase="postponed" /></Fit>
-            <Fit caption="Members · postponed" note="Who decides, and how much notice they'll get."><I.MemberPostponed /></Fit>
-          </div>
-
-          <h3 className="b-sub">Home's draft card (decided, matches 3c-2's build with three corrections)</h3>
-          <ul className="b-inv__notes">
-            <li><b>Corrections to the build</b> (ui/mobile-league-setup @ 55f4f68): (1) the order line becomes "The draft room opens Sat 6:00 PM ET, when the order is set." (was "Draft order set … an hour before the draft"). (2) Once the room is open, the button is "Go to the draft room", not "Build your queue": the queue lives in the room. (3) On Home, the members' postponed line drops "and on your Home": "You'll see it here, with at least an hour's notice."</li>
-          </ul>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Scheduled" note="The same card as the pre-draft Home, with the room-opening line."><I.HomeAuto phase="scheduled" /></Fit>
-            <Fit caption="Room open" note={'"Draft room open · starts in" and your position; the button goes to the room.'}><I.HomeAuto phase="open" /></Fit>
-            <Fit caption="At 0:00" note="Home never asks the server to start (the lobby and the server do); it just shows the state."><I.HomeAuto phase="starting" /></Fit>
-            <Fit caption="Commissioner · at risk" note="The blockers card sits on top of the draft card."><I.HomeAuto phase="risk" commish /></Fit>
-            <Fit caption="Commissioner · postponed" note="The blockers card replaces the draft card until a new time is set."><I.HomeAuto phase="postponed" commish /></Fit>
-            <Fit caption="Members · postponed" note={'Tag "Draft postponed", chip "Postponed".'}><I.HomeAuto phase="postponed" /></Fit>
-            <Fit caption="No draft time yet · commissioner" note={'Members read "Roberto B. will set the draft time."'}><I.HomeAuto phase="nodate" commish /></Fit>
-          </div>
-
-          <h3 className="b-sub">Draft time (decided)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Draft time sheet" note="15-minute steps; times under an hour away are greyed out, so there's no error to show. The server quietly accepts 55 minutes, so a slow submit is never refused."><I.DraftDatePicker /></Fit>
-            <Fit caption="After the room opens" note="The time can't change. A postponed draft is the exception: its room never opened."><I.DateAfterRoom /></Fit>
-          </div>
-
-          <div className="b-ask">
-            <h3>New push copy (flagged: new strings, all to Serie A Traders' members unless noted)</h3>
-            <ul>
-              <li><b>Room open</b> (everyone, T−1h): "The draft room is open. You pick 4th. The draft starts at 7:00 PM ET."</li>
-              <li><b>Started</b> (everyone, T): "The draft has started. You pick 4th."</li>
-              <li><b>At risk</b> (commissioner, as soon as it's blocked): "The draft room can't open yet: {'{first blocker}'}. Fix it before {'{Sat 6:00 PM ET}'}, or the draft is postponed."</li>
-              <li><b>Reminder</b> (commissioner, about T−2h, only if still blocked): "One hour left to fix your league. If it isn't ready by {'{6:00 PM ET}'}, the draft is postponed."</li>
-              <li><b>Postponed</b> (members, T−1h): "The draft is postponed. {'{Commissioner}'} will pick a new time."</li>
-              <li><b>Postponed</b> (commissioner, T−1h): "The draft is postponed: the league wasn't ready at {'{6:00 PM ET}'}. Fix it, then pick a new time."</li>
-              <li><b>New time</b> (everyone, decided: every draft-time change pushes every member, including whoever changed it): "The draft is now {'{Sun, Oct 4 · 7:00 PM ET}'}."</li>
-              <li><b>Blocker phrases</b> for {'{first blocker}'} are whole clauses: "Sofia F. left the league"; "Sofia F. and Ana P. left the league"; "3 managers left the league"; "a manager left the league" (no readable names); "8 playoff teams, but 7 teams are in" (or "there are more playoff teams than teams" when the counts aren't known); "the number of playoff teams isn't set"; "fewer than 4 teams have joined"; "some slots can't be filled"; "the budget can't fill every roster"; "the league's stakes aren't set"; "not every Season 1 player has answered"; fallback "something in League settings needs fixing". Members' fallback name: "The commissioner". In the card, each one stands as its own line.</li>
-              <li><b>One word: draft time.</b> The settings row and the sheet are "Draft time" (not "Draft date"), matching "Pick a new draft time" and the pushes. Pushes about the draft time go to every member, including whoever changed it.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-ux-pass1" aria-labelledby="call-ux-pass1-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">UX</span>
-            <div>
-              <h2 id="call-ux-pass1-h">Two fixes from the UX audit (decided: B, B)</h2>
-              <p className="b-job"><b>Decided by Giorgio (2026-10-06): B for both.</b> From the pass-1 audit against the UX rules (docs/design/reviews/ux-audit-2026-10.md). Both are about where the one action that matters sits. A is what 3c-2 builds today (the decided auto-start frames); B is the Design Lead's proposal. New copy is listed in the box at the end, never on the phone. Sample: Serie A Traders, Roberto B. is the commissioner.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>Rule 3, reachable targets:</b> a screen's primary action sits in the bottom third or is full width. "Set draft time" is named in the rule.</li>
-            <li><b>Rule 10, leave a hook:</b> anything waiting on you stays on Home until it's done, and Home should let you do it, not send you to find it.</li>
-            <li>Neither changes a product rule: the 15-minute steps, the one-hour minimum and Set later all stay.</li>
-          </ul>
-
-          <h3 className="b-sub">1 · The draft time sheet: where is the confirm?</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="A · Done in the header (not chosen)" note="The confirm is a small text link in the top corner, the hardest place to reach one-handed. The only full-width button is Set later, so the biggest target is the one that does NOT set a time."><I.DraftDatePicker /></Fit>
-            <Fit caption="✓ B · Set draft time at the bottom (chosen)" note="The confirm is the full-width button at the bottom, named for what it does. Close (×) dismisses without saving; Set later becomes a text button under it, still 44 pt tall. Where a time is required (a postponed draft), Set later is absent, as today."><I.DraftDatePicker variant="B" /></Fit>
-          </div>
-
-          <h3 className="b-sub">2 · Home, no draft time yet (commissioner)</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="A · Points to League settings (not chosen)" note="The only thing blocking the league is the draft time, but the button builds your queue, and the line sends you to another tab to find the setting."><I.HomeAuto phase="nodate" commish /></Fit>
-            <Fit caption="✓ B · Set draft time, right here (chosen)" note="The primary opens the same Draft time sheet in place. Build your queue moves to secondary. Members' card is unchanged (Roberto B. will set the draft time + Build your queue)."><I.HomeAuto phase="nodate" commish setFirst /></Fit>
-          </div>
-
-          <div className="b-ask">
-            <h3>Decided · B for both (Giorgio, 2026-10-06)</h3>
-            <ul>
-              <li><b>1-B:</b> the action that commits the draft time becomes the biggest, lowest thing on the sheet, and its label says what it does. A swipe or × no longer half-saves a time you were still scrolling to (today the picker writes as it spins and Done only closes). Familiar: Calendar's new-event sheet confirms at the top, but our sheets confirm at the bottom everywhere else (Review sell, Join), so B is consistent with the rest of the app.</li>
-              <li><b>2-B:</b> the commissioner can finish the one task blocking the league in two taps from Home, without hunting for League settings. Members see no change.</li>
-              <li><b>New copy (flagged):</b> "Set draft time" (sheet button), "Pick a time, and the countdown starts here." and "Set draft time" (Home, the same words as the sheet). The countdown claim is true by your rule: it shows as soon as a draft time is set. No push is promised.</li>
-            </ul>
-          </div>
-        </section>
-
-        <section className="b-sec" id="call-tier-trades" aria-labelledby="call-tier-trades-h">
-          <header className="b-sec__head">
-            <span className="b-sec__n b-sec__n--code">3e</span>
-            <div>
-              <h2 id="call-tier-trades-h">Your call: which tier a traded stock fills</h2>
-              <p className="b-job">Price-tier leagues (one share per tier). Today tiers are only counted from the draft, so after a sale a manager can buy a second stock into a tier that is already filled; only the roster cap stops them. Pick how a trade buy fits the tiers. Sample: "Tier Cup", six one-share tiers. Roberto sold DIS ($102.90), his $100–$200 stock. All copy in these frames is new.</p>
-            </div>
-          </header>
-          <ul className="b-inv__notes">
-            <li><b>Already decided (A, 2026-09-30):</b> one share per buy and the whole position per sell. The review says "1 share" and the slot's tier. This choice only decides <i>which</i> tier a buy may fill.</li>
-            <li><b>A · Replace in the same tier.</b> Selling frees that stock's tier slot. A buy must fit a free tier slot; the review says "Fills your $100–$200 slot". If no free tier fits, the buy is refused with the reason.</li>
-            <li><b>B · Any open tier, re-fit by price.</b> A holding's tier comes from its entry price, first fit across every holding. A buy is legal if all holdings plus the new one still fit the tier layout.</li>
-            <li><b>C · Tiers are a draft rule only.</b> Trades ignore tiers; only the roster cap and the budget apply. The review shows no tier.</li>
-            <li><b>Budget rows are unchanged:</b> the decided one-share review keeps "Budget now" and "Budget left after"; these frames leave them out to show only the tier line.</li>
-            <li><b>Either way, a tier is set by the entry price</b> (draft price or buy price) and never moves if the stock's price drifts out of its bracket later.</li>
-          </ul>
-
-          <h3 className="b-sub">A · Replace in the same tier</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Portfolio · the open slot" note="Each row names its slot; the freed slot is a row with Fill, which opens the stock list."><I.TierPortfolio mode="A" /></Fit>
-            <Fit caption="Review buy · SHOP $104.20" note='"Fills your $100–$200 slot", next to the already-decided "1 share" rule.'><I.TierReview mode="A" /></Fit>
-            <Fit caption="Refused · AAPL $211.42" note="Shown before the review, from the stock sheet's Buy. The reason names the price and the open slot's range."><I.TierRefused mode="A" /></Fit>
-          </div>
-
-          <h3 className="b-sub">B · Any open tier, re-fit by price</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Portfolio · tiers by entry price" note="Rows show the tier their entry price falls in. The gap is described by the whole layout, not one slot."><I.TierPortfolio mode="B" /></Fit>
-            <Fit caption="Review buy · SHOP $104.20" note="The tier is computed from today's price, so the review can only say where it lands."><I.TierReview mode="B" /></Fit>
-            <Fit caption="Refused · AAPL $211.42" note="The reason has to explain the whole layout, not one slot."><I.TierRefused mode="B" /></Fit>
-          </div>
-
-          <h3 className="b-sub">C · Tiers are a draft rule only</h3>
-          <div className="b-concepts b-concepts--three">
-            <Fit caption="Portfolio · after selling DIS, buying AAPL" note="Two stocks between $200 and $400, none between $100 and $200. No tier labels after the draft."><I.TierPortfolio mode="C" /></Fit>
-            <Fit caption="Review buy · AAPL $211.42" note="No tier line: only the roster cap and the budget can refuse."><I.TierReview mode="C" /></Fit>
-          </div>
-
-          <div className="b-ask">
-            <h3>Your call · recommend A</h3>
-            <ul>
-              <li><b>A keeps the league's shape.</b> The tier layout the commissioner chose stays true all season: every roster always holds one cheap stock, one mid-priced stock and one expensive stock. A trade is a swap inside a tier ("sell my $100–$200 stock, buy a better $100–$200 stock"), which is easy to explain on one line and easy to refuse with a reason.</li>
-              <li><b>B plays the same as A</b> while tiers don't overlap (the layout above): each one-share tier holds exactly one stock, so "re-fit everything" always lands back on "fill the open tier". It only differs with overlapping brackets, and there its refusals have to explain the whole roster ("two stocks in $200–$400 and none in $100–$200"). It costs more to explain for the same play.</li>
-              <li><b>C changes what tiers mean.</b> They become a draft-room constraint that dissolves on the first trade: by mid-season a tier league can be five $800+ stocks, the same game as a plain budget league. If that is the intent, a tier league doesn't need its own format.</li>
-              <li><b>Backend (A or B):</b> trade buys need a slot. Tiers today count only <code>drafts.slot_id</code>; a buy in record-trade would carry the freed <code>slot_id</code> (A) or re-check every holding's entry price (B), and refuse with <code>tier_full</code> / <code>tier_mismatch</code>. C needs no backend change.</li>
-            </ul>
-          </div>
-        </section>
 
         <Group id="money" code="3e" name="Trading" job="Sell, keep the cash in the slot, and buy again with exactly what the sale brought in."
           notes={[
@@ -6804,6 +6839,7 @@
   }
 
   window.KSInventoryBoard = Inventory;
+  window.KSArchivedCalls = ARCHIVED;
 })();
 
 </script>
@@ -8195,38 +8231,17 @@ window.KS_REFS = {
     );
   }
 
-  function Directions() {
+  /** Decided 2026-10-12 (PR #229): the Matchup row order. Archived; rendered by board.jsx. */
+  function RowOrder() {
     return (
-      <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
+      <section className="b-sec" id="call-row-order" aria-labelledby="call-row-order-h">
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.3</span>
           <div>
-            <h2 id="call-direction-h">Your call: the direction</h2>
-            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+            <h2 id="call-row-order-h">Decided: the order of the Matchup rows</h2>
+            <p className="b-job"><b>Decided by Giorgio (2026-10-12).</b> Drawn in all three directions so it holds whichever wins.</p>
           </div>
         </header>
-
-        <ul className="b-inv__notes">
-          <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
-          <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
-          <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
-          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
-          <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
-        </ul>
-
-        {DIRS.map((dir) => <Direction key={dir.id} dir={dir} />)}
-
-        <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
-        <div className="b-concepts b-concepts--three">
-          {['a', 'b', 'c'].map((d) => (
-            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
-          ))}
-          <figure className="b-fig b-fig--inv">
-            <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
-            <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
-          </figure>
-        </div>
-
         <h3 className="b-sub" id="call-direction-order">Decided: the order of the rows (Giorgio, 2026-10-12)</h3>
         <ul className="b-inv__notes">
           <li><b>Giorgio, 2026-10-12:</b> "It'll just be ordered by who's performing the best, uh, since there aren't like positions." <b>Unslotted leagues</b> (fixed per-slot, budget-cap; Stock Scudetto is one): one list per side, by week gain, best first, no grouping (a, below, and every Matchup frame above). <b>Slotted leagues</b> (category slots and price tiers) group by slot (next).</li>
@@ -8259,14 +8274,60 @@ window.KS_REFS = {
           ))}
         </div>
 
-        <h3 className="b-sub">Your call, later: the centre column (unslotted leagues)</h3>
+      </section>
+    );
+  }
+
+  function Directions() {
+    return (
+      <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id="call-direction-h">Your call: the direction</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+          </div>
+        </header>
+
+        <div className="b-ask" style={{ marginTop: 0 }}>
+          <h3>What I need from you</h3>
+          <ol>
+            <li><b>The direction:</b> A, B or C (or one with a piece of another). <a href="#call-direction-rec">The recommendation</a> is at the end of this section.</li>
+            <li><b>The centre column</b> in leagues without slots: empty, or something in it. <a href="#call-direction-centre">Drawn here.</a></li>
+            <li><b>Portfolio gets a chart and range pills</b><NEW />, as the plan asked: yes or no.</li>
+            <li><b>If A:</b> the your-turn flash changes from the approved gold to cyan. Yes, or keep gold.</li>
+          </ol>
+        </div>
+
+        <ul className="b-inv__notes">
+          <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
+          <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
+          <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
+          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
+          <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
+        </ul>
+
+        {DIRS.map((dir) => <Direction key={dir.id} dir={dir} />)}
+
+        <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
+        <div className="b-concepts b-concepts--three">
+          {['a', 'b', 'c'].map((d) => (
+            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
+          ))}
+          <figure className="b-fig b-fig--inv">
+            <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
+            <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
+          </figure>
+        </div>
+
+        <h3 className="b-sub" id="call-direction-centre">Your call: the centre column (unslotted leagues)</h3>
         <div className="dr-strip">
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or sector pill</b><span>In slotted leagues the group header now does this job (above). Elsewhere a pill would name each stock's price tier or sector; but rows pair best against best, not slot against slot, so the two sides' pills would disagree. Sector colours here are sample.</span></figcaption></figure>
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
         </div>
 
-        <div className="b-ask">
+        <div className="b-ask" id="call-direction-rec">
           <h3>The Design Lead's recommendation: A · Game Night</h3>
           <ul>
             <li><b>Why A:</b> it is the only one that looks like a fantasy app first. The lit half and the mirrored rows are 1.1.0's head-to-head, made bigger; the navy steps, the cyan and the colour tiles are Sleeper's game night; and the money screens still go Robinhood (near-black, the number and its line), so the bridge you asked for is built into the system, not bolted on.</li>
@@ -8281,6 +8342,7 @@ window.KS_REFS = {
   }
 
   window.KSDirections = Directions;
+  window.KSRowOrder = RowOrder;
 })();
 
 </script>
@@ -8552,6 +8614,60 @@ window.KS_REFS = {
     );
   }
 
+  // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
+  const OPEN = [
+    ['call-direction', 'The direction: A, B or C'],
+    ['call-direction-centre', 'Centre column (unslotted leagues)'],
+    ['call-direction-rec', 'Portfolio chart · your-turn colour'],
+  ];
+  // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
+  // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
+  const ARCHIVE = [
+    { id: 'call-row-order', title: 'The order of the Matchup rows', decision: 'Best week first; slotted leagues (categories and price tiers) grouped by slot; re-ordered at each market close, never live.', date: '2026-10-12', rec: 'PR #229 (rules) · #230 (board)', render: () => window.KSRowOrder },
+    { id: 'call-calm-home', title: 'A calmer Home', decision: 'A, same content, calmer, in every state as drawn.', date: '2026-10-12', rec: 'PR #218 (rules) · #219 (board) · #222 (build)', render: () => window.KSHomeCalm },
+    { id: 'call-leaver-names', title: 'Managers who left, in past seasons', decision: 'A with frozen names: they stay named in the seasons they played, frozen as they were when they left.', date: '2026-10-11', rec: 'PR #203 (rules) · #204 (board)' },
+    { id: 'call-join-commissioner', title: "The commissioner's name before you join", decision: 'A: the Join preview names nobody, not even the commissioner.', date: '2026-10-11', rec: 'PR #202' },
+    { id: 'call-medals', title: 'Who gets the gold once the season is over', decision: 'A: medals follow the playoffs; records stay the regular season\'s.', date: '2026-10-10', rec: 'PR #191' },
+    { id: 'call-sell-from-search', title: 'Selling a stock you own, found through search', decision: 'A: a stock you hold can be sold from any sheet, search included.', date: '2026-10-10', rec: 'PR #188 (rules) · #190 (board)' },
+    { id: 'call-watchlist', title: 'The watchlist and daily claims', decision: 'C, plus rulings (a)–(d): a Watchlist tab in Buy a stock and "Watching" on Portfolio; claims while the market is closed.', date: '2026-10-09', rec: 'PR #185 (plan) · #193 (board)' },
+    { id: 'call-manager-row', title: 'One manager row everywhere', decision: 'S-10: your name bold with the blue tint; no "(you)"; movement arrows on League only.', date: '2026-10-08', rec: 'PR #179 · #180' },
+    { id: 'call-ux-pass1', title: 'Two fixes from the UX audit', decision: 'B and B: the draft time commits on a full-width button; "Set draft time" is Home\'s primary when no time is set.', date: '2026-10-06', rec: 'PR #140' },
+    { id: 'your-turn', title: 'Your turn must be unmissable', decision: 'The top flashes, a buzz and a chime, once per turn; the gold rest state.', date: '2026-10-06', rec: 'PR #156' },
+    { id: 'call-auto-start', title: 'The draft starts by itself', decision: 'The room opens at T−1h; not ready then means postponed, never a late start.', date: '2026-10-06', rec: 'PR #128' },
+    { id: 'call-leave', title: 'Leaving a league', decision: 'Only before the season (until T−1h) or after it; the commissioner reconfirms; Stay stays a button.', date: '2026-10-06', rec: 'PRODUCT_RULES · League lifecycle' },
+    { id: 'call-tier-trades', title: 'Which tier a traded stock fills', decision: 'A: replace in the same tier ("Fills your $100–$200 slot").', date: '2026-10-06', rec: 'PR #114' },
+    { id: 'run-it-back', title: 'Run it back', decision: 'Opt-in: every Season 1 player answers; the commissioner reconciles; always a new draft.', date: '2026-10-04', rec: 'commit 4538f60f' },
+  ];
+  function Archive() {
+    const calls = window.KSArchivedCalls || {};
+    return (
+      <section className="b-sec b-archive" id="archive" aria-labelledby="archive-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n">✓</span>
+          <div>
+            <h2 id="archive-h">Archive: calls you've made</h2>
+            <p className="b-job">Newest first. Each one is closed; open it to see the mockups as you decided them. The decision itself lives in PRODUCT_RULES.md.</p>
+          </div>
+        </header>
+        <div className="b-archive__list">
+          {ARCHIVE.map((a) => {
+            const C = a.render ? a.render() : calls[a.id];
+            return (
+              <details key={a.id} className="b-arch" id={`arch-${a.id}`}>
+                <summary>
+                  <span className="b-arch__t">{a.title}</span>
+                  <span className="b-arch__d">{a.decision}</span>
+                  <span className="b-arch__m">Decided {a.date} · {a.rec}</span>
+                </summary>
+                <div className="b-arch__body">{C ? <C /> : <p className="b-job">Section not found.</p>}</div>
+              </details>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
   function Board() {
     const [theme, setThemeState] = useState(() => document.documentElement.dataset.ksTheme || 'light');
     const setTheme = (t) => {
@@ -8573,29 +8689,37 @@ window.KS_REFS = {
           <div className="b-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="var(--c-text-2)" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="var(--c-text-2)" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="var(--c-you)" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">App screens · v3 · 29 Sep 2026</span>
+            <span className="b-brand__meta">Design board · updated 12 Oct 2026</span>
           </div>
-          <h1>The app, as it will ship.</h1>
+          <h1>Your calls, then the app.</h1>
           <p className="b-lead">
-            Five key screens, built as real components on the Game Day tokens. They are the
-            source of truth for the mobile app and for the landing page's phone, so the landing
-            can only show what the app will actually look like. Every screen tells one story:
-            the same league, the same week, and numbers that add up.
+            The board in three parts. <b>Waiting on you</b> comes first: only the calls you
+            haven't made yet, newest first. Then the <b>approved screens</b>, the reference the app
+            is built from. Every call you've already made is in the <b>Archive</b> at the end,
+            closed, with what you decided, when, and where it was recorded.
           </p>
-          <p className="b-changed"><b>New in v3:</b> one design in two complete themes, Light and Dark (switch at the top right). <b>From your earlier answers:</b> Home shows one league at a time (switch with the league pill, which shows "+2" more leagues; no list on Home); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
             <div><dt>You</dt><dd>Roberto B. vs Gianluigi B.</dd></div>
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
-          <nav className="b-toc" aria-label="Screens">
-            {[['call-direction', 'Direction (your call)'], ['call-calm-home', 'Calmer Home (decided)'], ['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-sell-from-search', 'Sell (decided)'], ['call-medals', 'Medals (decided)'], ['call-watchlist', 'Watchlist (decided)'], ['call-join-commissioner', 'Join (decided)'], ['call-leaver-names', 'Leavers (decided)'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
-          </nav>
+          <div className="b-open" aria-label="Waiting on you">
+            <span className="b-open__lbl">Waiting on you ({OPEN.length})</span>
+            <nav className="b-toc" aria-label="Open calls">
+              {OPEN.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            </nav>
+            <p className="b-open__more"><a href="#approved">Approved screens</a> · <a href="#archive">Archive ({ARCHIVE.length} decided)</a></p>
+          </div>
         </header>
 
         {window.KSDirections ? <window.KSDirections /> : null}
-        {window.KSHomeCalm ? <window.KSHomeCalm /> : null}
+
+        <header className="b-part" id="approved">
+          <span className="b-part__eyebrow">Reference</span>
+          <h2>Approved screens</h2>
+          <p>What the app is built from: the five key screens, then every other screen, on the current (1.2.0) tokens. The new direction replaces the skin once you pick it; the structure stays.</p>
+        </header>
 
         <ThemesSection />
 
@@ -8710,6 +8834,8 @@ window.KS_REFS = {
         {window.KSInventoryBoard ? <window.KSInventoryBoard /> : null}
 
         <Ledger />
+
+        <Archive />
       </main>
     );
   }
