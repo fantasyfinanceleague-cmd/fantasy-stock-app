@@ -389,6 +389,34 @@
           </div>
         </section>
 
+        <section className="b-sec" id="call-join-commissioner" aria-labelledby="call-join-commissioner-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">1.2.0</span>
+            <div>
+              <h2 id="call-join-commissioner-h">Your call: the commissioner's name before you join</h2>
+              <p className="b-job">Your rule (2026-10-08): "we cannot allow a user to see any information outside of the name/avatar of another member in their league (email, etc) or any info about users not in their league." Someone holding an invite code isn't in the league yet, but today's Join preview shows "Run by {'{commissioner}'}", and the full-league message names them too. Serie A Traders, previewed with code SERIEA7.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">★ A · No name before joining (recommended)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="★ A · No name before joining" note={'The "Run by" line goes; nothing replaces it (the code above the title already says how you got here). Everything else is unchanged.'}><I.JoinCommishCall v="A" /></Fit>
+            <Fit caption="★ A · League full" note={'NEW copy: "Ask your commissioner if they can make room." ("your commissioner" as in the app\'s other pre-join messages, e.g. "Ask your commissioner for a new code.")'}><I.JoinCommishCall v="A" full /></Fit>
+          </div>
+          <h3 className="b-sub">B · Keep the name (today)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · Keep the name (today)" note={'"Run by Roberto B." stays, on the grounds that the code came from them. No copy change.'}><I.JoinCommishCall v="B" /></Fit>
+            <Fit caption="B · League full (today)" note={'"Ask Roberto B. if they can make room." No copy change.'}><I.JoinCommishCall v="B" full /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Your call · recommend A</h3>
+            <ul>
+              <li><b>A is your rule as written.</b> Before joining, the commissioner is a user not in your league, so their name is out. B adds an exception ("the code came from them") the rule doesn't have, and a code can be forwarded by anyone.</li>
+              <li><b>Nothing you need is lost.</b> The name, managers, draft time, stakes and season are all still there to decide on. You see the commissioner's name the moment you join.</li>
+              <li><b>For the build, A is a server change as well as copy:</b> the preview's data stops carrying the commissioner's name, so no client can show it. Hiding it only on screen would still send it to the phone. It also retires the app's "Ask Unknown if they can make room" fallback (final sweep S-13).</li>
+            </ul>
+          </div>
+        </section>
+
         <section className="b-sec" id="call-leave" aria-labelledby="call-leave-h">
           <header className="b-sec__head">
             <span className="b-sec__n b-sec__n--code">3c</span>
