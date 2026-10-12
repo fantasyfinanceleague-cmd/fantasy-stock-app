@@ -21,6 +21,55 @@ building anything, and don't reopen a rule without him.
 - **The bar** (2026-09-27): judge UI against Apple / Stripe / Linear (web) and Robinhood /
   Sleeper / Revolut / Arc (mobile). Correctness, honesty, tokens and reduced motion are
   table stakes, not the goal.
+- **Captivating, not bland** (2026-10-12, after seeing 1.2.0 and a Sleek trial of Home):
+  "everything I'm seeing is just so bland. It's not creative. It's not inspiring. It's,
+  you know, you're not opening up an app and being like, wow. You're opening up an app and
+  just seeing bland charts and bland everything. I want something that is captivating,
+  something that is creative. I want to emulate other fantasy football apps and and make
+  that bridge between them and investing apps. I want to create a, a kind of a, a blend
+  between a, a, a sleeper and ESPN fantasy football with a Robin Hood or... Another sort of
+  app like that. That's what I want." "Even the chart, like that's such an ugly chart."
+  - The references, his list: fantasy = **Sleeper, ESPN Fantasy Football, Yahoo Fantasy
+    Football**; investing = **Robinhood, E*TRADE**. What each does on screen and what we
+    take is in [`design/REFERENCES.md`](design/REFERENCES.md).
+  - Every direction and every screen is judged against those references side by side on the
+    board, never against adjectives. "Calm" governs structure (one standout, room to
+    breathe, UX rules 4–7); it never governs the visual language.
+  - **Sleek (sleek.design) is rejected** for this app: "let's maybe not use Sleek, especially
+    if it's going to charge us. Let's just maybe try to figure this out just in Claude Code."
+    Design happens on the board, built here.
+  - **Every section must elevate** (2026-10-12, approving the reset plan): "the main thing is
+    that I don't want bland. I want every section to, in its own way, elevate the, the app,
+    right?" His named examples of what is wrong in 1.2.0, verbatim:
+    - Standings: "the way it looks right now in the app is awful. It is just a basic table
+      with not even good like divide like dividing the columns and rows. It's it's ugly".
+    - Matchup: "the chart doesn't even load" (a defect to fix, not a design choice).
+    - Stocks: "you look at the different stocks and it's just they're so ugly."
+    - The head-to-head is the heart of it: "I feel like even in the last one, like it
+      captured that better head to head matchup look way better. And that should really be
+      shown. And that's a huge part because of it's that like that fantasy football style".
+      So the matchup is designed as a head-to-head scoreboard first (Sleeper/ESPN shape), and
+      the 1.1.0 matchup look is a reference for what to keep.
+    - His summary: "these are just some elements that really stuck out of just like, this is
+      not how it's supposed to look. from a UI's perspective."
+  - **The Matchup page is a fantasy-football matchup** (2026-10-12, also told to the
+    Orchestrator directly): "the matchup page needs to look like the matchup pages from
+    fantasy football apps, like an ESPN, like a Yahoo, like a sleeper, where it lists your
+    stocks as if they are like a football roster, obviously without the positions, because
+    that's not a thing, but it lists them like that and it shows their performance and it
+    stacks them up so that you can see which maybe stocks are like how your stock is
+    comparing to the other player's stock. We can maybe figure out a way to in, in what
+    order that we list them like later on, but the matchup page should be one of the
+    simpler ones. It should be just our themes, our take on that kind of fantasy football
+    style matchup window." So: a scoreboard header, then a mirrored two-column roster (your
+    stocks left, theirs right, row by row, each row's week performance shown), no position
+    labels; the row ORDER is an open decision for later; keep the page simple.
+    To the Orchestrator, the same day: "The matchup page should look like a matchup page
+    from a fantasy football app, where it lists your stocks like a roster and shows the
+    head-to-head performance of each. It's that simple. There really shouldn't be any other
+    added elements." The week race chart is REMOVED ("If on ... there's a whole day where
+    it's just going to sit there blank like that, we need to remove that"). Nothing on
+    Matchup may sit blank or mean nothing for part of the week.
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",

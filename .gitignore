@@ -43,3 +43,6 @@ supabase/.temp/
 .env.new-keys
 docs/api-keys-inventory.md
 .claude/worktrees/
+
+# Hallmark design skill cache (preflight.json, log.json): local, never committed
+.hallmark/
