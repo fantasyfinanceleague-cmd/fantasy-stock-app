@@ -41,7 +41,9 @@ building anything, and don't reopen a rule without him.
   information outside of the name/avatar of another member in their league (email, etc) or
   any info about users not in their league." So: another player's profile is visible only to
   people who share a league with them, and only their name and avatar. Nothing about players
-  outside your leagues.
+  outside your leagues. **Before you join** (2026-10-11, option A, board
+  `#call-join-commissioner`): the Join preview names nobody, not even the commissioner (no
+  "Run by"); a full league reads "Ask your commissioner if they can make room."
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
