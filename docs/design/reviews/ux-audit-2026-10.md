@@ -1222,6 +1222,41 @@ Nothing is lost against 1.2.0: past playoff results never appeared there (`weekl
 skips playoff rows), and the live round's "● WC" chip is replaced by the hero meta and the This
 week tag. Playoff results live in League › Playoffs.
 
+### Rulings during the build · the worker's five flags (2026-10-12, `feat/calm-home` @ `0c6efa28`)
+
+- **(a) R-1 (one shared fit for both scores) is not built.** Accepted for this branch: the scores
+  keep main's per-cell `adjustsFontSizeToFit` at 28pt. At 28pt the shrink that prompted R-1 (40pt
+  at $1M) is much less likely. R-1 stays an open P2. **Gate condition:** if either score shrinks
+  in the `xl_million` or XL captures, the two sides stop matching in size; that is a finding, and
+  R-1 then rides this branch.
+- **(b) Mark spans.** The worker is right: from the previous week's last point to this week's
+  last point. A past week is one point at its Friday close, so "start index → next start" would
+  set each mark under the following week. The spec's wording was imprecise.
+- **(c) `playoff_pending` chip "Week N · Live" → "Live".** Accepted. It matches the other live
+  chips; the round is in the card's tag.
+- **(d) Commissioner, postponed draft: the no-buying line no longer shows.** Accepted.
+  - Why: in that state Home's one job is the fix (`AutoStartBlockers`).
+  - Covered elsewhere: the rule is explained where a player would try to buy ("Trading opens
+    after the draft.", `moneyCopy.draftNotCompleted`). Members still see it under their draft
+    card.
+  - Don't add a stray card for it.
+- **(e) Commissioner with no draft time: the caption sits under both buttons.** Accepted. The
+  caption belongs to the button group, not to one button.
+- **Worker addition, pips past about 23 weeks:** accepted, with a non-colour twin (DESIGN_DIRECTION
+  §9B: no colour-only codes).
+  - Shapes: W = a filled `gain` dot; L = a hollow `loss` ring (1.5pt stroke); T = a filled
+    `text2` dot; a bye = a short `text2` dash (never green or red).
+  - Pip size: 5pt.
+  - Unchanged: the scrub label and the a11y label still name each week and result.
+  - Unit-test the switch point and the shapes.
+- **Worker addition, `league.tsx` clears `segment` after reading it:** accepted (a second tap
+  re-selects Standings).
+
+### P3 (from this build)
+
+- Matchup's `segment: 'all'` param has the same latent issue (read once, never cleared, so a
+  later push with the same param doesn't re-select). Same fix as League's; not on `feat/calm-home`.
+
 ### Captures for the gate
 
 17e and 17 Pro, Light, Large text unless noted. A Dark spot-check of 1, 4 and 9 on the 17e.
@@ -1237,7 +1272,7 @@ Measure the block gap in every capture: 24pt.
 6. Recording: scrub across weeks (label, mark underline, haptic ticks); then Season → 1W → 1M
    (marks only in Season).
 7. Recording: tap This week → Matchup; leave League on Schedule, go Home, tap Standings → League
-   on Standings.
+   on Standings; then do it once more (the param is cleared, so it re-selects).
 8. `pre_draft` (with a draft time; and commissioner with no time → Set draft time primary),
    `pre_draft_waiting`, the renewed Season 2 pre-draft (`leagues-renewal`, commissioner).
 9. `complete` (champion, commissioner + Run it back), `complete_runner_up`, member with the ask
