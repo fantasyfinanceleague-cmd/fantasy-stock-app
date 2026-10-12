@@ -73,7 +73,8 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 | 4 | First screens | **Home (in season) + Matchup (live and final) + Draft room**, each in all three directions, so a *system* is judged, not a screen | AskUserQuestion, 2026-10-12 |
 | 5 | Who draws | A **fresh "Design Lead" session with a handoff note** from the current one (Giorgio: "2, fresh design lead with a handoff"). Reason: skills load at session start, so the paused Design Lead cannot invoke Hallmark; a fresh one also carries no memory of the quiet-and-grey vocabulary. The Orchestrator relays; it stays as is | Giorgio, 2026-10-12 (revised from "resume") |
 | 6 | How screens are judged from now on | Against a reference screenshot side by side on the board and in every gate ("reference check"); adjectives never decide | `PRODUCT_RULES.md`, 2026-10-12 |
-| 7 | The three directions and the winner | To Giorgio as "Your call: direction" (brief below) | pending |
+| 7 | The three directions and the winner | **A "Game Night" chosen** (Giorgio, 2026-10-12), with tweaks: the Draft board keeps Game Night styling but takes Broadcast's slot-colour treatment as a LINE along the bottom of each tile (no colour-filled squares, "not a carbon copy of Sleeper"); B Broadcast ("the giant purple accent box … doing a little too much") and C Terminal ("too robotic") are closed. Matchup: the shaded "you" side and the "leads by" line stay. Unslotted-league centre column: EMPTY (the Design Lead's recommendation: "The two numbers face each other across a gap. Nothing to explain."). Verbatim in `PRODUCT_RULES.md` | board `#call-direction`, 2026-10-12 |
+| 9 | Sparklines on rows vs a stock pop-up | **No sparklines on Portfolio or Matchup rows.** Tapping a stock (yours or theirs, on either screen) opens the stock sheet, modelled on ESPN's player card: season line chart of the holding, how it was acquired (drafted: pick + date + price; claimed: date + price; bought: date + price), key figures, this week's line. Giorgio's ESPN screenshots, kept locally (not in the repo) at `~/fantasy-stock-design-review/references/espn-player-card-{1,2,3}.webp` | Giorgio, 2026-10-12 |
 | 8 | Hallmark (github.com/nutlope/hallmark, MIT, pure markdown) | **Adopted as a tool for the Design Lead, never as the designer** (Giorgio, 2026-10-12): (a) `hallmark study` on the five reference screens first, producing a DNA diagnosis + `design.md` the token spec builds on (its gate 57 then forbids drifting back to a generic theme); (b) its slop gates and six disciplines adopted into our gate via an adopt/adapt/skip table, like impeccable; (c) `hallmark audit` on every board frame before Giorgio sees it, beside the `ux-reviewer`. Installed at `~/.agents/skills/hallmark`; `.hallmark/` gitignored. Its own web themes and page machinery are not used | Planner chat, 2026-10-12 |
 
 ## Open questions
@@ -194,6 +195,14 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
     pills and emphasis; the number and the chrome-less line as every hero; sparklines on
     rows; game screens get the scoreboard but in the same minimal chrome; Sleeper's energy
     only in type scale and avatars.
+- **Follow-up frame after the pick (Game Night only, Light AND Dark): the stock sheet**,
+  opened from a Matchup row and from a Portfolio row, modelled on ESPN's player card
+  (Giorgio's screenshots, kept locally at `~/fantasy-stock-design-review/references/espn-player-card-{1,2,3}.webp`): header (ticker, company, slot/category
+  pill, "Owned by …" or "Yours"), a key-figures strip (price, week gain, season gain, your
+  position), the season line chart with a marker where you got it, **"How you got it"**
+  ("Drafted 2nd overall · Sep 29 · $290.10" / "Claimed off waivers · Oct 7 · $187.20" /
+  "Bought · Oct 2 · $214.80"), this week's line, and the actions for the state (Buy / Sell
+  / Claim / none). Rows on Matchup and Portfolio carry NO sparkline.
 - **Per direction, five frames, each in Light AND Dark (ten renders):** Home in season (the calm-Home structure: pill +
   status, hero + change line, chart, This week card, Standings card, tab bar); Matchup live
   (scoreboard header + two lineups) and the Final reveal state; Draft room on the clock
