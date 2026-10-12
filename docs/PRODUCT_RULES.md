@@ -114,6 +114,54 @@ building anything, and don't reopen a rule without him.
 - **Board review answers** (2026-10-06): "Buy a stock" (tappable-but-blocked ownership, the
   Portfolio entry row, the search copy) and the stock chart ("A week ago" as the comparison
   line): "fine".
+- **Direction chosen: "Game Night" (A), with tweaks** (2026-10-12, on the board's three
+  directions, Light and Dark). Giorgio, section by section:
+  - Home: "I like option A, game night the most. Uh, the broadcast version, I don't love the
+    giant like purple kind of accent box thing in the middle. I think that's doing a little
+    too much. And then Terminal just feels a little too robotic with some of the styling… I'm
+    leaning more towards the game night as like the color palette and the styling."
+  - Matchup: "I like the way that the game night one looks. I like the way that where you
+    are is kind of shaded. And then I like the way that it says like the leads by and stuff".
+  - Draft: "the game night one, I don't love the most… I do think it's just a little too
+    similar to Sleeper in the sense that the squares are like color coded like that. I like
+    the game night one. Look, but with the broadcast touch of having like it color coded just
+    with that line at the bottom. I think that does enough to where you kind of see the
+    breakdown by sector, but without it being like a carbon copy of Sleeper." So: Game Night
+    styling, draft tiles NOT colour-filled; the slot/sector colour is a line along the
+    bottom of each tile (the Broadcast treatment).
+  - Standings: "the game night one is the best just because of that, like, style and
+    formatting."
+  - Portfolio: "it's going to be game night again."
+  - Summary: "it's going to be kind of going towards that game night style, with just a few
+    tweaks". Broadcast (B) and Terminal (C) are closed.
+  - The Matchup roster's centre column in unslotted leagues: "let's go with its
+    recommendation". The Design Lead's recommendation on the board (#call-direction, "Your
+    call: the centre column (unslotted leagues)"): "Empty (recommended): The two numbers face
+    each other across a gap. Nothing to explain." So in unslotted leagues the centre column
+    is EMPTY. (Rejected there: a tier/sector pill, which disagrees across sides because rows
+    pair best vs best, not slot vs slot; and row numbers, which "read like a position, which
+    your ruling rules out".)
+- **No sparklines on rows; the stock pop-up carries the detail** (2026-10-12): "on the
+  portfolio page and on the matchup page … I don't want that like line thing there visible.
+  What I want is that when you click on the stock, whether it's on the matchup page or the
+  portfolio, it you know, like a pop-up window comes in where you can see more information
+  and more details on that holding. So it'll give you information like, Uh, like as if you
+  click on a player in fantasy where you kind of see … like for this one did you draft or
+  did you pick it up off the waivers if so put the date where it was from and then like the
+  price that you bought it at Uh, I would want to show that kind of line chart of its
+  progression throughout the season in that kind of pop-up window." Reference: ESPN's
+  player card (Giorgio's three screenshots, 2026-10-12, kept locally at
+  `~/fantasy-stock-design-review/references/espn-player-card-{1,2,3}.webp`, not in the repo, per the
+  references policy): header
+  with name/team/position and the owning team, a key-figures strip, an Overview tab with
+  this week's line, recent news, a game log, and a **Latest transaction** block ("Drafted
+  8th by SUBSTATION SURFER · Aug. 30, 6:06 PM"). "I don't want to see these like those
+  little lines showing the performance of the stock unless you click on it in the matchup
+  in the portfolio." So: Portfolio and Matchup rows show ticker, performance and the slot
+  pill, no chart; tapping a stock (yours or theirs) opens the stock sheet, which shows the
+  season line chart of that holding, how it was acquired (drafted, with pick and date and
+  price; claimed off waivers, with date and price; bought, with date and price) and the
+  rest of the ESPN-style overview.
 - **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
   to scrape anything and the more secure and locked down this can be the better." Chosen over
   keeping the public stock-symbol list readable (option B): the symbols table becomes
