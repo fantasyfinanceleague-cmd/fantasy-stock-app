@@ -27,7 +27,10 @@ export function useLeaveLeague(leagueId: string | null, enabled: boolean, me: st
     let cancelled = false;
     void Promise.all([
       seamRpc('get_league_display_names', { p_league_id: leagueId }),
-      seamTable<{ user_id: string }>('league_members', () => supabase.from('league_members').select('user_id').eq('league_id', leagueId)),
+      // Current members only: a player who left a finished league keeps a hidden
+      // row, and the server refuses them as commissioner (20261120000000).
+      seamTable<{ user_id: string }>('league_members', () =>
+        supabase.from('league_members').select('user_id').eq('league_id', leagueId).is('hidden_at', null)),
     ]).then(([n, m]) => {
       if (cancelled) return;
       // A failed read leaves the lists empty (no picker rows), never a guessed roster.
