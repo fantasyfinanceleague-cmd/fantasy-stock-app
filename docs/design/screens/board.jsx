@@ -265,6 +265,60 @@
     );
   }
 
+  // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
+  const OPEN = [
+    ['call-direction', 'The direction: A, B or C'],
+    ['call-direction-centre', 'Centre column (unslotted leagues)'],
+    ['call-direction-rec', 'Portfolio chart · your-turn colour'],
+  ];
+  // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
+  // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
+  const ARCHIVE = [
+    { id: 'call-row-order', title: 'The order of the Matchup rows', decision: 'Best week first; slotted leagues (categories and price tiers) grouped by slot; re-ordered at each market close, never live.', date: '2026-10-12', rec: 'PR #229 (rules) · #230 (board)', render: () => window.KSRowOrder },
+    { id: 'call-calm-home', title: 'A calmer Home', decision: 'A, same content, calmer, in every state as drawn.', date: '2026-10-12', rec: 'PR #218 (rules) · #219 (board) · #222 (build)', render: () => window.KSHomeCalm },
+    { id: 'call-leaver-names', title: 'Managers who left, in past seasons', decision: 'A with frozen names: they stay named in the seasons they played, frozen as they were when they left.', date: '2026-10-11', rec: 'PR #203 (rules) · #204 (board)' },
+    { id: 'call-join-commissioner', title: "The commissioner's name before you join", decision: 'A: the Join preview names nobody, not even the commissioner.', date: '2026-10-11', rec: 'PR #202' },
+    { id: 'call-medals', title: 'Who gets the gold once the season is over', decision: 'A: medals follow the playoffs; records stay the regular season\'s.', date: '2026-10-10', rec: 'PR #191' },
+    { id: 'call-sell-from-search', title: 'Selling a stock you own, found through search', decision: 'A: a stock you hold can be sold from any sheet, search included.', date: '2026-10-10', rec: 'PR #188 (rules) · #190 (board)' },
+    { id: 'call-watchlist', title: 'The watchlist and daily claims', decision: 'C, plus rulings (a)–(d): a Watchlist tab in Buy a stock and "Watching" on Portfolio; claims while the market is closed.', date: '2026-10-09', rec: 'PR #185 (plan) · #193 (board)' },
+    { id: 'call-manager-row', title: 'One manager row everywhere', decision: 'S-10: your name bold with the blue tint; no "(you)"; movement arrows on League only.', date: '2026-10-08', rec: 'PR #179 · #180' },
+    { id: 'call-ux-pass1', title: 'Two fixes from the UX audit', decision: 'B and B: the draft time commits on a full-width button; "Set draft time" is Home\'s primary when no time is set.', date: '2026-10-06', rec: 'PR #140' },
+    { id: 'your-turn', title: 'Your turn must be unmissable', decision: 'The top flashes, a buzz and a chime, once per turn; the gold rest state.', date: '2026-10-06', rec: 'PR #156' },
+    { id: 'call-auto-start', title: 'The draft starts by itself', decision: 'The room opens at T−1h; not ready then means postponed, never a late start.', date: '2026-10-06', rec: 'PR #128' },
+    { id: 'call-leave', title: 'Leaving a league', decision: 'Only before the season (until T−1h) or after it; the commissioner reconfirms; Stay stays a button.', date: '2026-10-06', rec: 'PRODUCT_RULES · League lifecycle' },
+    { id: 'call-tier-trades', title: 'Which tier a traded stock fills', decision: 'A: replace in the same tier ("Fills your $100–$200 slot").', date: '2026-10-06', rec: 'PR #114' },
+    { id: 'run-it-back', title: 'Run it back', decision: 'Opt-in: every Season 1 player answers; the commissioner reconciles; always a new draft.', date: '2026-10-04', rec: 'commit 4538f60f' },
+  ];
+  function Archive() {
+    const calls = window.KSArchivedCalls || {};
+    return (
+      <section className="b-sec b-archive" id="archive" aria-labelledby="archive-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n">✓</span>
+          <div>
+            <h2 id="archive-h">Archive: calls you've made</h2>
+            <p className="b-job">Newest first. Each one is closed; open it to see the mockups as you decided them. The decision itself lives in PRODUCT_RULES.md.</p>
+          </div>
+        </header>
+        <div className="b-archive__list">
+          {ARCHIVE.map((a) => {
+            const C = a.render ? a.render() : calls[a.id];
+            return (
+              <details key={a.id} className="b-arch" id={`arch-${a.id}`}>
+                <summary>
+                  <span className="b-arch__t">{a.title}</span>
+                  <span className="b-arch__d">{a.decision}</span>
+                  <span className="b-arch__m">Decided {a.date} · {a.rec}</span>
+                </summary>
+                <div className="b-arch__body">{C ? <C /> : <p className="b-job">Section not found.</p>}</div>
+              </details>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
   function Board() {
     const [theme, setThemeState] = useState(() => document.documentElement.dataset.ksTheme || 'light');
     const setTheme = (t) => {
@@ -286,29 +340,37 @@
           <div className="b-brand">
             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="4.5" height="8" rx="1" fill="var(--c-text-2)" /><rect x="9.75" y="9" width="4.5" height="12" rx="1" fill="var(--c-text-2)" /><rect x="16.5" y="4" width="4.5" height="17" rx="1" fill="var(--c-you)" /></svg>
             <span>Stockpile</span>
-            <span className="b-brand__meta">App screens · v3 · 29 Sep 2026</span>
+            <span className="b-brand__meta">Design board · updated 12 Oct 2026</span>
           </div>
-          <h1>The app, as it will ship.</h1>
+          <h1>Your calls, then the app.</h1>
           <p className="b-lead">
-            Five key screens, built as real components on the Game Day tokens. They are the
-            source of truth for the mobile app and for the landing page's phone, so the landing
-            can only show what the app will actually look like. Every screen tells one story:
-            the same league, the same week, and numbers that add up.
+            The board in three parts. <b>Waiting on you</b> comes first: only the calls you
+            haven't made yet, newest first. Then the <b>approved screens</b>, the reference the app
+            is built from. Every call you've already made is in the <b>Archive</b> at the end,
+            closed, with what you decided, when, and where it was recorded.
           </p>
-          <p className="b-changed"><b>New in v3:</b> one design in two complete themes, Light and Dark (switch at the top right). <b>From your earlier answers:</b> Home shows one league at a time (switch with the league pill, which shows "+2" more leagues; no list on Home); the standings column is "Season gain"; the draft pick clock defaults to 60 seconds and the commissioner can set 30–90; dollars decide matchups, with percent as the tiebreak; and a sold slot reinvests exactly its sale proceeds.</p>
           <dl className="b-canon">
             <div><dt>League</dt><dd>{K.LEAGUE.name} · 6 managers</dd></div>
             <div><dt>Moment</dt><dd>Week 6 of 14 · Thu 1:37 PM ET</dd></div>
             <div><dt>You</dt><dd>Roberto B. vs Gianluigi B.</dd></div>
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
-          <nav className="b-toc" aria-label="Screens">
-            {[['call-direction', 'Direction (your call)'], ['call-calm-home', 'Calmer Home (decided)'], ['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-sell-from-search', 'Sell (decided)'], ['call-medals', 'Medals (decided)'], ['call-watchlist', 'Watchlist (decided)'], ['call-join-commissioner', 'Join (decided)'], ['call-leaver-names', 'Leavers (decided)'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
-          </nav>
+          <div className="b-open" aria-label="Waiting on you">
+            <span className="b-open__lbl">Waiting on you ({OPEN.length})</span>
+            <nav className="b-toc" aria-label="Open calls">
+              {OPEN.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            </nav>
+            <p className="b-open__more"><a href="#approved">Approved screens</a> · <a href="#archive">Archive ({ARCHIVE.length} decided)</a></p>
+          </div>
         </header>
 
         {window.KSDirections ? <window.KSDirections /> : null}
-        {window.KSHomeCalm ? <window.KSHomeCalm /> : null}
+
+        <header className="b-part" id="approved">
+          <span className="b-part__eyebrow">Reference</span>
+          <h2>Approved screens</h2>
+          <p>What the app is built from: the five key screens, then every other screen, on the current (1.2.0) tokens. The new direction replaces the skin once you pick it; the structure stays.</p>
+        </header>
 
         <ThemesSection />
 
@@ -423,6 +485,8 @@
         {window.KSInventoryBoard ? <window.KSInventoryBoard /> : null}
 
         <Ledger />
+
+        <Archive />
       </main>
     );
   }

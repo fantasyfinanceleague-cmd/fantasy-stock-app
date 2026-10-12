@@ -788,38 +788,17 @@
     );
   }
 
-  function Directions() {
+  /** Decided 2026-10-12 (PR #229): the Matchup row order. Archived; rendered by board.jsx. */
+  function RowOrder() {
     return (
-      <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
+      <section className="b-sec" id="call-row-order" aria-labelledby="call-row-order-h">
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.3</span>
           <div>
-            <h2 id="call-direction-h">Your call: the direction</h2>
-            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+            <h2 id="call-row-order-h">Decided: the order of the Matchup rows</h2>
+            <p className="b-job"><b>Decided by Giorgio (2026-10-12).</b> Drawn in all three directions so it holds whichever wins.</p>
           </div>
         </header>
-
-        <ul className="b-inv__notes">
-          <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
-          <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
-          <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
-          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
-          <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
-        </ul>
-
-        {DIRS.map((dir) => <Direction key={dir.id} dir={dir} />)}
-
-        <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
-        <div className="b-concepts b-concepts--three">
-          {['a', 'b', 'c'].map((d) => (
-            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
-          ))}
-          <figure className="b-fig b-fig--inv">
-            <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
-            <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
-          </figure>
-        </div>
-
         <h3 className="b-sub" id="call-direction-order">Decided: the order of the rows (Giorgio, 2026-10-12)</h3>
         <ul className="b-inv__notes">
           <li><b>Giorgio, 2026-10-12:</b> "It'll just be ordered by who's performing the best, uh, since there aren't like positions." <b>Unslotted leagues</b> (fixed per-slot, budget-cap; Stock Scudetto is one): one list per side, by week gain, best first, no grouping (a, below, and every Matchup frame above). <b>Slotted leagues</b> (category slots and price tiers) group by slot (next).</li>
@@ -852,14 +831,60 @@
           ))}
         </div>
 
-        <h3 className="b-sub">Your call, later: the centre column (unslotted leagues)</h3>
+      </section>
+    );
+  }
+
+  function Directions() {
+    return (
+      <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id="call-direction-h">Your call: the direction</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+          </div>
+        </header>
+
+        <div className="b-ask" style={{ marginTop: 0 }}>
+          <h3>What I need from you</h3>
+          <ol>
+            <li><b>The direction:</b> A, B or C (or one with a piece of another). <a href="#call-direction-rec">The recommendation</a> is at the end of this section.</li>
+            <li><b>The centre column</b> in leagues without slots: empty, or something in it. <a href="#call-direction-centre">Drawn here.</a></li>
+            <li><b>Portfolio gets a chart and range pills</b><NEW />, as the plan asked: yes or no.</li>
+            <li><b>If A:</b> the your-turn flash changes from the approved gold to cyan. Yes, or keep gold.</li>
+          </ol>
+        </div>
+
+        <ul className="b-inv__notes">
+          <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
+          <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
+          <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
+          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
+          <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
+        </ul>
+
+        {DIRS.map((dir) => <Direction key={dir.id} dir={dir} />)}
+
+        <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
+        <div className="b-concepts b-concepts--three">
+          {['a', 'b', 'c'].map((d) => (
+            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
+          ))}
+          <figure className="b-fig b-fig--inv">
+            <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
+            <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
+          </figure>
+        </div>
+
+        <h3 className="b-sub" id="call-direction-centre">Your call: the centre column (unslotted leagues)</h3>
         <div className="dr-strip">
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or sector pill</b><span>In slotted leagues the group header now does this job (above). Elsewhere a pill would name each stock's price tier or sector; but rows pair best against best, not slot against slot, so the two sides' pills would disagree. Sector colours here are sample.</span></figcaption></figure>
           <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
         </div>
 
-        <div className="b-ask">
+        <div className="b-ask" id="call-direction-rec">
           <h3>The Design Lead's recommendation: A · Game Night</h3>
           <ul>
             <li><b>Why A:</b> it is the only one that looks like a fantasy app first. The lit half and the mirrored rows are 1.1.0's head-to-head, made bigger; the navy steps, the cyan and the colour tiles are Sleeper's game night; and the money screens still go Robinhood (near-black, the number and its line), so the bridge you asked for is built into the system, not bolted on.</li>
@@ -874,4 +899,5 @@
   }
 
   window.KSDirections = Directions;
+  window.KSRowOrder = RowOrder;
 })();
