@@ -348,6 +348,17 @@ building anything, and don't reopen a rule without him.
 
 - Every product/design choice goes to Giorgio as side-by-side mockups ("Your call" on the
   board), with a recommendation, never as prose only.
+- **The board shows only open calls** (2026-10-12): "the app screens like page that it shows
+  me when it wants me to pick between different mockups needs to be cleaned up. There are so
+  many sections up top for me to choose from. It is kind of difficult to find what I need
+  to. It there should be like an archive of picks that have been decided, and that should
+  only show me like the ones that are in progress. Because it's turning into it's because
+  it's getting too messy." So: the top navigation and the opening of the board list ONLY the
+  "Your call" sections still awaiting Giorgio, newest first; every decided call moves to a
+  collapsed **Archive** at the end, stamped with the decision and date (and the PR that
+  recorded it). A section is archived the moment its decision is recorded here. Approved
+  key screens stay on the board as the reference, under their own heading, not mixed with
+  the calls.
 - A rule is recorded here the moment it's decided. If a rule here and the code disagree,
   the code is wrong until Giorgio says otherwise.
 - **UX standard** (2026-10-06): every screen and flow is designed, built and reviewed against
