@@ -171,6 +171,14 @@ building anything, and don't reopen a rule without him.
 - **Market-data credit line**: credit Alpaca on price surfaces.
 - **Appearance:** System / Light / Dark. One layout and component set with two complete
   themes; no screen mixes them.
+- **Both themes, designed together, neither first** (2026-10-12, overruling the reset plan's
+  "dark first"): "I don't want the app to only be in dark mode. I want us to build an app
+  that can work well and is designed for either light or dark mode. Orchestrator just told
+  me that it was dark mode first, then light. No. I want one that it doesn't matter what
+  mode you're in, it's going to be built for either." So every direction on the board, every
+  token, every screen and every gate is done in Light AND Dark at the same time; a screen is
+  not approved in one theme without the other; the references for Light are E*TRADE and
+  Yahoo's light surfaces, for Dark Sleeper, ESPN and Robinhood.
 
 - **League › Schedule** (2026-10-05, option A, "keep it"; 3c-D4): the League tab keeps the
   full season schedule, every week in order: past weeks with your result and score, this
