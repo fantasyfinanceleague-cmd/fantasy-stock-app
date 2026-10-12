@@ -64,6 +64,12 @@ building anything, and don't reopen a rule without him.
     style matchup window." So: a scoreboard header, then a mirrored two-column roster (your
     stocks left, theirs right, row by row, each row's week performance shown), no position
     labels; the row ORDER is an open decision for later; keep the page simple.
+    To the Orchestrator, the same day: "The matchup page should look like a matchup page
+    from a fantasy football app, where it lists your stocks like a roster and shows the
+    head-to-head performance of each. It's that simple. There really shouldn't be any other
+    added elements." The week race chart is REMOVED ("If on ... there's a whole day where
+    it's just going to sit there blank like that, we need to remove that"). Nothing on
+    Matchup may sit blank or mean nothing for part of the week.
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",
