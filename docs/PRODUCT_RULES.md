@@ -70,6 +70,32 @@ building anything, and don't reopen a rule without him.
     added elements." The week race chart is REMOVED ("If on ... there's a whole day where
     it's just going to sit there blank like that, we need to remove that"). Nothing on
     Matchup may sit blank or mean nothing for part of the week.
+  - **Matchup roster row order** (2026-10-12): "let's order it that way. By uh, weak gain
+    with the best going first." Then, the same day, by league type: "if it's the like
+    category slots option, then the model should be listed like with the categories. So
+    it'll show like text docs on a list of three. Um, and then, you know, it, it just shows
+    each category and the stocks fit within those. And then with inside each of those, if
+    there's multiple for a single category, then it will show by who's performing the best.
+    For the other, uh, like game league types, game types, I don't know how we should call
+    them. It'll just be ordered by who's performing the best, uh, since there aren't like
+    positions." So:
+    Then, asked about price tiers: "No, the price tier league should also have the same
+    logic. Basically, if there's a mode where certain stocks are placed in certain
+    categories, let's show them on the matchup page in those respective categories.
+    Otherwise, we just show them in order by who's doing the best." So:
+    - **Slotted leagues (category slots AND price tiers):** the roster is grouped by slot
+      group in the league's slot order (e.g. "Tech ×3", then "Autos & Transport ×2", then
+      "Flex"; or "$100–$200 ×2", then "$200–$400 ×2"), the group acting as the position
+      label; within a group, stocks by week gain, best first. Both managers share the
+      league's slot structure, so the mirrored rows pair up group by group.
+    - **Unslotted leagues** (per-slot fixed-notional, budget-cap): one list per side by week
+      gain, best first; no grouping, since there are no positions.
+    - **When the order updates** (2026-10-12): "it should be at the end of each day, like
+      the start of the next day, it'll reorder it to show like who's been doing the best.
+      So it doesn't update like live per se, but updates at the end of the day. Let's just
+      have it do that for now." So the order is recomputed once at each market close and
+      holds through the next trading day; nothing re-sorts live. (On Monday the order is
+      the draft/slot order until the first close, since every week gain is $0.00.)
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",
