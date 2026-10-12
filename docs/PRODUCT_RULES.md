@@ -100,6 +100,14 @@ building anything, and don't reopen a rule without him.
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",
   never "best return" or "biggest dollar gain", because capital varies by stake mode.
+- **Nothing tappable does nothing** (2026-10-12): "make sure that there's no clickable
+  actions or links or anything that's clickable in the app that then doesn't do anything.
+  Like if there's any buttons or links or anything that should bring a pop-up or a redirect
+  or anything like that, it needs to be active. We can't have buttons that don't do
+  anything, links that don't do anything." Every control that looks tappable either does its
+  job or is not shown (a control that can't act in the current state is hidden, or disabled
+  with the reason beside it; never a silent no-op). Audited once the UI redesign lands
+  (plan `plans/2026-10-12-visual-language-reset.md`, W8) and checked at every gate after.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
 - **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature. See **League size** under League lifecycle.
