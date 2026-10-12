@@ -78,16 +78,15 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 
 ## Open questions
 
-None blocking the board work. Three for Giorgio when he picks a direction:
+None blocking the board work. Two for Giorgio when he picks a direction (the row order is decided):
 
-0. **Matchup roster row order** ("we can maybe figure out a way … later on"). The board
-   shows the Matchup frame with one default and names the alternatives as a "Your call"
-   strip: (a) **by week gain, best first on each side** (recommended: the top of the page
-   is the story of the week); (b) draft order (pick 1 at the top, the roster as drafted);
-   (c) by position size (largest holding first); (d) paired head-to-head, your best vs
-   their best, so each row is a mini-matchup. Rows never re-sort live during the day
-   (the §4 "no reorder on live update" principle); the order is fixed at the Monday open.
-
+0. ~~Matchup roster row order~~ **DECIDED (Giorgio, 2026-10-12):** by week gain, best first on
+   each side. In SLOTTED leagues (category slots and price tiers alike) the roster is grouped by
+   slot group in slot order, the group as the position label, best-first within each group;
+   unslotted leagues (per-slot, budget-cap) are one list per side, best first. The order is
+   recomputed once at each market close and holds through the next day; never live. Verbatim
+   in `PRODUCT_RULES.md`. The W1 Matchup frames show both a slotted (grouped) and an unslotted
+   (flat) roster.
 1. **Release target.** 1.2.0 is out. The reset lands as **1.3** unless Giorgio wants a 1.2.x
    with Home + Matchup only. Recommendation: 1.3, every screen, so the app never mixes two
    languages (the "no screen mixes themes" rule applied to skins).
