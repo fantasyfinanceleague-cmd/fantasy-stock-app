@@ -21,9 +21,9 @@
   --c-accent: oklch(87% 0.14 205);
   --c-accent-tint: oklch(87% 0.14 205 / 0.16);
   --c-on-accent: oklch(17% 0.05 272);
-  --c-you: oklch(64% 0.19 256);
+  --c-you: oklch(54% 0.2 258);          /* holds white initials (4.5:1+) */
   --c-you-text: oklch(78% 0.12 256);
-  --c-you-tint: oklch(64% 0.19 256 / 0.2);
+  --c-you-tint: oklch(54% 0.2 258 / 0.22);
   --c-opp: oklch(70% 0.03 262);
   --c-gain: oklch(85% 0.16 168);
   --c-loss: oklch(71% 0.17 10);
@@ -67,9 +67,9 @@
   --c-accent: oklch(80% 0.11 300);
   --c-accent-tint: oklch(80% 0.11 300 / 0.16);
   --c-on-accent: oklch(16% 0.02 300);
-  --c-you: oklch(62% 0.19 256);
+  --c-you: oklch(54% 0.2 258);          /* holds white initials (4.5:1+) */
   --c-you-text: oklch(78% 0.12 256);
-  --c-you-tint: oklch(62% 0.19 256 / 0.2);
+  --c-you-tint: oklch(54% 0.2 258 / 0.22);
   --c-opp: oklch(70% 0.012 285);
   --c-gain: oklch(80% 0.18 150);
   --c-loss: oklch(68% 0.19 25);
@@ -116,9 +116,9 @@
   --c-accent: oklch(89% 0.21 135);
   --c-accent-tint: oklch(89% 0.21 135 / 0.14);
   --c-on-accent: oklch(12% 0.02 135);
-  --c-you: oklch(64% 0.17 256);
+  --c-you: oklch(54% 0.2 258);          /* holds white initials (4.5:1+) */
   --c-you-text: oklch(80% 0.11 256);
-  --c-you-tint: oklch(64% 0.17 256 / 0.18);
+  --c-you-tint: oklch(54% 0.2 258 / 0.22);
   --c-opp: oklch(72% 0.008 140);
   --c-gain: oklch(89% 0.21 135);
   --c-loss: oklch(72% 0.19 38);
@@ -142,7 +142,7 @@
 }
 
 /* ── Shared frame pieces (roles only) ─────────────────────────────────── */
-.dr { font-family: var(--sp-type-family); }
+.dr { font-family: var(--sp-type-family); --d-on-you: oklch(99% 0.004 258); }
 .dr .ks-device { background: var(--c-bg); }
 .dr .ks-pill { background: var(--c-surface); border-color: var(--c-border); }
 .dr-num { font-variant-numeric: tabular-nums; }
@@ -160,7 +160,7 @@
   flex: none; display: grid; place-items: center; border-radius: 50%;
   background: var(--c-inset); color: var(--c-text); font-weight: 800;
 }
-.dr-av--you { box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 4px var(--c-you); background: var(--c-you); color: var(--c-text); }
+.dr-av--you { box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 4px var(--c-you); background: var(--c-you); color: var(--d-on-you); }
 .dr-chip {
   display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px;
   font-size: 11px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.06em; text-transform: uppercase;
@@ -206,3 +206,144 @@
 .dr-new { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em; background: var(--c-warn-tint); color: var(--c-warn-text); border: 1px solid var(--c-warn-line); vertical-align: 2px; }
 .dr-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-bottom: 18px; }
 .dr-crit { font-size: 12px; color: var(--c-text-2); margin-top: 4px; }
+
+/* ── LIGHT, from the same roles (Giorgio, 2026-10-12: "I want one that it doesn't
+   matter what mode you're in, it's going to be built for either.") ──────────
+   Light references: E*TRADE (S5) and Yahoo (off-white page, white cards, ONE vivid
+   accent as a filled pill with white ink, a tinted panel for the featured module).
+   The rule that changes in Light: a bright accent has no edge on white, so every
+   accent that fills a control darkens and carries white ink (gates 40–41). */
+
+/* A · Game Night, Light: the navy becomes the INK and the dark cells; the page is a
+   navy-tinted off-white; cyan darkens to a deep teal to hold white text. */
+.dir-a-light {
+  --c-bg: oklch(97% 0.01 272);
+  --c-surface: oklch(99.6% 0.003 272);
+  --c-inset: oklch(94% 0.015 272);
+  --c-sunken: oklch(93.5% 0.015 272);
+  --c-line: oklch(89% 0.022 270);
+  --c-border: oklch(89% 0.022 270);
+  --c-border-strong: oklch(70% 0.03 268);
+  --c-text: oklch(20% 0.05 272);
+  --c-text-2: oklch(47% 0.04 265);
+  --c-accent: oklch(50% 0.11 220);
+  --c-accent-tint: oklch(50% 0.11 220 / 0.12);
+  --c-on-accent: oklch(99.6% 0.003 272);
+  --c-you: oklch(53% 0.2 258);
+  --c-you-text: oklch(47% 0.19 258);
+  --c-you-tint: oklch(53% 0.2 258 / 0.1);
+  --c-opp: oklch(47% 0.04 265);
+  --c-gain: oklch(46% 0.12 165);
+  --c-loss: oklch(53% 0.19 15);
+  --c-zero: oklch(47% 0.04 265);
+  --c-live: oklch(50% 0.11 220);
+  --c-live-text: oklch(47% 0.11 220);
+  --c-tabbar: oklch(99.6% 0.003 272 / 0.94);
+  --c-track: oklch(90% 0.02 270);
+  --d-rim: oklch(89% 0.022 270);
+  --d-lit: oklch(93.5% 0.035 238);
+  --d-lead-wash: oklch(50% 0.12 165 / 0.09);
+  --d-money-bg: oklch(99.6% 0.003 272);
+  --d-on-tile: oklch(20% 0.05 272);
+  --d-tile-tech: oklch(81% 0.085 266);
+  --d-tile-comm: oklch(78% 0.11 295);
+  --d-tile-cons: oklch(85% 0.09 62);
+  --d-tile-fin: oklch(84% 0.12 180);
+  --d-tile-health: oklch(76% 0.12 350);
+  --d-clock-cell: oklch(22% 0.05 272);
+}
+/* the dark on-the-clock cell keeps its own light ink */
+.dir-a-light .dr-clockcell { --c-text: oklch(99.6% 0.003 272); --c-live-text: oklch(87% 0.14 205); --c-live: oklch(87% 0.14 205); }
+
+/* B · Broadcast, Light: the league band stays the same violet (it is a frame, not a
+   surface, so it reads the same in both modes, as Yahoo's purple does); panels go
+   white on a light-grey gutter; gold darkens for text. */
+.dir-b-light {
+  --c-bg: oklch(96.5% 0.004 285);
+  --c-surface: oklch(99.6% 0.002 285);
+  --c-inset: oklch(93% 0.006 285);
+  --c-sunken: oklch(93% 0.006 285);
+  --c-line: oklch(88% 0.008 285);
+  --c-border: oklch(88% 0.008 285);
+  --c-border-strong: oklch(68% 0.01 285);
+  --c-text: oklch(17% 0.012 285);
+  --c-text-2: oklch(45% 0.012 285);
+  --c-accent: oklch(46% 0.18 300);
+  --c-accent-tint: oklch(46% 0.18 300 / 0.1);
+  --c-on-accent: oklch(99.6% 0.002 285);
+  --c-you: oklch(53% 0.2 258);
+  --c-you-text: oklch(47% 0.19 258);
+  --c-you-tint: oklch(53% 0.2 258 / 0.1);
+  --c-opp: oklch(45% 0.012 285);
+  --c-gain: oklch(48% 0.14 150);
+  --c-loss: oklch(52% 0.19 25);
+  --c-zero: oklch(45% 0.012 285);
+  --c-live: oklch(72% 0.15 80);
+  --c-live-text: oklch(48% 0.1 75);
+  --c-tabbar: oklch(99.6% 0.002 285 / 0.96);
+  --c-track: oklch(88% 0.008 285);
+  --d-band: oklch(38% 0.17 300);
+  --d-band-2: oklch(30% 0.14 300);
+  --d-on-band: oklch(98% 0.01 300);
+  --d-on-band-2: oklch(86% 0.05 300);
+  --d-gutter: oklch(92% 0.006 285);
+  --d-tint-gain: oklch(48% 0.14 150 / 0.07);
+  --d-tint-loss: oklch(52% 0.19 25 / 0.08);
+  --d-money-bg: oklch(96.5% 0.004 285);
+  --d-on-tile: oklch(17% 0.012 285);
+  --d-tile-tech: oklch(72% 0.13 230);
+  --d-tile-comm: oklch(70% 0.14 300);
+  --d-tile-cons: oklch(78% 0.13 65);
+  --d-tile-fin: oklch(74% 0.14 165);
+  --d-tile-health: oklch(70% 0.15 355);
+}
+/* inside the band, live text is the band's own gold, not the page's dark gold */
+.dir-b-light .dr-onband {
+  --c-text: var(--d-on-band); --c-text-2: var(--d-on-band-2); --c-zero: var(--d-on-band-2);
+  --c-live: oklch(86% 0.16 90); --c-live-text: oklch(86% 0.16 90); --c-accent-tint: oklch(98% 0.01 300 / 0.16);
+  --c-track: var(--d-band-2); --c-bg: var(--d-band); --c-inset: var(--d-band-2);
+}
+
+/* C · Terminal, Light: Robinhood's light mode: near-white, the day's colour darkened
+   to a green that holds white ink; the neon is gone. */
+.dir-c-light {
+  --c-bg: oklch(99.3% 0.004 140);
+  --c-surface: oklch(96.5% 0.005 140);
+  --c-inset: oklch(93% 0.006 140);
+  --c-sunken: oklch(95% 0.005 140);
+  --c-line: oklch(90% 0.006 140);
+  --c-border: oklch(90% 0.006 140);
+  --c-border-strong: oklch(70% 0.008 140);
+  --c-text: oklch(14% 0.01 140);
+  --c-text-2: oklch(45% 0.01 140);
+  --c-accent: oklch(50% 0.15 145);
+  --c-accent-tint: oklch(50% 0.15 145 / 0.1);
+  --c-on-accent: oklch(99.3% 0.004 140);
+  --c-you: oklch(53% 0.2 258);
+  --c-you-text: oklch(47% 0.19 258);
+  --c-you-tint: oklch(53% 0.2 258 / 0.09);
+  --c-opp: oklch(45% 0.01 140);
+  --c-gain: oklch(50% 0.15 145);
+  --c-loss: oklch(54% 0.2 35);
+  --c-zero: oklch(45% 0.01 140);
+  --c-live: oklch(50% 0.15 145);
+  --c-live-text: oklch(47% 0.14 145);
+  --c-tabbar: oklch(99.3% 0.004 140 / 0.96);
+  --c-track: oklch(90% 0.006 140);
+  --d-money-bg: oklch(99.3% 0.004 140);
+  --d-on-tile: oklch(99.3% 0.004 140);   /* white ink: C Light tiles are dark enough to be text too */
+  --d-tile-tech: oklch(48% 0.14 252);
+  --d-tile-comm: oklch(47% 0.17 300);
+  --d-tile-cons: oklch(50% 0.13 50);
+  --d-tile-fin: oklch(47% 0.1 175);
+  --d-tile-health: oklch(49% 0.18 355);
+}
+/* C uses its tile colours as TEXT (the sector label) and as pill fills, so in Light they
+   are dark enough for both, and the pills take white ink (--d-on-tile above). */
+
+/* ── the board, both themes side by side ─────────────────────────────── */
+.dr-pairs { grid-template-columns: 1fr; }
+.dr-pair { grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1fr) 130px; }
+.dr-pair .dr-ref__img { width: 130px; }
+.dr-theme-lbl { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); margin: 0 0 6px; }
+@media (max-width: 1000px) { .dr-pair { grid-template-columns: 1fr 1fr; } }

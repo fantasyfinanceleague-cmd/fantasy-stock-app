@@ -75,5 +75,29 @@ window.KS_REFS = {
    1,
    0.7
   ]
+ },
+ "y1": {
+  "name": "Yahoo Fantasy \u00b7 draft (Light)",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/45/75/69/457569e0-6965-b4ba-b0d1-2a425d729f3d/01.jpg/1242x2688bb.jpg",
+  "w": 1242,
+  "h": 2688,
+  "crop": [
+   0.14,
+   0.18,
+   0.86,
+   0.7
+  ]
+ },
+ "y4": {
+  "name": "Yahoo Fantasy \u00b7 live (Light)",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/0e/4f/0e/0e4f0ede-0729-7420-69ff-1f9528fcc079/04.png/1242x2688bb.png",
+  "w": 1242,
+  "h": 2688,
+  "crop": [
+   0.14,
+   0.18,
+   0.86,
+   0.7
+  ]
  }
 };
