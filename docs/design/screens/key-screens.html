@@ -524,6 +524,217 @@
 
 </style>
 <style>
+/* Your call: direction (W1 of the visual-language reset, Design Lead, 2026-10-12).
+   Three directions, Dark first, each ONE token block. A direction re-points the
+   board's semantic roles (--c-*, read by Device, the tab bar and every ks- class)
+   and adds a few of its own (--d-*). Frames reference roles only (Hallmark gate 48):
+   no colour in directions.jsx is a literal. Values come from docs/design/design.md
+   (the studied DNA); each block names its primary source. */
+
+/* ── A · Game Night (primary: Sleeper S1/S2) ─────────────────────────────
+   Flat deep navy in three lightness steps of one hue (273°); cyan = live / your
+   turn / selected; mint and pink = up and down; you = the blue ring and tint. */
+.dir-a {
+  --c-bg: oklch(15.5% 0.045 272);
+  --c-surface: oklch(20% 0.055 272);
+  --c-inset: oklch(25% 0.06 272);
+  --c-sunken: oklch(12% 0.035 272);
+  --c-line: oklch(30% 0.06 270);
+  --c-border: oklch(30% 0.06 270);
+  --c-border-strong: oklch(45% 0.06 265);
+  --c-text: oklch(97% 0.008 270);
+  --c-text-2: oklch(73% 0.045 262);
+  --c-accent: oklch(87% 0.14 205);
+  --c-accent-tint: oklch(87% 0.14 205 / 0.16);
+  --c-on-accent: oklch(17% 0.05 272);
+  --c-you: oklch(64% 0.19 256);
+  --c-you-text: oklch(78% 0.12 256);
+  --c-you-tint: oklch(64% 0.19 256 / 0.2);
+  --c-opp: oklch(70% 0.03 262);
+  --c-gain: oklch(85% 0.16 168);
+  --c-loss: oklch(71% 0.17 10);
+  --c-zero: oklch(73% 0.045 262);
+  --c-live: oklch(87% 0.14 205);
+  --c-live-text: oklch(87% 0.14 205);
+  --c-tabbar: oklch(13% 0.04 272 / 0.94);
+  --c-track: oklch(30% 0.06 270);
+  --d-rim: oklch(32% 0.065 268);
+  --d-lit: oklch(28% 0.075 240);           /* the winning half-row slab (S1) */
+  --d-lead-wash: oklch(85% 0.16 168 / 0.12);/* the leader's half of the scoreboard */
+  --d-money-bg: oklch(10% 0.02 272);        /* money screens: near-black, same hue */
+  --d-on-tile: oklch(18% 0.05 272);
+  --d-tile-tech: oklch(81% 0.085 266);     /* periwinkle: clear of the cyan accent (gate 23) */
+  --d-tile-comm: oklch(76% 0.12 295);
+  --d-tile-cons: oklch(84% 0.095 62);
+  --d-tile-fin: oklch(83% 0.13 180);
+  --d-tile-health: oklch(72% 0.13 350);
+  --d-clock-cell: oklch(9% 0.03 272);
+  --d-score-stretch: 100%;
+  --d-score-weight: 800;
+  --d-hero-weight: 800;
+  --d-hero-stretch: 100%;
+  --d-radius: 14px;
+}
+
+/* ── B · Broadcast (primary: ESPN S3) ────────────────────────────────────
+   Charcoal (tinted to 0.008, gate 22), ONE league colour as the frame (a sample
+   violet: no league colour exists in the product yet, see the board), panels with
+   a gutter, the state bar on each panel's outer edge, the condensed numerals. */
+.dir-b {
+  --c-bg: oklch(14.5% 0.008 285);
+  --c-surface: oklch(21% 0.009 285);
+  --c-inset: oklch(26% 0.01 285);
+  --c-sunken: oklch(11% 0.007 285);
+  --c-line: oklch(30% 0.01 285);
+  --c-border: oklch(30% 0.01 285);
+  --c-border-strong: oklch(48% 0.012 285);
+  --c-text: oklch(97% 0.004 285);
+  --c-text-2: oklch(74% 0.012 285);
+  --c-accent: oklch(80% 0.11 300);
+  --c-accent-tint: oklch(80% 0.11 300 / 0.16);
+  --c-on-accent: oklch(16% 0.02 300);
+  --c-you: oklch(62% 0.19 256);
+  --c-you-text: oklch(78% 0.12 256);
+  --c-you-tint: oklch(62% 0.19 256 / 0.2);
+  --c-opp: oklch(70% 0.012 285);
+  --c-gain: oklch(80% 0.18 150);
+  --c-loss: oklch(68% 0.19 25);
+  --c-zero: oklch(74% 0.012 285);
+  --c-live: oklch(86% 0.16 90);
+  --c-live-text: oklch(86% 0.16 90);
+  --c-tabbar: oklch(10% 0.006 285 / 0.96);
+  --c-track: oklch(30% 0.01 285);
+  --d-band: oklch(38% 0.17 300);            /* the league colour (sample) */
+  --d-band-2: oklch(30% 0.14 300);
+  --d-on-band: oklch(98% 0.01 300);
+  --d-on-band-2: oklch(86% 0.05 300);
+  --d-gutter: oklch(11% 0.007 285);
+  --d-tint-gain: oklch(80% 0.18 150 / 0.09);
+  --d-tint-loss: oklch(68% 0.19 25 / 0.12);
+  --d-money-bg: oklch(14.5% 0.008 285);
+  --d-on-tile: oklch(16% 0.02 285);       /* dark ink on bright fills (gate 41) */
+  --d-tile-tech: oklch(72% 0.13 230);
+  --d-tile-comm: oklch(70% 0.14 300);
+  --d-tile-cons: oklch(78% 0.13 65);
+  --d-tile-fin: oklch(76% 0.14 165);
+  --d-tile-health: oklch(68% 0.16 355);
+  --d-score-stretch: 62%;
+  --d-score-weight: 900;
+  --d-hero-weight: 900;
+  --d-hero-stretch: 62%;
+  --d-radius: 4px;
+}
+
+/* ── C · Terminal (primary: Robinhood S4) ────────────────────────────────
+   Near-black tinted toward the accent (gate 7 adapted), ONE neon that is the
+   day's colour (up = neon green, down = neon orange-red), separation by space
+   alone, sparklines on rows, money numbers at regular weight. */
+.dir-c {
+  --c-bg: oklch(9% 0.006 140);
+  --c-surface: oklch(15% 0.007 140);
+  --c-inset: oklch(20% 0.008 140);
+  --c-sunken: oklch(6% 0.005 140);
+  --c-line: oklch(24% 0.008 140);
+  --c-border: oklch(24% 0.008 140);
+  --c-border-strong: oklch(42% 0.01 140);
+  --c-text: oklch(97% 0.004 140);
+  --c-text-2: oklch(72% 0.008 140);
+  --c-accent: oklch(89% 0.21 135);
+  --c-accent-tint: oklch(89% 0.21 135 / 0.14);
+  --c-on-accent: oklch(12% 0.02 135);
+  --c-you: oklch(64% 0.17 256);
+  --c-you-text: oklch(80% 0.11 256);
+  --c-you-tint: oklch(64% 0.17 256 / 0.18);
+  --c-opp: oklch(72% 0.008 140);
+  --c-gain: oklch(89% 0.21 135);
+  --c-loss: oklch(72% 0.19 38);
+  --c-zero: oklch(72% 0.008 140);
+  --c-live: oklch(89% 0.21 135);
+  --c-live-text: oklch(89% 0.21 135);
+  --c-tabbar: oklch(9% 0.006 140 / 0.96);
+  --c-track: oklch(24% 0.008 140);
+  --d-money-bg: oklch(9% 0.006 140);
+  --d-on-tile: oklch(12% 0.02 140);       /* dark ink on bright fills (gate 41) */
+  --d-tile-tech: oklch(78% 0.11 225);
+  --d-tile-comm: oklch(76% 0.12 300);
+  --d-tile-cons: oklch(82% 0.11 70);
+  --d-tile-fin: oklch(85% 0.12 170);
+  --d-tile-health: oklch(74% 0.14 355);
+  --d-score-stretch: 100%;
+  --d-score-weight: 700;
+  --d-hero-weight: 500;
+  --d-hero-stretch: 100%;
+  --d-radius: 16px;
+}
+
+/* ── Shared frame pieces (roles only) ─────────────────────────────────── */
+.dr { font-family: var(--sp-type-family); }
+.dr .ks-device { background: var(--c-bg); }
+.dr .ks-pill { background: var(--c-surface); border-color: var(--c-border); }
+.dr-num { font-variant-numeric: tabular-nums; }
+.dr-score { font-weight: var(--d-score-weight); font-stretch: var(--d-score-stretch); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.dr-hero { font-weight: var(--d-hero-weight); font-stretch: var(--d-hero-stretch); font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
+.dr-t { font-weight: 800; letter-spacing: 0.01em; }
+.dr-cap { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+.dr-call { font-size: 13px; line-height: 18px; font-weight: 500; }
+.dr-tag { font-size: 11px; line-height: 14px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.06em; text-transform: uppercase; }
+.dr-gain { color: var(--c-gain); }
+.dr-loss { color: var(--c-loss); }
+.dr-zero { color: var(--c-zero); }
+.dr-muted { color: var(--c-text-2); }
+.dr-av {
+  flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--c-inset); color: var(--c-text); font-weight: 800;
+}
+.dr-av--you { box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 4px var(--c-you); background: var(--c-you); color: var(--c-text); }
+.dr-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--c-accent-tint); color: var(--c-live-text);
+}
+.dr-chip--final { background: var(--c-inset); color: var(--c-text); }
+.dr-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-live); flex: none; }
+.dr-card { background: var(--c-surface); border-radius: var(--d-radius); }
+.dr-a-card { background: var(--c-surface); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--d-rim); }
+.dr-btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 18px;
+  border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--c-accent); color: var(--c-on-accent);
+}
+.dr-btn--sm { height: 34px; padding: 0 14px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; font-stretch: 125%; }
+.dr-seg { display: flex; gap: 22px; padding: 0 2px; }
+.dr-seg span { font-size: 15px; font-weight: 700; color: var(--c-text-2); padding-bottom: 6px; position: relative; }
+.dr-seg span.on { color: var(--c-text); font-weight: 800; }
+.dr-seg span.on::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 18px; height: 3px; margin-left: -9px; border-radius: 2px; background: var(--c-accent); }
+.dr-range { display: flex; justify-content: space-between; }
+.dr-range span { min-width: 44px; height: 28px; display: grid; place-items: center; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+.dr-range span.on { background: var(--c-accent); color: var(--c-on-accent); }
+.dr-range--perf span { color: var(--c-gain); }
+.dr-range--perf span.on { background: var(--c-gain); color: var(--c-on-accent); }
+.dr-pillcat { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--d-on-tile); }
+
+/* ── The board's own pieces for this section ──────────────────────────── */
+.dr-pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(470px, 1fr)); gap: 34px 30px; margin: 0 0 18px; }
+.dr-pair { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start; }
+.dr-pair figcaption { grid-column: 1 / -1; font-size: 14px; line-height: 1.45; color: var(--c-text-2); }
+.dr-pair figcaption b { color: var(--c-text); }
+.dr-ref { display: grid; gap: 6px; }
+.dr-ref__img { width: 150px; aspect-ratio: 9 / 16; border-radius: 16px; background-color: var(--c-sunken); background-repeat: no-repeat; box-shadow: 0 0 0 1px var(--c-border); }
+.dr-ref__cap { font-size: 12px; line-height: 1.35; color: var(--c-text-2); }
+.dr-ref__cap b { color: var(--c-text); display: block; }
+.dr-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
+.dr-sw { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-2); }
+.dr-sw i { width: 22px; height: 22px; border-radius: 6px; box-shadow: 0 0 0 1px var(--c-border); }
+.dr-dirhead { display: grid; gap: 4px; margin: 44px 0 10px; padding-top: 22px; border-top: 1px solid var(--c-border); }
+.dr-dirhead h3 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 900; font-stretch: 75%; }
+.dr-dirhead p { margin: 0; max-width: 90ch; color: var(--c-text-2); }
+.dr-motion { margin: 4px 0 18px; padding-left: 18px; color: var(--c-text-2); font-size: 14px; }
+.dr-motion b { color: var(--c-text); }
+.dr-new { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em; background: var(--c-warn-tint); color: var(--c-warn-text); border: 1px solid var(--c-warn-line); vertical-align: 2px; }
+.dr-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-bottom: 18px; }
+.dr-crit { font-size: 12px; color: var(--c-text-2); margin-top: 4px; }
+
+</style>
+<style>
   /* Board chrome. The board follows its OWN Light/Dark toggle (data-ks-theme
      on <html>, default Light), not the viewer's theme, and renders every
      screen in that theme. Every colour comes from themes.css. */
@@ -7111,6 +7322,882 @@
 })();
 
 </script>
+<script>
+// Reference images for "Your call: direction" (Design Lead, 2026-10-12).
+// The five references are HOTLINKED public marketing images (never copied into the
+// repo, per REFERENCES.md); crop = [x0, y0, x1, y1] as fractions of the image.
+// v110 is our own app: 1.1.0's matchup screen (audit capture, 2026-09-25, Light),
+// embedded so the single-file board needs no relative fetch. Regenerate, don't hand-edit.
+window.KS_REFS = {
+ "s1": {
+  "name": "Sleeper \u00b7 matchup",
+  "src": "https://sleepercdn.com/sleeper-web/public/web-public/images/marketing-pages/fantasy-football/matchup_mobile.webp",
+  "w": 750,
+  "h": 1624,
+  "crop": [
+   0,
+   0.03,
+   1,
+   0.6
+  ]
+ },
+ "s2": {
+  "name": "Sleeper \u00b7 mobile draft",
+  "src": "https://sleepercdn.com/sleeper-web/public/web-public/images/marketing-pages/fantasy-football/draft_mobile.webp",
+  "w": 750,
+  "h": 1624,
+  "crop": [
+   0,
+   0.02,
+   1,
+   0.6
+  ]
+ },
+ "s3": {
+  "name": "ESPN Fantasy \u00b7 matchup",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/eb/a5/a1/eba5a1ce-9630-718e-1c4a-99e513d6acd8/Matchup-6_5-_U00281242x2688_U0029.png/1242x2688bb.png",
+  "w": 1242,
+  "h": 2688,
+  "crop": [
+   0.125,
+   0.13,
+   0.88,
+   0.8
+  ]
+ },
+ "s4": {
+  "name": "Robinhood \u00b7 portfolio hero",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/a5/7b/8b/a57b8bb6-dc14-118e-4dac-b0c3ea500c1c/ios-1242x2208_ALT.jpg/1242x2208bb.jpg",
+  "w": 1242,
+  "h": 2208,
+  "crop": [
+   0.13,
+   0.42,
+   0.87,
+   1
+  ]
+ },
+ "s5": {
+  "name": "E*TRADE \u00b7 account header",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/48/ef/e6/48efe650-93d6-8c8f-ecc6-43f42f0736b0/781617f0-ce0d-40b5-9604-9412c188ffb8_5.5_1.png/1242x2208bb.png",
+  "w": 1242,
+  "h": 2208,
+  "crop": [
+   0.12,
+   0.31,
+   0.88,
+   0.85
+  ]
+ },
+ "v110": {
+  "name": "Stockpile 1.1.0 \u00b7 matchup",
+  "src": "data:image/jpeg;base64,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CiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACuU8SXfiq2ubNfDtvHNG8mLkueVTjpyO2fWurooA46O88YHxFc2720X2BYiYJM8s+OAec8nrxxWOupfEX/hGpblrKH+0BNiOPIwY/XG7Gfxr0migCrYvdPZxPfKEmKAyKvIDY5ArhvHvwx8GeP8A7JqXiDSNM1HUtIMk2kXGpWyXItLh1wJFDc9QpIBBOBzkA16HRQB+b3wC+FH7U/xE1HxJoX7d1r4d8ReG4rkDRrOWztZd0kb5E8PlqNkO3AAkHmE9cDO79HYYYreJYIFCIihVVRgADgADsBUlFAH5t/8ABR79jPxX+1n4I0a5+Ht1bQ674dmneG3vHMcVzDchBIm8BtrgxqVJGDyCRX4pf8Olf20/+gLpv/gytv8A4qv60aKAP5Lv+HS37af/AEBNN/8ABlbf/FV7P8Af+CSP7R0XxV0bWfiounaNoum3sN7cyRXaXE8qwOH8uJIs4LEYLMQADnkjFf01UUAZ2k6PpWhWKaZottDaW8eSsUCLGgLHJO1QBkkkn1PNaNFFABRRRQAUUUUAf//S/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooA//T/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKRmVFLucADJJ7UALRXnkHxC0vVdWbRdBltZZ0UttluFR2UdWWIbpCv+0VA9DT7X4haL/bTeHtRmtUulIDLDcJLtLdBIvDx57Flx7140eIMtlNQVXd2vZ8v/gVrfO9jreBrrTl17aX+7c9Aooor2TkCiiigAooooAKKRmVFLuQABkk9BUFrd2l7F59nKkyZxujYMMj3FAFiiqv26y+1fYfOj8/G7ytw349dvXFLdXlnYxefeyxwpnG6Rgoyfc0AWaKiluIII/OmdUT+8xAHPuaigv7G6YpbTRyMBkhGDHH4GgC1RRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQB//1P38ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACvL/jDq8+jeBLm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AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9P9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9T9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9X9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9b9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9f9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9D9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9H9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9L9+PMP91v0o8w/3W/SpKKYEfmH+636UeYf7rfpUlFAEfmH+636UeYf7rfpUlU4NR0+6iaa1nikRGKMyOGAYdVJB4I9KPkBY8w/3W/SjzD/AHW/SpAQRkUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lSUUAR+Yf7rfpR5h/ut+lQ2d9ZahD9psJo54ySu+Jg65BwRkZHB61aoemjQk01dEfmH+636UeYf7rfpUlFAyPzD/AHW/SjzD/db9KkooAj8w/wB1v0o8w/3W/SpKKAI/MP8Adb9KPMP91v0qSsrUdd0TRyq6teW9qX5UTyrHn6biM0LXZAaPmH+636UeYf7rfpXPR+NPB80iww6tYs7HCqtxGSSewG6ul68im1bdCTT2I/MP91v0o8w/3W/SpKKQyPzD/db9KPMP91v0qSigCPzD/db9KPMP91v0qSigCPzD/db9KPMP91v0qSigCPzD/db9KPMP91v0qi+s6RHfjS3u4FuW6QGRRIfouc/pWlR8gI/MP91v0o8w/wB1v0qSigCPzD/db9KPMP8Adb9KkooA/9P9/KKKKACiiobm3hu7eS0uV3RyqUdemVYYI4oA8wvdVvviBezaB4YmaDS4HMV/qMR+aRh96C3Pr/fk/h6DmuX+IHwftbjSfN8GQpE0IUyWGdsFyIwQu4dpBnhu/Q+tJpV9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prtq45wcJOEt0erRqxq041YbPUKKKKk0CiiigArK1nTH1eyNnHdXFmSQfNtmCyDHbLKwwfpXCxeLxp8euebOlxdWs8pgtWcb9iqCAFznaOv0rn7j4lavb6Q1032XzlZyhGxlkVEDkfLOVQgnHLknqF7VqqUr6EOcep2XhnwHF4XufOtNT1GeMs7tBPIjRlnOWYgIDnPPWu9rxmb4iaubpVhFou+QxrasGM5AhaQSDDAFWIAHy9O+aSf4mXckedO+zSAi3VpVIZI2lVmbdmRF4K4ALDk8ntTlTnJ3YlOK0R7PRWL4d1K41fRbfUbtESSVNzCNgy59QQSMH6mtqsmrOxogooopAFFFFABXF6/4Kttc1WPW4769sbmOH7PvtJFXdHu3YIZW7+mKseOrq6svCV9dWTvHKkY2tGdrAlgOD2NcfY3/AIu0m7gsHDCK8lkeJLxhPOsUUasw3I2CWbO3JOAfwrWEXbmTIk1s0a//AAgF3/0MOtf9/ov/AI1VzR/Atvpespr1zqF/fzxRPDH9rkVlRZCC2AqL12jrmuDvPF2va9pq2dvc28bTvZO0lrvzCLicI0DkOCHA6kFTjIwOtD+MtY0y4nlhJkVd0IWRiyITeyxeY29x0VQMFwOgyBWnLUatcjmie60Vz3hbVbrWtEi1C8WNZGLqfKZWRgrFQwKs45AzjccdMmuhrnas7Gyd9QooopAf/9X9/KKKKACkKqxBYA45HtS0UARNBA4w6KcNu5APzev1pfKiznaPXp61JRQBEIIRIJQi7gNobAyB6Z9KloooAKKKKACiiigApAqqSVAGeTjvS0UARLBAnCIo53cADn1+tL5UW4vtXceScc8VJRQBEIIFztRRuO44A5PqfegQQh1cIu5RhTgZAPpUtFABRRRQAUUUUAFRtFE5y6qTjHIzxUlFAFaWys5sGaGN8HcNyg4Pr9aSSyspQwlhjYNjdlQc46Z+narVFO7FyrsReRB1CL1B6DqOlY+o+GtD1VYlvbdGEEy3CADaN69CcYz16Hit2impNO6ZMqcJK0ldDEjSJBHGoVVGAAMAD2FPooqSwooooAKKKKAIPs1t5vn+Wm/+9gZ/Ok+yWmwR+Um0HIXaMA+uKsUUXAwX8N6ZJqi6vIJGlQ7kUyOY1bG3cEztBwcdK1/sttsMflptbqNowfqKnop3YrIQAKAqjAHQCloopDCiiigAooooARlVxtYAg9jQVUkMQMjofSlooAiWCBM7UUbm3HAHJ9T70GCEgqUUhgQRgcg9c1LRQA1ESNQiAKoGABwAKdRRQAUUUUAf/9b9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9f9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9k=",
+  "w": 414,
+  "h": 900,
+  "crop": [
+   0,
+   0.1,
+   1,
+   0.7
+  ]
+ }
+};
+
+</script>
+<script type="text/babel" data-presets="react">
+// Your call: direction (W1 of docs/plans/2026-10-12-visual-language-reset.md).
+// Design Lead, 2026-10-12. Three directions for the app's visual language, Dark first:
+//   A · Game Night (primary: Sleeper)   B · Broadcast (primary: ESPN)   C · Terminal (primary: Robinhood)
+// Same structure (the calm-Home ruling, the UX rules, Giorgio's Matchup ruling), same copy,
+// same data (data.js). Only the skin changes. Each direction is ONE token block in
+// directions.css; every colour here is a role (var(--c-*) / var(--d-*)), never a literal.
+// The studied DNA behind the values: docs/design/design.md.
+
+(function () {
+  const { useState, useLayoutEffect, useRef } = React;
+  const K = window.KS;
+  const { Device, Icon, ICON, SD, $, $s, pct } = window.KSKit;
+  const REF = window.KS_REFS || {};
+  const G = 20; // screen gutter
+  const tone = (v) => (Math.round(Math.abs(v) * 100) === 0 ? 'dr-zero' : v > 0 ? 'dr-gain' : 'dr-loss');
+  const toneVar = (v) => (Math.round(Math.abs(v) * 100) === 0 ? 'var(--c-zero)' : v > 0 ? 'var(--c-gain)' : 'var(--c-loss)');
+
+  // ── Sample data that data.js doesn't carry (captioned "sample" on the board) ──
+  // Sector per symbol, for the category pill and the draft tiles' colour.
+  const SECTOR = {
+    MSFT: 'tech', NVDA: 'tech', AVGO: 'tech', AMD: 'tech', PLTR: 'tech', AAPL: 'tech', CRM: 'tech', ORCL: 'tech',
+    META: 'comm', GOOGL: 'comm', DIS: 'comm',
+    AMZN: 'cons', TSLA: 'cons', COST: 'cons', NKE: 'cons', KO: 'cons', UBER: 'cons',
+    COIN: 'fin', JPM: 'fin', V: 'fin', 'BRK.B': 'fin', BA: 'fin',
+    LLY: 'health', UNH: 'health',
+  };
+  const SECTOR_LABEL = { tech: 'Tech', comm: 'Comm', cons: 'Cons', fin: 'Fin', health: 'Hlth' };
+
+  // ── Frame scaling ─────────────────────────────────────────────────────
+  /** Scales a 402pt phone (874 tall, or its measured height when full) to its column. */
+  function Fit({ children }) {
+    const box = useRef(null);
+    const inner = useRef(null);
+    const [k, setK] = useState(0.7);
+    const [h, setH] = useState(874);
+    useLayoutEffect(() => {
+      const ro = new ResizeObserver(() => {
+        if (!box.current || !inner.current) return;
+        setK(Math.min(1, box.current.clientWidth / 402));
+        setH(inner.current.firstChild ? inner.current.firstChild.offsetHeight : 874);
+      });
+      ro.observe(box.current);
+      ro.observe(inner.current);
+      return () => ro.disconnect();
+    }, []);
+    return (
+      <div className="b-fit" ref={box} style={{ height: h * k, maxWidth: 402 }}>
+        <div className="b-fit__in" ref={inner} style={{ transform: `scale(${k})`, width: 402, borderRadius: 56 }}>{children}</div>
+      </div>
+    );
+  }
+
+  /** A reference screenshot, hotlinked and cropped (REF[id].crop = [x0, y0, x1, y1]). */
+  function RefImg({ id, trait }) {
+    const r = REF[id];
+    if (!r) return null;
+    const [x0, y0, x1, y1] = r.crop;
+    const cw = x1 - x0, ch = y1 - y0;
+    const style = {
+      backgroundImage: `url("${r.src}")`,
+      backgroundSize: `${100 / cw}% auto`,
+      backgroundPosition: `${cw < 1 ? (x0 / (1 - cw)) * 100 : 0}% ${ch < 1 ? (y0 / (1 - ch)) * 100 : 0}%`,
+      aspectRatio: `${cw * r.w} / ${ch * r.h}`,
+    };
+    return (
+      <div className="dr-ref">
+        <div className="dr-ref__img" style={style} role="img" aria-label={`Reference: ${r.name}`} />
+        <span className="dr-ref__cap"><b>{r.name}</b>{trait}</span>
+      </div>
+    );
+  }
+
+  /** One board item: the reference on the left, the direction's frame on the right. */
+  function Pair({ refId, trait, caption, note, children }) {
+    return (
+      <figure className="dr-pair" style={{ margin: 0 }}>
+        <RefImg id={refId} trait={trait} />
+        <Fit>{children}</Fit>
+        <figcaption><b>{caption}</b> {note}</figcaption>
+      </figure>
+    );
+  }
+
+  // ── Shared frame pieces ───────────────────────────────────────────────
+  function Phone({ d, tab, label, money, children }) {
+    return (
+      <div className={`dr dir-${d}`}>
+        <Device tab={tab} label={label} style={money ? { background: 'var(--d-money-bg)' } : undefined}>{children}</Device>
+      </div>
+    );
+  }
+  const Av = ({ init, you, size = 36 }) => (
+    <span className={you ? 'dr-av dr-av--you' : 'dr-av'} style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.36)) }}>{init}</span>
+  );
+  function Head({ chip }) {
+    return (
+      <div className="ks-head" style={{ paddingInline: G }}>
+        <span className="ks-pill"><span>{K.LEAGUE.name}</span><span className="ks-pill__more">+{K.OTHER_LEAGUES.length}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+        {chip || <Av init="RB" you size={34} />}
+      </div>
+    );
+  }
+  const LiveChip = () => <span className="dr-chip"><span className="dr-dot" />Live</span>;
+  const FinalChip = () => <span className="dr-chip dr-chip--final">Final</span>;
+  const Chev = ({ size = 16 }) => <span className="dr-muted" style={{ display: 'inline-flex' }} aria-label="Opens"><Icon d={ICON.right} size={size} width={2.4} /></span>;
+  const Body = ({ gap = 24, children, pad = G }) => (
+    <div style={{ padding: `0 ${pad}px 24px`, display: 'flex', flexDirection: 'column', gap }}>{children}</div>
+  );
+
+  /** A sparkline through the real points only (straight segments; it stops at the last one). */
+  function Spark({ pts, w = 44, h = 18, color }) {
+    const min = Math.min(...pts), max = Math.max(...pts);
+    const X = (i) => (i / (pts.length - 1)) * (w - 4) + 2;
+    const Y = (v) => 2 + (1 - (v - min) / (max - min || 1)) * (h - 4);
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true" style={{ display: 'block', flex: 'none' }}>
+        <path d={d} fill="none" stroke={color} strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={X(pts.length - 1)} cy={Y(pts[pts.length - 1])} r="2" fill={color} />
+      </svg>
+    );
+  }
+  /** A stock's week through the real closes: Monday open → Wednesday close → Thursday live (→ Friday close). */
+  const weekPts = (r, final) => (final ? [r.mon, r.prev, r.thu, r.fri] : [r.mon, r.prev, r.thu]);
+
+  // ── The season chart (Home) and the value chart (Portfolio) ───────────
+  const RESULTS = [...K.HOME.weekResults.map((w) => w.result), 'live'];
+  /** Full-bleed line, edge to edge (S4). `marks` = the W/L marks on the axis (calm-Home). */
+  function Line({ d, series, starts, h = 124, marks, base = 0, label }) {
+    const w = 402;
+    const pad = { t: 14, b: marks ? 24 : 8 };
+    const min = Math.min(base, ...series), max = Math.max(base, ...series);
+    const X = (i) => (i / (series.length - 1)) * (w - 22) + 1;
+    const Y = (v) => pad.t + (1 - (v - min) / (max - min || 1)) * (h - pad.t - pad.b);
+    const path = series.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const end = series[series.length - 1];
+    const ex = X(series.length - 1), ey = Y(end);
+    const z = Y(base);
+    const style = {
+      a: { stroke: 'var(--c-gain)', sw: 2.5, fill: false, zero: 'var(--c-border-strong)', dash: '3 5' },
+      b: { stroke: 'var(--c-gain)', sw: 3, fill: true, zero: 'var(--c-line)', dash: '0' },
+      c: { stroke: 'var(--c-gain)', sw: 2, fill: false, zero: 'var(--c-line)', dash: '2 6' },
+    }[d];
+    const spans = starts ? starts.map((s, k) => [s, k + 1 < starts.length ? starts[k + 1] : series.length - 1]) : [];
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={label} style={{ display: 'block', marginInline: -G, overflow: 'visible' }}>
+        {style.fill ? <path d={`${path} L${ex},${z} L${X(0)},${z} Z`} fill="var(--c-gain)" opacity=".1" /> : null}
+        <line x1="0" x2={w} y1={z} y2={z} stroke={style.zero} strokeDasharray={style.dash} strokeWidth="1" opacity=".8" />
+        <path d={path} fill="none" stroke={style.stroke} strokeWidth={style.sw} strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={ex} cy={ey} r="9" fill="var(--c-live)" opacity=".22" />
+        <circle cx={ex} cy={ey} r="4.5" fill="var(--c-live)" />
+        {marks ? spans.map(([a, b], k) => {
+          const r = RESULTS[k];
+          const cx = r === 'live' ? ex : (X(a) + X(b)) / 2;
+          if (r === 'live') return <circle key={k} cx={cx} cy={h - 8} r="3.5" fill="var(--c-live)" />;
+          const c = r === 'W' ? 'var(--c-gain)' : r === 'L' ? 'var(--c-loss)' : 'var(--c-text-2)';
+          if (d === 'b') {
+            return (
+              <g key={k}>
+                <rect x={cx - 9} y={h - 18} width="18" height="16" rx="3" fill={c} opacity=".18" />
+                <text x={cx} y={h - 6} textAnchor="middle" fontSize="11" fontWeight="900" fill={c}>{r}</text>
+              </g>
+            );
+          }
+          return <text key={k} x={cx} y={h - 4} textAnchor="middle" fontSize="12" fontWeight="800" fill={c}>{r}</text>;
+        }) : null}
+      </svg>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // HOME, in season (the calm-Home structure, decided 2026-10-12)
+  // ═════════════════════════════════════════════════════════════════════
+  const H = K.HOME;
+  const L = K.MATCHUP.live;
+  function HeroText({ d }) {
+    const size = { a: 46, b: 56, c: 44 }[d];
+    return (
+      <div style={{ display: 'grid', gap: 2 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span className="dr-cap">Your team</span>
+          <span className="dr-cap dr-num">2nd of 6 · {H.record} · Week {K.LEAGUE.week} of {K.LEAGUE.weeks}</span>
+        </div>
+        <div className="dr-hero" style={{ fontSize: size, lineHeight: `${size + 2}px` }}>{$(H.value)}</div>
+        <div className="dr-call dr-num" style={{ fontWeight: 700 }}>
+          <span className="dr-gain">{$s(H.gain)} · {pct(H.gainPct)}</span> <span className="dr-muted" style={{ fontWeight: 500 }}>season gain</span>
+          <span className="dr-muted" style={{ fontWeight: 500 }}> · </span>
+          <span className="dr-gain">{$s(H.today)}</span> <span className="dr-muted" style={{ fontWeight: 500 }}>today</span>
+        </div>
+      </div>
+    );
+  }
+  function RangeTabs({ d, on = 'Season', labels = ['1W', '1M', 'Season'] }) {
+    if (d === 'c') {
+      return <div className="dr-range dr-range--perf">{labels.map((s) => <span key={s} className={s === on ? 'on' : undefined} style={{ paddingInline: 10 }}>{s}</span>)}</div>;
+    }
+    return (
+      <div style={{ display: 'flex', gap: 18, justifyContent: 'flex-end' }}>
+        {labels.map((s) => (
+          <span key={s} className={d === 'b' ? 'dr-tag' : 'dr-call'} style={{ fontWeight: s === on ? 800 : 600, color: s === on ? 'var(--c-text)' : 'var(--c-text-2)', borderBottom: `${d === 'b' ? 3 : 2}px solid ${s === on ? 'var(--c-accent)' : 'transparent'}`, paddingBottom: 2 }}>{s}</span>
+        ))}
+      </div>
+    );
+  }
+  /** This week (opens Matchup). Scores 28pt, the Tug, the lead line: the calm-Home card. */
+  function ThisWeek({ d }) {
+    const y = SD(L.you), o = SD(L.opp);
+    const frac = K.tugRatio(y.value, o.value);
+    const scores = (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <span className="dr-score" style={{ fontSize: 28, lineHeight: '30px', color: d === 'c' ? 'var(--c-gain)' : 'var(--c-text)' }}>{y.primary}</span>
+        <span className="dr-score" style={{ fontSize: 28, lineHeight: '30px', textAlign: 'right', color: d === 'b' ? 'var(--d-on-band-2)' : 'var(--c-text)' }}>{o.primary}</span>
+      </div>
+    );
+    const tug = (
+      <div style={{ display: 'flex', height: d === 'c' ? 3 : 6, borderRadius: 3, overflow: 'hidden', gap: 2 }} role="img" aria-label="You lead">
+        <span style={{ flex: frac, background: d === 'b' ? 'var(--d-on-band)' : 'var(--c-you)' }} />
+        <span style={{ flex: 1 - frac, background: d === 'b' ? 'var(--d-band-2)' : 'var(--c-track)' }} />
+      </div>
+    );
+    const top = (onBand) => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="dr-tag" style={{ color: onBand ? 'var(--d-on-band)' : 'var(--c-live-text)' }}>This week</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><LiveChip /><Chev /></span>
+      </div>
+    );
+    const names = (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="dr-call">
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><Av init="RB" you size={24} />You</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }} className={d === 'b' ? undefined : 'dr-muted'}>vs Gianluigi B.<Av init="GB" size={24} /></span>
+      </div>
+    );
+    const foot = (
+      <div style={{ display: 'flex', justifyContent: 'space-between' }} className="dr-cap">
+        <span style={{ color: 'var(--c-text)' }}>You lead by <b className="dr-num">{K.formatMoney(Math.abs(L.you.gain - L.opp.gain))}</b></span>
+        <span style={{ color: d === 'b' ? 'var(--d-on-band-2)' : undefined }}>Ends Fri 4:00 PM ET</span>
+      </div>
+    );
+    if (d === 'a') {
+      return (
+        <div className="dr-a-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+          {top()}{names}{scores}{tug}{foot}
+        </div>
+      );
+    }
+    if (d === 'b') {
+      return (
+        <div style={{ margin: `0 -${G}px`, padding: `14px ${G}px 14px`, background: 'var(--d-band)', color: 'var(--d-on-band)', display: 'grid', gap: 10 }}>
+          {top(true)}{names}{scores}{tug}{foot}
+        </div>
+      );
+    }
+    return (
+      <div className="dr-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+        {top()}{names}{scores}{tug}{foot}
+      </div>
+    );
+  }
+  /** Standings excerpt (opens League › Standings). One manager row style (S-10). */
+  function StandingsExcerpt({ d }) {
+    const rows = K.STANDINGS_BEFORE.slice(0, 3);
+    const head = (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: d === 'b' ? '0 2px 6px' : '0 0 4px' }}>
+        <span className={d === 'b' ? 'dr-tag' : undefined} style={d === 'b' ? undefined : { fontSize: 17, fontWeight: 800 }}>Standings</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dr-cap">Through Week 5</span><Chev /></span>
+      </div>
+    );
+    const row = (r) => (
+      <div key={r.id} style={{
+        display: 'grid', gridTemplateColumns: '20px 26px 1fr auto 84px', gap: 10, alignItems: 'center',
+        padding: d === 'b' ? '10px 12px' : '9px 10px', borderRadius: d === 'b' ? 3 : 10,
+        background: r.you ? 'var(--c-you-tint)' : d === 'b' ? 'var(--c-surface)' : undefined,
+        boxShadow: d === 'b' && r.you ? 'inset 3px 0 0 var(--c-you)' : undefined,
+      }}>
+        <span className="dr-score" style={{ fontSize: d === 'b' ? 20 : 15, color: 'var(--c-text-2)' }}>{r.rank}</span>
+        <Av init={r.init} you={r.you} size={24} />
+        <span className="dr-call" style={{ fontWeight: r.you ? 800 : 500, fontSize: 15 }}>{r.name}</span>
+        <span className="dr-call dr-num dr-muted">{r.w}–{r.l}</span>
+        <span className={`dr-call dr-num ${tone(r.pf)}`} style={{ fontWeight: 800, textAlign: 'right' }}>{$s(r.pf)}</span>
+      </div>
+    );
+    if (d === 'b') {
+      return <div style={{ display: 'grid', gap: 3 }}>{head}{rows.map(row)}</div>;
+    }
+    return (
+      <div className={d === 'a' ? 'dr-a-card' : 'dr-card'} style={{ padding: '14px 10px 8px', display: 'grid', gap: 2 }}>
+        <div style={{ padding: '0 6px' }}>{head}</div>
+        {rows.map(row)}
+      </div>
+    );
+  }
+  function HomeFrame({ d }) {
+    return (
+      <Phone d={d} tab="home" label={`Home in season, direction ${d.toUpperCase()}`}>
+        <Head />
+        <Body>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <HeroText d={d} />
+            <Line d={d} series={H.series} starts={H.weekStarts} marks label={`Season gain: ${$s(H.gain)}. Weeks: W, W, L, W, W, Week 6 live.`} />
+            <RangeTabs d={d} />
+          </div>
+          <ThisWeek d={d} />
+          <StandingsExcerpt d={d} />
+        </Body>
+      </Phone>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // MATCHUP: a scoreboard header, then the mirrored roster. Nothing else
+  // (Giorgio, 2026-10-12: "There really shouldn't be any other added elements.").
+  // ═════════════════════════════════════════════════════════════════════
+  /** Rows by week gain, best first on each side (the plan's default order, a). */
+  const byGain = (rows) => [...rows].sort((p, q) => q.weekGain - p.weekGain);
+  function pairs(final, order = 'gain') {
+    const s = final ? K.MATCHUP.final : K.MATCHUP.live;
+    const sort = order === 'gain' ? byGain : order === 'value' ? (r) => [...r].sort((p, q) => q.value - p.value) : (r) => [...r].sort((p, q) => p.pick - q.pick);
+    const a = sort(s.you.rows), b = sort(s.opp.rows);
+    return a.map((r, i) => [r, b[i]]);
+  }
+
+  function Scoreboard({ d, final }) {
+    const s = final ? K.MATCHUP.final : K.MATCHUP.live;
+    const y = SD(s.you), o = SD(s.opp);
+    const youLead = s.you.gain >= s.opp.gain;
+    const line = (
+      <span className="dr-call" style={{ textAlign: 'center' }}>
+        Roberto B. {final ? 'won by' : 'leads by'} <b className="dr-num">{K.formatMoney(Math.abs(s.you.gain - s.opp.gain))}</b>
+      </span>
+    );
+    const side = (who, mirror) => {
+      const you = who === 'you';
+      const lead = you === youLead;
+      const sc = you ? y : o;
+      const scoreColor = d === 'b' ? (lead ? 'var(--d-on-band)' : 'var(--d-on-band-2)') : d === 'c' ? (lead ? 'var(--c-gain)' : 'var(--c-text)') : 'var(--c-text)';
+      return (
+        <div style={{
+          display: 'grid', gap: 8, justifyItems: mirror ? 'end' : 'start', padding: d === 'a' ? '16px 14px' : '6px 0',
+          background: d === 'a' && lead ? 'var(--d-lead-wash)' : undefined,
+          borderRadius: d === 'a' ? (mirror ? '0 14px 14px 0' : '14px 0 0 14px') : undefined,
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: mirror ? 'row-reverse' : 'row' }}>
+            <Av init={you ? 'RB' : 'GB'} you={you} size={d === 'b' ? 40 : 44} />
+            <span className="dr-call" style={{ fontWeight: you ? 800 : 600, fontSize: 15, color: d === 'b' ? 'var(--d-on-band)' : undefined }}>{you ? 'Roberto B.' : 'Gianluigi B.'}</span>
+          </span>
+          <span className="dr-score" style={{ fontSize: d === 'b' ? 52 : d === 'c' ? 34 : 32, lineHeight: d === 'b' ? '48px' : '36px', color: scoreColor }}>{sc.primary}</span>
+        </div>
+      );
+    };
+    if (d === 'a') {
+      return (
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div className="dr-a-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>{side('you')}{side('opp', true)}</div>
+          {line}
+        </div>
+      );
+    }
+    if (d === 'b') {
+      return (
+        <div style={{ margin: `0 -${G}px`, color: 'var(--d-on-band)' }}>
+          <div style={{ background: 'var(--d-band)', padding: `14px ${G}px 12px`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{side('you')}{side('opp', true)}</div>
+          <div style={{ background: 'var(--d-band-2)', padding: '8px 0', display: 'grid', color: 'var(--d-on-band)' }}>{line}</div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>{side('you')}{side('opp', true)}</div>
+        <span className="dr-muted" style={{ display: 'grid' }}>{line}</span>
+      </div>
+    );
+  }
+
+  /** One side of a roster row. `mid` = what the centre column carries ('none' | 'cat' | 'num'). */
+  function Half({ d, r, mirror, final, lit }) {
+    const pctWeek = ((r.price - r.mon) / r.mon) * 100;
+    const name = (
+      <span style={{ display: 'grid', gap: 1, justifyItems: mirror ? 'end' : 'start', minWidth: 0 }}>
+        <span className="dr-t" style={{ fontSize: 16 }}>{r.t}</span>
+        <span className="dr-cap" style={{ whiteSpace: 'nowrap' }}>{r.co}</span>
+      </span>
+    );
+    const num = (
+      <span style={{ display: 'grid', gap: 1, justifyItems: mirror ? 'start' : 'end' }}>
+        <span className={`dr-score ${tone(r.weekGain)}`} style={{ fontSize: d === 'b' ? 22 : 17, lineHeight: '22px' }}>{$s(r.weekGain)}</span>
+        <span className={`dr-cap dr-num ${tone(pctWeek)}`} style={{ fontWeight: 700 }}>{pct(pctWeek)}</span>
+      </span>
+    );
+    const spark = d === 'c' ? <Spark pts={weekPts(r, final)} color={toneVar(r.weekGain)} w={34} h={16} /> : null;
+    const parts = mirror ? [num, spark, name] : [name, spark, num];
+    const base = { display: 'grid', alignItems: 'center', gap: 8, gridTemplateColumns: mirror ? (spark ? 'auto auto 1fr' : 'auto 1fr') : (spark ? '1fr auto auto' : '1fr auto') };
+    if (d === 'a') {
+      return (
+        <div style={{
+          ...base, padding: '12px 12px', minHeight: 64,
+          marginLeft: mirror ? 0 : -G, paddingLeft: mirror ? 12 : G, marginRight: mirror ? -G : 0, paddingRight: mirror ? G : 12,
+          background: lit ? 'var(--d-lit)' : undefined, borderRadius: mirror ? '12px 0 0 12px' : '0 12px 12px 0',
+        }}>{parts}</div>
+      );
+    }
+    if (d === 'b') {
+      return (
+        <div style={{
+          ...base, padding: '11px 12px', minHeight: 62, background: 'var(--c-surface)', borderRadius: 2,
+          boxShadow: `inset ${mirror ? -3 : 3}px 0 0 ${toneVar(r.weekGain)}`,
+        }}>{parts}</div>
+      );
+    }
+    return <div style={{ ...base, padding: '10px 0', minHeight: 56 }}>{parts}</div>;
+  }
+  function Mid({ d, mid, r, i }) {
+    if (mid === 'none') return <span />;
+    if (mid === 'num') return <span className="dr-cap dr-num" style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', background: d === 'b' ? 'var(--d-gutter)' : 'var(--c-inset)', borderRadius: 6, minWidth: 26 }}>{i + 1}</span>;
+    const s = SECTOR[r.t];
+    return <span className="dr-pillcat" style={{ alignSelf: 'center', background: `var(--d-tile-${s})` }}>{SECTOR_LABEL[s]}</span>;
+  }
+  function Roster({ d, final, order = 'gain', mid = 'none', limit }) {
+    const ps = pairs(final, order).slice(0, limit || 6);
+    const midCol = mid === 'none' ? (d === 'b' ? '4px' : '10px') : 'auto';
+    return (
+      <div style={{ display: 'grid', gap: d === 'b' ? 4 : d === 'a' ? 6 : 4, background: d === 'b' ? 'var(--d-gutter)' : undefined, margin: d === 'b' ? `0 -${G}px` : 0, padding: d === 'b' ? '4px 4px' : 0 }}>
+        {d === 'b' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', padding: '6px 8px 2px' }} className="dr-tag">
+            <span style={{ color: 'var(--c-you-text)' }}>Roberto B.</span><span className="dr-muted">Week 6</span><span style={{ textAlign: 'right' }} className="dr-muted">Gianluigi B.</span>
+          </div>
+        ) : null}
+        {ps.map(([a, b], i) => (
+          <div key={a.t} style={{ display: 'grid', gridTemplateColumns: `minmax(0,1fr) ${midCol} minmax(0,1fr)`, gap: d === 'b' && mid === 'none' ? 0 : 6, alignItems: 'stretch' }}>
+            <Half d={d} r={a} final={final} lit={a.weekGain > b.weekGain} />
+            <Mid d={d} mid={mid} r={a} i={i} />
+            <Half d={d} r={b} final={final} mirror lit={b.weekGain > a.weekGain} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  function MatchupFrame({ d, final }) {
+    return (
+      <Phone d={d} tab="matchup" label={`Matchup ${final ? 'final' : 'live'}, direction ${d.toUpperCase()}`}>
+        <Head chip={final ? <FinalChip /> : <LiveChip />} />
+        <Body gap={d === 'b' ? 0 : 18}>
+          <div className="dr-seg" style={{ marginBottom: d === 'b' ? 14 : 0 }}><span className="on">My matchup</span><span>All matchups</span></div>
+          <Scoreboard d={d} final={final} />
+          <Roster d={d} final={final} />
+        </Body>
+      </Phone>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // DRAFT ROOM, on the clock (round 2, pick 11, 0:42)
+  // ═════════════════════════════════════════════════════════════════════
+  const D = K.DRAFT_MOMENT;
+  const SEATS = [...K.PLAYERS].sort((p, q) => p.seat - q.seat);
+  function ClockCard({ d }) {
+    const mmss = `0:${String(D.secondsLeft).padStart(2, '0')}`;
+    const frac = D.secondsLeft / D.secondsTotal;
+    const ring = (
+      <svg width="74" height="74" viewBox="0 0 74 74" aria-hidden="true" style={{ flex: 'none' }}>
+        <circle cx="37" cy="37" r="31" fill="none" stroke="var(--c-track)" strokeWidth="6" />
+        <circle cx="37" cy="37" r="31" fill="none" stroke="var(--c-live)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 31} strokeDashoffset={2 * Math.PI * 31 * (1 - frac)} transform="rotate(-90 37 37)" />
+        <text x="37" y="44" textAnchor="middle" fontSize="20" fontWeight="900" fill="var(--c-text)" style={{ fontVariantNumeric: 'tabular-nums' }}>{mmss}</text>
+      </svg>
+    );
+    const text = (
+      <div style={{ display: 'grid', gap: 3 }}>
+        <span style={{ fontSize: 26, lineHeight: '28px', fontWeight: 900, fontStretch: d === 'b' ? '75%' : '100%', color: 'var(--c-live-text)' }}>You're on the clock</span>
+        <span className="dr-call" style={{ fontWeight: 700 }}>Round 2 of {K.LEAGUE.slots} · Pick 11</span>
+        <span className="dr-cap">Then Paolo M. picks twice (12, 13)</span>
+      </div>
+    );
+    const box = {
+      a: { background: 'var(--c-accent-tint)', boxShadow: 'inset 0 0 0 2px var(--c-live)', borderRadius: 16 },
+      b: { background: 'var(--c-surface)', boxShadow: 'inset 0 0 0 2px var(--c-live)', borderRadius: 3 },
+      c: { background: 'var(--c-surface)', boxShadow: 'inset 0 0 0 1.5px var(--c-live)', borderRadius: 16 },
+    }[d];
+    return <div style={{ ...box, padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>{ring}{text}</div>;
+  }
+  function Board({ d }) {
+    const label = (n, s, muted, dot) => (
+      <span className={muted ? 'dr-num dr-muted' : 'dr-num'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+        <span>{n}</span>
+        <span style={dot ? { color: `var(--d-tile-${s})` } : undefined}>{SECTOR_LABEL[s]}</span>
+      </span>
+    );
+    const cell = (n) => {
+      const p = K.DRAFT_PICKS[n - 1];
+      const t = p.t;
+      const s = t ? SECTOR[t] : null;
+      const onClock = n === D.pick;
+      const base = { height: 44, borderRadius: d === 'b' ? 2 : d === 'a' ? 5 : 8, padding: '4px 6px', display: 'grid', alignContent: 'space-between', position: 'relative' };
+      if (onClock) {
+        return (
+          <div key={n} style={{ ...base, background: d === 'a' ? 'var(--d-clock-cell)' : d === 'b' ? 'var(--d-band)' : 'var(--c-bg)', boxShadow: 'inset 0 0 0 2px var(--c-live)' }}>
+            <span className="dr-num" style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-live-text)' }}>{n}</span>
+            <span className="dr-num" style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-text)' }}>0:{String(D.secondsLeft).padStart(2, '0')}</span>
+          </div>
+        );
+      }
+      if (!t) return <div key={n} style={{ ...base, background: d === 'c' ? 'transparent' : 'var(--c-sunken)', boxShadow: d === 'c' ? 'inset 0 0 0 1px var(--c-line)' : undefined }}><span className="dr-num dr-muted" style={{ fontSize: 11, fontWeight: 700 }}>{n}</span></div>;
+      if (d === 'a') return <div key={n} style={{ ...base, background: `var(--d-tile-${s})`, color: 'var(--d-on-tile)' }}>{label(n, s)}<span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
+      if (d === 'b') return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-tile-${s})` }}>{label(n, s, true)}<span style={{ fontSize: 14, fontWeight: 900, fontStretch: '75%' }}>{t}</span></div>;
+      return <div key={n} style={{ ...base, background: 'var(--c-surface)' }}>{label(n, s, true, true)}<span style={{ fontSize: 13, fontWeight: 800 }}>{t}</span></div>;
+    };
+    return (
+      <div style={{ display: 'grid', gap: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4, paddingBottom: 2 }}>
+          {SEATS.map((p) => (
+            <span key={p.id} style={{ display: 'grid', justifyItems: 'center', gap: 3 }}>
+              <Av init={p.init} you={p.you} size={26} />
+              <span className="dr-cap" style={{ fontSize: 11, fontWeight: p.you ? 800 : 500, color: p.you ? 'var(--c-text)' : undefined }}>{p.name.split(' ')[0]}</span>
+            </span>
+          ))}
+        </div>
+        {[1, 2, 3].map((round) => (
+          <div key={round} style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+            {SEATS.map((p) => cell(K.picksForSeat(p.seat, 6, 3)[round - 1]))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  function DraftFrame({ d }) {
+    return (
+      <Phone d={d} tab="league" label={`Draft room on the clock, direction ${d.toUpperCase()}`}>
+        <Head chip={<span className="dr-chip"><span className="dr-dot" />Drafting</span>} />
+        <Body gap={16}>
+          <ClockCard d={d} />
+          <Board d={d} />
+          <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 12px', borderRadius: d === 'b' ? 3 : 12, background: 'var(--c-surface)' }}>
+              <span className="dr-muted" style={{ display: 'flex' }}><Icon d={ICON.search} size={18} /></span><span className="dr-call" style={{ fontSize: 15 }}>{K.DRAFT_SEARCH.query}</span>
+            </div>
+            {K.DRAFT_SEARCH.results.slice(0, 3).map((r, i) => (
+              <div key={r.t} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, alignItems: 'center', padding: '8px 2px' }}>
+                <span><span className="dr-t" style={{ fontSize: 15 }}>{r.t}</span> <span className="dr-cap">{r.co}{r.tag ? ` · ${r.tag}` : ''}</span></span>
+                <span className="dr-call dr-num dr-muted">{$(r.price)}</span>
+                {i === 0 ? <span className="dr-btn dr-btn--sm">Draft</span> : <span className="dr-muted" style={{ display: 'inline-flex', width: 44, justifyContent: 'center' }} aria-label="Queue"><Icon d={ICON.plus} size={20} /></span>}
+              </div>
+            ))}
+          </div>
+        </Body>
+      </Phone>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // LEAGUE › STANDINGS, in full (after Week 6's Friday close)
+  // ═════════════════════════════════════════════════════════════════════
+  function Move({ n }) {
+    if (!n) return <span className="dr-muted" style={{ width: 22, textAlign: 'center' }} aria-label="no change">–</span>;
+    const up = n > 0;
+    return (
+      <span className={up ? 'dr-gain' : 'dr-loss'} style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 800, width: 22 }} aria-label={`${up ? 'up' : 'down'} ${Math.abs(n)}`}>
+        <Icon d={up ? ICON.up : ICON.chevron} size={12} width={3} />{Math.abs(n)}
+      </span>
+    );
+  }
+  function StandingsFrame({ d }) {
+    const rows = K.STANDINGS_FINAL;
+    const cols = '22px 22px 32px minmax(0,1fr) 34px 86px';
+    const row = (r) => {
+      const style = {
+        a: { padding: '12px 10px', borderRadius: 12, background: r.you ? 'var(--c-you-tint)' : 'var(--c-surface)', boxShadow: r.you ? 'inset 0 0 0 1.5px var(--c-you)' : undefined },
+        b: { padding: '12px 10px', borderRadius: 2, background: r.you ? 'var(--c-you-tint)' : 'var(--c-surface)', boxShadow: r.you ? 'inset 3px 0 0 var(--c-you)' : undefined },
+        c: { padding: '14px 10px', borderRadius: 12, background: r.you ? 'var(--c-you-tint)' : undefined },
+      }[d];
+      return (
+        <div key={r.id} style={{ display: 'grid', gridTemplateColumns: cols, gap: 8, alignItems: 'center', ...style }}>
+          <span className="dr-score" style={{ fontSize: d === 'b' ? 24 : 18, color: r.rank === 1 ? 'var(--c-text)' : 'var(--c-text-2)' }}>{r.rank}</span>
+          <Move n={r.delta} />
+          <Av init={r.init} you={r.you} size={32} />
+          <span style={{ fontSize: 15, fontWeight: r.you ? 800 : 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
+          <span className="dr-call dr-num dr-muted" style={{ textAlign: 'right' }}>{r.w}–{r.l}</span>
+          <span className={`dr-num ${tone(r.pf)}`} style={{ fontSize: 15, fontWeight: 800, textAlign: 'right' }}>{$s(r.pf)}</span>
+        </div>
+      );
+    };
+    return (
+      <Phone d={d} tab="league" label={`League standings, direction ${d.toUpperCase()}`}>
+        <Head />
+        <Body gap={14}>
+          <div className="dr-seg"><span className="on">Standings</span><span>Schedule</span><span>Playoffs</span><span>History</span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 8, padding: '0 10px', alignItems: 'end' }} className="dr-tag">
+            <span className="dr-muted">#</span><span /><span /><span className="dr-cap" style={{ textTransform: 'none', letterSpacing: 0, fontStretch: '100%', fontWeight: 500 }}>Through Week 6</span><span className="dr-muted" style={{ textAlign: 'right', fontStretch: '100%', whiteSpace: 'nowrap' }}>W–L</span><span className="dr-muted" style={{ textAlign: 'right', fontStretch: '100%', whiteSpace: 'nowrap' }}>Season gain</span>
+          </div>
+          <div style={{ display: 'grid', gap: d === 'b' ? 3 : d === 'a' ? 6 : 2, background: d === 'b' ? 'var(--d-gutter)' : undefined, margin: d === 'b' ? `0 -${G}px` : 0, padding: d === 'b' ? '3px' : 0 }}>
+            {rows.map(row)}
+          </div>
+        </Body>
+      </Phone>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // PORTFOLIO hero (the money surface)
+  // ═════════════════════════════════════════════════════════════════════
+  const P = K.PORTFOLIO_LIVE;
+  function PortfolioFrame({ d }) {
+    const size = { a: 44, b: 48, c: 44 }[d];
+    const weight = d === 'b' ? 900 : 500;
+    const series = H.series.map((g) => K.LEAGUE.slots * K.LEAGUE.notionalPerSlot + g);
+    const holding = (t) => {
+      const r = P.rows.find((x) => x.t === t);
+      const s = SECTOR[t];
+      return (
+        <div key={t} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) auto auto', gap: 12, alignItems: 'center', padding: d === 'b' ? '12px 12px' : '12px 0', background: d === 'b' ? 'var(--c-surface)' : undefined, borderRadius: d === 'b' ? 2 : 0 }}>
+          <span className="dr-av" style={{ width: 40, height: 40, fontSize: 11, borderRadius: d === 'b' ? 4 : 20 }}>{t}</span>
+          <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dr-t" style={{ fontSize: 16 }}>{t}</span><span className="dr-pillcat" style={{ background: `var(--d-tile-${s})`, height: 18, fontSize: 11 }}>{SECTOR_LABEL[s]}</span></span>
+            <span className="dr-cap dr-num">{r.co} · {r.qty.toFixed(2)} sh</span>
+          </span>
+          <Spark pts={[r.mon, r.prev, r.thu]} color={toneVar(r.thu - r.mon)} w={52} h={22} />
+          <span style={{ display: 'grid', justifyItems: 'end', gap: 2 }}>
+            <b className="dr-num" style={{ fontSize: 15 }}>{$(r.value)}</b>
+            <span className={`dr-cap dr-num ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span>
+          </span>
+        </div>
+      );
+    };
+    return (
+      <Phone d={d} tab="portfolio" money label={`Portfolio, direction ${d.toUpperCase()}`}>
+        <Head chip={<LiveChip />} />
+        <Body gap={20}>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gap: 2 }}>
+              <span className="dr-cap">Portfolio value</span>
+              <span className="dr-num" style={{ fontSize: size, lineHeight: `${size + 2}px`, fontWeight: weight, fontStretch: d === 'b' ? '62%' : '100%', letterSpacing: '-0.015em' }}>{$(P.value)}</span>
+              <span className="dr-call dr-num" style={{ fontWeight: 700 }}><span className="dr-gain">{$s(P.gain)} · {pct(P.gainPct)}</span> <span className="dr-muted" style={{ fontWeight: 500 }}>since the draft</span></span>
+              <span className="dr-call dr-num" style={{ fontWeight: 700 }}><span className="dr-gain">{$s(P.today)} · {pct(P.todayPct)}</span> <span className="dr-muted" style={{ fontWeight: 500 }}>today</span></span>
+            </div>
+            <Line d={d} series={series} base={series[0]} h={150} label={`Portfolio value since the draft: ${$(P.value)}`} />
+            {d === 'c' ? <RangeTabs d="c" /> : <div className="dr-range" style={{ justifyContent: 'flex-start', gap: 6 }}>{['1W', '1M', 'Season'].map((s) => <span key={s} className={s === 'Season' ? 'on' : undefined} style={{ paddingInline: 12 }}>{s}</span>)}</div>}
+          </div>
+          <div style={{ display: 'grid', gap: d === 'b' ? 3 : 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: 4 }}>
+              <span style={{ fontSize: 17, fontWeight: 800 }}>Holdings</span><span className="dr-cap">Value · today</span>
+            </div>
+            {holding('NVDA')}
+            {holding('AAPL')}
+          </div>
+        </Body>
+      </Phone>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // THE BOARD SECTION
+  // ═════════════════════════════════════════════════════════════════════
+  const NEW = () => <span className="dr-new">NEW</span>;
+  const SW = ({ v, label }) => <span className="dr-sw"><i style={{ background: `var(${v})` }} />{label}</span>;
+  const DIRS = [
+    {
+      crit: 'P5 H4 E4 S5 Earned 4 V4', audit: '0 critical · 0 major · 2 minor (the lit column when one side sweeps; the DRAFT pill\'s 44pt hit area is a build item)',
+      id: 'a', name: 'A · Game Night', primary: 'Sleeper (S1 matchup, S2 draft)',
+      line: 'Flat deep navy in three lightness steps of one hue: the page, a lighter card with a rim, a lighter sheet. Cyan means live, your turn and selected; mint and pink mean up and down; the blue ring and tint mean you. Game numbers are heavy at normal width. Rows divide by space and by a lit slab that runs off the screen edge, never by lines. Money screens drop to near-black with the line in the day\'s colour.',
+      sw: [['--c-bg', 'page'], ['--c-surface', 'card'], ['--d-rim', 'rim'], ['--d-lit', 'lit half'], ['--c-accent', 'cyan'], ['--c-gain', 'up'], ['--c-loss', 'down'], ['--c-you', 'you'], ['--d-money-bg', 'money page']],
+      motion: [
+        ['Hero number', 'rolls its changed digits on a live update (§4 Roll), never on first paint.'],
+        ['Chart', 'draws left to right once, then the end dot breathes while the market is open.'],
+        ['Your turn', 'the clock card flashes cyan twice (the approved flash, recoloured), then rests with a cyan ring that runs down with the clock.'],
+      ],
+    },
+    {
+      crit: 'P4 H3 E4 S4 Earned 3 V4', audit: '0 critical · 1 major (the league band covers 12–17% of Home and Matchup, and competes with the hero) · 1 minor',
+      id: 'b', name: 'B · Broadcast', primary: 'ESPN (S3 matchup)',
+      line: 'Charcoal surfaces with ONE league colour as the frame: the scoreboard is a full-width band, like a broadcast score bug. Every stock is its own panel with a gutter between, and its state bar on the outer edge (green up, red down). Numerals are condensed and the largest thing on every game screen. Labels are small capitals. The band colour here is a sample violet: no league colour exists in the product yet.',
+      sw: [['--c-bg', 'page'], ['--c-surface', 'panel'], ['--d-gutter', 'gutter'], ['--d-band', 'league band'], ['--d-band-2', 'band, lower'], ['--c-live', 'live'], ['--c-gain', 'up'], ['--c-loss', 'down'], ['--c-you', 'you']],
+      motion: [
+        ['Hero number', 'condensed digits slot-roll on change (the scoreboard\'s lively spring, §4).'],
+        ['Chart', 'the filled area rises from the zero line once; the W/L boxes stamp in left to right.'],
+        ['Your turn', 'the clock card\'s edge bar and the board\'s on-the-clock cell flash gold twice (the approved flash), then rest.'],
+      ],
+    },
+    {
+      crit: 'P4 H5 E4 S3 Earned 5 V4', audit: '0 critical · 0 major · 2 minor (the selected pill changes colour on a down day; the DRAFT pill\'s hit area)',
+      id: 'c', name: 'C · Terminal', primary: 'Robinhood (S4 portfolio hero)',
+      line: 'Near-black and one neon that is the day\'s colour: green on an up day (shown), orange-red on a down day, used for the line, the selected pill and the leading score. Groups separate by space alone. Money numbers are regular weight; game scores are bold but not condensed. Sleeper\'s energy lives only in the type scale and the avatars. Stock rows carry sparklines.',
+      sw: [['--c-bg', 'page'], ['--c-surface', 'card'], ['--c-accent', 'neon (up day)'], ['--c-loss', 'down'], ['--c-you', 'you'], ['--c-text-2', 'secondary']],
+      motion: [
+        ['Hero number', 'no roll; it crossfades to the new value in 150 ms, the way Robinhood\'s number ticks.'],
+        ['Chart', 'the line is there on arrival; scrubbing it moves the number (the Robinhood interaction).'],
+        ['Your turn', 'the clock card\'s neon outline flashes twice, then the ring runs down.'],
+      ],
+    },
+  ];
+  const REFS_FOR = {
+    a: { home: ['s1', 'The navy card with a rim; the lit half.'], match: ['s1', 'Avatars at the edges, the mirrored roster, the lit slab off the edge.'], draft: ['s2', 'Colour tiles with dark text; the dark on-the-clock cell.'], stand: ['s1', 'Rows divided by space and surface, never lines.'], money: ['s4', 'The number, then its line, edge to edge.'] },
+    b: { home: ['s3', 'The scoreboard as the loudest thing on the screen.'], match: ['s3', 'Panels with a gutter; state on the outer edge; numbers facing each other.'], draft: ['s2', 'Tiles, here as panels with a sector bar.'], stand: ['s3', 'Dense panels, small-capital labels, strong numerals.'], money: ['s5', 'The key figures and right-aligned tabular numbers.'] },
+    c: { home: ['s4', 'Black, one neon, the number and its line.'], match: ['s1', 'The arrangement only: avatars at the edges, the mirrored roster.'], draft: ['s2', 'The board, reduced to type and a sector dot.'], stand: ['s4', 'Space alone does the dividing.'], money: ['s4', 'Regular-weight number, neon line, filled range pill.'] },
+  };
+
+  function Direction({ dir }) {
+    const r = REFS_FOR[dir.id];
+    return (
+      <>
+        <div className="dr-dirhead" id={`dir-${dir.id}`}>
+          <h3>{dir.name} <span className="dr-muted" style={{ fontSize: 15, fontWeight: 600, fontStretch: '100%' }}>· primary reference: {dir.primary}</span></h3>
+          <p>{dir.line}</p>
+        </div>
+        <div className={`dir-${dir.id} dr-swatches`} style={{ background: 'var(--c-bg)', padding: 10, borderRadius: 12 }}>
+          {dir.sw.map(([v, l]) => <SW key={v} v={v} label={<span style={{ color: 'var(--c-text-2)' }}>{l}</span>} />)}
+        </div>
+        <ul className="dr-motion">{dir.motion.map(([k, v]) => <li key={k}><b>{k}:</b> {v}</li>)}</ul>
+        <p className="dr-crit"><b>Self-critique</b> (1–5, revise under 3): {dir.crit}. <b>hallmark audit</b>, after fixes: {dir.audit}. Punch list: reviews/hallmark-audit-w1.md.</p>
+        <div className="dr-pairs">
+          <Pair refId={r.home[0]} trait={r.home[1]} caption={`${dir.id.toUpperCase()} · Home, in season`} note="The calm-Home structure as decided: the hero, its chart with the W/L marks, This week, Standings. Same copy, same numbers."><HomeFrame d={dir.id} /></Pair>
+          <Pair refId={r.match[0]} trait={r.match[1]} caption={`${dir.id.toUpperCase()} · Matchup, live`} note="The scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, best week first on each side. Nothing else."><MatchupFrame d={dir.id} /></Pair>
+          <Pair refId="v110" trait="What the last one got right: the leader's half lit, the rows mirrored." caption={`${dir.id.toUpperCase()} · Matchup, final`} note={'Friday close: "Final", "Roberto B. won by …", the same rows at the close.'}><MatchupFrame d={dir.id} final /></Pair>
+          <Pair refId={r.draft[0]} trait={r.draft[1]} caption={`${dir.id.toUpperCase()} · Draft room, on the clock`} note="Round 2, pick 11, 0:42. Tile colour = sector (sample; see below)."><DraftFrame d={dir.id} /></Pair>
+          <Pair refId={r.stand[0]} trait={r.stand[1]} caption={`${dir.id.toUpperCase()} · League › Standings, in full`} note="After Week 6's Friday close: the movement, the avatars, your row. No grid lines."><StandingsFrame d={dir.id} /></Pair>
+          <Pair refId={r.money[0]} trait={r.money[1]} caption={`${dir.id.toUpperCase()} · Portfolio`} note={<>The number, its line, the range, two holdings with sparklines and a sector pill. The chart and the range pills are new on Portfolio<NEW />.</>}><PortfolioFrame d={dir.id} /></Pair>
+        </div>
+      </>
+    );
+  }
+
+  /** A compact roster for the "Your call" strips (direction A's skin). */
+  function MiniRoster({ order = 'gain', mid = 'none', label }) {
+    return (
+      <div className="dr dir-a" style={{ background: 'var(--c-bg)', borderRadius: 20, padding: '14px 20px', overflow: 'hidden', color: 'var(--c-text)' }} role="img" aria-label={label}>
+        <Roster d="a" order={order} mid={mid} limit={4} />
+      </div>
+    );
+  }
+
+  function Directions() {
+    return (
+      <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id="call-direction-h">Your call: the direction</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+          </div>
+        </header>
+
+        <ul className="b-inv__notes">
+          <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
+          <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
+          <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
+          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
+          <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
+        </ul>
+
+        {DIRS.map((dir) => <Direction key={dir.id} dir={dir} />)}
+
+        <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
+        <div className="b-concepts b-concepts--three">
+          {['a', 'b', 'c'].map((d) => (
+            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
+          ))}
+          <figure className="b-fig b-fig--inv">
+            <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
+            <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
+          </figure>
+        </div>
+
+        <h3 className="b-sub">Your call, later: the order of the rows</h3>
+        <div className="dr-strip">
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="gain" label="Rows by week gain" /><figcaption><b>a · By week gain, best first on each side (recommended, drawn above)</b><span>The top of the page is the story of the week. It is also (d) "your best against their best": each row is a mini-matchup.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="pick" label="Rows in draft order" /><figcaption><b>b · Draft order</b><span>Your first pick at the top, the roster as drafted. Never moves.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="value" label="Rows by position size" /><figcaption><b>c · By position size</b><span>Your largest holding first. Moves only when prices move a lot.</span></figcaption></figure>
+        </div>
+        <ul className="b-inv__notes">
+          <li><b>A clash to settle with it:</b> the plan says rows never re-sort live and "the order is fixed at the Monday open". At the Monday open every week gain is $0.00, so (a) has nothing to sort by. Proposal: under (a), rows re-order at each market close (never while the market is open), and Monday uses the order at Friday's close. (b) and (c) don't have the problem.</li>
+        </ul>
+
+        <h3 className="b-sub">Your call, later: the centre column</h3>
+        <div className="dr-strip">
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or category pill</b><span>Sleeper's position pill, as a price tier ("$100–$200") or category ("Tech") in leagues that have them; empty in leagues that don't. A pill in the centre names the ROW's slot, so it only reads right if rows pair slot against slot (Tech vs Tech), which settles the row order too. Sector colours here are sample.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
+        </div>
+
+        <div className="b-ask">
+          <h3>The Design Lead's recommendation: A · Game Night</h3>
+          <ul>
+            <li><b>Why A:</b> it is the only one that looks like a fantasy app first. The lit half and the mirrored rows are 1.1.0's head-to-head, made bigger; the navy steps, the cyan and the colour tiles are Sleeper's game night; and the money screens still go Robinhood (near-black, the number and its line), so the bridge you asked for is built into the system, not bolted on.</li>
+            <li><b>Why not B:</b> it is the loudest scoreboard, but it needs a league colour the product doesn't have (who picks it, and what it is in Light, would be new decisions), and its panels make every screen denser. It is also the closest to 1.2.0's Game Day idea, which is the look you called bland.</li>
+            <li><b>Why not C:</b> it is the cleanest and the best money screen, but the game screens read as a brokerage. The fantasy feeling you asked for lives only in the type.</li>
+            <li><b>What A costs:</b> the your-turn flash changes from gold to cyan (an approved look, so it is part of this pick); the Matchup's lit slab and the colour tiles are new components; the money screens use a second, darker page colour.</li>
+            <li><b>When you pick:</b> say which, and anything to take from the others (for example "A, with C's portfolio"). Light comes next from the same roles, then the token spec, then the build (Home first). Two questions ride along for later: the row order and the centre column (above).</li>
+          </ul>
+        </div>
+      </section>
+    );
+  }
+
+  window.KSDirections = Directions;
+})();
+
+</script>
 <script type="text/babel" data-presets="react">
 // The review board around the key screens: one section per screen, each
 // with the live component, what it shows, its motion moments (playable),
@@ -7417,10 +8504,11 @@
             <div><dt>Stakes</dt><dd>$2,000 per slot · 6 slots</dd></div>
           </dl>
           <nav className="b-toc" aria-label="Screens">
-            {[['call-calm-home', 'Calmer Home (decided)'], ['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-sell-from-search', 'Sell (decided)'], ['call-medals', 'Medals (decided)'], ['call-watchlist', 'Watchlist (decided)'], ['call-join-commissioner', 'Join (decided)'], ['call-leaver-names', 'Leavers (decided)'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+            {[['call-direction', 'Direction (your call)'], ['call-calm-home', 'Calmer Home (decided)'], ['themes', 'Themes'], ['home', 'Home'], ['matchup', 'Matchup'], ['league', 'League'], ['draft', 'Draft room'], ['portfolio', 'Portfolio'], ['inventory', 'Every screen'], ['shell', 'Sign in'], ['join-league', 'Join league'], ['not-found', 'Not found'], ['phases', 'Home phases'], ['game', 'Game'], ['run-it-back', 'Run it back'], ['your-turn', 'Your turn'], ['call-manager-row', 'Manager row'], ['call-sell-from-search', 'Sell (decided)'], ['call-medals', 'Medals (decided)'], ['call-watchlist', 'Watchlist (decided)'], ['call-join-commissioner', 'Join (decided)'], ['call-leaver-names', 'Leavers (decided)'], ['call-leave', 'Leave call'], ['call-auto-start', 'Auto-start'], ['call-ux-pass1', 'UX fixes'], ['call-tier-trades', 'Tiers call'], ['money', 'Trading'], ['buy-a-stock', 'Buy a stock'], ['web', 'Web'], ['ledger', 'Ledger']].map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
           </nav>
         </header>
 
+        {window.KSDirections ? <window.KSDirections /> : null}
         {window.KSHomeCalm ? <window.KSHomeCalm /> : null}
 
         <ThemesSection />
