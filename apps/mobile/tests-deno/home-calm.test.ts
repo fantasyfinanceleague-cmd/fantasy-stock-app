@@ -194,3 +194,20 @@ Deno.test('the "Pre-draft" chip is gone; "Postponed" stays; the order line has n
   // The card renders in preDraftBlocks' order.
   assert(card.includes('{blocks.map((b) => <View key={b}>{renderBlock(b)}</View>)}'));
 });
+
+// ── Found in the capture pass ─────────────────────────────────────────────
+
+Deno.test('Standings header: at large text the caption and chevron wrap to their own line, never off the card', () => {
+  const card = SOURCES['components/home/StandingsCard.tsx'];
+  assert(/header:\s*\{\s*flexDirection: 'row',\s*flexWrap: 'wrap',/.test(card));
+  assert(/headerRight:\s*\{[^}]*flexShrink: 1,/.test(card));
+  assert(/headerCaption:\s*\{\s*flexShrink: 1,/.test(card));
+  assert(card.includes('<Text variant="caption" tone="secondary" style={styles.headerCaption}>'));
+});
+
+Deno.test("the chart leaves room on the right for the static end dot (r 4 + 2pt stroke), so it is never clipped", () => {
+  const chart = SOURCES['components/home/SeasonChart.tsx'];
+  assert(chart.includes('const END_DOT_CLEAR = 6;'));
+  assert(chart.includes('{ padRight: END_DOT_CLEAR, ...(showMarks ? { padBottom: MARKS_PAD_BOTTOM } : {}) }'));
+  assert(chart.includes('<Circle cx={endpoint.x} cy={endpoint.y} r={4}') && chart.includes('strokeWidth={2} />'));
+});

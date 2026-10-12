@@ -71,7 +71,7 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
       <View style={styles.header}>
         <Text variant="headline">{STANDINGS_CARD_TITLE}</Text>
         <View style={styles.headerRight}>
-          <Text variant="caption" tone="secondary">
+          <Text variant="caption" tone="secondary" style={styles.headerCaption}>
             {standingsThroughWeekCaption(throughWeek)}
           </Text>
           <Ionicons name="chevron-forward" size={16} color={colors.text2} />
@@ -122,15 +122,24 @@ const styles = StyleSheet.create({
     gap: space[3],
     borderRadius: 14,
   },
+  // At large text the caption and chevron drop to their own line rather than push the
+  // chevron off the card or break the caption mid-word (capture pass, XL/XXXL).
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    columnGap: space[3],
+    rowGap: space[1],
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
+    flexShrink: 1,
+  },
+  headerCaption: {
+    flexShrink: 1,
   },
   row: {
     flexDirection: 'row',

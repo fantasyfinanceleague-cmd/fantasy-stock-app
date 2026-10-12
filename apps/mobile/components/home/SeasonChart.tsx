@@ -70,6 +70,10 @@ export interface SeasonChartProps {
 const DEFAULT_HEIGHT = 148;
 // With marks, the axis row needs its own room under the ticks (board: pad.b 26).
 const MARKS_PAD_BOTTOM = 26;
+// The static end dot (r 4 + its 2pt stroke) sits at the line's last x: without room on
+// the right the SVG clipped it in half (capture pass, playoff_live). The board pads the
+// same way (screens.jsx GainChart: X spans w - 8 from 2).
+const END_DOT_CLEAR = 6;
 
 export function SeasonChart({
   points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false, drawKey = 'season', height: HEIGHT = DEFAULT_HEIGHT, markResults, accessibilityLabel,
@@ -85,7 +89,7 @@ export function SeasonChart({
   // week, never the whole regular season padded out to a hypothetical
   // future Friday (Design Lead ruling, 2026-09-30, board convention).
   const positions = points.map((p) => p.dayIndex);
-  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, showMarks ? { padBottom: MARKS_PAD_BOTTOM } : {}, positions) : null;
+  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, { padRight: END_DOT_CLEAR, ...(showMarks ? { padBottom: MARKS_PAD_BOTTOM } : {}) }, positions) : null;
   const marks = geometry && showMarks ? weekMarks(geometry.points, weekStartIdx, markResults!, width, fontScale) : [];
   const toneColor = (t: WeekMarkTone) => (t === 'gain' ? colors.gain : t === 'loss' ? colors.loss : t === 'live' ? colors.live : colors.text2);
   const tickTop = HEIGHT - (showMarks ? MARKS_PAD_BOTTOM : 22) + 2;
