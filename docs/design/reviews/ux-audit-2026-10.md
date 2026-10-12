@@ -1279,3 +1279,80 @@ Measure the block gap in every capture: 24pt.
    pending, member out (the GS-14 chip).
 10. `drafting_on_clock` (unchanged apart from the gap).
 11. Reduce Motion: open Home (the chart appears drawn; tabs swap instantly).
+
+## Gate · a calmer Home (`feat/calm-home` @ `e821bc8e`), 2026-10-12
+
+**Scope examined:**
+- the worker's captures (`docs/design/captures/calm-home/` on the branch): all 11 items on the 17e
+  and 17 Pro, Light, plus Dark spot-checks of 1, 4 and 9;
+- the frame sheets of recordings 6, 7 and 11;
+- the copy and hero diff against `origin/main`.
+
+**Verdict: BLOCK, narrowly, on F1.** Everything else passes. Re-check F1 from three captures.
+
+**Not examined:**
+- motion beyond the frame sheets;
+- VoiceOver, and the haptics (not visible on video).
+
+### Blocking
+
+- **F1 · The range tabs float between the chart and the This week card (items 1, 4, 5 and 6; rule 5,
+  proximity).** Measured from the pixels on `01-live_open-17e-light.png`:
+  - the chart's marks end at 319.3pt and the tab text starts at 343.3pt, a 24pt gap;
+  - the tabs' underline ends at 359pt and the card starts at about 383pt, also 24pt.
+
+  The spec asks for 8pt between the chart and the tabs. Equal space on both sides leaves the tabs
+  belonging to neither block, on the screen's first view. The likely cause: the tabs' 44pt hit
+  area is built from padding, which pushes the text down.
+
+  **Fix:**
+  - The tab text sits 8pt (±2) under the marks.
+  - The 44pt hit area stays, made by pulling the row up over the bottom of the chart (a negative
+    top margin, the row drawn above the chart) or by `hitSlop`.
+  - The gap from the underline to the card stays 24pt.
+
+  **Re-check:**
+  - `01-live_open-17e-light`
+  - `01-live_open-17pro-light`
+  - `04-live_open-xl-17e-light`
+  - the measurement for each.
+
+### Pass
+
+| # | Verdict | Evidence |
+|---|---|---|
+| 1 | PASS apart from F1 | Gap 24.0pt. At Large, everything sits above the fold on both phones; Standings' 3rd row is at 726pt (fold 749.7) on the 17e. One big number; "Live" chip; chevrons. |
+| 2 | PASS | closed: no mark yet and the static dot. scored won/lost: a W or L 6th mark. pre-season: hero only. bye: "Bye" in text2. eliminated: regular marks only. |
+| 3 | PASS | B′: six regular marks, no playoff slot or hairline, a static end dot (`03-end-dot…` zoom), "Wild card" in the meta and the tag. |
+| 4 | PASS apart from F1 | XL: the marks are capped and don't collide; the Standings header wraps cleanly (fixed in this pass). This week starts below the fold at XL; the fold is ruled at Large. |
+| 5 | PASS | $1,234,567.80 and both 28pt scores fit; the unpriced captions push Standings' 3rd row to the 17e fold, which the fold ruling accepts. |
+| 6 | PASS apart from F1 | The scrub label and the accent underline land on the right week (W2 +$58.75 under the 2nd mark, L −$96.40 under the L); the live week's days; the marks only in Season. |
+| 7 | PASS | This week → Matchup; Standings → League on Standings, twice (the second tap re-selects). |
+| 8 | PASS | Countdown first at `score.xl`; date at callout 700; no "Pre-draft" chip; the no-buying caption under the button(s); two cards. |
+| 9 | PASS | One season card: medallion, hairline, tiles, hairline, "See the final standings ›". Run it back (commissioner) or I'm in (member) is the only primary; "You're out" chip for the out member. |
+| 10 | PASS | Drafting unchanged, gap 24. |
+| 11 | PASS | Reduce Motion: the line is drawn in the first frame; window swaps within one frame. |
+| R-1 | PASS | No shrink at Large or XL; both sides match in size (README measurement). |
+| Copy | PASS | Strings only removed (`SEASON_CARD_*`, the "Week N · Live" chip, `PRE_DRAFT_CHIP`); `PLAYOFF_LIVE_CHIP` renamed `LIVE_CHIP`; `HomeHero` untouched. |
+
+### Corrections and follow-ups (not blocking)
+
+- **The README says Standings rows lose names at XXXL. They already do at XL** ("P…", "R…" in
+  `04-live_open-xl-scrolled-17e`). The rows are untouched, so this predates the branch.
+  - **Why it matters:** at XL a sighted player can't read who leads (rule 7 keeps your row by its
+    tint).
+  - **Fix:** wrap a row onto two lines (name, then record and gain) when the font scale is at XL
+    or above.
+  - **Priority:** P2 (1.3), for Standings on Home and on League.
+- **The member's ask buttons are compact pills, left-aligned,** not the board's two equal-width
+  buttons. This predates the branch (RenewalAsk, unchanged); P3 (with the Change-sheet note
+  above).
+- **Scrubbing the first point reads "Week 1 · $0.00"** (the season's start point). It predates
+  the branch (`seasonScrubLabel`); P3: the start point should read the draft day, or not be
+  scrubbable.
+- **Fixture seams, not product:**
+  - 4–1 on Home vs 4–2 on League;
+  - "10:38 AM ET" on a draft time (real times snap to :00/:15/:30/:45);
+  - the Saturday order line under a Wednesday draft.
+- **Add to MOBILE_SIMULATOR.md (the worker's find):** Metro's env reload never unsets a variable
+  you remove from `.env.local`. Write every fixture variable explicitly and restart with `--clear`.
