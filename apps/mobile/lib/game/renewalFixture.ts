@@ -23,14 +23,35 @@ export interface FixturePerson {
 
 /** Who is calling get_renewal_roster: the commissioner (with a reply still pending, or
  * 'commissioner-ready' once everyone has answered: the review screen), a member who is
- * in / new / pending / out, or someone the roster is not visible to.
- * EXPO_PUBLIC_RENEWAL_FIXTURE picks it. */
-export type RenewalCaller = 'commissioner' | 'commissioner-ready' | 'in' | 'new' | 'pending' | 'out' | 'stranger';
-const CALLERS: readonly RenewalCaller[] = ['commissioner', 'commissioner-ready', 'in', 'new', 'pending', 'out', 'stranger'];
+ * in / new / pending / out, 'in-set' (in, everyone has replied and the draft is set: no
+ * Change, GS-10), 'removed' (out by the commissioner's Remove: no ask, GS-14), or someone
+ * the roster is not visible to. EXPO_PUBLIC_RENEWAL_FIXTURE picks it. */
+export type RenewalCaller = 'commissioner' | 'commissioner-ready' | 'in' | 'in-set' | 'new' | 'pending' | 'out' | 'removed' | 'stranger';
+const CALLERS: readonly RenewalCaller[] = ['commissioner', 'commissioner-ready', 'in', 'in-set', 'new', 'pending', 'out', 'removed', 'stranger'];
 
 export function parseRenewalCaller(raw: string | null | undefined): RenewalCaller | null {
   return raw && (CALLERS as readonly string[]).includes(raw) ? (raw as RenewalCaller) : null;
 }
+
+/** The caller after an answer through the seam's respond_to_renewal (DEV captures of the
+ * flip: an out player taps I'm in and lands on the list; a member who is in changes to
+ * out). Only a Season 1 player who can answer moves; everyone else stays put. Pure. */
+export function callerAfterAnswer(caller: RenewalCaller, answer: 'in' | 'out' | null): RenewalCaller {
+  if (answer === null) return caller;
+  return caller === 'in' || caller === 'pending' || caller === 'out' ? answer : caller;
+}
+
+/** The seam's last answer (lib/game/seamCalls.ts), so the fixture roster follows it. */
+let fixtureAnswer: 'in' | 'out' | null = null;
+export function markFixtureAnswer(answer: unknown): void {
+  if (answer === 'in' || answer === 'out') fixtureAnswer = answer;
+}
+export function fixtureAnswered(caller: RenewalCaller): RenewalCaller {
+  return callerAfterAnswer(caller, fixtureAnswer);
+}
+
+/** The draft time the 'in-set' fixture's roster carries (the commissioner has scheduled). */
+export const FIXTURE_SET_DRAFT_DATE = '2026-01-24T00:00:00Z';
 
 /** The commissioner when the caller is a member: Paolo (as in the leagues-member shell fixture). */
 export const RENEWAL_MEMBER_COMMISSIONER = 'paolo';
@@ -50,14 +71,15 @@ export function renewalShellFacts(fixture: string, renewedBySeam: boolean, calle
  * caller's group, with Paolo as commissioner. */
 function roster(caller: RenewalCaller): { user_id: string; display_name: string; group: RenewalGroup; is_commissioner?: boolean }[] {
   const asCommissioner = caller === 'commissioner' || caller === 'commissioner-ready';
-  const myGroup: RenewalGroup = caller === 'new' || caller === 'pending' || caller === 'out' ? caller : 'in';
+  const myGroup: RenewalGroup = caller === 'new' || caller === 'pending' || caller === 'out' ? caller : caller === 'removed' ? 'out' : 'in';
+  const allReplied = caller === 'commissioner-ready' || caller === 'in-set';
   return [
     { user_id: FIXTURE_USER_ID, display_name: 'Roberto B.', group: myGroup, is_commissioner: asCommissioner },
     { user_id: RENEWAL_MEMBER_COMMISSIONER, display_name: 'Paolo M.', group: 'in', is_commissioner: !asCommissioner },
     { user_id: 'alessandro', display_name: 'Alessandro D.', group: 'out' },
     { user_id: 'francesco', display_name: 'Francesco T.', group: 'in' },
     { user_id: 'gianluigi', display_name: 'Gianluigi B.', group: 'in' },
-    { user_id: 'andrea', display_name: 'Andrea P.', group: caller === 'commissioner-ready' ? 'in' : 'pending' },
+    { user_id: 'andrea', display_name: 'Andrea P.', group: allReplied ? 'in' : 'pending' },
     { user_id: 'marta', display_name: 'Marta C.', group: 'new' },
   ];
 }
@@ -98,13 +120,13 @@ export function fixtureCounts(people: FixturePerson[]): RenewalCounts {
 export function fixtureRoster(caller: RenewalCaller, now: Date) {
   if (caller === 'stranger') return { status: 'not_visible' as const };
   const people = fixturePeople(now, caller);
-  if (caller === 'pending' || caller === 'out') {
+  if (caller === 'pending' || caller === 'out' || caller === 'removed') {
     return {
       status: 'ok' as const,
       league_id: FIXTURE_LEAGUE_ID,
       full_list: false as const,
-      caller_status: caller,
-      caller_decided_by: caller === 'out' ? ('player' as const) : null,
+      caller_status: caller === 'pending' ? ('pending' as const) : ('out' as const),
+      caller_decided_by: caller === 'out' ? ('player' as const) : caller === 'removed' ? ('commissioner' as const) : null,
       draft_status: 'not_started',
       draft_date: null,
     };
@@ -119,7 +141,7 @@ export function fixtureRoster(caller: RenewalCaller, now: Date) {
     is_commissioner: caller === 'commissioner' || caller === 'commissioner-ready',
     caller_status: callerStatus,
     draft_status: 'not_started',
-    draft_date: null,
+    draft_date: caller === 'in-set' ? FIXTURE_SET_DRAFT_DATE : null,
     counts,
     replies_pending: counts.pending > 0,
     people,

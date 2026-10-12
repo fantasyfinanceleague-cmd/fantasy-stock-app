@@ -17,7 +17,7 @@ import { SOURCES } from './sourceManifest.generated.ts';
 const NOW = new Date('2026-01-18T12:00:00Z');
 
 Deno.test('EXPO_PUBLIC_RENEWAL_FIXTURE: every caller, and nothing else', () => {
-  for (const c of ['commissioner', 'commissioner-ready', 'in', 'new', 'pending', 'out', 'stranger']) assertEquals(parseRenewalCaller(c), c);
+  for (const c of ['commissioner', 'commissioner-ready', 'in', 'in-set', 'new', 'pending', 'out', 'removed', 'stranger']) assertEquals(parseRenewalCaller(c), c);
   for (const c of [undefined, '', 'admin', 'Commissioner']) assertEquals(parseRenewalCaller(c), null, String(c));
 });
 
@@ -28,7 +28,9 @@ Deno.test('each caller reaches its own screen, with "me" always the fixture user
   assertEquals(screen('in'), 'member_list');
   assertEquals(screen('new'), 'member_list');
   assertEquals(screen('pending'), 'ask');
-  assertEquals(screen('out'), 'none');
+  assertEquals(screen('out'), 'ask'); // GS-14: out by choice keeps the ask
+  assertEquals(screen('removed'), 'none'); // removed by the commissioner: no card
+  assertEquals(screen('in-set'), 'member_list'); // in, the draft set: the list without Change
   assertEquals(screen('stranger'), 'none');
   type Full = { people: { user_id: string; is_commissioner: boolean; group: string }[]; caller_status: string; replies_pending: boolean; is_commissioner: boolean };
   const asCommissioner = fixtureRoster('commissioner', NOW) as Full;
@@ -73,7 +75,9 @@ Deno.test('the renewal hooks pass the fixture caller (DEV-only), never a hard-co
   assert(hook.includes('if (fixtureCaller) {'));
   assert(SOURCES['app/(tabs)/league.tsx'].includes('useRenewalRoster(leagueId, RENEWAL_FIXTURE_CALLER, rosterKey)'));
   assert(SOURCES['components/game/LeagueRenewal.tsx'].includes('useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, retry)'));
-  assert(SOURCES['components/home/RenewalCountsCard.tsx'].includes('useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, 0)'));
+  // GS-11: Home reads the roster once (RenewedPreDraftHome) and shares it with the counts card and PreDraftCard.
+  assert(SOURCES['app/(tabs)/index.tsx'].includes('useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, readKey)'));
+  assert(!SOURCES['components/home/RenewalCountsCard.tsx'].includes('useRenewalRoster('));
   assert(SOURCES['components/game/HomeRenewalAsk.tsx'].includes('isCommissioner ? null : RENEWAL_FIXTURE_CALLER'));
   for (const [path, src] of Object.entries(SOURCES)) assert(!/useRenewalRoster\([^)]*,\s*null\s*,/.test(src), `${path} passes a null caller`);
 });
