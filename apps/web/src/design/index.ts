@@ -18,6 +18,7 @@ export type { BrandMarkProps } from './BrandMark';
 
 export { useMotion } from './useMotion';
 export type { UseMotionResult } from './useMotion';
+export { MotionRoot } from './MotionRoot';
 
 export { Surface, useSurfaceKind } from './Surface';
 export type { SurfaceProps, SurfaceKind, SurfaceLevel } from './Surface';

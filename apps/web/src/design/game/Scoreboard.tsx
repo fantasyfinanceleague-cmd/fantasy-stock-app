@@ -65,7 +65,7 @@ export function Scoreboard({
         </div>
       </div>
 
-      <TugBar you={you.gain} opponent={opponent.gain} />
+      <TugBar you={you.gain} opponent={opponent.gain} youLabel={you.name} opponentLabel={opponent.name} />
 
       {leading && (
         <Text variant="caption" tone="secondary" as="p" className="sp-scoreboard__lead-line">

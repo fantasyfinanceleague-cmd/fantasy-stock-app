@@ -43,3 +43,6 @@ supabase/.temp/
 .env.new-keys
 docs/api-keys-inventory.md
 .claude/worktrees/
+
+# Landing prerender intermediate (apps/web, deleted by the build itself)
+dist-ssr/

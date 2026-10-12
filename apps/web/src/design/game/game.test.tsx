@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { ScoreDigits } from './ScoreDigits';
-import { TugBar } from './TugBar';
+import { TugBar, tugLabel } from './TugBar';
 import { LiveDot } from './LiveDot';
 import { Chyron } from './Chyron';
 import { Scoreboard } from './Scoreboard';
@@ -21,14 +21,39 @@ describe('ScoreDigits', () => {
 });
 
 describe('TugBar', () => {
-  it('renders an accessible label describing both percentages', () => {
-    render(<TugBar you={100} opponent={0} />);
-    expect(screen.getByRole('img', { name: 'You 92%, opponent 8%' })).toBeInTheDocument();
+  it('labels the lead in dollars (the ratio is visual only)', () => {
+    render(<TugBar you={100} opponent={0} youLabel="You" opponentLabel="Priya" />);
+    expect(screen.getByRole('img', { name: 'You lead by $100.00' })).toBeInTheDocument();
   });
 
-  it('a tied matchup reads 50/50', () => {
-    render(<TugBar you={0} opponent={0} />);
-    expect(screen.getByRole('img', { name: 'You 50%, opponent 50%' })).toBeInTheDocument();
+  it('a tied matchup reads "Tied"', () => {
+    render(<TugBar you={0} opponent={0} youLabel="You" opponentLabel="Priya" />);
+    expect(screen.getByRole('img', { name: 'Tied' })).toBeInTheDocument();
+  });
+
+  it('names the opponent when they lead, with third-person grammar', () => {
+    render(<TugBar you={39.4} opponent={56.8} youLabel="You" opponentLabel="Priya" />);
+    expect(screen.getByRole('img', { name: 'Priya leads by $17.40' })).toBeInTheDocument();
+  });
+
+  it('takes the margin between two losses, and treats a sub-cent gap as a tie', () => {
+    expect(tugLabel(-3, -10.5, 'You', 'Priya')).toBe('You lead by $7.50');
+    expect(tugLabel(10.001, 10.004, 'You', 'Priya')).toBe('Tied');
+  });
+
+  it('never puts a percentage in front of assistive tech', () => {
+    const cases: Array<[number, number]> = [
+      [100, 0],
+      [0, 100],
+      [56.8, 39.4],
+      [0, 0],
+      [-12.75, 44.3],
+      [1e6, 1],
+    ];
+    for (const [you, opp] of cases) expect(tugLabel(you, opp, 'You', 'Priya')).not.toContain('%');
+    const { container } = render(<TugBar you={56.8} opponent={39.4} youLabel="You" opponentLabel="Priya" />);
+    expect(container.innerHTML).not.toContain('%,');
+    expect(container.querySelector('[aria-label]')?.getAttribute('aria-label')).not.toContain('%');
   });
 });
 

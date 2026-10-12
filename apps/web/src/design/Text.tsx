@@ -61,7 +61,10 @@ export function Text({ variant, tone = 'primary', as, nowrap, className, style, 
   const surfaceKind = useSurfaceKind();
   const onGame = surfaceKind === 'game';
   const tokens = VARIANTS[variant];
-  const Component = (as ?? 'span') as ElementType;
+  // Narrowed to the props we pass: an unparameterised ElementType also
+  // spans every JSX intrinsic in the program — including three.js's, which
+  // @react-three/fiber adds globally — and their intersection is `never`.
+  const Component = (as ?? 'span') as ElementType<{ className?: string; style?: CSSProperties; children?: ReactNode }>;
   const shouldNowrap = nowrap ?? SCORE_VARIANTS.has(variant);
 
   const computedStyle: CSSProperties = {
