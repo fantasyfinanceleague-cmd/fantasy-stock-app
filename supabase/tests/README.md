@@ -621,6 +621,20 @@ The second `Deno.test` boots a fresh database with `fixtures/run_it_back_398da84
 
 Run: `deno test --allow-read --allow-env supabase/tests/leave_league.pglite.test.ts`
 
+## leaver_gaps.pglite.test.ts
+
+After the season, leaving sets `league_members.hidden_at` and keeps the row. This covers the two places that treated a leaver as a current member, or let a row be born hidden:
+- `20261120000000`: `transfer_commissioner` refuses a hidden target with `target_invalid` (and writes nothing), still transfers to a current member in both open windows, and transfers again once the leaver un-hides. Grants are checked by `proacl` and `has_function_privilege`.
+- `20261120000001`: `league_members_insert_self` refuses a self-insert with `hidden_at` set (42501). The normal create-league insert (omitted or explicit-NULL `hidden_at`) still works, and the policy's three older conditions still refuse on their own.
+
+What it does:
+- Boots the leave-league replica and migration chain, verbatim. The one difference: `league_members`' policies are the REAL chain (`20260712000002` → `20260811000005` → `20261001000000`), not hand-declared stand-ins.
+- A BEFORE step reproduces both findings on the pre-fix definitions.
+- Runs `docs/security/leaver-gaps-effect-test.sql`, the prod effect check, and requires its 6 PASS lines and a rolled-back fixture. Line I1 is INFO: it reports the `[I6]` bot-insert residual (a bot row can still be born hidden until `[I6]` is dropped).
+- Independent of #205 (`20261119*`).
+
+Run: `deno test --allow-read --allow-env supabase/tests/leaver_gaps.pglite.test.ts`
+
 ## migration_cli_split.test.ts
 
 What it does:
