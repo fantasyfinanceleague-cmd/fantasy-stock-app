@@ -38,6 +38,20 @@ building anything, and don't reopen a rule without him.
   - **Sleek (sleek.design) is rejected** for this app: "let's maybe not use Sleek, especially
     if it's going to charge us. Let's just maybe try to figure this out just in Claude Code."
     Design happens on the board, built here.
+  - **Every section must elevate** (2026-10-12, approving the reset plan): "the main thing is
+    that I don't want bland. I want every section to, in its own way, elevate the, the app,
+    right?" His named examples of what is wrong in 1.2.0, verbatim:
+    - Standings: "the way it looks right now in the app is awful. It is just a basic table
+      with not even good like divide like dividing the columns and rows. It's it's ugly".
+    - Matchup: "the chart doesn't even load" (a defect to fix, not a design choice).
+    - Stocks: "you look at the different stocks and it's just they're so ugly."
+    - The head-to-head is the heart of it: "I feel like even in the last one, like it
+      captured that better head to head matchup look way better. And that should really be
+      shown. And that's a huge part because of it's that like that fantasy football style".
+      So the matchup is designed as a head-to-head scoreboard first (Sleeper/ESPN shape), and
+      the 1.1.0 matchup look is a reference for what to keep.
+    - His summary: "these are just some elements that really stuck out of just like, this is
+      not how it's supposed to look. from a UI's perspective."
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",

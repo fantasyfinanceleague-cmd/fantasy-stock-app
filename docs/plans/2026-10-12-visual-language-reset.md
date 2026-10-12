@@ -1,6 +1,6 @@
 # Visual language reset: captivating, not bland
 
-Status: Draft (awaiting Giorgio's approval)
+Status: Approved (Giorgio, 2026-10-12: "approved, resume and push")
 Planner session: "Planner" (Fable 5.1), 2026-10-12 · Orchestrator hand-off: —
 
 ## Goal
@@ -32,6 +32,28 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
   Football. Stock: Robinhood and E*trade."
 - Still in force from 2026-10-12 morning ("A calm Home"): same content, calmer structure,
   one standout number, sections never touch. This plan changes the *skin*, never that.
+- On approving this plan: "the main thing is that I don't want bland. I want every section
+  to, in its own way, elevate the, the app, right?" With named failures in 1.2.0:
+  standings ("a basic table with not even good … dividing the columns and rows. It's
+  ugly"), the matchup chart ("doesn't even load"), the stock rows ("so ugly"); and one
+  thing the previous build did better: "even in the last one … it captured that better
+  head to head matchup look way better. And that should really be shown. And that's a huge
+  part because of … that fantasy football style". Full quotes in `PRODUCT_RULES.md`.
+
+**What those four examples mean for the board (binding on W1):**
+- **Standings** is a design object, not a table: rank, avatar with ring, name (yours bold on
+  the tint), record, season gain with sign, movement arrow, and rows that read as a league
+  table on game night (Sleeper/ESPN's standings density, Robinhood's tabular numerals).
+  No bare grid lines; row separation by surface and rhythm.
+- **Matchup** is a head-to-head scoreboard first: the Sleeper/ESPN header shape (two scores,
+  avatars at the edges, win-% chips and bars, record and status under each), the lead bar,
+  then the mirrored lineup. The 1.1.0 matchup screen is pulled up as a reference frame on
+  the board ("what the last one got right") beside the new direction.
+- **Stock rows** (holdings, search results, watchlist): ticker + name, price, change with a
+  sign, a sparkline (Robinhood), the tier/category pill (Sleeper's position colour), and
+  the row tinted by outcome where there is one (ESPN).
+- **The matchup chart not loading** is a defect, routed to the Orchestrator for triage in
+  1.2.x (likely S-1/S-5 territory), separate from the design work.
 
 ## Decisions
 
@@ -41,7 +63,7 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 | 2 | What the references are and what we take | `docs/design/REFERENCES.md`: Sleeper **fantasy side only** (flat deep navy + cyan, the matchup header with win-% bars, mirrored lineup with a colour-coded middle column, colour-coded draft tiles, "YOUR TURN" pill; Giorgio: the picks/betting screenshots "arent as relevant to us"), ESPN (scoreboard header, row tints, dense tables), Yahoo (invites, "your turn", warmth), Robinhood (number + chrome-less line as hero, one meaningful accent, range pills, sparklines), E*TRADE (key-figures list, tabular numbers) | Planner chat, 2026-10-12 |
 | 3 | Theme order | **Dark first**; Light designed second from the same system; the System / Light / Dark setting stays | AskUserQuestion, 2026-10-12 |
 | 4 | First screens | **Home (in season) + Matchup (live and final) + Draft room**, each in all three directions, so a *system* is judged, not a screen | AskUserQuestion, 2026-10-12 |
-| 5 | Who draws | The **Design Lead resumes**, briefed with `REFERENCES.md` and this plan; the Orchestrator relays | AskUserQuestion, 2026-10-12 |
+| 5 | Who draws | A **fresh "Design Lead" session with a handoff note** from the current one (Giorgio: "2, fresh design lead with a handoff"). Reason: skills load at session start, so the paused Design Lead cannot invoke Hallmark; a fresh one also carries no memory of the quiet-and-grey vocabulary. The Orchestrator relays; it stays as is | Giorgio, 2026-10-12 (revised from "resume") |
 | 6 | How screens are judged from now on | Against a reference screenshot side by side on the board and in every gate ("reference check"); adjectives never decide | `PRODUCT_RULES.md`, 2026-10-12 |
 | 7 | The three directions and the winner | To Giorgio as "Your call: direction" (brief below) | pending |
 | 8 | Hallmark (github.com/nutlope/hallmark, MIT, pure markdown) | **Adopted as a tool for the Design Lead, never as the designer** (Giorgio, 2026-10-12): (a) `hallmark study` on the five reference screens first, producing a DNA diagnosis + `design.md` the token spec builds on (its gate 57 then forbids drifting back to a generic theme); (b) its slop gates and six disciplines adopted into our gate via an adopt/adapt/skip table, like impeccable; (c) `hallmark audit` on every board frame before Giorgio sees it, beside the `ux-reviewer`. Installed at `~/.agents/skills/hallmark`; `.hallmark/` gitignored. Its own web themes and page machinery are not used | Planner chat, 2026-10-12 |
@@ -155,11 +177,15 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
     pills and emphasis; the number and the chrome-less line as every hero; sparklines on
     rows; game screens get the scoreboard but in the same minimal chrome; Sleeper's energy
     only in type scale and avatars.
-- **Per direction, four frames, dark:** Home in season (the calm-Home structure: pill +
+- **Per direction, five frames, dark:** Home in season (the calm-Home structure: pill +
   status, hero + change line, chart, This week card, Standings card, tab bar); Matchup live
   (scoreboard header + two lineups) and the Final reveal state; Draft room on the clock
-  ("YOUR TURN · 0:42", the board, the queue strip); Portfolio hero (number + line + range
-  pills + a holdings row with a sparkline).
+  ("YOUR TURN · 0:42", the board, the queue strip); **League › Standings in full** (the
+  table Giorgio called "awful" is the one to redeem: 6 managers, avatars, movement, your
+  row); Portfolio hero (number + line + range pills + two holdings rows with sparklines and
+  tier pills). Beside the Matchup frames, one reference frame of the **1.1.0 matchup screen**
+  (the look Giorgio says the last build captured better), so the direction is judged
+  against it too.
 - **Real data** from `data.js` (Stock Scudetto, week 6, Roberto B. vs Gianluigi B.,
   $12,343.59, +$343.59 · +2.86% · +$121.26 today; the draft moment round 2 pick 11).
 - **Each frame sits beside the reference screenshot** it borrows from (the App Store
