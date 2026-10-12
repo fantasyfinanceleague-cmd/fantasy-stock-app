@@ -1,0 +1,215 @@
+# Visual language reset: captivating, not bland
+
+Status: Draft (awaiting Giorgio's approval)
+Planner session: "Planner" (Fable 5.1), 2026-10-12 · Orchestrator hand-off: —
+
+## Goal
+
+Replace the app's visual language, not its structure. 1.2.0 shipped the right skeleton
+(one standout per screen, sections that breathe, the UX rulebook) with a bland skin:
+grey cards, hairlines, a thin teal line for a chart. Giorgio's bar is the feeling of
+opening Sleeper or ESPN on game night and Robinhood on a green day. This plan gets three
+fully rendered directions in front of him (Home, Matchup, Draft room; dark first), lets him
+pick by seeing, then rebuilds the screens to the chosen direction with every gate judged
+against the real reference apps side by side.
+
+## Giorgio's rules
+
+All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES.md`
+("Captivating, not bland").
+
+- "everything I'm seeing is just so bland. It's not creative. It's not inspiring. It's, you
+  know, you're not opening up an app and being like, wow. You're opening up an app and just
+  seeing bland charts and bland everything. I want something that is captivating, something
+  that is creative. I want to emulate other fantasy football apps and and make that bridge
+  between them and investing apps. I want to create a, a kind of a, a blend between a, a, a
+  sleeper and ESPN fantasy football with a Robin Hood or... Another sort of app like that.
+  That's what I want."
+- "Even the chart, like that's such an ugly chart."
+- "let's maybe not use Sleek, especially if it's going to charge us. Let's just maybe try to
+  figure this out just in Claude Code."
+- References, his list: "Fantasy Football: Sleeper, ESPN Fantasy Football, and Yahoo Fantasy
+  Football. Stock: Robinhood and E*trade."
+- Still in force from 2026-10-12 morning ("A calm Home"): same content, calmer structure,
+  one standout number, sections never touch. This plan changes the *skin*, never that.
+
+## Decisions
+
+| # | Question | Decision | Board section / date |
+|---|---|---|---|
+| 1 | Design tool | Sleek rejected (bland result; paid plan); design on the board, built in Claude Code | Planner chat, 2026-10-12 |
+| 2 | What the references are and what we take | `docs/design/REFERENCES.md`: Sleeper (gradient dark, glass, display type, tiles, avatars), ESPN (scoreboard header, row tints, dense tables), Yahoo (invites, "your turn", warmth), Robinhood (number + chrome-less line as hero, one meaningful accent, range pills, sparklines), E*TRADE (key-figures list, tabular numbers) | Planner chat, 2026-10-12 |
+| 3 | Theme order | **Dark first**; Light designed second from the same system; the System / Light / Dark setting stays | AskUserQuestion, 2026-10-12 |
+| 4 | First screens | **Home (in season) + Matchup (live and final) + Draft room**, each in all three directions, so a *system* is judged, not a screen | AskUserQuestion, 2026-10-12 |
+| 5 | Who draws | The **Design Lead resumes**, briefed with `REFERENCES.md` and this plan; the Orchestrator relays | AskUserQuestion, 2026-10-12 |
+| 6 | How screens are judged from now on | Against a reference screenshot side by side on the board and in every gate ("reference check"); adjectives never decide | `PRODUCT_RULES.md`, 2026-10-12 |
+| 7 | The three directions and the winner | To Giorgio as "Your call: direction" (brief below) | pending |
+
+## Open questions
+
+None blocking the board work. Two for Giorgio when he picks a direction:
+
+1. **Release target.** 1.2.0 is out. The reset lands as **1.3** unless Giorgio wants a 1.2.x
+   with Home + Matchup only. Recommendation: 1.3, every screen, so the app never mixes two
+   languages (the "no screen mixes themes" rule applied to skins).
+2. **Supersession.** `DESIGN_DIRECTION.md` §1 (Direction B "Game Day"), §9 (tokens) and §9A
+   (two themes) are superseded by the chosen direction's token spec. The motion language
+   (§4), Reduce Motion (§5) and the native craft floor (§9B) stay. Confirm when choosing.
+
+## Scope
+
+**In:**
+- `REFERENCES.md` (done) and the ruling (done).
+- The board: three directions × three screens, dark, each next to its reference, with a
+  recommendation. A fourth frame per direction shows the money treatment (Portfolio hero)
+  so the brokerage half is judged too.
+- The chosen direction's **token spec v3** (dark first): surfaces (gradient/glow or black),
+  the display type, the accent system (team colour vs money colour), tiles, row tints,
+  chart style; then Light from the same roles.
+- Rebuilding the screens to it, in order: Home → Matchup → Draft room → League → Portfolio
+  and the stock sheet → the watchlist/claims surfaces (when built) → onboarding/invites.
+- The gate: a "reference check" step and the rule that the squint test runs against the
+  reference, not the previous build.
+
+**Out (and why):**
+- Any structure change (what's on each screen, in what order): the calm-Home ruling, the
+  UX rulebook and the approved product rules stand.
+- The web app and landing (3d, 3a): after the app, per "app first".
+- Sleek or any paid design tool.
+- A product rename (deferred to pre-launch; `brand.name` stays a token).
+
+## How it works
+
+### The player's side (what changes when it ships)
+
+Opening the app in season feels like game night: a deep gradient surface with glow, your
+team value in big display type with a chart that is a bright single line in the colour of
+your day, the matchup a real scoreboard with avatars and bars, your row lit in your colour.
+The draft room has colour-coded tiles, a turn clock that looks like a turn clock, and a
+"YOUR TURN" moment with presence. Money screens go Robinhood: the number and the line, one
+accent that means something, sparklines on rows. Nothing moves on the page; the same
+content sits in the same order (the calm-Home ruling); it just stops being grey.
+
+### The system's side
+
+1. **Board, "Your call: direction"** (Design Lead; brief below). Three directions, each
+   rendered for Home, Matchup, Draft room and a Portfolio hero, dark, with real data from
+   `docs/design/screens/data.js`, each frame beside the reference screenshot it borrows
+   from, with the trait named. The Design Lead recommends one. Giorgio picks on the board.
+2. **Token spec v3** (Design Lead → `DESIGN_DIRECTION.md` new §9C, superseding §9/§9A):
+   named roles, contrast PAIRS re-run for the new palette (the 108-pair check exists in
+   `constants/tokens/contrastPairs.ts`), the display typeface decision (Archivo's 62%/900 may
+   already serve as the condensed display face; the board decides), chart style, tile
+   colours mapped to price tiers / categories, row tint rules, avatar ring rules.
+3. **Primitives** (one mobile worker, after the spec): `apps/mobile/constants/tokens/*`,
+   `ThemeProvider`, `Card`, `sp/*`, the chart component (`SeasonChart`, the stock chart),
+   `ManagerRow`, `PhaseChip`, the tab bar. Gradients via `expo-linear-gradient`; glow via
+   layered radial gradients or a pre-rendered image, measured on device (§9B performance
+   score). Every token change passes the contrast test before any screen uses it.
+4. **Screens**, one worker per group, each gated: Home (in season, pre-draft, post-season),
+   Matchup (live/final/reveal), Draft room + lobby, League (standings/schedule/history),
+   Portfolio + stock sheet + search, onboarding/invite/join, then the watchlist/claims
+   surfaces when their plan builds.
+5. **Light theme**: after the dark screens are approved, the same roles in Light, judged
+   against E*TRADE/Yahoo light surfaces; no screen mixes.
+6. **Gate change** (`UI-UX-PROGRAM.md`): step (3) squint test is run against the reference
+   screenshot named for that screen; a new step "reference check" lists, per screen, the
+   reference and the borrowed traits present/absent; the `ux-reviewer` adds a row
+   "resembles its reference?" with evidence.
+
+### The board brief: "Your call: direction" (W1)
+
+Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md` first.
+
+- **Three directions, named so they can be discussed:**
+  - **A "Game Night"** (Sleeper-led): deep blue→navy gradient with glow; glassy cards with a
+    1px light border; heavy condensed all-caps display type for moments; colour-coded tiles
+    (tiers/categories); large avatars with rings; the two-score header with win chips and
+    bars; money screens on near-black with a bright single-colour line.
+  - **B "Broadcast"** (ESPN-led): near-black surfaces with ONE league/team colour as the
+    frame; a true scoreboard header (scores, avatars, a bar each, record, status) pinned
+    over scrolling lineups; row tints by outcome; dense tabular lists; display numerals;
+    money screens the same black with the chart line in the performance colour.
+  - **C "Terminal"** (Robinhood-led): pure black; one neon accent for the line, selected
+    pills and emphasis; the number and the chrome-less line as every hero; sparklines on
+    rows; game screens get the scoreboard but in the same minimal chrome; Sleeper's energy
+    only in type scale and avatars.
+- **Per direction, four frames, dark:** Home in season (the calm-Home structure: pill +
+  status, hero + change line, chart, This week card, Standings card, tab bar); Matchup live
+  (scoreboard header + two lineups) and the Final reveal state; Draft room on the clock
+  ("YOUR TURN · 0:42", the board, the queue strip); Portfolio hero (number + line + range
+  pills + a holdings row with a sparkline).
+- **Real data** from `data.js` (Stock Scudetto, week 6, Roberto B. vs Gianluigi B.,
+  $12,343.59, +$343.59 · +2.86% · +$121.26 today; the draft moment round 2 pick 11).
+- **Each frame sits beside the reference screenshot** it borrows from (the App Store
+  images linked in `REFERENCES.md`), with the borrowed trait named in one line.
+- **Keep:** the structure (calm Home), UX rules 2–11, the 11pt floor, 44pt targets, colour
+  never the only code, Reduce Motion fallbacks, Archivo unless the board argues a second
+  display face (then name it and its cost).
+- **Motion notes per direction** (one line each; no recordings yet): what the hero number
+  does on load, what the chart does, what "YOUR TURN" does.
+- **Recommend one**, with the reasoning on the board. Giorgio picks; the Planner records.
+
+## Risks and edge cases
+
+- **Contrast in dark.** Gradients and glow change the background under text; every PAIR
+  is re-measured against the *darkest and lightest* point of the gradient, not one colour.
+  Team colours on dark need their own gain/loss variants (the §9A lesson).
+- **Performance.** Gradients, blur and glow on React Native cost frames; the §9B
+  performance score is measured on a device at the first screen, not assumed. Fallback: a
+  pre-rendered gradient image per surface.
+- **Regressing the rulebook.** "Captivating" is not a licence to add things; the structure
+  rules and the one-primary-action rule hold; the `ux-reviewer` still runs. A direction
+  that needs a second hero fails on arrival.
+- **Vocabulary drift.** The words "quiet", "restrained", "hairline", "calm" are banned from
+  visual rulings (allowed for structure). The Design Lead's gate template is updated.
+- **Token churn across live branches.** The watchlist/claims work (approved plan) and any
+  P2 follow-ups build on the current tokens; the primitives worker lands first, and
+  screens rebase on it, so no screen is built twice.
+- **Light theme lag.** Light comes second; until it lands, Light users see the old skin.
+  Acceptable for a 1.3 cut only if both ship together; the plan's done-means requires both.
+- **The Sleek key.** `~/.sleek_api_key` and `~/.agents/skills/sleek-design-mobile-apps`
+  remain on Giorgio's machine; harmless, free tier; removable on request.
+
+## Done means
+
+- [ ] `REFERENCES.md` and the ruling are on `main`.
+- [ ] Board "Your call: direction": 3 directions × 4 frames, dark, each beside its reference;
+      Giorgio has picked; the pick and any edits are recorded in `PRODUCT_RULES.md`.
+- [ ] Token spec v3 in `DESIGN_DIRECTION.md` §9C; contrast PAIRS test green for Dark, then
+      Light.
+- [ ] Primitives rebuilt and gated; the first screen (Home) on device measured for frame
+      rate with the new surfaces.
+- [ ] Every key screen rebuilt and DESIGN-APPROVED with a reference check; `ux-reviewer`
+      row "resembles its reference" present in each gate.
+- [ ] Light theme approved; no screen mixes skins.
+- [ ] Giorgio's check by hand, on his phone, Dark then Light: Home in season, Matchup live,
+      the draft room on his turn, Portfolio. His word is the acceptance: it either makes him
+      go "wow" or it isn't done.
+
+## Suggested workstreams
+
+| # | Workstream | Depends on | Who |
+|---|---|---|---|
+| W0 | Push this branch (+ the two earlier unpushed ones, with Giorgio's go); docs PR | Giorgio's go | Orchestrator |
+| W1 | "Your call: direction" board: 3 × 4 frames beside references; recommendation | W0 | Design Lead (resumed) |
+| W2 | Giorgio picks; Planner records; token spec v3 (§9C) + contrast PAIRS | W1 | Design Lead, Planner |
+| W3 | Primitives + tokens + charts rebuilt; device frame-rate check | W2 | mobile worker |
+| W4 | Screens in order (Home → Matchup → Draft → League → Portfolio/sheet → onboarding); one gate each with the reference check | W3 | mobile workers (2 in parallel max) |
+| W5 | Light theme from the same roles; gates | W4 | mobile worker, Design Lead |
+| W6 | Gate template + `ux-reviewer` "reference check" row; `UI-UX-PROGRAM.md` | W2 | Orchestrator (docs), Giorgio (`.claude/agents/ux-reviewer.md` edit by hand) |
+| W7 | 1.3 cut: Giorgio's device check, EAS build | W4, W5 | Giorgio |
+
+## Models
+
+| Role / workstream | Model | Why |
+|---|---|---|
+| Planner | Fable 5.1 | Direction, briefs, recording |
+| Orchestrator | Opus 5.5 | Verification and gates |
+| W1 board directions | **Design Lead on Opus** throughout | This is the judgement work of the whole plan; a cheaper model produced the bland pass |
+| W2 token spec | Design Lead on Opus; contrast script runs are mechanical (Haiku worker) | Judgement vs mechanical |
+| W3 primitives | Worker turn 1 on Opus (gradient/perf design), then Sonnet | The performance trade-offs need judgement; the token plumbing doesn't |
+| W4 screens | Turn 1 on Opus, then Sonnet; **Opus for the gate** (Design Lead) | Well-specified from the board; the gate is judgement |
+| W5 Light | Sonnet after an Opus plan turn | Role mapping is specified by then |
+| `ux-reviewer` | Sonnet | Checklist |
+| Recon | Haiku | Read-only |
