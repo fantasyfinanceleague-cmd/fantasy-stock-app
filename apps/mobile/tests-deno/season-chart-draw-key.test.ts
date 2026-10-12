@@ -21,5 +21,5 @@ Deno.test('the draw-in is keyed on the window, never on the series values (sourc
   // Once drawn, the path is the full line for whatever the values are now.
   assert(chart.includes('d={drawProgress >= 1 ? geometry.linePath : partialLinePath(geometry.points, drawProgress, lineLength)}'));
   // The league switch still remounts (and skips the entrance), as Home's H5 ruled.
-  assert(SOURCES['app/(tabs)/index.tsx'].includes("<HomeLeagueTransition key={activeLeagueId ?? 'none'}>"));
+  assert(SOURCES['app/(tabs)/index.tsx'].includes("<HomeLeagueTransition key={activeLeagueId ?? 'none'}"));
 });

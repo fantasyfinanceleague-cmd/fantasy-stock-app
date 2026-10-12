@@ -437,7 +437,7 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Home" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <HomeLeagueTransition key={activeLeagueId ?? 'none'}>
+        <HomeLeagueTransition key={activeLeagueId ?? 'none'} style={{ gap: space[6] }}>
           <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} skipEntrance={skipEntrance} />
         </HomeLeagueTransition>
       </BarsRefresh>

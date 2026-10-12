@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { useMotion } from '@/components/sp/motion';
@@ -22,7 +23,11 @@ import { useMotion } from '@/components/sp/motion';
 // HomeHero/SeasonChart/StandingsCard) so their FIRST-open entrance
 // animations don't replay on every switch this remount causes.
 
-export function HomeLeagueTransition({ children }: { children: ReactNode }) {
+// The wrapper IS the container of Home's sections (HomeBody returns a fragment),
+// so the caller's section spacing must be passed here via `style`. A gap set on
+// the scroll container only spaces ITS children, and this wrapper is its only
+// child: with the gap there, every section sat flush (1.2.0, Giorgio 2026-10-12).
+export function HomeLeagueTransition({ children, style: containerStyle }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const { reduced, duration, easing, withTiming } = useMotion();
   const progress = useSharedValue(reduced ? 1 : 0);
 
@@ -37,5 +42,5 @@ export function HomeLeagueTransition({ children }: { children: ReactNode }) {
 
   const style = useAnimatedStyle(() => ({ opacity: progress.value }));
 
-  return <Animated.View style={style}>{children}</Animated.View>;
+  return <Animated.View style={[containerStyle, style]}>{children}</Animated.View>;
 }

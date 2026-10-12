@@ -20,5 +20,5 @@ Deno.test('the Matchup body and All matchups remount per league (source guard)',
   // Why: ScoreDigits remembers the previous text, so only a remount resets it.
   assert(SOURCES['components/sp/game/ScoreDigits.tsx'].includes('prevTextRef'));
   // Home does the same.
-  assert(SOURCES['app/(tabs)/index.tsx'].includes("<HomeLeagueTransition key={activeLeagueId ?? 'none'}>"));
+  assert(SOURCES['app/(tabs)/index.tsx'].includes("<HomeLeagueTransition key={activeLeagueId ?? 'none'}"));
 });
