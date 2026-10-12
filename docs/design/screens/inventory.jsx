@@ -3751,6 +3751,83 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: managers who left, in a league's past seasons. Giorgio,
+  // 2026-10-08: "i can only see other names and avatars of other users im
+  // in a leauge with ... or any info about users not in their league."
+  // Leaving is only possible before the draft (no record yet) or after the
+  // season, so a leaver only ever appears in finished seasons. Stock
+  // Scudetto, Season 1 (data.js SEASON1); Andrea P. left after it. The
+  // Week 3 scores are SAMPLE.
+  // ═════════════════════════════════════════════════════════════════════
+  const FORMER = 'Former manager';
+  const LeaverAvatar = ({ init, gone, me }) => gone
+    ? <span className="ks-avatar ks-avatar--sm ks-avatar--neutral" aria-label={FORMER} style={{ opacity: 0.6 }} />
+    : <span className={me ? 'ks-avatar ks-avatar--sm' : 'ks-avatar ks-avatar--sm ks-avatar--neutral'}>{init}</span>;
+  /** League › History, Season 1. v: 'A' (names stay) | 'B' (leavers anonymous).
+   *  me: whose phone; gone: who has left. */
+  function LeaverHistory({ v = 'A', me = 'roberto', gone = ['andrea'] }) {
+    const name = (r) => (v === 'B' && gone.includes(r.id) ? FORMER : r.name);
+    const champ = S1.rows.find((r) => r.id === S1.champion);
+    return (
+      <Device tab="league" label={`League History, leavers option ${v}`}>
+        <Head chip={null} avatar={false} />
+        <div className="ks-pad ks-stack">
+          <div className="ks-seg"><span>Standings</span><span>Schedule</span><span className="on">History</span></div>
+          <Card pad="12px 14px">
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="ks-headline" style={{ fontWeight: 700 }}>Season 1</span><span className="ks-callout ks-num ks-muted">{S1.rows.find((r) => r.id === me).w}–{S1.rows.find((r) => r.id === me).l}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span className="ks-caption">Champion {name(champ)}</span><span className="ks-caption">After the playoffs</span></div>
+            <ul className="ks-rows">
+              {S1.rows.map((r) => {
+                const isMe = r.id === me, left = gone.includes(r.id);
+                return (
+                  <li key={r.id} className="ks-row" style={{ gridTemplateColumns: '20px 28px 1fr auto auto', padding: '8px 6px', background: isMe ? 'var(--c-you-tint)' : undefined, borderRadius: isMe ? 8 : 0 }}>
+                    <Medal rank={r.rank} />
+                    <LeaverAvatar init={r.init} gone={v === 'B' && left} me={isMe} />
+                    <span className="ks-callout" style={{ fontWeight: isMe ? 700 : 500, color: v === 'B' && left ? 'var(--c-text-2)' : undefined }}>{name(r)}{r.id === S1.champion ? <><br /><span className="ks-caption">Champion</span></> : r.id === S1.runnerUp ? <><br /><span className="ks-caption">Runner-up</span></> : null}</span>
+                    <span className="ks-callout ks-num ks-muted">{r.w}–{r.l}</span>
+                    <span className={`ks-callout ks-num ${tone(r.pf)}`} style={{ fontWeight: 700, minWidth: 82, textAlign: 'right' }}>{$s(r.pf)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
+      </Device>
+    );
+  }
+  /** A past matchup (Season 1, Week 3, Final) against the leaver. */
+  function LeaverMatchup({ v = 'A' }) {
+    const a = K.byId.andrea;
+    const opp = v === 'B' ? FORMER : a.name;
+    const you = 212.4, them = -38.1;
+    return (
+      <Device tab="league" label={`Past matchup against a leaver, option ${v}`}>
+        <Back label="Schedule" />
+        <div className="ks-pad ks-stack">
+          <div><span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Season 1 · Week 3 · Final</span></div>
+          <Card pad="14px">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="ks-callout">
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}><span className="ks-avatar ks-avatar--sm">RB</span><b style={{ color: 'var(--c-you-text)' }}>Roberto B.</b></span>
+              <span style={{ display: 'flex', gap: 8, alignItems: 'center', color: 'var(--c-text-2)' }}>{opp}<LeaverAvatar init={a.init} gone={v === 'B'} /></span>
+            </div>
+            <Scores left={$s(you)} right={$s(them)} size="lg" />
+            <Tug you={you} opp={them} />
+            <span className="ks-caption">Roberto B. won by {$(you - them)}</span>
+          </Card>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {[['Roberto B.', [['NVDA', 88.2], ['AAPL', 61.15], ['CRM', 34.4]]], [opp, [['F', -12.3], ['KO', 4.1], ['DIS', -29.9]]]].map(([who, rows]) => (
+              <div key={who}>
+                <span className="ks-caption">{who}</span>
+                <ul className="ks-rows">{rows.map(([t, g]) => <li key={t} className="ks-row" style={{ gridTemplateColumns: '1fr auto', padding: '6px 0' }}><b className="ks-callout">{t}</b><span className={`ks-callout ks-num ${tone(g)}`}>{$s(g)}</span></li>)}</ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -3768,6 +3845,7 @@
     WatchPortfolio, WatchOtherLeague, WatchTab, SaveResults, SaveSheet, DraftQueueSave,
     ClaimSheet, ClaimComposer, ClaimsList, ClaimEnding, HomeClaimsHook,
     JoinCommishCall,
+    LeaverHistory, LeaverMatchup,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
