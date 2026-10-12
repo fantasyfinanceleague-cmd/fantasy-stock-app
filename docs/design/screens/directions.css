@@ -15,7 +15,7 @@
   --c-sunken: oklch(12% 0.035 272);
   --c-line: oklch(30% 0.06 270);
   --c-border: oklch(30% 0.06 270);
-  --c-border-strong: oklch(45% 0.06 265);
+  --c-border-strong: oklch(52% 0.06 265);
   --c-text: oklch(97% 0.008 270);
   --c-text-2: oklch(73% 0.045 262);
   --c-accent: oklch(87% 0.14 205);
@@ -24,7 +24,7 @@
   --c-you: oklch(54% 0.2 258);          /* holds white initials (4.5:1+) */
   --c-you-text: oklch(78% 0.12 256);
   --c-you-tint: oklch(54% 0.2 258 / 0.22);
-  --c-opp: oklch(70% 0.03 262);
+  --c-opp: oklch(64% 0.04 262);
   --c-gain: oklch(85% 0.16 168);
   --c-loss: oklch(71% 0.17 10);
   --c-zero: oklch(73% 0.045 262);
@@ -223,7 +223,7 @@
   --c-sunken: oklch(93.5% 0.015 272);
   --c-line: oklch(89% 0.022 270);
   --c-border: oklch(89% 0.022 270);
-  --c-border-strong: oklch(70% 0.03 268);
+  --c-border-strong: oklch(58% 0.03 268);
   --c-text: oklch(20% 0.05 272);
   --c-text-2: oklch(47% 0.04 265);
   --c-accent: oklch(50% 0.11 220);
@@ -232,24 +232,24 @@
   --c-you: oklch(53% 0.2 258);
   --c-you-text: oklch(47% 0.19 258);
   --c-you-tint: oklch(53% 0.2 258 / 0.1);
-  --c-opp: oklch(47% 0.04 265);
+  --c-opp: oklch(60% 0.03 266);
   --c-gain: oklch(46% 0.12 165);
   --c-loss: oklch(53% 0.19 15);
   --c-zero: oklch(47% 0.04 265);
   --c-live: oklch(50% 0.11 220);
   --c-live-text: oklch(47% 0.11 220);
   --c-tabbar: oklch(99.6% 0.003 272 / 0.94);
-  --c-track: oklch(90% 0.02 270);
+  --c-track: oklch(89% 0.022 270);
   --d-rim: oklch(89% 0.022 270);
   --d-lit: oklch(93.5% 0.035 238);
-  --d-lead-wash: oklch(50% 0.12 165 / 0.09);
+  --d-lead-wash: oklch(46% 0.12 165 / 0.09);
   --d-money-bg: oklch(99.6% 0.003 272);
   --d-on-tile: oklch(20% 0.05 272);
-  --d-tile-tech: oklch(81% 0.085 266);
-  --d-tile-comm: oklch(78% 0.11 295);
-  --d-tile-cons: oklch(85% 0.09 62);
-  --d-tile-fin: oklch(84% 0.12 180);
-  --d-tile-health: oklch(76% 0.12 350);
+  --d-tile-tech: oklch(66% 0.12 262);
+  --d-tile-comm: oklch(62% 0.15 300);
+  --d-tile-cons: oklch(66% 0.13 56);
+  --d-tile-fin: oklch(64% 0.11 178);
+  --d-tile-health: oklch(62% 0.16 355);
   --d-clock-cell: oklch(22% 0.05 272);
 }
 /* the dark on-the-clock cell keeps its own light ink */
