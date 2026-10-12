@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a5939f33d11bc20c98e073c944954a8e1a3800cb",
-    "commitShort": "a5939f33",
+    "commit": "9d89320d485f96b993a127e5c0792376369a04bf",
+    "commitShort": "9d89320d",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "fix/your-turn-anywhere",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T02:03:20Z",
-    "sourceHash": "sha256:f360fd7f0faa1ea383e418d13c9b946a4a5f1a8e5f7a879dc21a979f950eaa7d",
+    "timestamp": "2026-10-12T02:28:52Z",
+    "sourceHash": "sha256:2a167b4977fe36c573b0231046ba43af8a36246860dac8b120380285bf8ebde7",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 102.4,
+    "ageHours": 102.8,
     "ageDays": 4.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -15429,9 +15429,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/components/game/DraftRoom.tsx:198",
-        "apps/mobile/components/game/DraftRoom.tsx:222",
-        "apps/mobile/components/game/DraftRoom.tsx:262"
+        "apps/mobile/components/game/DraftRoom.tsx:199",
+        "apps/mobile/components/game/DraftRoom.tsx:223",
+        "apps/mobile/components/game/DraftRoom.tsx:263"
       ],
       "via": [
         "seamInvoke"
@@ -16390,7 +16390,7 @@
       "payload": ".from('push_tokens').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:91"
+        "apps/mobile/lib/notifications.ts:99"
       ]
     },
     {
@@ -16403,7 +16403,7 @@
       "payload": ".from('push_tokens').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:64"
+        "apps/mobile/lib/notifications.ts:72"
       ]
     },
     {
@@ -16416,8 +16416,8 @@
       "payload": ".from('user_profiles').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:69",
-        "apps/mobile/lib/notifications.ts:94"
+        "apps/mobile/lib/notifications.ts:102",
+        "apps/mobile/lib/notifications.ts:77"
       ]
     },
     {
@@ -19664,9 +19664,9 @@
       "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
-      "apps/mobile/components/game/DraftRoom.tsx:198 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:222 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:262 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:199 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:223 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:263 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
@@ -19825,10 +19825,10 @@
       "apps/mobile/lib/game/useLeaveLeague.ts:57 -> league_members.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
-      "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
-      "apps/mobile/lib/notifications.ts:69 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:91 -> push_tokens.delete",
-      "apps/mobile/lib/notifications.ts:94 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:102 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:72 -> push_tokens.upsert",
+      "apps/mobile/lib/notifications.ts:77 -> user_profiles.update",
+      "apps/mobile/lib/notifications.ts:99 -> push_tokens.delete",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
