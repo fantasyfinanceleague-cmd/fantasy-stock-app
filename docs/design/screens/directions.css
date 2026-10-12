@@ -1,0 +1,208 @@
+/* Your call: direction (W1 of the visual-language reset, Design Lead, 2026-10-12).
+   Three directions, Dark first, each ONE token block. A direction re-points the
+   board's semantic roles (--c-*, read by Device, the tab bar and every ks- class)
+   and adds a few of its own (--d-*). Frames reference roles only (Hallmark gate 48):
+   no colour in directions.jsx is a literal. Values come from docs/design/design.md
+   (the studied DNA); each block names its primary source. */
+
+/* ── A · Game Night (primary: Sleeper S1/S2) ─────────────────────────────
+   Flat deep navy in three lightness steps of one hue (273°); cyan = live / your
+   turn / selected; mint and pink = up and down; you = the blue ring and tint. */
+.dir-a {
+  --c-bg: oklch(15.5% 0.045 272);
+  --c-surface: oklch(20% 0.055 272);
+  --c-inset: oklch(25% 0.06 272);
+  --c-sunken: oklch(12% 0.035 272);
+  --c-line: oklch(30% 0.06 270);
+  --c-border: oklch(30% 0.06 270);
+  --c-border-strong: oklch(45% 0.06 265);
+  --c-text: oklch(97% 0.008 270);
+  --c-text-2: oklch(73% 0.045 262);
+  --c-accent: oklch(87% 0.14 205);
+  --c-accent-tint: oklch(87% 0.14 205 / 0.16);
+  --c-on-accent: oklch(17% 0.05 272);
+  --c-you: oklch(64% 0.19 256);
+  --c-you-text: oklch(78% 0.12 256);
+  --c-you-tint: oklch(64% 0.19 256 / 0.2);
+  --c-opp: oklch(70% 0.03 262);
+  --c-gain: oklch(85% 0.16 168);
+  --c-loss: oklch(71% 0.17 10);
+  --c-zero: oklch(73% 0.045 262);
+  --c-live: oklch(87% 0.14 205);
+  --c-live-text: oklch(87% 0.14 205);
+  --c-tabbar: oklch(13% 0.04 272 / 0.94);
+  --c-track: oklch(30% 0.06 270);
+  --d-rim: oklch(32% 0.065 268);
+  --d-lit: oklch(28% 0.075 240);           /* the winning half-row slab (S1) */
+  --d-lead-wash: oklch(85% 0.16 168 / 0.12);/* the leader's half of the scoreboard */
+  --d-money-bg: oklch(10% 0.02 272);        /* money screens: near-black, same hue */
+  --d-on-tile: oklch(18% 0.05 272);
+  --d-tile-tech: oklch(81% 0.085 266);     /* periwinkle: clear of the cyan accent (gate 23) */
+  --d-tile-comm: oklch(76% 0.12 295);
+  --d-tile-cons: oklch(84% 0.095 62);
+  --d-tile-fin: oklch(83% 0.13 180);
+  --d-tile-health: oklch(72% 0.13 350);
+  --d-clock-cell: oklch(9% 0.03 272);
+  --d-score-stretch: 100%;
+  --d-score-weight: 800;
+  --d-hero-weight: 800;
+  --d-hero-stretch: 100%;
+  --d-radius: 14px;
+}
+
+/* ── B · Broadcast (primary: ESPN S3) ────────────────────────────────────
+   Charcoal (tinted to 0.008, gate 22), ONE league colour as the frame (a sample
+   violet: no league colour exists in the product yet, see the board), panels with
+   a gutter, the state bar on each panel's outer edge, the condensed numerals. */
+.dir-b {
+  --c-bg: oklch(14.5% 0.008 285);
+  --c-surface: oklch(21% 0.009 285);
+  --c-inset: oklch(26% 0.01 285);
+  --c-sunken: oklch(11% 0.007 285);
+  --c-line: oklch(30% 0.01 285);
+  --c-border: oklch(30% 0.01 285);
+  --c-border-strong: oklch(48% 0.012 285);
+  --c-text: oklch(97% 0.004 285);
+  --c-text-2: oklch(74% 0.012 285);
+  --c-accent: oklch(80% 0.11 300);
+  --c-accent-tint: oklch(80% 0.11 300 / 0.16);
+  --c-on-accent: oklch(16% 0.02 300);
+  --c-you: oklch(62% 0.19 256);
+  --c-you-text: oklch(78% 0.12 256);
+  --c-you-tint: oklch(62% 0.19 256 / 0.2);
+  --c-opp: oklch(70% 0.012 285);
+  --c-gain: oklch(80% 0.18 150);
+  --c-loss: oklch(68% 0.19 25);
+  --c-zero: oklch(74% 0.012 285);
+  --c-live: oklch(86% 0.16 90);
+  --c-live-text: oklch(86% 0.16 90);
+  --c-tabbar: oklch(10% 0.006 285 / 0.96);
+  --c-track: oklch(30% 0.01 285);
+  --d-band: oklch(38% 0.17 300);            /* the league colour (sample) */
+  --d-band-2: oklch(30% 0.14 300);
+  --d-on-band: oklch(98% 0.01 300);
+  --d-on-band-2: oklch(86% 0.05 300);
+  --d-gutter: oklch(11% 0.007 285);
+  --d-tint-gain: oklch(80% 0.18 150 / 0.09);
+  --d-tint-loss: oklch(68% 0.19 25 / 0.12);
+  --d-money-bg: oklch(14.5% 0.008 285);
+  --d-on-tile: oklch(16% 0.02 285);       /* dark ink on bright fills (gate 41) */
+  --d-tile-tech: oklch(72% 0.13 230);
+  --d-tile-comm: oklch(70% 0.14 300);
+  --d-tile-cons: oklch(78% 0.13 65);
+  --d-tile-fin: oklch(76% 0.14 165);
+  --d-tile-health: oklch(68% 0.16 355);
+  --d-score-stretch: 62%;
+  --d-score-weight: 900;
+  --d-hero-weight: 900;
+  --d-hero-stretch: 62%;
+  --d-radius: 4px;
+}
+
+/* ── C · Terminal (primary: Robinhood S4) ────────────────────────────────
+   Near-black tinted toward the accent (gate 7 adapted), ONE neon that is the
+   day's colour (up = neon green, down = neon orange-red), separation by space
+   alone, sparklines on rows, money numbers at regular weight. */
+.dir-c {
+  --c-bg: oklch(9% 0.006 140);
+  --c-surface: oklch(15% 0.007 140);
+  --c-inset: oklch(20% 0.008 140);
+  --c-sunken: oklch(6% 0.005 140);
+  --c-line: oklch(24% 0.008 140);
+  --c-border: oklch(24% 0.008 140);
+  --c-border-strong: oklch(42% 0.01 140);
+  --c-text: oklch(97% 0.004 140);
+  --c-text-2: oklch(72% 0.008 140);
+  --c-accent: oklch(89% 0.21 135);
+  --c-accent-tint: oklch(89% 0.21 135 / 0.14);
+  --c-on-accent: oklch(12% 0.02 135);
+  --c-you: oklch(64% 0.17 256);
+  --c-you-text: oklch(80% 0.11 256);
+  --c-you-tint: oklch(64% 0.17 256 / 0.18);
+  --c-opp: oklch(72% 0.008 140);
+  --c-gain: oklch(89% 0.21 135);
+  --c-loss: oklch(72% 0.19 38);
+  --c-zero: oklch(72% 0.008 140);
+  --c-live: oklch(89% 0.21 135);
+  --c-live-text: oklch(89% 0.21 135);
+  --c-tabbar: oklch(9% 0.006 140 / 0.96);
+  --c-track: oklch(24% 0.008 140);
+  --d-money-bg: oklch(9% 0.006 140);
+  --d-on-tile: oklch(12% 0.02 140);       /* dark ink on bright fills (gate 41) */
+  --d-tile-tech: oklch(78% 0.11 225);
+  --d-tile-comm: oklch(76% 0.12 300);
+  --d-tile-cons: oklch(82% 0.11 70);
+  --d-tile-fin: oklch(85% 0.12 170);
+  --d-tile-health: oklch(74% 0.14 355);
+  --d-score-stretch: 100%;
+  --d-score-weight: 700;
+  --d-hero-weight: 500;
+  --d-hero-stretch: 100%;
+  --d-radius: 16px;
+}
+
+/* ── Shared frame pieces (roles only) ─────────────────────────────────── */
+.dr { font-family: var(--sp-type-family); }
+.dr .ks-device { background: var(--c-bg); }
+.dr .ks-pill { background: var(--c-surface); border-color: var(--c-border); }
+.dr-num { font-variant-numeric: tabular-nums; }
+.dr-score { font-weight: var(--d-score-weight); font-stretch: var(--d-score-stretch); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.dr-hero { font-weight: var(--d-hero-weight); font-stretch: var(--d-hero-stretch); font-variant-numeric: tabular-nums; letter-spacing: -0.015em; }
+.dr-t { font-weight: 800; letter-spacing: 0.01em; }
+.dr-cap { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--c-text-2); }
+.dr-call { font-size: 13px; line-height: 18px; font-weight: 500; }
+.dr-tag { font-size: 11px; line-height: 14px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.06em; text-transform: uppercase; }
+.dr-gain { color: var(--c-gain); }
+.dr-loss { color: var(--c-loss); }
+.dr-zero { color: var(--c-zero); }
+.dr-muted { color: var(--c-text-2); }
+.dr-av {
+  flex: none; display: grid; place-items: center; border-radius: 50%;
+  background: var(--c-inset); color: var(--c-text); font-weight: 800;
+}
+.dr-av--you { box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 4px var(--c-you); background: var(--c-you); color: var(--c-text); }
+.dr-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--c-accent-tint); color: var(--c-live-text);
+}
+.dr-chip--final { background: var(--c-inset); color: var(--c-text); }
+.dr-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-live); flex: none; }
+.dr-card { background: var(--c-surface); border-radius: var(--d-radius); }
+.dr-a-card { background: var(--c-surface); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--d-rim); }
+.dr-btn {
+  display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 18px;
+  border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--c-accent); color: var(--c-on-accent);
+}
+.dr-btn--sm { height: 34px; padding: 0 14px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; font-stretch: 125%; }
+.dr-seg { display: flex; gap: 22px; padding: 0 2px; }
+.dr-seg span { font-size: 15px; font-weight: 700; color: var(--c-text-2); padding-bottom: 6px; position: relative; }
+.dr-seg span.on { color: var(--c-text); font-weight: 800; }
+.dr-seg span.on::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 18px; height: 3px; margin-left: -9px; border-radius: 2px; background: var(--c-accent); }
+.dr-range { display: flex; justify-content: space-between; }
+.dr-range span { min-width: 44px; height: 28px; display: grid; place-items: center; border-radius: 8px; font-size: 13px; font-weight: 800; color: var(--c-text-2); font-variant-numeric: tabular-nums; }
+.dr-range span.on { background: var(--c-accent); color: var(--c-on-accent); }
+.dr-range--perf span { color: var(--c-gain); }
+.dr-range--perf span.on { background: var(--c-gain); color: var(--c-on-accent); }
+.dr-pillcat { display: inline-grid; place-items: center; min-width: 30px; height: 22px; padding: 0 6px; border-radius: 6px; font-size: 11px; font-weight: 800; color: var(--d-on-tile); }
+
+/* ── The board's own pieces for this section ──────────────────────────── */
+.dr-pairs { display: grid; grid-template-columns: repeat(auto-fit, minmax(470px, 1fr)); gap: 34px 30px; margin: 0 0 18px; }
+.dr-pair { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: start; }
+.dr-pair figcaption { grid-column: 1 / -1; font-size: 14px; line-height: 1.45; color: var(--c-text-2); }
+.dr-pair figcaption b { color: var(--c-text); }
+.dr-ref { display: grid; gap: 6px; }
+.dr-ref__img { width: 150px; aspect-ratio: 9 / 16; border-radius: 16px; background-color: var(--c-sunken); background-repeat: no-repeat; box-shadow: 0 0 0 1px var(--c-border); }
+.dr-ref__cap { font-size: 12px; line-height: 1.35; color: var(--c-text-2); }
+.dr-ref__cap b { color: var(--c-text); display: block; }
+.dr-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
+.dr-sw { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-2); }
+.dr-sw i { width: 22px; height: 22px; border-radius: 6px; box-shadow: 0 0 0 1px var(--c-border); }
+.dr-dirhead { display: grid; gap: 4px; margin: 44px 0 10px; padding-top: 22px; border-top: 1px solid var(--c-border); }
+.dr-dirhead h3 { margin: 0; font-size: 28px; line-height: 1.1; font-weight: 900; font-stretch: 75%; }
+.dr-dirhead p { margin: 0; max-width: 90ch; color: var(--c-text-2); }
+.dr-motion { margin: 4px 0 18px; padding-left: 18px; color: var(--c-text-2); font-size: 14px; }
+.dr-motion b { color: var(--c-text); }
+.dr-new { margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em; background: var(--c-warn-tint); color: var(--c-warn-text); border: 1px solid var(--c-warn-line); vertical-align: 2px; }
+.dr-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-bottom: 18px; }
+.dr-crit { font-size: 12px; color: var(--c-text-2); margin-top: 4px; }

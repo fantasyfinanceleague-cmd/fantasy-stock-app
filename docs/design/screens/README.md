@@ -15,6 +15,7 @@ the landing disagree, this folder wins until Giorgio changes it.
 | `inventory.jsx` | Step 2: every other screen (3b-1 sign in and first run, 3b-2 Home in every phase, 3c game, 3e trading, 3d web) built from the same blocks (`window.KSKit`). |
 | `inventory-board.jsx` | Board part 2, grouped by the phase that builds each screen. |
 | `home-calm.jsx` | "Your call: a calmer Home" (2026-10-12): 1.2.0's Home today vs A (same content, calmer) vs B (fewer things), in season, before the draft and season over. Rendered first on the board. |
+| `directions.jsx`, `directions.css`, `refs.js` | "Your call: the direction" (W1 of the visual-language reset, 2026-10-12): directions A Game Night, B Broadcast, C Terminal, Dark, six frames each beside the reference image they borrow from, plus the 1.1.0 matchup and two later calls (row order, centre column). Each direction is ONE token block in `directions.css` that re-points the board's `--c-*` roles. `refs.js` holds the hotlinked reference URLs with crops and the 1.1.0 capture as a data URI; it is generated, don't hand-edit. Rendered first on the board. |
 | `board.jsx`, `index.html` | The review board: each screen with its notes, playable motion moments, open questions, and a ledger computed from `data.js`. |
 | `key-screens.html` | Single-file build of the board for publishing (`node docs/design/screens/build.mjs`). |
 
