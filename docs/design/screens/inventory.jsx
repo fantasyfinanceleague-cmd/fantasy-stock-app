@@ -1609,20 +1609,28 @@
       {children || <span className="ks-callout">{ids.map((id) => K.byId[id].name).join(', ')}</span>}
     </div>
   );
-  /** The prompt every Season 1 player gets (Gianluigi B.'s phone): Home and League tab. */
-  function RibMemberPrompt() {
+  /** The prompt every Season 1 player gets (Gianluigi B.'s phone): Home and League tab.
+   *  answered: undefined (no reply yet) | 'out' (GS-14, 2026-10-11: an out player keeps the
+   *  card, with their answer marked, so they can change it until the draft is set). */
+  function RibMemberPrompt({ answered }) {
+    const out = answered === 'out';
+    const Chk = () => <Icon d={CHECK} size={14} width={3} />;
     return (
-      <Device tab="home" label="Member: are you in for Season 2?">
+      <Device tab="home" label={out ? "Member who said I'm out: the same card, answer marked" : 'Member: are you in for Season 2?'}>
         <div className="ks-head"><Pill /><span className="ks-avatar">GB</span></div>
         <div className="ks-pad ks-stack">
           <div className="ks-game" style={{ padding: 16, display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="ks-tag" style={{ color: 'var(--c-live-text)' }}>Season 2</span>
-              <span className="ks-chip">Reply</span>
+              <span className="ks-chip">{out ? "You're out" : 'Reply'}</span>
             </div>
             <span className="ks-title" style={{ fontSize: 20 }}>Roberto B. is running it back. Are you in?</span>
             <span className="ks-callout ks-muted">Same league, new season. The draft is set once everyone has replied.</span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}><span className="ks-btn ks-btn--secondary">I'm out</span><span className="ks-btn">I'm in</span></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {out
+                ? <><span className="ks-btn ks-btn--secondary" aria-pressed="true" style={{ borderColor: 'var(--c-text)', borderWidth: 2, display: 'inline-flex', gap: 6 }}><Chk />I'm out</span><span className="ks-btn">I'm in</span></>
+                : <><span className="ks-btn ks-btn--secondary">I'm out</span><span className="ks-btn">I'm in</span></>}
+            </div>
             <span className="ks-caption">You can change your answer until the draft is set.</span>
           </div>
           <Card pad="12px 14px">

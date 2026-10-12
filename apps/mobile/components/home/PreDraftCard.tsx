@@ -28,7 +28,7 @@ import {
 } from '@/lib/game/autoStart';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
-import { PICK_A_TIME_HOME, SET_DRAFT_TIME, homeSetsDraftTime } from '@/lib/game/draftTimeSheet';
+import { PICK_A_TIME_HOME, SET_DRAFT_TIME, homeNoDateBlock, homeSetsDraftTime } from '@/lib/game/draftTimeSheet';
 import {
   pickClockLine, BUILD_YOUR_QUEUE, GO_TO_DRAFT_ROOM, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
   MEMBERS_TITLE, membersJoinedCaption, membersNeededCaption, INVITE_CODE_LABEL, NO_BUYING_BEFORE_DRAFT,
@@ -62,6 +62,11 @@ export interface PreDraftCardProps {
    * different number from DraftOrderInfo.minMembers (the draft-order
    * threshold): the board's "6 of 8 joined" uses this one. */
   numParticipants: number;
+  /** GS-11 (board RibHomeCounts): a renewed league's Season 1 players are still replying.
+   * The draft block ("No draft time yet", "Pick a time…", Set draft time) goes until the
+   * last reply lands; Build your queue, Members and the invite code stay (newcomers join
+   * by code meanwhile). The counts card above carries the reason. */
+  repliesPending?: boolean;
 }
 
 function initialsOf(name: string): string {
@@ -71,7 +76,7 @@ function initialsOf(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
-export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, draftDate, numParticipants }: PreDraftCardProps) {
+export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, draftDate, numParticipants, repliesPending = false }: PreDraftCardProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { activeLeague } = useLeagueContext();
@@ -112,7 +117,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   // Ruling B (board #call-ux-pass1): the commissioner sets the time right here,
   // in the same Draft time sheet, opened in place (its own, so it never doubles
   // up with the blockers card's sheet). No Set later: there's no time yet.
-  const setsTime = homeSetsDraftTime(!!view?.noDate, ds.isCommissioner);
+  const setsTime = homeSetsDraftTime(!!view?.noDate, ds.isCommissioner, repliesPending);
   const [picking, setPicking] = useState(false);
 
   return (
@@ -145,10 +150,13 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
             <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName, 'home').line}</Text>
           </>
         ) : view?.noDate ? (
-          <>
-            <Text variant="title">{NO_DATE_TITLE}</Text>
-            <Text variant="callout" tone="secondary">{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}</Text>
-          </>
+          // GS-11: no draft block while a renewal's replies are pending (the counts card says why).
+          homeNoDateBlock(true, repliesPending) ? (
+            <>
+              <Text variant="title">{NO_DATE_TITLE}</Text>
+              <Text variant="callout" tone="secondary">{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}</Text>
+            </>
+          ) : null
         ) : (
           <>
             {dateLabel ? <Text variant="title">{dateLabel}</Text> : null}

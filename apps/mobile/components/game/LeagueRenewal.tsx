@@ -6,7 +6,7 @@ import { Button } from '@/components/sp/Button';
 import { RENEWAL_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { space } from '@/constants/tokens';
 import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
-import { screenFor } from '@/lib/game/renewal';
+import { renewalAskAnswer, screenFor } from '@/lib/game/renewal';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { season1Order as orderFromHistory } from '@/lib/game/history';
 import { RenewalRoster } from './RenewalRoster';
@@ -50,7 +50,7 @@ export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged
   if (screen === 'ask') {
     // A pending invitee's roster carries no people, so the commissioner's name is
     // not in this read. The fallback is a placeholder until the backend returns it.
-    return <View style={styles.stack}><RenewalAsk leagueId={successorId} commissionerName="Your commissioner" onAnswered={onChanged} /></View>;
+    return <View style={styles.stack}><RenewalAsk leagueId={successorId} commissionerName="Your commissioner" answered={renewalAskAnswer(st.roster)} onAnswered={onChanged} /></View>;
   }
   if (screen === 'reconcile' || screen === 'member_list') {
     const r = st.roster;

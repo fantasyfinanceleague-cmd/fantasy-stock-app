@@ -16,10 +16,18 @@ export const SET_LATER = 'Set later'; // board
 /** Home, commissioner, no draft time yet (ruling B). */
 export const PICK_A_TIME_HOME = 'Pick a time, and the countdown starts here.'; // Design Lead, ruled (B)
 
+/** Home's no-time block ("No draft time yet" and its line). GS-11 (board RibHomeCounts):
+ * a renewed league drops it while Season 1 players are still replying; the counts card
+ * above says why, and the block returns with the last reply. */
+export function homeNoDateBlock(noDate: boolean, repliesPending = false): boolean {
+  return noDate && !repliesPending;
+}
+
 /** Home's no-time card leads with setting the time (ruling B): the commissioner
- * only. Members keep "{Commissioner} will set the draft time." and Build your queue. */
-export function homeSetsDraftTime(noDate: boolean, isCommissioner: boolean): boolean {
-  return noDate && isCommissioner;
+ * only. Members keep "{Commissioner} will set the draft time." and Build your queue.
+ * Never while a renewal's replies are pending (GS-11): no Set draft time until then. */
+export function homeSetsDraftTime(noDate: boolean, isCommissioner: boolean, repliesPending = false): boolean {
+  return homeNoDateBlock(noDate, repliesPending) && isCommissioner;
 }
 
 export type SheetAction =

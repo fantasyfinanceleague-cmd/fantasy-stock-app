@@ -47,6 +47,9 @@ export interface ButtonProps extends Omit<PressableScaleProps, 'children' | 'sty
   size?: ButtonSize;
   /** Goes full-width, but only once fontScale reaches FULL_WIDTH_FONT_SCALE — a lone primary action (e.g. EmptyState's CTA), not a general layout prop. */
   fullWidth?: boolean;
+  /** The current answer of a choice (Run it back's I'm in / I'm out, board RibMemberPrompt
+   * 1b): a 2 pt border in the text colour and a leading check, announced as selected. */
+  selected?: boolean;
 }
 
 // Both sizes clear the 44pt minimum tap target (Apple HIG / WCAG 2.5.5) as a
@@ -55,7 +58,7 @@ const MIN_HEIGHT: Record<ButtonSize, number> = { md: 52, sm: 44 };
 const PADDING_X: Record<ButtonSize, number> = { md: space[6], sm: space[5] };
 const PADDING_Y: Record<ButtonSize, number> = { md: space[3], sm: space[2] };
 
-export function Button({ label, variant = 'primary', size = 'md', fullWidth = false, disabled, status = 'idle', ...rest }: ButtonProps) {
+export function Button({ label, variant = 'primary', size = 'md', fullWidth = false, selected = false, disabled, status = 'idle', ...rest }: ButtonProps) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const { reduced, duration, easing } = useMotion();
@@ -99,12 +102,16 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
       textColor = colors.text;
       break;
   }
+  if (selected) {
+    borderWidth = 2;
+    borderColor = colors.text;
+  }
 
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={a11y.label}
-      accessibilityState={{ disabled: !!disabled, busy: a11y.busy }}
+      accessibilityState={{ disabled: !!disabled, busy: a11y.busy, selected }}
       disabled={!a11y.pressable}
       style={[
         styles.base,
@@ -123,6 +130,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
       {...rest}
     >
       <Animated.View style={[styles.content, labelStyle]}>
+        {selected ? <Ionicons name="checkmark" size={16} color={textColor} style={styles.check} /> : null}
         <Text
           variant={size === 'md' ? 'headline' : 'callout'}
           color={textColor}
@@ -159,6 +167,9 @@ const styles = StyleSheet.create({
   },
   label: {
     textAlign: 'center',
+  },
+  check: {
+    marginRight: space[2],
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

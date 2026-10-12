@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4ac80728e7048b5a70a4e1a10931c3763d7a86c6",
-    "commitShort": "4ac80728",
+    "commit": "a5939f33d11bc20c98e073c944954a8e1a3800cb",
+    "commitShort": "a5939f33",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T02:13:38Z",
-    "sourceHash": "sha256:9940fafc074a54ce511cc0f45eaaf448d1c93e61c5ebb6fab8f1c00c1b72e88c",
+    "timestamp": "2026-10-12T02:03:20Z",
+    "sourceHash": "sha256:f360fd7f0faa1ea383e418d13c9b946a4a5f1a8e5f7a879dc21a979f950eaa7d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 102.5,
+    "ageHours": 102.4,
     "ageDays": 4.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -5513,11 +5513,10 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261110000000_transfer_commissioner.sql:117",
-          "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:51"
+          "supabase/migrations/20261110000000_transfer_commissioner.sql:117"
         ],
-        "latestDefinition": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
-        "redefinitions": 2
+        "latestDefinition": "supabase/migrations/20261110000000_transfer_commissioner.sql",
+        "redefinitions": 1
       },
       "drift": [],
       "annotation": null,
@@ -5527,8 +5526,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
-        "line": 51
+        "path": "supabase/migrations/20261110000000_transfer_commissioner.sql",
+        "line": 117
       }
     },
     {
@@ -14600,8 +14599,7 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:141",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:75"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:141"
       ]
     },
     {
@@ -14615,9 +14613,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:151",
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:153",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:86",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:88"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:153"
       ]
     },
     {
@@ -14630,8 +14626,7 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:156",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:91"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:156"
       ]
     },
     {
@@ -14644,8 +14639,7 @@
       "payload": "SELECT league_roster_reconfirm (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:163",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:98"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:163"
       ]
     },
     {
@@ -14658,8 +14652,7 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:128",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:62"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:128"
       ]
     },
     {
@@ -14672,8 +14665,7 @@
       "payload": "UPDATE leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261110000000_transfer_commissioner.sql:147",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:82"
+        "supabase/migrations/20261110000000_transfer_commissioner.sql:147"
       ]
     },
     {
@@ -15469,7 +15461,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('respond_to_renewal')",
       "callSites": [
-        "apps/mobile/components/game/RenewalAsk.tsx:25"
+        "apps/mobile/components/game/RenewalAsk.tsx:88"
       ],
       "via": [
         "seamRpc"
@@ -15499,7 +15491,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('nudge_renewal')",
       "callSites": [
-        "apps/mobile/components/game/RenewalRoster.tsx:50"
+        "apps/mobile/components/game/RenewalRoster.tsx:58"
       ],
       "via": [
         "seamRpc"
@@ -15514,7 +15506,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('remove_renewal_invitee')",
       "callSites": [
-        "apps/mobile/components/game/RenewalRoster.tsx:50"
+        "apps/mobile/components/game/RenewalRoster.tsx:58"
       ],
       "via": [
         "seamRpc"
@@ -15530,7 +15522,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:72"
+        "apps/mobile/lib/game/seamCalls.ts:75"
       ]
     },
     {
@@ -15543,7 +15535,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:66"
+        "apps/mobile/lib/game/seamCalls.ts:69"
       ]
     },
     {
@@ -15556,7 +15548,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:44"
+        "apps/mobile/lib/game/seamCalls.ts:47"
       ]
     },
     {
@@ -15871,7 +15863,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('leave-league')",
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:47"
+        "apps/mobile/lib/game/useLeaveLeague.ts:44"
       ],
       "via": [
         "seamInvoke"
@@ -15905,8 +15897,8 @@
         "user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:33",
-        "apps/mobile/lib/game/useLeaveLeague.ts:60"
+        "apps/mobile/lib/game/useLeaveLeague.ts:30",
+        "apps/mobile/lib/game/useLeaveLeague.ts:57"
       ]
     },
     {
@@ -15918,7 +15910,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_renewal_roster')",
       "callSites": [
-        "apps/mobile/lib/game/useRenewalRoster.ts:45"
+        "apps/mobile/lib/game/useRenewalRoster.ts:49"
       ],
       "via": [
         "seamRpc"
@@ -16120,7 +16112,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:115"
+        "apps/mobile/app/(tabs)/league.tsx:116"
       ],
       "via": [
         "seamRpc"
@@ -19240,7 +19232,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 61,
+        "line": 64,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -19248,7 +19240,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 69,
+        "line": 72,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -19256,7 +19248,7 @@
         "surface": "client",
         "name": "seamInvoke",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 35,
+        "line": 38,
         "kind": "forwarder:invoke",
         "detail": "argument 0 is the function name"
       },
@@ -19264,7 +19256,7 @@
         "surface": "client",
         "name": "seamRpc",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 26,
+        "line": 29,
         "kind": "forwarder:rpc",
         "detail": "argument 0 is the RPC name"
       },
@@ -19272,7 +19264,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 75,
+        "line": 78,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -19288,14 +19280,14 @@
         "surface": "client",
         "name": "seamUpdateLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 41,
+        "line": 44,
         "kind": "seam-stub",
         "detail": "leagues.update"
       }
     ],
     "inferred": [
-      "apps/mobile/components/game/RenewalRoster.tsx:50 -> nudge_renewal (via seamRpc)",
-      "apps/mobile/components/game/RenewalRoster.tsx:50 -> remove_renewal_invitee (via seamRpc)"
+      "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc)",
+      "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc)"
     ],
     "unattributed": [],
     "cannotSee": [
@@ -19679,7 +19671,7 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
-      "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
+      "apps/mobile/lib/game/useLeaveLeague.ts:44 -> leave-league (via seamInvoke)",
       "apps/mobile/lib/home/useHomeLeague.ts:600 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:617 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
@@ -19709,13 +19701,13 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:115 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/league.tsx:116 -> renew_league (via seamRpc)",
       "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:39 -> set_draft_queue (via seamRpc)",
-      "apps/mobile/components/game/RenewalAsk.tsx:25 -> respond_to_renewal (via seamRpc)",
+      "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
-      "apps/mobile/components/game/RenewalRoster.tsx:50 -> nudge_renewal (via seamRpc, inferred)",
-      "apps/mobile/components/game/RenewalRoster.tsx:50 -> remove_renewal_invitee (via seamRpc, inferred)",
+      "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
+      "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
       "apps/mobile/lib/LeagueContext.tsx:169 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:174 -> market_session_status",
@@ -19727,7 +19719,7 @@
       "apps/mobile/lib/game/useLeagueStandings.ts:37 -> get_home_league (via seamRpc)",
       "apps/mobile/lib/game/useLeagueStandings.ts:50 -> league_standings_ranked (via seamRpc)",
       "apps/mobile/lib/game/useLeaveLeague.ts:29 -> get_league_display_names (via seamRpc)",
-      "apps/mobile/lib/game/useRenewalRoster.ts:45 -> get_renewal_roster (via seamRpc)",
+      "apps/mobile/lib/game/useRenewalRoster.ts:49 -> get_renewal_roster (via seamRpc)",
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
@@ -19815,9 +19807,9 @@
       "apps/mobile/lib/categoryData.ts:65 -> categories.select",
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
-      "apps/mobile/lib/game/seamCalls.ts:44 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:66 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:72 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:47 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:69 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:75 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
@@ -19829,8 +19821,8 @@
       "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",
       "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
       "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:33 -> league_members.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:60 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:30 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:57 -> league_members.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
@@ -20182,9 +20174,7 @@
       "20261118000000_get_visible_profiles.sql",
       "20261118000001_user_profiles_self_only.sql",
       "20261119000000_frozen_leaver_names.sql",
-      "20261119000001_frozen_leaver_names_callers.sql",
-      "20261120000000_transfer_commissioner_refuses_hidden.sql",
-      "20261120000001_league_members_insert_self_not_hidden.sql"
+      "20261119000001_frozen_leaver_names_callers.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
