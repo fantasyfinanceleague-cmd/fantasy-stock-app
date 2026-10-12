@@ -44,6 +44,10 @@ building anything, and don't reopen a rule without him.
   outside your leagues. **Before you join** (2026-10-11, option A, board
   `#call-join-commissioner`): the Join preview names nobody, not even the commissioner (no
   "Run by"); a full league reads "Ask your commissioner if they can make room."
+  **After someone leaves** (2026-10-11, "A with frozen names", board `#call-leaver-names`):
+  they stay named, with name and avatar, in the seasons they played with you (history is
+  kept), frozen as they were when they left, so nothing about them after they leave
+  reaches you. No "Former manager" label.
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
