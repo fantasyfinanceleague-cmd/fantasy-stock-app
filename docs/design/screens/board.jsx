@@ -267,13 +267,13 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
-    ['call-direction', 'The direction: A, B or C'],
-    ['call-direction-centre', 'Centre column (unslotted leagues)'],
-    ['call-direction-rec', 'Portfolio chart · your-turn colour'],
+    ['call-game-night', 'Game Night as you picked it · the player card'],
+    ['call-game-night-ask', 'A label · the Portfolio chart · the your-turn colour'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-direction', title: 'The direction', decision: 'A, Game Night, for Home, Matchup, Standings and Portfolio; the draft tiles take Broadcast\'s line at the bottom; no small lines on rows; the centre column empty. B closed ("doing a little too much"), C closed ("a little too robotic").', date: '2026-10-12', rec: 'docs/rules-direction-game-night', render: () => window.KSDirectionsArchived },
     { id: 'call-row-order', title: 'The order of the Matchup rows', decision: 'Best week first; slotted leagues (categories and price tiers) grouped by slot; re-ordered at each market close, never live.', date: '2026-10-12', rec: 'PR #229 (rules) · #230 (board)', render: () => window.KSRowOrder },
     { id: 'call-calm-home', title: 'A calmer Home', decision: 'A, same content, calmer, in every state as drawn.', date: '2026-10-12', rec: 'PR #218 (rules) · #219 (board) · #222 (build)', render: () => window.KSHomeCalm },
     { id: 'call-leaver-names', title: 'Managers who left, in past seasons', decision: 'A with frozen names: they stay named in the seasons they played, frozen as they were when they left.', date: '2026-10-11', rec: 'PR #203 (rules) · #204 (board)' },

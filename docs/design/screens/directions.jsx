@@ -1,5 +1,5 @@
 // Your call: direction (W1 of docs/plans/2026-10-12-visual-language-reset.md).
-// Design Lead, 2026-10-12. Three directions for the app's visual language, Dark first:
+// Design Lead, 2026-10-12. Three directions for the app's visual language, Light and Dark together:
 //   A · Game Night (primary: Sleeper)   B · Broadcast (primary: ESPN)   C · Terminal (primary: Robinhood)
 // Same structure (the calm-Home ruling, the UX rules, Giorgio's Matchup ruling), same copy,
 // same data (data.js). Only the skin changes. Each direction is ONE token block in
@@ -7,7 +7,11 @@
 // The studied DNA behind the values: docs/design/design.md.
 
 (function () {
-  const { useState, useLayoutEffect, useRef } = React;
+  const { useState, useLayoutEffect, useRef, useContext, createContext } = React;
+  // Giorgio picked A with amendments (2026-10-12): the draft tiles take a sector LINE at the
+  // bottom (not a fill), and no sparklines on rows. The archived call renders with
+  // amended = false, so it still shows the three directions exactly as he chose between them.
+  const Amended = createContext(true);
   const K = window.KS;
   const { Device, Icon, ICON, SD, $, $s, pct } = window.KSKit;
   const REF = window.KS_REFS || {};
@@ -106,21 +110,23 @@
   }
 
   /** One board item: the reference on the left, the direction's frame on the right. */
-  function Pair({ refId, trait, caption, note, children }) {
+  function Pair({ refId, trait, lightRef, lightTrait, caption, note, frame }) {
     return (
       <figure className="dr-pair" style={{ margin: 0 }}>
         <RefImg id={refId} trait={trait} />
-        <Fit>{children}</Fit>
+        <div><p className="dr-theme-lbl">Dark</p><Fit>{frame('dark')}</Fit></div>
+        <div><p className="dr-theme-lbl">Light</p><Fit>{frame('light')}</Fit></div>
+        <RefImg id={lightRef} trait={lightTrait} />
         <figcaption><b>{caption}</b> {note}</figcaption>
       </figure>
     );
   }
 
   // ── Shared frame pieces ───────────────────────────────────────────────
-  function Phone({ d, tab, label, money, full, children }) {
+  function Phone({ d, t = 'dark', tab, label, money, full, overlay, children }) {
     return (
-      <div className={`dr dir-${d}`}>
-        <Device tab={tab} label={label} full={full} style={money ? { background: 'var(--d-money-bg)' } : undefined}>{children}</Device>
+      <div className={`dr dir-${d}${t === 'light' ? ` dir-${d}-light` : ''}`}>
+        <Device tab={tab} label={label} full={full} overlay={overlay} style={money ? { background: 'var(--d-money-bg)' } : undefined}>{children}</Device>
       </div>
     );
   }
@@ -280,7 +286,7 @@
     }
     if (d === 'b') {
       return (
-        <div style={{ margin: `0 -${G}px`, padding: `14px ${G}px 14px`, background: 'var(--d-band)', color: 'var(--d-on-band)', display: 'grid', gap: 10 }}>
+        <div className="dr-onband" style={{ margin: `0 -${G}px`, padding: `14px ${G}px 14px`, background: 'var(--d-band)', color: 'var(--d-on-band)', display: 'grid', gap: 10 }}>
           {top(true)}{names}{scores}{tug}{foot}
         </div>
       );
@@ -324,9 +330,9 @@
       </div>
     );
   }
-  function HomeFrame({ d }) {
+  function HomeFrame({ d, t }) {
     return (
-      <Phone d={d} tab="home" label={`Home in season, direction ${d.toUpperCase()}`}>
+      <Phone d={d} t={t} tab="home" label={`Home in season, direction ${d.toUpperCase()}`}>
         <Head />
         <Body>
           <div style={{ display: 'grid', gap: 8 }}>
@@ -393,7 +399,7 @@
     }
     if (d === 'b') {
       return (
-        <div style={{ margin: `0 -${G}px`, color: 'var(--d-on-band)' }}>
+        <div className="dr-onband" style={{ margin: `0 -${G}px`, color: 'var(--d-on-band)' }}>
           <div style={{ background: 'var(--d-band)', padding: `14px ${G}px 12px`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{side('you')}{side('opp', true)}</div>
           <div style={{ background: 'var(--d-band-2)', padding: '8px 0', display: 'grid', color: 'var(--d-on-band)' }}>{line}</div>
         </div>
@@ -498,9 +504,9 @@
       </div>
     );
   }
-  function MatchupFrame({ d, final, groups }) {
+  function MatchupFrame({ d, t, final, groups, overlay }) {
     return (
-      <Phone d={d} tab="matchup" full={groups} label={`Matchup ${final ? 'final' : 'live'}${groups ? `, ${groups} league` : ''}, direction ${d.toUpperCase()}`}>
+      <Phone d={d} t={t} overlay={overlay} tab="matchup" full={groups} label={`Matchup ${final ? 'final' : 'live'}${groups ? `, ${groups} league` : ''}, direction ${d.toUpperCase()}`}>
         <Head chip={final ? <FinalChip /> : <LiveChip />} league={groups === 'tier' ? 'Tier Cup' : undefined} />
         <Body gap={d === 'b' ? 0 : 18}>
           <div className="dr-seg" style={{ marginBottom: d === 'b' ? 14 : 0 }}><span className="on">My matchup</span><span>All matchups</span></div>
@@ -541,6 +547,7 @@
     return <div style={{ ...box, padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>{ring}{text}</div>;
   }
   function Board({ d }) {
+    const amended = useContext(Amended);
     const label = (n, s, muted, dot) => (
       <span className={muted ? 'dr-num dr-muted' : 'dr-num'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden' }}>
         <span>{n}</span>
@@ -555,13 +562,14 @@
       const base = { height: 44, borderRadius: d === 'b' ? 2 : d === 'a' ? 5 : 8, padding: '4px 6px', display: 'grid', alignContent: 'space-between', position: 'relative' };
       if (onClock) {
         return (
-          <div key={n} style={{ ...base, background: d === 'a' ? 'var(--d-clock-cell)' : d === 'b' ? 'var(--d-band)' : 'var(--c-bg)', boxShadow: 'inset 0 0 0 2px var(--c-live)' }}>
+          <div key={n} className={d === 'a' ? 'dr-clockcell' : d === 'b' ? 'dr-onband' : undefined} style={{ ...base, background: d === 'a' ? 'var(--d-clock-cell)' : d === 'b' ? 'var(--d-band)' : 'var(--c-bg)', boxShadow: 'inset 0 0 0 2px var(--c-live)' }}>
             <span className="dr-num" style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-live-text)' }}>{n}</span>
             <span className="dr-num" style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-text)' }}>0:{String(D.secondsLeft).padStart(2, '0')}</span>
           </div>
         );
       }
       if (!t) return <div key={n} style={{ ...base, background: d === 'c' ? 'transparent' : 'var(--c-sunken)', boxShadow: d === 'c' ? 'inset 0 0 0 1px var(--c-line)' : undefined }}><span className="dr-num dr-muted" style={{ fontSize: 11, fontWeight: 700 }}>{n}</span></div>;
+      if (d === 'a' && amended) return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-tile-${s})`, color: 'var(--c-text)' }}>{label(n, s, true)}<span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
       if (d === 'a') return <div key={n} style={{ ...base, background: `var(--d-tile-${s})`, color: 'var(--d-on-tile)' }}>{label(n, s)}<span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
       if (d === 'b') return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-tile-${s})` }}>{label(n, s, true)}<span style={{ fontSize: 14, fontWeight: 900, fontStretch: '75%' }}>{t}</span></div>;
       return <div key={n} style={{ ...base, background: 'var(--c-surface)' }}>{label(n, s, true, true)}<span style={{ fontSize: 13, fontWeight: 800 }}>{t}</span></div>;
@@ -584,9 +592,9 @@
       </div>
     );
   }
-  function DraftFrame({ d }) {
+  function DraftFrame({ d, t }) {
     return (
-      <Phone d={d} tab="league" label={`Draft room on the clock, direction ${d.toUpperCase()}`}>
+      <Phone d={d} t={t} tab="league" label={`Draft room on the clock, direction ${d.toUpperCase()}`}>
         <Head chip={<span className="dr-chip"><span className="dr-dot" />Drafting</span>} />
         <Body gap={16}>
           <ClockCard d={d} />
@@ -620,7 +628,7 @@
       </span>
     );
   }
-  function StandingsFrame({ d }) {
+  function StandingsFrame({ d, t }) {
     const rows = K.STANDINGS_FINAL;
     const cols = '22px 22px 32px minmax(0,1fr) 34px 86px';
     const row = (r) => {
@@ -641,7 +649,7 @@
       );
     };
     return (
-      <Phone d={d} tab="league" label={`League standings, direction ${d.toUpperCase()}`}>
+      <Phone d={d} t={t} tab="league" label={`League standings, direction ${d.toUpperCase()}`}>
         <Head />
         <Body gap={14}>
           <div className="dr-seg"><span className="on">Standings</span><span>Schedule</span><span>Playoffs</span><span>History</span></div>
@@ -660,10 +668,11 @@
   // PORTFOLIO hero (the money surface)
   // ═════════════════════════════════════════════════════════════════════
   const P = K.PORTFOLIO_LIVE;
-  function PortfolioFrame({ d }) {
+  function PortfolioFrame({ d, t, overlay }) {
     const size = { a: 44, b: 48, c: 44 }[d];
     const weight = d === 'b' ? 900 : 500;
     const series = H.series.map((g) => K.LEAGUE.slots * K.LEAGUE.notionalPerSlot + g);
+    const amended = useContext(Amended);
     const holding = (t) => {
       const r = P.rows.find((x) => x.t === t);
       const s = SECTOR[t];
@@ -674,7 +683,7 @@
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dr-t" style={{ fontSize: 16 }}>{t}</span><span className="dr-pillcat" style={{ background: `var(--d-tile-${s})`, height: 18, fontSize: 11 }}>{SECTOR_LABEL[s]}</span></span>
             <span className="dr-cap dr-num">{r.co} · {r.qty.toFixed(2)} sh</span>
           </span>
-          <Spark pts={[r.mon, r.prev, r.thu]} color={toneVar(r.thu - r.mon)} w={52} h={22} />
+          {d === 'a' && amended ? <span /> : <Spark pts={[r.mon, r.prev, r.thu]} color={toneVar(r.thu - r.mon)} w={52} h={22} />}
           <span style={{ display: 'grid', justifyItems: 'end', gap: 2 }}>
             <b className="dr-num" style={{ fontSize: 15 }}>{$(r.value)}</b>
             <span className={`dr-cap dr-num ${tone(r.todayPct)}`} style={{ fontWeight: 700 }}>{pct(r.todayPct)}</span>
@@ -683,7 +692,7 @@
       );
     };
     return (
-      <Phone d={d} tab="portfolio" money label={`Portfolio, direction ${d.toUpperCase()}`}>
+      <Phone d={d} t={t} overlay={overlay} tab="portfolio" money label={`Portfolio, direction ${d.toUpperCase()}`}>
         <Head chip={<LiveChip />} />
         <Body gap={20}>
           <div style={{ display: 'grid', gap: 10 }}>
@@ -716,6 +725,7 @@
   const DIRS = [
     {
       crit: 'P5 H4 E4 S5 Earned 4 V4', audit: '0 critical · 0 major · 2 minor (the lit column when one side sweeps; the DRAFT pill\'s 44pt hit area is a build item)',
+      light: "it reads like Sleeper's own light mode. The navy becomes the ink and the dark on-the-clock cell; the cyan darkens to a deep teal so it can carry white text (a bright cyan has no edge on white). The lit halves, the colour tiles and the heavy type carry it. What it loses: the night-time glow of the cyan on navy. It changes the most between the two modes, but it is still clearly a fantasy app in both.",
       id: 'a', name: 'A · Game Night', primary: 'Sleeper (S1 matchup, S2 draft)',
       line: 'Flat deep navy in three lightness steps of one hue: the page, a lighter card with a rim, a lighter sheet. Cyan means live, your turn and selected; mint and pink mean up and down; the blue ring and tint mean you. Game numbers are heavy at normal width. Rows divide by space and by a lit slab that runs off the screen edge, never by lines. Money screens drop to near-black with the line in the day\'s colour.',
       sw: [['--c-bg', 'page'], ['--c-surface', 'card'], ['--d-rim', 'rim'], ['--d-lit', 'lit half'], ['--c-accent', 'cyan'], ['--c-gain', 'up'], ['--c-loss', 'down'], ['--c-you', 'you'], ['--d-money-bg', 'money page']],
@@ -727,6 +737,7 @@
     },
     {
       crit: 'P4 H3 E4 S4 Earned 3 V4', audit: '0 critical · 1 major (the league band covers 12–17% of Home and Matchup, and competes with the hero) · 1 minor',
+      light: "the violet band and its white type are the same in both modes (a frame, not a surface: Yahoo's purple on white is the same idea), and the panels turn white on a pale grey gutter. B looks most like itself in Light; the band is still loud (12–17% of the frame).",
       id: 'b', name: 'B · Broadcast', primary: 'ESPN (S3 matchup)',
       line: 'Charcoal surfaces with ONE league colour as the frame: the scoreboard is a full-width band, like a broadcast score bug. Every stock is its own panel with a gutter between, and its state bar on the outer edge (green up, red down). Numerals are condensed and the largest thing on every game screen. Labels are small capitals. The band colour here is a sample violet: no league colour exists in the product yet.',
       sw: [['--c-bg', 'page'], ['--c-surface', 'panel'], ['--d-gutter', 'gutter'], ['--d-band', 'league band'], ['--d-band-2', 'band, lower'], ['--c-live', 'live'], ['--c-gain', 'up'], ['--c-loss', 'down'], ['--c-you', 'you']],
@@ -738,6 +749,7 @@
     },
     {
       crit: 'P4 H5 E4 S3 Earned 5 V4', audit: '0 critical · 0 major · 2 minor (the selected pill changes colour on a down day; the DRAFT pill\'s hit area)',
+      light: "Robinhood's own light mode: near-white, one green. The neon can't hold text on white, so it darkens to a plain green, and with no surfaces to speak of, C in Light is the plainest of the three.",
       id: 'c', name: 'C · Terminal', primary: 'Robinhood (S4 portfolio hero)',
       line: 'Near-black and one neon that is the day\'s colour: green on an up day (shown), orange-red on a down day, used for the line, the selected pill and the leading score. Groups separate by space alone. Money numbers are regular weight; game scores are bold but not condensed. Sleeper\'s energy lives only in the type scale and the avatars. Stock rows carry sparklines.',
       sw: [['--c-bg', 'page'], ['--c-surface', 'card'], ['--c-accent', 'neon (up day)'], ['--c-loss', 'down'], ['--c-you', 'you'], ['--c-text-2', 'secondary']],
@@ -762,29 +774,176 @@
           <h3>{dir.name} <span className="dr-muted" style={{ fontSize: 15, fontWeight: 600, fontStretch: '100%' }}>· primary reference: {dir.primary}</span></h3>
           <p>{dir.line}</p>
         </div>
-        <div className={`dir-${dir.id} dr-swatches`} style={{ background: 'var(--c-bg)', padding: 10, borderRadius: 12 }}>
-          {dir.sw.map(([v, l]) => <SW key={v} v={v} label={<span style={{ color: 'var(--c-text-2)' }}>{l}</span>} />)}
-        </div>
+        {['dark', 'light'].map((t) => (
+          <div key={t} className={`dir-${dir.id}${t === 'light' ? ` dir-${dir.id}-light` : ''} dr-swatches`} style={{ background: 'var(--c-bg)', padding: 10, borderRadius: 12, marginBottom: 6 }}>
+            <span className="dr-sw" style={{ fontWeight: 800, color: 'var(--c-text)', minWidth: 44 }}>{t === 'dark' ? 'Dark' : 'Light'}</span>
+            {dir.sw.map(([v, l]) => <SW key={v} v={v} label={<span style={{ color: 'var(--c-text-2)' }}>{l}</span>} />)}
+          </div>
+        ))}
+        <p className="dr-crit" style={{ fontSize: 15, color: 'var(--c-text)' }}><b>In Light:</b> {dir.light}</p>
         <ul className="dr-motion">{dir.motion.map(([k, v]) => <li key={k}><b>{k}:</b> {v}</li>)}</ul>
         <p className="dr-crit"><b>Self-critique</b> (1–5, revise under 3): {dir.crit}. <b>hallmark audit</b>, after fixes: {dir.audit}. Punch list: reviews/hallmark-audit-w1.md.</p>
         <div className="dr-pairs">
-          <Pair refId={r.home[0]} trait={r.home[1]} caption={`${dir.id.toUpperCase()} · Home, in season`} note="The calm-Home structure as decided: the hero, its chart with the W/L marks, This week, Standings. Same copy, same numbers."><HomeFrame d={dir.id} /></Pair>
-          <Pair refId={r.match[0]} trait={r.match[1]} caption={`${dir.id.toUpperCase()} · Matchup, live`} note="The scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, best week first on each side. Nothing else."><MatchupFrame d={dir.id} /></Pair>
-          <Pair refId="v110" trait="What the last one got right: the leader's half lit, the rows mirrored." caption={`${dir.id.toUpperCase()} · Matchup, final`} note={'Friday close: "Final", "Roberto B. won by …", the same rows at the close.'}><MatchupFrame d={dir.id} final /></Pair>
-          <Pair refId={r.draft[0]} trait={r.draft[1]} caption={`${dir.id.toUpperCase()} · Draft room, on the clock`} note="Round 2, pick 11, 0:42. Tile colour = sector (sample; see below)."><DraftFrame d={dir.id} /></Pair>
-          <Pair refId={r.stand[0]} trait={r.stand[1]} caption={`${dir.id.toUpperCase()} · League › Standings, in full`} note="After Week 6's Friday close: the movement, the avatars, your row. No grid lines."><StandingsFrame d={dir.id} /></Pair>
-          <Pair refId={r.money[0]} trait={r.money[1]} caption={`${dir.id.toUpperCase()} · Portfolio`} note={<>The number, its line, the range, two holdings with sparklines and a sector pill. The chart and the range pills are new on Portfolio<NEW />.</>}><PortfolioFrame d={dir.id} /></Pair>
+          <Pair refId={r.home[0]} trait={r.home[1]} lightRef="y4" lightTrait="Off-white page, white cards, one vivid accent." caption={`${dir.id.toUpperCase()} · Home, in season`} note="The calm-Home structure as decided: the hero, its chart with the W/L marks, This week, Standings. Same copy, same numbers." frame={(t) => <HomeFrame d={dir.id} t={t} />} />
+          <Pair refId={r.match[0]} trait={r.match[1]} lightRef="y4" lightTrait="Team-coloured cards on white; the feed reads in daylight." caption={`${dir.id.toUpperCase()} · Matchup, live`} note="The scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, best week first on each side. Nothing else." frame={(t) => <MatchupFrame d={dir.id} t={t} />} />
+          <Pair refId={r.match[0]} trait={r.match[1]} lightRef="v110" lightTrait="1.1.0, Light: the leader's half lit, the rows mirrored." caption={`${dir.id.toUpperCase()} · Matchup, final`} note={'Friday close: "Final", "Roberto B. won by …", the same rows at the close.'} frame={(t) => <MatchupFrame d={dir.id} t={t} final />} />
+          <Pair refId={r.draft[0]} trait={r.draft[1]} lightRef="y1" lightTrait="Your turn as a filled pill with white ink, on white." caption={`${dir.id.toUpperCase()} · Draft room, on the clock`} note="Round 2, pick 11, 0:42. Tile colour = sector (sample)." frame={(t) => <DraftFrame d={dir.id} t={t} />} />
+          <Pair refId={r.stand[0]} trait={r.stand[1]} lightRef="s5" lightTrait="White cards, right-aligned tabular numbers." caption={`${dir.id.toUpperCase()} · League › Standings, in full`} note="After Week 6's Friday close: the movement, the avatars, your row. No grid lines." frame={(t) => <StandingsFrame d={dir.id} t={t} />} />
+          <Pair refId={r.money[0]} trait={r.money[1]} lightRef="s5" lightTrait="The number on a brand bar; gains in green; key figures." caption={`${dir.id.toUpperCase()} · Portfolio`} note={<>The number, its line, the range, two holdings with sparklines and a sector pill. The chart and the range pills are new on Portfolio<NEW />.</>} frame={(t) => <PortfolioFrame d={dir.id} t={t} />} />
         </div>
       </>
     );
   }
 
   /** A compact roster for the "Your call" strips (direction A's skin). */
-  function MiniRoster({ order = 'gain', mid = 'none', label }) {
+  function MiniRoster({ order = 'gain', mid = 'none', label, t = 'dark' }) {
     return (
-      <div className="dr dir-a" style={{ background: 'var(--c-bg)', borderRadius: 20, padding: '14px 20px', overflow: 'hidden', color: 'var(--c-text)' }} role="img" aria-label={label}>
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`} style={{ background: 'var(--c-bg)', borderRadius: 20, padding: '14px 20px', overflow: 'hidden', color: 'var(--c-text)' }} role="img" aria-label={label}>
         <Roster d="a" order={order} mid={mid} limit={4} />
       </div>
+    );
+  }
+
+
+  // ═════════════════════════════════════════════════════════════════════
+  // THE PLAYER CARD (Giorgio, 2026-10-12): tapping ANY stock, yours or theirs, on Portfolio
+  // or Matchup, opens it, on the ESPN player-card model.
+  // ═════════════════════════════════════════════════════════════════════
+  // SAMPLE: each stock's Friday closes for weeks 1–5. data.js has the draft price and Week 6's
+  // Monday open, Wednesday close and Thursday price; those are real.
+  const SEASON_CLOSES = { NVDA: [292.4, 296.8, 288.9, 295.6, 299.1], NKE: [81.9, 80.4, 78.8, 79.9, 79.3] };
+  /** A price line on a trading-day axis; `marks` = [{ i, text }] markers (where it was acquired). */
+  function CardLine({ pts, days, base, h = 128, marks = [], label }) {
+    const w = 402, padT = 22, padB = 10;
+    const min = Math.min(base, ...pts), max = Math.max(base, ...pts);
+    const span = days[days.length - 1] || 1;
+    const X = (i) => 2 + (days[i] / span) * (w - 24);
+    const Y = (v) => padT + (1 - (v - min) / (max - min || 1)) * (h - padT - padB);
+    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const last = pts.length - 1;
+    const c = pts[last] >= base ? 'var(--c-gain)' : 'var(--c-loss)';
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={label} style={{ display: 'block', marginInline: -G, overflow: 'visible' }}>
+        <line x1="0" x2={w} y1={Y(base)} y2={Y(base)} stroke="var(--c-border-strong)" strokeDasharray="3 5" opacity=".8" />
+        <path d={path} fill="none" stroke={c} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+        {marks.map((m) => (
+          <g key={m.i}>
+            <circle cx={X(m.i)} cy={Y(pts[m.i])} r="6" fill="var(--c-surface)" stroke="var(--c-text)" strokeWidth="2" />
+            <text x={X(m.i) + 10} y={Y(pts[m.i]) - 9} fontSize="11" fontWeight="800" fill="var(--c-text)">{m.text}</text>
+          </g>
+        ))}
+        <circle cx={X(last)} cy={Y(pts[last])} r="9" fill="var(--c-live)" opacity=".22" />
+        <circle cx={X(last)} cy={Y(pts[last])} r="4.5" fill="var(--c-live)" />
+      </svg>
+    );
+  }
+  function PlayerCard({ who }) {
+    const you = who === 'you';
+    const t = you ? 'NVDA' : 'NKE';
+    const r = (you ? K.MATCHUP.live.you.rows : K.MATCHUP.live.opp.rows).find((x) => x.t === t);
+    const weekPct = ((r.thu - r.mon) / r.mon) * 100;
+    const season = [r.draft, ...SEASON_CLOSES[t], r.mon, r.prev, r.thu];
+    const seasonDays = [0, 5, 10, 15, 20, 25, 25.2, 27, 28.6];
+    const fig = (lbl, v, sub, cls) => (
+      <span>
+        <span className="dr-tag dr-muted" style={{ fontStretch: '100%', letterSpacing: '.04em' }}>{lbl}</span>
+        <b className={`dr-num ${cls || ''}`} style={{ fontSize: 17, lineHeight: '22px', fontWeight: 800 }}>{v}</b>
+        <span className={`dr-cap dr-num ${sub[1] || ''}`} style={{ fontWeight: 700 }}>{sub[0]}</span>
+      </span>
+    );
+    return (
+      <>
+        <div className="dr-scrim" />
+        <div className="dr-sheet" role="dialog" aria-label={`${t}, player card`}>
+          <span className="dr-grab" />
+          <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr 44px', gap: 12, alignItems: 'center' }}>
+            <span className="dr-av" style={{ width: 52, height: 52, fontSize: 13, background: 'var(--c-inset)' }}>{t}</span>
+            <span style={{ display: 'grid', gap: 2 }}>
+              <span style={{ fontSize: 26, lineHeight: '28px', fontWeight: 900, letterSpacing: '.01em' }}>{t}</span>
+              <span className="dr-call dr-muted">{r.co}</span>
+            </span>
+            <span className="dr-muted" style={{ display: 'grid', placeItems: 'center', width: 44, height: 44 }} aria-label="Close"><Icon d={ICON.close} size={22} /></span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {you ? <span className="dr-pill dr-pill--you">Yours</span> : <span className="dr-pill">Owned by Gianluigi B.</span>}
+          </div>
+          <div className="dr-strip4">
+            {fig('Price', $(r.thu), [`${pct(r.todayPct)} today`, tone(r.todayPct)])}
+            {fig('Week gain', $s(r.weekGain), [pct(weekPct), tone(weekPct)], tone(r.weekGain))}
+            {fig('Since the draft', $s(r.gain), [pct((r.gain / r.cost) * 100), tone(r.gain)], tone(r.gain))}
+            {fig(you ? 'Your position' : 'Their position', $(r.value), [`${r.qty.toFixed(2)} sh`])}
+          </div>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>Season</span>
+              <span className="dr-cap">Drafted {$(r.draft)} · now {$(r.thu)}</span>
+            </div>
+            <CardLine pts={season} days={seasonDays} base={r.draft} marks={[{ i: 0, text: 'Drafted' }]} label={`${t} this season, from the draft at ${$(r.draft)} to ${$(r.thu)} now`} />
+          </div>
+          <div style={{ display: 'grid', gap: 3 }}>
+            <span style={{ fontSize: 15, fontWeight: 800 }}>{you ? 'How you got it' : 'How they got it'}</span>
+            <span className="dr-call dr-num" style={{ fontSize: 15 }}>Drafted {K.ordinal(r.pick)} overall · Sep 29 · {$(r.draft)}</span>
+          </div>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 15, fontWeight: 800 }}>This week</span>
+              <span className={`dr-call dr-num ${tone(r.weekGain)}`} style={{ fontWeight: 800 }}>{$s(r.weekGain)} · {pct(weekPct)}</span>
+            </div>
+            <CardLine pts={[r.mon, r.prev, r.thu]} days={[0, 2, 3.6]} base={r.mon} h={70} label={`${t} this week, from Monday's open at ${$(r.mon)} to ${$(r.thu)} now`} />
+          </div>
+          {you
+            ? <span className="dr-btn dr-btn--line" style={{ width: '100%' }}>Sell</span>
+            : <span className="dr-btn dr-btn--line" style={{ width: '100%', gap: 8 }}><Icon d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" size={18} width={2} />Save</span>}
+          <span className="dr-cap" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
+        </div>
+      </>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // OPEN: Game Night as he picked it, and the player card.
+  // ═════════════════════════════════════════════════════════════════════
+  function GameNight() {
+    const A = (title, note, frame, ref = ['s1', 'The arrangement he picked.'], lref = ['y4', 'Off-white page, white cards.']) => (
+      <Pair refId={ref[0]} trait={ref[1]} lightRef={lref[0]} lightTrait={lref[1]} caption={title} note={note} frame={frame} />
+    );
+    return (
+      <section className="b-sec" id="call-game-night" aria-labelledby="call-game-night-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id="call-game-night-h">Your look: Game Night, as you picked it, and the player card</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "I'm leaning more towards the game night as like the color palette and the styling." The draft board's colour "just with that line at the bottom", because the filled squares are "a little too similar to Sleeper", and you want it "without it being like a carbon copy of Sleeper". No row lines: "I don't want that like line thing there visible." Tapping any stock opens it as a player card. Every frame in Dark and Light; look it over and say if it is right.</p>
+          </div>
+        </header>
+        <div className="b-ask" style={{ marginTop: 0 }} id="call-game-night-ask">
+          <h3>What I need from you</h3>
+          <ol>
+            <li><b>Is this Game Night as you picked it?</b> Every frame below, Dark and Light.</li>
+            <li><b>The player card</b> (the first two rows): right, or what to change.</li>
+            <li><b>One label:</b> "Since the draft" (your Portfolio rule) or "Season gain" (your list) in the card's key figures.</li>
+            <li><b>Still open from before:</b> Portfolio gets a chart and range pills<NEW /> (yes or no), and the your-turn flash in cyan instead of the approved gold (yes, or keep gold).</li>
+          </ol>
+        </div>
+        <ul className="b-inv__notes">
+          <li><b>What changed from the A you picked:</b> the draft tiles carry their sector as a line at the bottom (Broadcast's treatment, in Game Night's surfaces); the Portfolio rows lose their small lines; the Matchup keeps the shaded side for whoever leads the row and the "leads by" line; the centre column stays empty.</li>
+          <li><b>Your question:</b> was the small line on each Portfolio row the whole season? No: it was this week only (Monday's open, Wednesday's close, now). It is gone now; the player card carries the season line instead, with a marker where the stock was acquired.</li>
+          <li><b>The player card</b> opens from any stock, yours or theirs, on Portfolio or Matchup: the header (ticker, company, "Yours" or "Owned by …", and the slot pill in leagues that have slots, so not in Stock Scudetto), the four key figures, the season line with where it was acquired, how it was got, this week's line, and the one action for the state (Sell for yours while the market is open; Save for theirs).</li>
+          <li><b>A label clash for you:</b> your list says "season gain" in the key figures. Your rule from 2026-10-05 keeps "season gain" for a manager's regular-season total and says Portfolio's gain is "since the draft", never one for the other. Drawn as "Since the draft"; a stock bought or claimed later would read "Since Oct 2"<NEW />. Say if you want "Season gain" there anyway.</li>
+          <li><b>New copy</b><NEW />: "Yours", "How they got it", "Their position" (your words: "How you got it", "Drafted 2nd overall · Sep 29 · $290.10"). Everything else is the app's own ("Owned by …", "Your position", "Week gain", "Sell", "Save").</li>
+          <li><b>SAMPLE:</b> each stock's Friday closes for weeks 1–5 on the season line. The draft price and Week 6's prices are data.js's.</li>
+        </ul>
+        <div className="dr-pairs">
+          {A('Player card · opened from Matchup (their stock: Gianluigi B.\'s NKE)', 'Tap any row on either side. The header says whose it is; the action is Save, since another manager owns it.', (t) => <MatchupFrame d="a" t={t} overlay={<PlayerCard who="opp" />} />, ['pc', 'ESPN: the big name, the stat strip, the action.'], ['s5', 'E*TRADE: the key figures, right-aligned and tabular.'])}
+          {A('Player card · opened from Portfolio (yours: NVDA)', 'Your words for the "How you got it" line. The one action is Sell (the whole position, as always).', (t) => <PortfolioFrame d="a" t={t} overlay={<PlayerCard who="you" />} />, ['pc', 'ESPN: the player card as a sheet over the screen.'], ['s5', 'E*TRADE: the key figures.'])}
+          {A('Home, in season', 'Unchanged from the A you picked.', (t) => <HomeFrame d="a" t={t} />, ['s1', 'The navy card with a rim; the lit half.'])}
+          {A('Matchup, live', 'Unchanged: the shaded side and the "leads by" line; the centre column empty.', (t) => <MatchupFrame d="a" t={t} />)}
+          {A('Matchup, final', 'Unchanged.', (t) => <MatchupFrame d="a" t={t} final />, ['s1', 'The mirrored roster.'], ['v110', '1.1.0, Light: the leader\'s half lit.'])}
+          {A('Draft room, on the clock', 'Changed: the sector is a line at the bottom of each tile, on Game Night\'s surfaces.', (t) => <DraftFrame d="a" t={t} />, ['s3', 'Broadcast\'s line at the bottom (ESPN\'s panel edge).'], ['y1', 'Your turn as a filled pill on white.'])}
+          {A('League › Standings, in full', 'Unchanged.', (t) => <StandingsFrame d="a" t={t} />, ['s1', 'Rows divided by space and surface.'], ['s5', 'White cards, right-aligned numbers.'])}
+          {A('Portfolio', <>Changed: no small lines on the rows. The chart and the range pills are still new on Portfolio<NEW /> (one of your open questions).</>, (t) => <PortfolioFrame d="a" t={t} />, ['s4', 'The number, then its line.'], ['s5', 'Key figures on white.'])}
+        </div>
+      </section>
     );
   }
 
@@ -805,9 +964,9 @@
           <li><b>When it updates (decided):</b> "it should be at the end of each day, like the start of the next day, it'll reorder it to show like who's been doing the best. So it doesn't update like live per se, but updates at the end of the day." The order is recomputed once at each market close and holds through the next trading day; nothing re-sorts live. On Monday, before the first close, every week gain is $0.00, so the rows show the draft/slot order.</li>
         </ul>
         <div className="dr-strip">
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="gain" label="Rows by week gain" /><figcaption><b>✓ a · By week gain, best first on each side (chosen)</b><span>The top of the page is the story of the week. It is also (d) "your best against their best": each row is a mini-matchup.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="pick" label="Rows in draft order" /><figcaption><b>b · Draft order (not chosen)</b><span>Your first pick at the top, the roster as drafted. Never moves.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="value" label="Rows by position size" /><figcaption><b>c · By position size (not chosen)</b><span>Your largest holding first. Moves only when prices move a lot.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="gain" label="Rows by week gain" /><div style={{ height: 10 }} /><MiniRoster order="gain" label="Rows by week gain" t="light" /><figcaption><b>✓ a · By week gain, best first on each side (chosen)</b><span>The top of the page is the story of the week. It is also (d) "your best against their best": each row is a mini-matchup.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="pick" label="Rows in draft order" /><div style={{ height: 10 }} /><MiniRoster order="pick" label="Rows in draft order" t="light" /><figcaption><b>b · Draft order (not chosen)</b><span>Your first pick at the top, the roster as drafted. Never moves.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster order="value" label="Rows by position size" /><div style={{ height: 10 }} /><MiniRoster order="value" label="Rows by position size" t="light" /><figcaption><b>c · By position size (not chosen)</b><span>Your largest holding first. Moves only when prices move a lot.</span></figcaption></figure>
         </div>
         <ul className="b-inv__notes">
         </ul>
@@ -821,13 +980,13 @@
         </ul>
 
         <div className="b-concepts b-concepts--three">
-          {['a', 'b', 'c'].map((d) => (
-            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} groups="category" /></Fit><figcaption><b>{d.toUpperCase()} · Matchup live, a category league (sample slots)</b><span>The whole scroll. Each group: its header, then its rows, best week first.</span></figcaption></figure>
+          {['a', 'b', 'c'].flatMap((d) => (
+            ['dark', 'light'].map((t) => <figure key={d + t} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} t={t} groups="category" /></Fit><figcaption><b>{d.toUpperCase()} · {t === 'dark' ? 'Dark' : 'Light'} · Matchup live, a category league (sample slots)</b><span>The whole scroll. Each group: its header, then its rows, best week first.</span></figcaption></figure>)
           ))}
         </div>
         <div className="b-concepts b-concepts--three">
-          {['a', 'b', 'c'].map((d) => (
-            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} groups="tier" /></Fit><figcaption><b>{d.toUpperCase()} · Matchup live, a price-tier league (sample)</b><span>Tier Cup: "$200–$400 ×3", then "$100–$200", then "$50–$100", the league's slot order.</span></figcaption></figure>
+          {['a', 'b', 'c'].flatMap((d) => (
+            ['dark', 'light'].map((t) => <figure key={d + t} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} t={t} groups="tier" /></Fit><figcaption><b>{d.toUpperCase()} · {t === 'dark' ? 'Dark' : 'Light'} · Matchup live, a price-tier league (sample)</b><span>Tier Cup: "$200–$400 ×3", then "$100–$200", then "$50–$100", the league's slot order.</span></figcaption></figure>)
           ))}
         </div>
 
@@ -835,18 +994,18 @@
     );
   }
 
-  function Directions() {
+  function Directions({ archived }) {
     return (
       <section className="b-sec" id="call-direction" aria-labelledby="call-direction-h">
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.3</span>
           <div>
-            <h2 id="call-direction-h">Your call: the direction</h2>
-            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), Dark first. Each frame sits beside the reference it borrows from, with the trait named. Pick the one that makes you go "wow"; Light follows from the same roles.</p>
+            <h2 id="call-direction-h">{archived ? 'Decided: the direction · A, Game Night' : 'Your call: the direction'}</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "everything I'm seeing is just so bland. It's not creative. It's not inspiring." "I want to create a, a kind of a, a blend between a, a, a sleeper and ESPN fantasy football with a Robin Hood". "I want every section to, in its own way, elevate the, the app". Three directions, each led by ONE of your references, drawn on the same league at the same moment (Stock Scudetto, Week 6, Thu 1:37 PM ET, Roberto B.'s phone), each in Dark and in Light side by side. <b>Giorgio, 2026-10-12:</b> "I want one that it doesn't matter what mode you're in, it's going to be built for either." Each frame sits between the Dark reference it borrows from (left) and the Light one (right), with the trait named. Pick the one that makes you go "wow" in both.</p>
           </div>
         </header>
 
-        <div className="b-ask" style={{ marginTop: 0 }}>
+        {archived ? null : <div className="b-ask" style={{ marginTop: 0 }}>
           <h3>What I need from you</h3>
           <ol>
             <li><b>The direction:</b> A, B or C (or one with a piece of another). <a href="#call-direction-rec">The recommendation</a> is at the end of this section.</li>
@@ -854,13 +1013,13 @@
             <li><b>Portfolio gets a chart and range pills</b><NEW />, as the plan asked: yes or no.</li>
             <li><b>If A:</b> the your-turn flash changes from the approved gold to cyan. Yes, or keep gold.</li>
           </ol>
-        </div>
+        </div>}
 
         <ul className="b-inv__notes">
           <li><b>The same in all three:</b> what is on each screen and in what order (the calm Home, the UX rules), every string (all of it already in the app, except where marked <NEW />), and every number (derived from the board's data). Only the skin changes: surfaces, colour, type weight, how rows divide, the chart.</li>
           <li><b>Matchup is your ruling, literally:</b> a scoreboard (names, the two totals, who leads), then your stocks against theirs, row by row, each with its week. No win %, no bars, no projections, no chart, no "yet to play", nothing else, in any direction. The existing My matchup / All matchups switch stays (it isn't page content).</li>
           <li><b>Sample, not data:</b> the sector of each stock (the tile colours and the pill) and the league colour in B. This league has no tiers or categories, so the pill shows what a category league would draw.</li>
-          <li><b>Dark only, for now:</b> these frames stay Dark whichever theme the board is in. Light is drawn after you pick, from the same roles.</li>
+          <li><b>Both themes, every frame:</b> each screen is drawn in Dark and in Light from the same roles, side by side, whichever theme the board itself is in. Light references: E*TRADE and Yahoo; Dark: Sleeper, ESPN, Robinhood. Where a direction loses something in Light, its "In Light" line says so.</li>
           <li><b>Every chart has a state for 0 and 1 points:</b> the line stops at the last real point and ends in a dot (Robinhood's "stops at now"), so Monday morning is a short line, never a blank frame.</li>
         </ul>
 
@@ -868,9 +1027,9 @@
 
         <h3 className="b-sub" id="call-direction-compare">Matchup, side by side, with 1.1.0</h3>
         <div className="b-concepts b-concepts--three">
-          {['a', 'b', 'c'].map((d) => (
-            <figure key={d} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} /></Fit><figcaption><b>{d.toUpperCase()} · live</b></figcaption></figure>
-          ))}
+          {['a', 'b', 'c'].flatMap((d) => ['dark', 'light'].map((t) => (
+            <figure key={d + t} className="b-fig b-fig--inv"><Fit><MatchupFrame d={d} t={t} /></Fit><figcaption><b>{d.toUpperCase()} · live · {t === 'dark' ? 'Dark' : 'Light'}</b></figcaption></figure>
+          )))}
           <figure className="b-fig b-fig--inv">
             <div className="b-fit" style={{ maxWidth: 402 }}><img src={REF.v110 && REF.v110.src} alt="Stockpile 1.1.0, matchup screen (Light, a test league)" style={{ width: '100%', borderRadius: 40, display: 'block' }} /></div>
             <figcaption><b>1.1.0 · the look you said captured the head-to-head better</b><span>Light, a test league (2026-09-25). The leader's half of the scoreboard is lit with "Leading"; the roster is two mirrored columns with a numbered centre column, the leader's column lit, a total at the foot. All three directions keep the lit half and the mirror.</span></figcaption>
@@ -879,25 +1038,26 @@
 
         <h3 className="b-sub" id="call-direction-centre">Your call: the centre column (unslotted leagues)</h3>
         <div className="dr-strip">
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><figcaption><b>The tier or sector pill</b><span>In slotted leagues the group header now does this job (above). Elsewhere a pill would name each stock's price tier or sector; but rows pair best against best, not slot against slot, so the two sides' pills would disagree. Sector colours here are sample.</span></figcaption></figure>
-          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="none" label="Centre column empty" /><div style={{ height: 10 }} /><MiniRoster mid="none" label="Centre column empty" t="light" /><figcaption><b>Empty (recommended, drawn above)</b><span>The two numbers face each other across a gap. Nothing to explain.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="cat" label="Centre column with the sector pill" /><div style={{ height: 10 }} /><MiniRoster mid="cat" label="Centre column with the sector pill" t="light" /><figcaption><b>The tier or sector pill</b><span>In slotted leagues the group header now does this job (above). Elsewhere a pill would name each stock's price tier or sector; but rows pair best against best, not slot against slot, so the two sides' pills would disagree. Sector colours here are sample.</span></figcaption></figure>
+          <figure className="b-fig b-fig--inv" style={{ margin: 0 }}><MiniRoster mid="num" label="Centre column with row numbers" /><div style={{ height: 10 }} /><MiniRoster mid="num" label="Centre column with row numbers" t="light" /><figcaption><b>Row number, as 1.1.0 had it</b><span>1 to 6. Honest, but it reads like a position, which your ruling rules out.</span></figcaption></figure>
         </div>
 
         <div className="b-ask" id="call-direction-rec">
           <h3>The Design Lead's recommendation: A · Game Night</h3>
           <ul>
-            <li><b>Why A:</b> it is the only one that looks like a fantasy app first. The lit half and the mirrored rows are 1.1.0's head-to-head, made bigger; the navy steps, the cyan and the colour tiles are Sleeper's game night; and the money screens still go Robinhood (near-black, the number and its line), so the bridge you asked for is built into the system, not bolted on.</li>
-            <li><b>Why not B:</b> it is the loudest scoreboard, but it needs a league colour the product doesn't have (who picks it, and what it is in Light, would be new decisions), and its panels make every screen denser. It is also the closest to 1.2.0's Game Day idea, which is the look you called bland.</li>
-            <li><b>Why not C:</b> it is the cleanest and the best money screen, but the game screens read as a brokerage. The fantasy feeling you asked for lives only in the type.</li>
-            <li><b>What A costs:</b> the your-turn flash changes from gold to cyan (an approved look, so it is part of this pick); the Matchup's lit slab and the colour tiles are new components; the money screens use a second, darker page colour.</li>
-            <li><b>When you pick:</b> say which, and anything to take from the others (for example "A, with C's portfolio"). Light comes next from the same roles, then the token spec, then the build (Home first). The row order and when it updates are decided (above); still open: the centre column in unslotted leagues.</li>
+            <li><b>Why A, in both modes:</b> it is the only one that looks like a fantasy app first, in Dark and in Light. The lit half and the mirrored rows are 1.1.0's head-to-head, made bigger; the navy steps, the cyan and the colour tiles are Sleeper's game night; and the money screens still go Robinhood (near-black, the number and its line), so the bridge you asked for is built into the system, not bolted on.</li>
+            <li><b>Why not B:</b> it is the one that changes least between the modes (the violet band reads the same on white as on charcoal, like Yahoo's purple), so if Light matters most to you, B is the strong alternative. But it is the loudest scoreboard, it needs a league colour the product doesn't have (who picks it, and what it is in Light, would be new decisions), and its panels make every screen denser. It is also the closest to 1.2.0's Game Day idea, which is the look you called bland.</li>
+            <li><b>Why not C:</b> it is the cleanest and the best money screen, but the game screens read as a brokerage, and in Light, with the neon gone, it is the plainest of the three. The fantasy feeling you asked for lives only in the type.</li>
+            <li><b>What A costs:</b> the your-turn flash changes from gold to cyan in Dark and deep teal in Light (an approved look, so it is part of this pick); the Matchup's lit slab and the colour tiles are new components; in Dark the money screens use a second, darker page colour; in Light the cyan loses its glow.</li>
+            <li><b>When you pick:</b> say which, and anything to take from the others (for example "A, with C's portfolio"). Then the token spec (both themes at once), then the build (Home first). The row order and when it updates are decided (above); still open: the centre column in unslotted leagues.</li>
           </ul>
         </div>
       </section>
     );
   }
 
-  window.KSDirections = Directions;
+  window.KSDirections = GameNight;
+  window.KSDirectionsArchived = () => <Amended.Provider value={false}><Directions archived /></Amended.Provider>;
   window.KSRowOrder = RowOrder;
 })();

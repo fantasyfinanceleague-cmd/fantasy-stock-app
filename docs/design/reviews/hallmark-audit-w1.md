@@ -92,3 +92,68 @@ tiers; order recomputed at each market close, never live). Same audit, same tool
   share each); its scores are derived (week gain = Thursday − Monday open: +$24.80 vs +$3.75,
   checked by hand against the frame). Which stocks each manager holds is the only invention.
 - **Count:** 0 critical · 0 major · 0 minor. It also gives O2 its mixed week.
+
+## Addendum · Light (2026-10-12, Giorgio: "built for either")
+
+Every W1 frame is now drawn in Light beside Dark: 18 direction frames, 6 slotted Matchup
+frames, the comparison row and the two strips. Same tools; Light references are E*TRADE (S5)
+and Yahoo (01 draft, 04 live), studied by pixel: an off-white page (`#f0f0f0` ≈ 73% of the
+area), white cards, ONE vivid accent (purple `#7020f0`, < 1%) as a filled pill with white ink.
+
+**The rule that changes in Light:** a bright accent has no edge on white, so every accent that
+fills a control darkens and carries white ink (A's cyan → deep teal; C's neon → plain green).
+
+- **Contrast:** 96 Light pairs (A 32, B 33, C 31), all ≥ 4.5:1 after the fixes below, and the
+  90 Dark pairs re-run: all pass. Your avatar's ring is ≥ 3.76:1 against the page in Dark
+  (non-text, 3:1 needed).
+- **Accent by area:** A ≤ 2.1%, C ≤ 1.9% per frame. B's band (and its violet, which the
+  measure can't tell from B's accent) covers 8–17% of Home, Matchup and the slotted
+  Matchups: O1, now in both modes.
+
+| # | Sev | Found in Light | Fix |
+|---|---|---|---|
+| L1 | critical | B: Light's dark text roles leaked into the violet band ("You lead by …", the This week scores, 0:42 on the band cell) | the band re-points the text, zero, live, track, bg and inset roles to its own inks |
+| L2 | critical | B: the opponent's avatar inside the band became white initials on a near-white disc | `--c-inset` inside the band = the lower band shade |
+| L3 | major | All: your avatar's initials took the page ink (dark navy on blue in Light) | a `--d-on-you` role, white in every theme |
+| L4 | major | Dark, pre-existing (found by L3's new pair): white initials on the you-blue were 3.3–3.6:1 | you-blue darkened to oklch(54% 0.2 258) in Dark: 5.07:1 |
+| L5 | major | A: the dark on-the-clock cell's pick number took Light's deep teal (navy on navy) | the cell keeps Dark's cyan for its live text |
+| L6 | major | C: sector colours used as text on the light surface and as pill fills failed both (3.4–4.3:1) | darkened to L 47–50%, white pill ink: both uses pass |
+| L7 | minor | A: gain green on your blue tint, 4.40:1 | A Light gain darkened to oklch(46% 0.12 165) |
+
+**Count after fixes, Light:** 0 critical · 1 major (O1, B's band, both modes) · 0 minor.
+
+**What each direction loses in Light** (said in its "In Light" line on the board):
+- **A:** the cyan's night-time glow; it changes the most between modes but still reads as a
+  fantasy app (lit halves, colour tiles, heavy type).
+- **B:** nothing structural; the band and its white type are identical in both modes. B is
+  the most itself in Light.
+- **C:** the neon; on white it is a plain green, and C is the plainest of the three.
+
+**Recommendation:** still A (a fantasy app first, in both modes); B is now named as the
+strong alternative if Light matters most.
+
+## Addendum · Game Night as picked + the player card (2026-10-12)
+
+Giorgio picked A, Game Night, with amendments: the draft tiles carry the sector as a line at
+the bottom (not a fill), no small lines on rows, the centre column empty; tapping any stock
+opens a player card (ESPN model). 16 new frames: A's six screens as amended plus the card
+from Matchup (their NKE) and from Portfolio (your NVDA), each in Dark and Light. The direction
+call moved to the Archive, still showing the three directions as he chose between them (the
+amendments are switched off there).
+
+- **Contrast:** the card's pairs (key figures on the inset strip, the "Yours" pill, the
+  sheet's text on its surface): A Dark ≥ 5.78, A Light ≥ 4.90. Pass.
+- **Accent by area:** the card adds no accent; the live end dot is the only cyan. Pass.
+- **Honest copy (46):** the season line's Friday closes for weeks 1–5 are SAMPLE, captioned;
+  the draft price, Week 6's prices, the position, the gain and the pick are data.js's
+  ("Drafted 2nd overall · Sep 29 · $290.10" is Giorgio's own example, and it matches).
+- **Decoration (45):** ESPN's team-crest watermark is not carried (no logos; it would be
+  decoration). The acquisition marker carries information ("Drafted").
+- **Typography:** two strip labels wrap onto two lines ("Since the draft", "Their
+  position") in the 11pt tag; not tappable (gate 49 is about tappable text), left as is.
+- **Fixed:** the card's full-width button overflowed its sheet (the padding added to 100%);
+  `box-sizing: border-box`.
+- **Flagged to Giorgio, not decided by me:** his list says "season gain" in the key figures,
+  his 2026-10-05 rule keeps that term for a manager's regular-season total; drawn as "Since
+  the draft".
+- **Count:** 0 critical · 0 major · 1 minor (the two-line strip labels).
