@@ -1126,17 +1126,20 @@ app. Files: `app/(tabs)/index.tsx`, `app/(tabs)/league.tsx` (one param), `compon
    - **Glyphs and colours:** "W" in `gain`, "L" in `loss`, "T" in `text2`. A bye is "Bye" in
      `text2`, or "–" in `text2` when its slot is under 26pt, never coloured. The live week (market
      open) gets a 6pt `live` dot instead of a letter. A scored current week shows its letter.
-   - **Playoffs:** playoff weeks use the same letters. A 1pt `borderStrong` vertical hairline goes
-     before the first playoff week's slot.
-   - **No overlaps:** marks never overlap or wrap. Add a test with 14 regular weeks + 4 playoff
-     weeks at 350pt.
+   - **Playoffs (amended 2026-10-12, B′):** the chart has no playoff slots, no playoff marks and no
+     hairline. R3 stands (`chartEndWeek = min(currentWeek, numWeeks)`): season gain is regular
+     season only and stays at its final total in the playoffs (PRODUCT_RULES), so the axis is the
+     regular season. During the playoffs the line's end is the static end dot, NOT the pulsing live
+     dot (`live` = market open AND not a playoff week). The value isn't moving, and the live round
+     already shows on the first screen: the hero meta ("Wild card") and the This week tag and chip.
+   - **No overlaps:** marks never overlap or wrap. Add a test with 18 regular weeks at 350pt.
    - **Scrub:** the scrubbed week's mark gets a 2pt `accent` underline (this replaces the chip
      highlight).
-   - **Scrub label:** a playoff week's scrub label names its round ("Wild card", "Semifinals",
-     "Final", via `playoffRoundLabelForWeek`), never "Week 15". This is the B7 rule the chips
-     carried, now carried by `seasonScrubLabel`.
+   - **Scrub label:** unchanged (`seasonScrubLabel`). The scrub only reaches regular-season weeks,
+     so "Week N" is always right. *(Amended: the original line asking for round names on scrub
+     assumed playoff slots that don't exist.)*
    - **Accessibility:** the chart's label lists the results: "Season gain: +$343.59. Weeks: W, W, L,
-     W, W, Week 6 live." Bye weeks read "bye".
+     W, W, Week 6 live." Bye weeks read "bye". In the playoffs, no "live" entry.
 4. **Range tabs replace `SegmentedControl`.** "1W · 1M · Season" (same labels, same window logic)
    as right-aligned text tabs under the chart, callout 13pt.
    - **Selected:** `text` colour, weight 800, 2pt `text`-colour underline.
@@ -1206,6 +1209,19 @@ app. Files: `app/(tabs)/index.tsx`, `app/(tabs)/league.tsx` (one param), `compon
   - the This week card cut by the fold on either phone at Large text;
   - anything above Standings needing a scroll on the 17 Pro.
 
+### Ruling during the build · playoffs on the chart (2026-10-12): B′
+
+The worker found that the spec's playoff marks had no x-slots to sit in: R3 ends the chart at
+the regular season. I ruled **B′**: no playoff slots; the regular-season marks only; a static end
+dot in the playoffs. I rejected the worker's A (an axis that extends past the line's end with
+playoff letters but no points), for three reasons:
+- It is a new look that the approved frame never showed, so it would have gone to Giorgio.
+- An x-slot without a point reads as missing data.
+- It puts results that don't count toward season gain on the chart whose rule is "season gain".
+Nothing is lost against 1.2.0: past playoff results never appeared there (`weeklyResults`
+skips playoff rows), and the live round's "● WC" chip is replaced by the hero meta and the This
+week tag. Playoff results live in League › Playoffs.
+
 ### Captures for the gate
 
 17e and 17 Pro, Light, Large text unless noted. A Dark spot-check of 1, 4 and 9 on the 17e.
@@ -1213,7 +1229,8 @@ Measure the block gap in every capture: 24pt.
 
 1. `live_open`: top (both phones), with where the fold falls.
 2. `live_closed`, `scoring`, `scored` (won and lost), `pre_season` (no chart), `bye`, `eliminated`.
-3. `playoff_live`: 7+ week marks, the playoff hairline, the round name on scrub.
+3. `playoff_live`: marks for the regular weeks only, a static (not pulsing) end dot, and "Wild card"
+   in the hero meta and the This week tag with the "Live" chip.
 4. XL text (`accessibility-extra-large`) on `live_open`: marks don't collide, range tabs fit,
    28pt scores fit; plus XXXL sanity (F1).
 5. `xl_million`: the hero value and the 28pt scores fit.
