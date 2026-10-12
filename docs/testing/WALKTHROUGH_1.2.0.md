@@ -48,9 +48,10 @@ to go, what you need for it, and what right looks like. Tick it when it does tha
   and the music keeps going.
 - [ ] **11. Ten seconds left.** Let your clock run down. Right: one more buzz at 10 seconds and
   the clock turns red.
-- [ ] **12. Your turn while you're elsewhere.** Sit on the Home tab when your pick comes up.
-  Right: a banner tells you it's your turn (with your phone's usual notification sound). Open
-  the draft room and the clock is already highlighted, "You're on the clock".
+- [ ] **12. Your turn while you're elsewhere.** Sit on the Home tab, app open, when your pick
+  comes up. Right: a banner tells you it's your turn, and the phone buzzes and plays the chime
+  once (in silent mode, just the buzz). Open the draft room: the clock is already highlighted,
+  "You're on the clock", with no second buzz.
 
 ## Matchup
 
@@ -87,7 +88,7 @@ to go, what you need for it, and what right looks like. Tick it when it does tha
   preview shows the league's name, managers, draft time, stakes and season, and no "Run by …". If
   the league is full: "… Ask your commissioner if they can make room."
 
-## Run it back: only if the switch is ON [2+ accounts, a finished league]
+## Run it back [2+ accounts, a finished league]
 
 - [ ] **22. The ask.** As commissioner, start Run it back on a finished league. Right: each
   member gets "{your name} is running it back. Are you in?" on that league's Home and League tab.
