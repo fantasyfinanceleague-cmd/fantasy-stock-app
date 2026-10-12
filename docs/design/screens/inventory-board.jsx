@@ -77,7 +77,7 @@
         <Group id="join-league" code="1.2.0" name="Join a league" job="A new player has an invite code: find the league, see what it is, join it. Replaces the legacy join-league screen. All copy here is new."
           notes={[
             'Reached from "Join with code" in Your leagues, the empty Home and Get started. One field, one button: "Find league" looks the code up (preview-league); nothing is joined until the preview\'s Join button.',
-            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, commissioner, managers (count, not faces), draft time, stakes, season length.',
+            'The preview IS the confirmation (no alert after it). It shows only what preview-league returns: name, managers (count, not faces), draft time, stakes, season length. No commissioner name before joining (Giorgio, 2026-10-11, #call-join-commissioner A).',
             'Every refusal keeps the league on screen when the server found it, so the reason names the league. A bad code is the only error under the field.',
             <>Refusals not framed, same Alert card under the preview: <b>invite_expired</b> "This invite has expired. Ask your commissioner for a new code." · <b>season_completed</b> "{'{League}'}'s season is over. Ask your commissioner whether they're running it back." · <b>no connection</b> "Couldn't reach the league. Check your connection, then try again." (under the field).</>,
             <>Backend: the stakes line needs the per-slot amount from preview-league, not just stake_mode. (A manager who leaves before the draft is deleted and rejoins with the code; nobody leaves after the draft, so there is no "left this season" case.)</>,
@@ -385,6 +385,34 @@
               <li><b>(d) The 9:30 refusals use a stock you could buy</b>, so "Market's open: just buy it." is always true.</li>
               <li><b>Also drawn as ruled with the Planner:</b> the lost ending names the winner and one reason ("lower in the standings"); the waiver order is visible to the league; claims are blind and holdings visible ("Owned by …" unchanged).</li>
               <li><b>Sample data.</b> The brief's AAPL examples are drawn with the board's own stocks: AMGN paid by selling NVDA (both in the $200–$400 tier, the swap a tier league allows), and LOW from the budget. The waiver order and Tier Cup's budget are sample.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section className="b-sec" id="call-join-commissioner" aria-labelledby="call-join-commissioner-h">
+          <header className="b-sec__head">
+            <span className="b-sec__n b-sec__n--code">1.2.0</span>
+            <div>
+              <h2 id="call-join-commissioner-h">Decided: the commissioner's name before you join</h2>
+              <p className="b-job"><b>Decided by Giorgio (2026-10-11): A.</b> No commissioner name before joining. Your rule (2026-10-08): "we cannot allow a user to see any information outside of the name/avatar of another member in their league (email, etc) or any info about users not in their league." Someone holding an invite code isn't in the league yet, but today's Join preview shows "Run by {'{commissioner}'}", and the full-league message names them too. Serie A Traders, previewed with code SERIEA7.</p>
+            </div>
+          </header>
+          <h3 className="b-sub">✓ A · No name before joining (chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="✓ A · No name before joining (chosen)" note={'The "Run by" line goes; nothing replaces it (the code above the title already says how you got here). Everything else is unchanged.'}><I.JoinCommishCall v="A" /></Fit>
+            <Fit caption="✓ A · League full (chosen)" note={'NEW copy: "Ask your commissioner if they can make room." ("your commissioner" as in the app\'s other pre-join messages, e.g. "Ask your commissioner for a new code.")'}><I.JoinCommishCall v="A" full /></Fit>
+          </div>
+          <h3 className="b-sub">B · Keep the name (not chosen)</h3>
+          <div className="b-concepts b-concepts--three">
+            <Fit caption="B · Keep the name (not chosen)" note={'"Run by Roberto B." stays, on the grounds that the code came from them. No copy change.'}><I.JoinCommishCall v="B" /></Fit>
+            <Fit caption="B · League full (not chosen)" note={'"Ask Roberto B. if they can make room." No copy change.'}><I.JoinCommishCall v="B" full /></Fit>
+          </div>
+          <div className="b-ask">
+            <h3>Decided: A (Giorgio, 2026-10-11)</h3>
+            <ul>
+              <li><b>A is your rule as written.</b> Before joining, the commissioner is a user not in your league, so their name is out. B adds an exception ("the code came from them") the rule doesn't have, and a code can be forwarded by anyone.</li>
+              <li><b>Nothing you need is lost.</b> The name, managers, draft time, stakes and season are all still there to decide on. You see the commissioner's name the moment you join.</li>
+              <li><b>For the build, A is a server change as well as copy:</b> the preview's data stops carrying the commissioner's name, so no client can show it. Hiding it only on screen would still send it to the phone. It also retires the app's "Ask Unknown if they can make room" fallback (final sweep S-13).</li>
             </ul>
           </div>
         </section>

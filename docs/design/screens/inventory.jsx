@@ -2488,11 +2488,12 @@
     );
   }
   /** The league preview. block: null (joinable) | 'full' | 'drafted' | 'member'. */
+  // No commissioner name before joining (Giorgio, 2026-10-11, #call-join-commissioner A).
   function JoinPreview({ block = null }) {
     const P = PREVIEW;
     const members = block === 'full' ? P.max : P.members;
     const msg = {
-      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask ${P.commish} if they can make room.`,
+      full: `${P.name} is full: ${P.max} of ${P.max} managers. Ask your commissioner if they can make room.`,
       drafted: `${P.name} has already drafted, so it can't take new managers this season.`,
       member: `You're already in ${P.name}.`,
     }[block];
@@ -2503,7 +2504,6 @@
           <div style={{ display: 'grid', gap: 4 }}>
             <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Invite code SERIEA7</span>
             <h2 className="ks-head__title" style={{ fontSize: 30 }}>{P.name}</h2>
-            <span className="ks-callout ks-muted">Run by {P.commish}</span>
           </div>
           <Card><Sum rows={[
             ['Managers', `${members} of ${P.max}`],
@@ -3715,6 +3715,42 @@
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: the commissioner's name on the Join preview, before you join.
+  // Giorgio, 2026-10-08 (PRODUCT_RULES, "Who can see other players"): "we
+  // cannot allow a user to see any information outside of the name/avatar
+  // of another member in their league (email, etc) or any info about users
+  // not in their league." A = the rule as written; B = today's preview.
+  // ═════════════════════════════════════════════════════════════════════
+  function JoinCommishCall({ v = 'A', full }) {
+    const P = PREVIEW;
+    const members = full ? P.max : P.members;
+    const msg = v === 'A'
+      ? `${P.name} is full: ${P.max} of ${P.max} managers. Ask your commissioner if they can make room.`
+      : `${P.name} is full: ${P.max} of ${P.max} managers. Ask ${P.commish} if they can make room.`;
+    return (
+      <Device noTabs label={`League preview, option ${v}${full ? ', full' : ''}`}>
+        <Back label="Invite code" />
+        <div className="ks-pad ks-stack">
+          <div style={{ display: 'grid', gap: 4 }}>
+            <span className="ks-tag" style={{ color: 'var(--c-text-2)' }}>Invite code SERIEA7</span>
+            <h2 className="ks-head__title" style={{ fontSize: 30 }}>{P.name}</h2>
+            {v === 'B' ? <span className="ks-callout ks-muted">Run by {P.commish}</span> : null}
+          </div>
+          <Card><Sum rows={[
+            ['Managers', `${members} of ${P.max}`],
+            ['Draft', P.draft],
+            ['Stakes', P.stakes],
+            ['Season', P.weeks],
+          ]} /></Card>
+          {full ? <Alert>{msg}</Alert> : null}
+          {full ? <span className="ks-btn ks-btn--secondary">Try another code</span> : <span className="ks-btn">Join {P.name}</span>}
+          {full ? null : <span className="ks-caption" style={{ textAlign: 'center' }}>You can leave any time before the draft.</span>}
+        </div>
+      </Device>
+    );
+  }
+
   window.KSInventory = {
     SignIn, SignUp, SignUpPaused, Forgot, Onboarding, GetStarted, PickUsername, LeagueSheet, Profile, Appearance, ChangePassword, EmptyHome,
     HomePreDraft, HomeDrafting, HomePreSeason, HomeClosed, HomeUnpriced, HomeScoring, HomeComplete, HomeCompleteOther, DraftComplete,
@@ -3731,6 +3767,7 @@
     SellCallSearch, SellCallSheet, SellCallPortfolio, MedalsCall, ManagerRowCall,
     WatchPortfolio, WatchOtherLeague, WatchTab, SaveResults, SaveSheet, DraftQueueSave,
     ClaimSheet, ClaimComposer, ClaimsList, ClaimEnding, HomeClaimsHook,
+    JoinCommishCall,
     WebHome, WebPortfolio, WebSettings,
   };
 })();
