@@ -1,14 +1,22 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { supabase } from './supabase';
-import { foregroundPresentation, foregroundQuiet } from './foregroundQuiet';
+import { foregroundQuiet } from './foregroundQuiet';
+import { foregroundPushPlan } from './game/yourTurnPush';
+import { alertYourTurn } from './game/yourTurnAlert';
 
 // Configure how notifications are displayed when app is in foreground
 // Foreground banners stay quiet while the app already shows what they'd say
 // (your pick clock in the draft room; 3e's trade review): lib/foregroundQuiet.ts.
+// A "your turn" push buzzes + chimes once per turn, wherever you are in the open app,
+// shared with the draft room; its banner plays no OS sound (lib/game/yourTurnPush.ts).
 Notifications.setNotificationHandler({
-  handleNotification: async () => foregroundPresentation(foregroundQuiet()),
+  handleNotification: async (notification) => {
+    const plan = foregroundPushPlan(notification.request.content.data, foregroundQuiet(), AppState.currentState === 'active');
+    if (plan.alertKey) alertYourTurn(plan.alertKey);
+    return plan.presentation;
+  },
 });
 
 /**

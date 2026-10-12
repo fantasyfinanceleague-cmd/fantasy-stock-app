@@ -588,8 +588,8 @@ export async function notifyNextPicker(
     }
     if (!target.token) return 'no_token';
     if (!target.enabled) return 'disabled';
-    // League name from the leagues row loadDraftContext read: never caller input.
-    const sent = await push.sendExpoPush(target.token, draftTurnMessage(String(ctx.league.name)));
+    // League name and id from the leagues row loadDraftContext read: never caller input.
+    const sent = await push.sendExpoPush(target.token, draftTurnMessage(String(ctx.league.name), leagueId, next.pickNumber));
     if (!sent.sent) {
       console.error('[turn-push] push not sent', leagueId, next.pickNumber, sent.reason);
       return 'send_failed';

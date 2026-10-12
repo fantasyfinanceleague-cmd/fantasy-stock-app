@@ -33,8 +33,8 @@ Deno.test('your pick clock: only on your turn, only while it runs', () => {
   assertEquals(ownPickClockRunning(false, 'on_clock'), false);
 });
 
-Deno.test('wiring: the handler asks foregroundPresentation; the room sets and clears its reason (source guards)', () => {
-  assertEquals(SOURCES['lib/notifications.ts'].includes('handleNotification: async () => foregroundPresentation(foregroundQuiet()),'), true);
+Deno.test('wiring: the handler asks foreground quiet (via foregroundPushPlan); the room sets and clears its reason (source guards)', () => {
+  assertEquals(SOURCES['lib/notifications.ts'].includes("const plan = foregroundPushPlan(notification.request.content.data, foregroundQuiet(), AppState.currentState === 'active');"), true);
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes("setForegroundQuiet('own_pick_clock', quiet);"), true);
   assertEquals(room.includes("return () => setForegroundQuiet('own_pick_clock', false);"), true);

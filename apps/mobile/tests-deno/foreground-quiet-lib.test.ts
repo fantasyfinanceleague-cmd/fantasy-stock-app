@@ -35,6 +35,6 @@ Deno.test('your pick clock: only on your turn, only while it runs', () => {
   assertEquals(ownPickClockRunning(false, 'on_clock'), false);
 });
 
-Deno.test('wiring: the foreground handler asks foregroundPresentation (source guard, main copy)', () => {
-  assertEquals(notificationsSrc.includes('handleNotification: async () => foregroundPresentation(foregroundQuiet()),'), true);
+Deno.test('wiring: the foreground handler asks foreground quiet, through foregroundPushPlan (source guard, main copy)', () => {
+  assertEquals(notificationsSrc.includes("const plan = foregroundPushPlan(notification.request.content.data, foregroundQuiet(), AppState.currentState === 'active');"), true);
 });

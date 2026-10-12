@@ -9,11 +9,14 @@
  */
 import type { PushMessage } from './push.ts';
 
-/** "Your turn" in the draft. The pre-2026-07-30 client copy, verbatim. */
-export function draftTurnMessage(leagueName: string): PushMessage {
+/** "Your turn" in the draft. The pre-2026-07-30 client copy, verbatim.
+ * `league_id` + `pick_number` are the app's once-per-turn key: a foreground push
+ * and the open draft room share one buzz + chime per turn (apps/mobile
+ * lib/game/yourTurnPush.ts). Data only, never shown. */
+export function draftTurnMessage(leagueName: string, leagueId: string, pickNumber: number): PushMessage {
   return {
     title: "It's Your Turn! 🏈",
     body: `Time to make your pick in ${leagueName}`,
-    data: { type: 'draft_turn', screen: 'draft' },
+    data: { type: 'draft_turn', screen: 'draft', league_id: leagueId, pick_number: pickNumber },
   };
 }
