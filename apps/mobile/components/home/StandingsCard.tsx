@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
+import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Money } from '@/components/sp/Money';
 import { useMotion } from '@/components/sp/motion';
 import { STANDINGS_CARD_TITLE, standingsThroughWeekCaption } from '@/lib/home/homeCopy';
 import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
+import { STANDINGS_HREF } from '@/lib/home/calmHome';
 
 // Stockpile — <StandingsCard> (Phase 3b-2, board "Home"). Top 3 plus the
 // caller's own row if outside it. Rank/record/gain come STRAIGHT from
@@ -18,6 +22,10 @@ import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 // league_standings_ranked only, never re-sort on the client").
 //
 // H4: rows use `stagger.delayFor(i)` on enter (capped at 8, per the token).
+//
+// A calm Home (2026-10-12): the whole card opens League on Standings (a chevron after
+// "Through Week N"); League reads `segment`, so it lands there even if it was left on
+// Schedule. The rows are unchanged.
 
 export interface StandingRow {
   userId: string;
@@ -58,12 +66,16 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
   const displayed = showMineSeparately ? [...top3, mine] : top3;
 
   return (
+    <PressableScale onPress={() => router.push(STANDINGS_HREF)} accessibilityRole="button">
     <Card style={styles.card}>
       <View style={styles.header}>
         <Text variant="headline">{STANDINGS_CARD_TITLE}</Text>
-        <Text variant="caption" tone="secondary">
-          {standingsThroughWeekCaption(throughWeek)}
-        </Text>
+        <View style={styles.headerRight}>
+          <Text variant="caption" tone="secondary">
+            {standingsThroughWeekCaption(throughWeek)}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.text2} />
+        </View>
       </View>
       <View>
         {displayed.map((r, i) => {
@@ -100,6 +112,7 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
         })}
       </View>
     </Card>
+    </PressableScale>
   );
 }
 
@@ -112,7 +125,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[2],
   },
   row: {
     flexDirection: 'row',

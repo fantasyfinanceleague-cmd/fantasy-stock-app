@@ -13,7 +13,8 @@ Deno.test('the draw-in is keyed on the window, never on the series values (sourc
   const chart = SOURCES['components/home/SeasonChart.tsx'];
   assert(chart.includes('key: drawKey,'));
   assert(!chart.includes("key: series.join(',')"));
-  assert(SOURCES['components/home/SeasonCard.tsx'].includes('drawKey={window}'));
+  // A calm Home: the chart lives in the hero block (HomeSeason), not the old Season card.
+  assert(SOURCES['components/home/HomeSeason.tsx'].includes('drawKey={window}'));
   // Why the key matters: useDrawIn restarts from 0 whenever its key changes.
   const hook = SOURCES['lib/chart/useDrawIn.ts'];
   assert(hook.includes('setProgress(0);'));

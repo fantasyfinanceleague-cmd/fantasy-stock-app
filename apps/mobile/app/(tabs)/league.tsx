@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { View, StyleSheet, Alert } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { radius, space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -45,7 +45,8 @@ import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { useBracket } from '@/lib/game/useBracket';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { leagueSegmentFromParam } from '@/lib/home/calmHome';
 import { useLeagueStandings } from '@/lib/game/useLeagueStandings';
 import { useAuth } from '@/lib/useAuth';
 import { buildStandingsRows, standingsView, type StandingsRow } from '@/lib/game/standings';
@@ -84,6 +85,16 @@ export default function LeagueScreen() {
   const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId } = useLeagueContext();
   // League's segments: Standings | Schedule (the board, D4 = keep). History is not built yet.
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
+  // Home's Standings card opens League on Standings (?segment=standings), the way Matchup
+  // reads 'all'. The tab stays mounted, so the param is applied when it arrives, then
+  // cleared: a second tap from Home (League left on Schedule meanwhile) is a new value.
+  const { segment: segmentParam } = useLocalSearchParams<{ segment?: string }>();
+  useEffect(() => {
+    const s = leagueSegmentFromParam(segmentParam);
+    if (!s) return;
+    setSegment(s);
+    router.setParams({ segment: undefined });
+  }, [segmentParam]);
   // UX rule 7: your standings row, pinned at the bottom while it's below the fold.
   const [pinnedRow, setPinnedRow] = useState<StandingsRow | null>(null);
   const [endingFor, setEndingFor] = useState<string | null>(null);

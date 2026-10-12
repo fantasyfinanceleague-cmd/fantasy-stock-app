@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -30,10 +30,11 @@ import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { PICK_A_TIME_HOME, SET_DRAFT_TIME, homeNoDateBlock, homeSetsDraftTime } from '@/lib/game/draftTimeSheet';
 import {
-  pickClockLine, BUILD_YOUR_QUEUE, GO_TO_DRAFT_ROOM, PRE_DRAFT_TAG, PRE_DRAFT_CHIP,
+  pickClockLine, BUILD_YOUR_QUEUE, GO_TO_DRAFT_ROOM, PRE_DRAFT_TAG,
   MEMBERS_TITLE, membersJoinedCaption, membersNeededCaption, INVITE_CODE_LABEL, NO_BUYING_BEFORE_DRAFT,
   DRAFT_ORDER_WAITING_TAG, orderWaitingLine, managersProgressCaption,
 } from '@/lib/home/homeCopy';
+import { preDraftBlocks, preDraftChipShown, type PreDraftBlock } from '@/lib/home/calmHome';
 
 // Stockpile — <PreDraftCard> (Phase 3b-2, states 6 — "before the draft" +
 // "waiting for managers"). Rebuilt to match the board's HomePreDraft/
@@ -49,6 +50,11 @@ import {
 // draft" at 0:00, the commissioner's needs-you card when the draft is at risk
 // (board ReconfirmHome: on top of the draft card), and postponed for everyone.
 // Home never asks the server to start (the lobby does; the server does anyway).
+//
+// A calm Home (2026-10-12): two cards, not three. The countdown leads (score.xl, the
+// screen's one big number), then the date (callout 700); the "Pre-draft" chip went
+// ("Postponed" stays); the order line has no dot; the no-buying line is a centred
+// caption under the button, inside the draft card (lib/home/calmHome preDraftBlocks).
 
 export interface PreDraftCardProps {
   leagueId: string;
@@ -120,6 +126,96 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   const setsTime = homeSetsDraftTime(!!view?.noDate, ds.isCommissioner, repliesPending);
   const [picking, setPicking] = useState(false);
 
+  const blocks = preDraftBlocks({
+    memberPostponed: !!view?.memberPostponed,
+    noDate: !!view?.noDate,
+    date: !!dateLabel,
+    roomOpenTag: !!countdown && view?.countdown === 'room_open',
+    countdown: !!clock,
+    starting: !!countdown?.starting,
+    pick: !!pick,
+    pickClock: !postponed,
+    // No draft time: no order time either (two sources disagreeing show neither).
+    orderSet: !!(!postponed && !roomOpen && !view?.noDate && !loading && !waiting && finalizeAt),
+    waiting: !loading && !!waiting,
+    buttons: !waiting,
+  });
+
+  function renderBlock(b: PreDraftBlock): ReactNode {
+    switch (b) {
+      case 'postponedTitle':
+        return <Text variant="title">{memberPostponedCopy(commissionerName, 'home').title}</Text>;
+      case 'postponedLine':
+        return <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName, 'home').line}</Text>;
+      case 'noDate':
+        // GS-11: no draft block while a renewal's replies are pending (the counts card says why).
+        return homeNoDateBlock(true, repliesPending) ? (
+          <View style={styles.stack}>
+            <Text variant="title">{NO_DATE_TITLE}</Text>
+            <Text variant="callout" tone="secondary">{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}</Text>
+          </View>
+        ) : null;
+      case 'roomOpenTag':
+        return <Text variant="tag" style={{ color: colors.liveText }}>{countdown!.tag}</Text>;
+      case 'countdown':
+        return <Text variant="score.xl" style={styles.countdown}>{clock}</Text>;
+      case 'date':
+        return <Text variant="callout" style={styles.bold}>{dateLabel}</Text>;
+      case 'starting':
+        return (
+          <View style={styles.starting}>
+            <ActivityIndicator color={colors.text} />
+            <Text variant="callout" style={styles.bold}>{countdown!.starting}</Text>
+          </View>
+        );
+      case 'pick':
+        return <Text variant="callout" style={[styles.bold, { color: colors.youText }]}>{pick}</Text>;
+      case 'pickClock':
+        return <Text variant="callout" tone="secondary">{pickClockLine(pickSeconds, numRounds)}</Text>;
+      case 'orderSet':
+        return <Text variant="callout" tone="secondary">{orderSetLine(finalizeAt!)}</Text>;
+      case 'waiting':
+        return (
+          <View style={[styles.orderWaiting, { backgroundColor: colors.inset }]}>
+            <Text variant="tag" style={{ color: colors.liveText }}>
+              {DRAFT_ORDER_WAITING_TAG}
+            </Text>
+            <Text variant="callout" style={styles.orderWaitingLine}>
+              {orderWaitingLine(minMembers)}
+            </Text>
+            <View style={styles.progressRow} accessibilityLabel={`${memberCount} of ${minMembers} managers`}>
+              {Array.from({ length: minMembers }, (_, i) => (
+                <View key={i} style={[styles.progressSeg, { backgroundColor: i < memberCount ? colors.youText : colors.track }]} />
+              ))}
+            </View>
+            <Text variant="caption" style={styles.progressCaption}>
+              {managersProgressCaption(memberCount, minMembers)}
+            </Text>
+          </View>
+        );
+      case 'buttons':
+        return setsTime ? (
+          <View style={styles.stack}>
+            <Button label={SET_DRAFT_TIME} onPress={() => setPicking(true)} variant="primary" status={auto.fixes.busy ? 'loading' : 'idle'} />
+            <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="secondary" />
+            {auto.fixes.fixError ? (
+              <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{auto.fixes.fixError}</Text>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.primary}>
+            <Button label={roomOpen ? GO_TO_DRAFT_ROOM : BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" />
+          </View>
+        );
+      case 'noBuying':
+        return (
+          <Text variant="caption" tone="secondary" style={styles.noBuying}>
+            {NO_BUYING_BEFORE_DRAFT}
+          </Text>
+        );
+    }
+  }
+
   return (
     <>
       {view?.blockers ? (
@@ -137,92 +233,15 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
           <Text variant="tag" style={{ color: colors.liveText }}>
             {view?.memberPostponed ? memberPostponedCopy(commissionerName, 'home').tag : PRE_DRAFT_TAG}
           </Text>
-          <View style={[styles.chip, { backgroundColor: colors.inset }]}>
-            <Text variant="tag" tone="secondary">
-              {postponed ? 'Postponed' : PRE_DRAFT_CHIP}
-            </Text>
-          </View>
-        </View>
-
-        {view?.memberPostponed ? (
-          <>
-            <Text variant="title">{memberPostponedCopy(commissionerName, 'home').title}</Text>
-            <Text variant="callout" tone="secondary">{memberPostponedCopy(commissionerName, 'home').line}</Text>
-          </>
-        ) : view?.noDate ? (
-          // GS-11: no draft block while a renewal's replies are pending (the counts card says why).
-          homeNoDateBlock(true, repliesPending) ? (
-            <>
-              <Text variant="title">{NO_DATE_TITLE}</Text>
-              <Text variant="callout" tone="secondary">{setsTime ? PICK_A_TIME_HOME : noDateCopy(ds.isCommissioner, commissionerName)}</Text>
-            </>
-          ) : null
-        ) : (
-          <>
-            {dateLabel ? <Text variant="title">{dateLabel}</Text> : null}
-            {countdown && view?.countdown === 'room_open' ? (
-              <Text variant="tag" style={{ color: colors.liveText }}>
-                {countdown.tag}
+          {preDraftChipShown(postponed) ? (
+            <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+              <Text variant="tag" tone="secondary">
+                Postponed
               </Text>
-            ) : null}
-            {clock ? (
-              <Text variant="score.lg" style={styles.countdown}>
-                {clock}
-              </Text>
-            ) : null}
-            {countdown?.starting ? (
-              <View style={styles.starting}>
-                <ActivityIndicator color={colors.text} />
-                <Text variant="callout" style={styles.bold}>{countdown.starting}</Text>
-              </View>
-            ) : null}
-            {pick ? <Text variant="callout" style={[styles.bold, { color: colors.youText }]}>{pick}</Text> : null}
-          </>
-        )}
-        {!postponed ? (
-          <Text variant="callout" tone="secondary">
-            {pickClockLine(pickSeconds, numRounds)}
-          </Text>
-        ) : null}
-
-        {/* No draft time: no order time either (two sources disagreeing show neither). */}
-        {!postponed && !roomOpen && !view?.noDate && !loading && !waiting && finalizeAt ? (
-          <View style={styles.orderRow}>
-            <View style={[styles.dot, { backgroundColor: colors.liveText }]} />
-            <Text variant="callout">{orderSetLine(finalizeAt)}</Text>
-          </View>
-        ) : null}
-
-        {!loading && waiting ? (
-          <View style={[styles.orderWaiting, { backgroundColor: colors.inset }]}>
-            <Text variant="tag" style={{ color: colors.liveText }}>
-              {DRAFT_ORDER_WAITING_TAG}
-            </Text>
-            <Text variant="callout" style={styles.orderWaitingLine}>
-              {orderWaitingLine(minMembers)}
-            </Text>
-            <View style={styles.progressRow} accessibilityLabel={`${memberCount} of ${minMembers} managers`}>
-              {Array.from({ length: minMembers }, (_, i) => (
-                <View key={i} style={[styles.progressSeg, { backgroundColor: i < memberCount ? colors.youText : colors.track }]} />
-              ))}
             </View>
-            <Text variant="caption" style={styles.progressCaption}>
-              {managersProgressCaption(memberCount, minMembers)}
-            </Text>
-          </View>
-        ) : null}
-
-        {!waiting && setsTime ? (
-          <>
-            <Button label={SET_DRAFT_TIME} onPress={() => setPicking(true)} variant="primary" status={auto.fixes.busy ? 'loading' : 'idle'} />
-            <Button label={BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="secondary" />
-            {auto.fixes.fixError ? (
-              <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{auto.fixes.fixError}</Text>
-            ) : null}
-          </>
-        ) : !waiting ? (
-          <Button label={roomOpen ? GO_TO_DRAFT_ROOM : BUILD_YOUR_QUEUE} onPress={() => router.push('/(tabs)/league')} variant="primary" />
-        ) : null}
+          ) : null}
+        </View>
+        {blocks.map((b) => <View key={b}>{renderBlock(b)}</View>)}
       </Card>
       )}
 
@@ -270,13 +289,6 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
         onClose={() => setPicking(false)}
       />
 
-      {!waiting ? (
-        <Card style={styles.card}>
-          <Text variant="callout" tone="secondary">
-            {NO_BUYING_BEFORE_DRAFT}
-          </Text>
-        </Card>
-      ) : null}
     </>
   );
 }
@@ -286,6 +298,16 @@ const styles = StyleSheet.create({
     padding: space[6],
     gap: space[3],
     borderRadius: 14,
+  },
+  stack: {
+    gap: space[3],
+  },
+  // The board's button sits a little apart from the lines above it.
+  primary: {
+    marginTop: space[2],
+  },
+  noBuying: {
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -307,19 +329,6 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: '700',
-  },
-  orderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: space[2],
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    // S2 (Design Lead gate, 2026-10-05): with flex-start the dot must sit on
-    // the first line of a wrapped sentence. (callout's 18 pt line - 6 pt dot) / 2.
-    marginTop: 6,
   },
   orderWaiting: {
     padding: space[4],

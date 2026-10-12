@@ -20,8 +20,6 @@ import { ordinal } from './ordinal';
 // "+$343.59 · +2.86% season gain · +$121.26 today"
 export const HERO_SEASON_GAIN_LABEL = 'season gain'; // board
 export const HERO_TODAY_LABEL = 'today'; // board
-export const SEASON_CARD_TITLE = 'Season'; // board
-export const SEASON_CARD_CAPTION = 'Season gain, week by week'; // board
 /** The chart's zero-baseline label (S4, Design Lead, 2026-09-30) — board
  * verbatim: `<text ...>$0</text>` at the dashed zero line, screens.jsx's
  * GainChart. Always the literal string, never formatMoney(0): the axis
@@ -59,14 +57,10 @@ export function standingsThroughWeek(phase: PhaseResult): number {
 
 // ── This-week card (state 1/2/3/4) — board, verbatim ───────────────────────
 export const THIS_WEEK_TAG = 'This week'; // board
-export function thisWeekLiveChip(week: number): string {
-  return `Week ${week} · Live`; // board
-}
-/** B7 (Design Lead ruling, 2026-09-30): a playoff week's chip reads just
- * "Live" with the dot -- the tag already carries the round name (e.g.
- * "Semifinals"), so "Week 15 · Live" repeats the week number for no
- * reason and names nothing the tag doesn't already say. */
-export const PLAYOFF_LIVE_CHIP = 'Live'; // board
+/** The live chip reads just "Live" with the dot (a calm Home, 2026-10-12; first ruled
+ * for playoff weeks as B7, 2026-09-30): the week (or round) is already in the hero's
+ * meta and the card's tag, so "Week 6 · Live" said it a second time. */
+export const LIVE_CHIP = 'Live'; // board
 export const YOU_LABEL = 'You'; // board
 export function vsOpponentLabel(oppName: string): string {
   return `vs ${oppName}`; // board
@@ -164,7 +158,6 @@ export function preSeasonStartsLabel(startsAtIso: string | null): string {
 // earlier pass here wrongly accepted them as such. The real on-screen
 // copy is the card's tag + chip pair, below.
 export const PRE_DRAFT_TAG = 'Draft'; // board
-export const PRE_DRAFT_CHIP = 'Pre-draft'; // board
 export const DRAFTING_TAG = 'Draft is live'; // board
 export const DRAFTING_CHIP = 'Drafting'; // board
 export function pickClockLine(pickSeconds: number, rounds: number): string {

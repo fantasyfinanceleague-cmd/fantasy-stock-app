@@ -65,10 +65,17 @@ export function iconPointSize(role: IconRole, fontScale: number): number {
   return Math.round(ICON_SIZE[role] * scale * 10) / 10;
 }
 
-/** The medallion's disc at a given Dynamic Type scale, scaled with its glyph (the heading's factor, capped). */
-export function medallionDiscPt(fontScale: number): number {
+/** The medallion's disc at a given Dynamic Type scale, scaled with its glyph (the heading's factor, capped).
+ * `basePt` is the disc at standard size (72 by default; Home's season-over card is 60). */
+export function medallionDiscPt(fontScale: number, basePt: number = MEDALLION_DISC_PT): number {
   const scale = Math.min(Math.max(fontScale, 1), MEDALLION_MAX_SCALE);
-  return Math.round(MEDALLION_DISC_PT * scale);
+  return Math.round(basePt * scale);
+}
+
+/** The medallion's glyph for a disc of `basePt`: half the disc, as the 36-in-72 default. */
+export function medallionGlyphPt(fontScale: number, basePt: number = MEDALLION_DISC_PT): number {
+  const scale = Math.min(Math.max(fontScale, 1), MEDALLION_MAX_SCALE);
+  return Math.round(ICON_SIZE.medallion * (basePt / MEDALLION_DISC_PT) * scale);
 }
 
 /** Accessibility for an icon: decorative (hidden from VoiceOver) unless it has a label. */

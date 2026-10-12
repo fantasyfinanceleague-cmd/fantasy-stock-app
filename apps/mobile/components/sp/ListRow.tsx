@@ -24,15 +24,17 @@ export interface ListRowProps {
   onPress?: () => void;
   /** Hides the trailing chevron even when `onPress` is set. */
   hideChevron?: boolean;
+  /** Set false for the last row inside a card, which has no line under it. Default true. */
+  divider?: boolean;
 }
 
-export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron }: ListRowProps) {
+export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron, divider = true }: ListRowProps) {
   const { colors } = useTheme();
   const chevronColor = colors.text2;
   const dividerColor = colors.line;
 
   const content = (
-    <View style={[styles.row, { borderBottomColor: dividerColor }]}>
+    <View style={[styles.row, divider ? { borderBottomColor: dividerColor } : styles.noDivider]}>
       {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.titles}>
         <Text variant="body" numberOfLines={1}>
@@ -66,6 +68,9 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: space[4],
+  },
+  noDivider: {
+    borderBottomWidth: 0,
   },
   leading: {
     alignItems: 'center',

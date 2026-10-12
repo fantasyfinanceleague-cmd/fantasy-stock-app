@@ -12,7 +12,13 @@ const home = SOURCES['app/(tabs)/index.tsx'];
 const wrapper = SOURCES['components/home/HomeLeagueTransition.tsx'];
 
 Deno.test('Home passes its section gap to the wrapper that actually holds the sections', () => {
-  assertEquals(/<HomeLeagueTransition key=\{activeLeagueId \?\? 'none'\} style=\{\{ gap: space\[6\] \}\}>/.test(home), true);
+  // A calm Home (2026-10-12): 24pt between blocks (space[7]; was space[6], 20pt).
+  assertEquals(/<HomeLeagueTransition key=\{activeLeagueId \?\? 'none'\} style=\{\{ gap: space\[7\] \}\}>/.test(home), true);
+});
+
+Deno.test('the block gap is 24pt', async () => {
+  const { space } = await import('../constants/tokens/space.ts');
+  assertEquals(space[7], 24);
 });
 
 Deno.test('the wrapper applies the caller style to the Animated.View that contains the sections', () => {

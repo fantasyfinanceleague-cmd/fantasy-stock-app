@@ -13,7 +13,7 @@ import type { League } from '@/lib/LeagueContext';
 import { useHomeLeague } from '@/lib/home/useHomeLeague';
 import { HomeHero } from '@/components/home/HomeHero';
 import { ThisWeekCard } from '@/components/home/ThisWeekCard';
-import { SeasonCard } from '@/components/home/SeasonCard';
+import { HomeSeason } from '@/components/home/HomeSeason';
 import { StandingsCard, type StandingRow } from '@/components/home/StandingsCard';
 import { PreDraftCard } from '@/components/home/PreDraftCard';
 import { DraftingCard } from '@/components/home/DraftingCard';
@@ -30,12 +30,14 @@ import { PhaseTransition } from '@/components/home/PhaseTransition';
 import { HomeLeagueTransition } from '@/components/home/HomeLeagueTransition';
 import type { PhaseResult } from '@/lib/home/homePhase';
 import {
-  MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, PLAYOFF_LIVE_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
+  MARKET_CLOSED_CHIP, SCORING_CHIP, SCORED_CHIP, LIVE_CHIP, endsAtLabel, marketClosedAt, marketResumesAt,
   PRE_SEASON_CAPTION, PRE_SEASON_TAG, PRE_SEASON_CHIP, preSeasonStartsLabel, BYE_MESSAGE, byeNextWeekLabel,
   byeToRoundLabel, eliminatedLabel, SEE_THE_BRACKET, scoredResultLine, nextWeekStartsLabel,
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
   standingsThroughWeek,
 } from '@/lib/home/homeCopy';
+import { seasonOverPrimary } from '@/lib/home/calmHome';
+import { resultFromGains } from '@/lib/home/weekMarks';
 
 /** Run it back stays off until its backend (PR #94) is live: see runItBackEnabled. */
 const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);
@@ -49,7 +51,8 @@ function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; ri
   const tag = phase.kind !== 'missed_playoffs' && 'isPlayoff' in phase && phase.isPlayoff && 'round' in phase && phase.round ? phase.round : THIS_WEEK_TAG;
   switch (phase.kind) {
     case 'live_open':
-      return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: phase.isPlayoff ? PLAYOFF_LIVE_CHIP : `Week ${week} · Live`, tag };
+      // A calm Home: "Live", playoff or not. The week is in the hero's meta.
+      return { isLive: true, rightLabel: endsAtLabel(phase.weekEnd), liveChipLabel: LIVE_CHIP, tag };
     case 'live_closed':
       // R2 (Design Lead, 2026-09-30): the actual last-closed session, not
       // `weekEnd` (always Friday) -- a Tuesday-evening after-hours state
@@ -133,7 +136,7 @@ function HomeBody({
     return <HomeSkeleton />;
   }
 
-  const { phase, hero, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;
+  const { phase, hero: heroVm, thisWeek, standings, myUserId, season, weeklyResults } = viewModel;
 
   // States 6/7: no money views at all — the draft's own cards.
   if (phase.kind === 'pre_draft') {
@@ -159,6 +162,12 @@ function HomeBody({
   // component's own doc).
   if (phase.kind === 'complete') {
     const myStanding = standings.find((s) => s.user_id === myUserId);
+    // One primary on the screen: Run it back (commissioner) or the ask (member).
+    const primary = seasonOverPrimary({
+      runItBackOn: RUN_IT_BACK_ON,
+      isCommissioner: league?.commissioner_id === myUserId,
+      hasSuccessor: !!league?.successor_league_id,
+    });
     return (
       <>
       <SeasonCompleteCard
@@ -174,13 +183,14 @@ function HomeBody({
         ties={myStanding?.ties ?? 0}
         seasonGain={myStanding?.points_for ?? 0}
         playoffTeams={league?.playoff_teams ?? null}
-        // phase.numWeeks, not league.num_weeks (B7 bullet 3 -- same
-        // two-fixture-axis gap as SeasonCard's numWeeks below).
+        // phase.numWeeks, not league.num_weeks (B7 bullet 3): the value that
+        // decided this phase's own round labels. In the dev fixtures, league
+        // and phase are two independent axes with their own numbers.
         numWeeks={phase.numWeeks}
       />
-      {RUN_IT_BACK_ON && league?.commissioner_id === myUserId ? <RunItBackCard /> : null}
+      {primary === 'run_it_back' ? <RunItBackCard /> : null}
       {/* Board #run-it-back frame 1: members are asked on Home too, until they answer. */}
-      {RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? (
+      {primary === 'renewal_ask' && league?.successor_league_id ? (
         <HomeRenewalAsk
           successorId={league.successor_league_id}
           isCommissioner={false}
@@ -191,7 +201,7 @@ function HomeBody({
     );
   }
 
-  if (!hero) {
+  if (!heroVm) {
     // Shouldn't reach here (every remaining phase.kind builds the money
     // views), but never render nothing silently if it ever does.
     return (
@@ -321,52 +331,55 @@ function HomeBody({
     }
   }
 
-  const showSeasonCard = season && !['pre_season'].includes(phase.kind);
+  const showSeason = !!season && !['pre_season'].includes(phase.kind);
   // B2/B3 (Design Lead, 2026-09-30): the board has no Standings card at
   // all before the season starts — there's no record yet to show.
   const showStandingsCard = !['pre_season'].includes(phase.kind);
 
+  // The current week's posted result, when it is a scored week (its axis mark).
+  const currentScored = phase.kind === 'scored' && thisWeek ? resultFromGains(thisWeek.you.gain, thisWeek.opponent.gain) : null;
+  const hero = (
+    <HomeHero
+      leagueId={leagueId ?? ''}
+      rank={phase.kind === 'pre_season' ? null : myRow?.rank ?? 0}
+      totalPlayers={standingRows.length}
+      record={record}
+      weekOrRound={heroWeekOrRoundLabel(phase)}
+      value={heroVm.value}
+      seasonGainDollars={heroVm.seasonGainDollars}
+      seasonGainPct={heroVm.seasonGainPct}
+      today={heroVm.today}
+      unpricedValue={heroVm.unpricedValue}
+      unpricedToday={heroVm.unpricedToday}
+      preSeasonLabel={phase.kind === 'pre_season' ? preSeasonStartsLabel(phase.seasonStartsAt) : null}
+      skipEntrance={skipEntrance}
+    />
+  );
+
   return (
     <>
-      <HomeHero
-        leagueId={leagueId ?? ''}
-        rank={phase.kind === 'pre_season' ? null : myRow?.rank ?? 0}
-        totalPlayers={standingRows.length}
-        record={record}
-        weekOrRound={heroWeekOrRoundLabel(phase)}
-        value={hero.value}
-        seasonGainDollars={hero.seasonGainDollars}
-        seasonGainPct={hero.seasonGainPct}
-        today={hero.today}
-        unpricedValue={hero.unpricedValue}
-        unpricedToday={hero.unpricedToday}
-        preSeasonLabel={phase.kind === 'pre_season' ? preSeasonStartsLabel(phase.seasonStartsAt) : null}
-        skipEntrance={skipEntrance}
-      />
+      {/* A calm Home (2026-10-12): the hero block is the hero, then the season chart
+          and its range tabs, with no card (the old Season card). Team value is the
+          ONE standout number. Pre-season stays hero only. */}
+      {showSeason ? (
+        <View style={{ gap: space[3] }}>
+          {hero}
+          <HomeSeason
+            series={season!}
+            // Regular-season byes are NO RESULT (Giorgio, 2026-09-29): never
+            // coloured green/red as a win or loss; the axis reads "Bye" (or "–").
+            weekResults={weeklyResults.map((w) => ({ week: w.week, result: w.result }))}
+            currentWeek={week}
+            marketOpen={chrome.isLive}
+            // B′ (Design Lead, 2026-10-12): in the playoffs the line's end is the
+            // static dot; season gain is frozen at its regular-season total.
+            isPlayoff={'isPlayoff' in phase && !!phase.isPlayoff}
+            currentScored={currentScored}
+            skipEntrance={skipEntrance}
+          />
+        </View>
+      ) : hero}
       {middleCard ? <PhaseTransition key={phase.kind}>{middleCard}</PhaseTransition> : null}
-      {showSeasonCard ? (
-        <SeasonCard
-          series={season!}
-          // Regular-season byes are NO RESULT (Giorgio, 2026-09-29): never
-          // coloured green/red as a win or loss. S7 (Design Lead,
-          // 2026-09-30): still gets its own "Bye W6" chip, not omitted
-          // from the row entirely -- SeasonCard renders 'BYE' distinctly.
-          weekResults={weeklyResults.map((w) => ({ week: w.week, result: w.result }))}
-          currentWeek={week}
-          isLive={chrome.isLive}
-          // phase.numWeeks (not league.num_weeks): the SAME value that
-          // decided this phase's own round labels in buildHomeViewModel,
-          // so a week chip's round can never disagree with the phase's
-          // own tag/chip. In the dev fixture universe specifically,
-          // league (SHELL_FIXTURE) and phase (HOME_FIXTURE) are two
-          // independent fixture axes with their own numbers -- using
-          // league's here would silently mismatch HOME_FIXTURE's actual
-          // playoff week structure.
-          numWeeks={phase.numWeeks}
-          playoffTeams={league?.playoff_teams ?? null}
-          skipEntrance={skipEntrance}
-        />
-      ) : null}
       {showStandingsCard ? (
         <StandingsCard rows={standingRows} throughWeek={standingsThroughWeek(phase)} skipEntrance={skipEntrance} />
       ) : null}
@@ -437,7 +450,9 @@ export default function HomeScreen() {
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Home" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
-        <HomeLeagueTransition key={activeLeagueId ?? 'none'} style={{ gap: space[6] }}>
+        {/* 24pt between Home's blocks (a calm Home, 2026-10-12), on the wrapper that holds
+            them (PR #217). Never compressed to win back the 17e's fold. */}
+        <HomeLeagueTransition key={activeLeagueId ?? 'none'} style={{ gap: space[7] }}>
           <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} skipEntrance={skipEntrance} />
         </HomeLeagueTransition>
       </BarsRefresh>

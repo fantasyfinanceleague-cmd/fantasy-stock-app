@@ -18,8 +18,11 @@ Deno.test('the switch is on only for exactly "1"; unset is off', () => {
 Deno.test('every Run it back entry point is behind the switch (Home and League)', () => {
   const home = SOURCES['app/(tabs)/index.tsx'];
   assert(home.includes('const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);'));
-  assert(home.includes('{RUN_IT_BACK_ON && league?.commissioner_id === myUserId ? <RunItBackCard /> : null}'));
-  assert(home.includes('{RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? ('));
+  // A calm Home (2026-10-12): season over has ONE primary, picked by seasonOverPrimary,
+  // which returns none with the switch off (home-calm.test.ts pins that).
+  assert(home.includes('runItBackOn: RUN_IT_BACK_ON,'));
+  assert(home.includes("{primary === 'run_it_back' ? <RunItBackCard /> : null}"));
+  assert(home.includes("{primary === 'renewal_ask' && league?.successor_league_id ? ("));
   assert(home.includes('return RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId\n      ? <RenewedPreDraftHome'));
   // The counts card mounts only inside RenewedPreDraftHome, which mounts only from that gated return.
   assert(home.split('<RenewedPreDraftHome').length === 2, 'RenewedPreDraftHome mounted once');

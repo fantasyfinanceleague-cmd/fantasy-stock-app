@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { ClipPath, Defs, Line, Path, Rect, Circle, Text as SvgText } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
 
@@ -15,6 +15,7 @@ import { buildChartGeometry, partialLinePath } from '@/lib/chart/chartGeometry';
 import { useChartScrub } from '@/lib/chart/useChartScrub';
 import { useDrawIn } from '@/lib/chart/useDrawIn';
 import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
+import { weekMarks, MARK_MAX_FONT_SCALE, LIVE_MARK_SIZE, PIP_SIZE, type WeekMarkInput, type WeekMarkTone } from '@/lib/home/weekMarks';
 
 // Height the scrub label needs at the top edge (S1): a point above this line
 // flips its label below the point.
@@ -31,8 +32,12 @@ const SCRUB_LABEL_CLEAR = 52;
 // between paths at `base`. The live endpoint gets the pulsing dot ONLY
 // while the market is open (the caller passes `live`). Scrub: a
 // long-press-then-drag Pan gesture shows a floating (date · gain) label
-// and fires one light haptic per trading-day index change; the matching
-// week chip highlight is the caller's job (onScrubIndex).
+// and fires one light haptic per trading-day index change, and underlines
+// the scrubbed week's axis mark.
+//
+// A calm Home (2026-10-12): the W/L marks sit on the axis, under each week's
+// span (lib/home/weekMarks), in the Season window only; they replace the week
+// chips the old Season card carried. Regular weeks only (B′).
 //
 // Reduce Motion: the line appears fully drawn, a window change swaps
 // instantly, and the scrub label still works with no haptic ticks (§5).
@@ -53,12 +58,25 @@ export interface SeasonChartProps {
    * per league and window; a new value (the 30 s live poll moving today's point)
    * updates the path in place instead of blanking and redrawing it. */
   drawKey?: string;
+  /** The chart's height, axis row included (Home passes 124). */
+  height?: number;
+  /** One result per week of the series (parallel to `weekStartIdx`): the axis marks.
+   * Omitted (or empty) in the 1W/1M windows, which have no week ticks. */
+  markResults?: WeekMarkInput[];
+  /** The whole chart's VoiceOver label (Home lists the week results in it). */
+  accessibilityLabel?: string;
 }
 
-const HEIGHT = 148;
+const DEFAULT_HEIGHT = 148;
+// With marks, the axis row needs its own room under the ticks (board: pad.b 26).
+const MARKS_PAD_BOTTOM = 26;
 
-export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false, drawKey = 'season' }: SeasonChartProps) {
+export function SeasonChart({
+  points, live = false, weekStartIdx, onScrubIndex, skipEntrance = false, drawKey = 'season', height: HEIGHT = DEFAULT_HEIGHT, markResults, accessibilityLabel,
+}: SeasonChartProps) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  const showMarks = !!markResults && markResults.length > 0;
   const { reduced, duration } = useMotion();
   const [width, setWidth] = useState(0);
 
@@ -67,7 +85,10 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   // week, never the whole regular season padded out to a hypothetical
   // future Friday (Design Lead ruling, 2026-09-30, board convention).
   const positions = points.map((p) => p.dayIndex);
-  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, {}, positions) : null;
+  const geometry = width > 0 ? buildChartGeometry(series, width, HEIGHT, showMarks ? { padBottom: MARKS_PAD_BOTTOM } : {}, positions) : null;
+  const marks = geometry && showMarks ? weekMarks(geometry.points, weekStartIdx, markResults!, width, fontScale) : [];
+  const toneColor = (t: WeekMarkTone) => (t === 'gain' ? colors.gain : t === 'loss' ? colors.loss : t === 'live' ? colors.live : colors.text2);
+  const tickTop = HEIGHT - (showMarks ? MARKS_PAD_BOTTOM : 22) + 2;
   const lineLength = geometry?.lineLength ?? 0;
 
   // H2: the line draws in on first view and on a window change (lib/chart/useDrawIn,
@@ -90,6 +111,7 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
 
   const scrubPoint = geometry && scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubValue = scrubIndex != null ? points[scrubIndex] : null;
+  const scrubbedWeek = scrubValue ? scrubValue.week : null;
   const scrubLabel = scrubValue && scrubIndex != null
     ? seasonScrubLabel(scrubValue, scrubIndex > 0 ? points[scrubIndex - 1].gain : null)
     : null;
@@ -98,7 +120,7 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   const endValue = series.length > 0 ? series[series.length - 1] : 0;
 
   return (
-    <View style={styles.wrap} onLayout={handleLayout} accessible accessibilityRole="image" accessibilityLabel={`Season gain: ${formatMoney(endValue)}`}>
+    <View style={styles.wrap} onLayout={handleLayout} accessible accessibilityRole="image" accessibilityLabel={accessibilityLabel ?? `Season gain: ${formatMoney(endValue)}`}>
       {width > 0 && geometry ? (
         <GestureDetector gesture={pan}>
           <View>
@@ -138,9 +160,25 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
               {weekStartIdx.map((idx, w) => {
                 const p = geometry.points[idx];
                 if (!p) return null;
-                return <Line key={w} x1={p.x} x2={p.x} y1={HEIGHT - 20} y2={HEIGHT - 16} stroke={colors.borderStrong} strokeWidth={1} />;
+                return <Line key={w} x1={p.x} x2={p.x} y1={tickTop} y2={tickTop + 4} stroke={colors.borderStrong} strokeWidth={1} />;
               })}
             </Svg>
+            {marks.map((m) => (
+              // RN Text (not SVG) so the marks follow Dynamic Type, capped at 1.3x. A wide,
+              // centred box: the glyph is centred on the mark's x whatever its true width.
+              <View key={m.week} pointerEvents="none" style={[styles.mark, { left: m.x - MARK_BOX / 2, top: tickTop + 2 }]}>
+                {m.glyph === 'live' || m.glyph === 'pip' ? (
+                  <View style={styles.markRow}>
+                    <View style={{ width: m.w, height: m.w, borderRadius: m.w / 2, backgroundColor: toneColor(m.tone) }} />
+                  </View>
+                ) : (
+                  <Text variant="caption" maxFontSizeMultiplier={MARK_MAX_FONT_SCALE} numberOfLines={1} style={[styles.markText, { color: toneColor(m.tone) }]}>
+                    {m.glyph}
+                  </Text>
+                )}
+                {scrubbedWeek === m.week ? <View style={[styles.markUnderline, { width: Math.max(m.w, LIVE_MARK_SIZE + PIP_SIZE), backgroundColor: colors.accent }]} /> : null}
+              </View>
+            ))}
             {endpoint && !scrubPoint && live ? (
               // LiveDot is an RN View (its halo pulse is a reanimated
               // View transform, not an SVG element), so the ONLY loop on
@@ -170,9 +208,30 @@ export function SeasonChart({ points, live = false, weekStartIdx, onScrubIndex, 
   );
 }
 
+// The box each axis mark is centred in (wider than any glyph, even "Bye" at 1.3x).
+const MARK_BOX = 40;
+
 const styles = StyleSheet.create({
   wrap: {
     width: '100%',
+  },
+  mark: {
+    position: 'absolute',
+    width: MARK_BOX,
+    alignItems: 'center',
+  },
+  markRow: {
+    height: 16,
+    justifyContent: 'center',
+  },
+  markText: {
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  markUnderline: {
+    height: 2,
+    borderRadius: 1,
+    marginTop: 1,
   },
   scrubLabel: {
     position: 'absolute',
