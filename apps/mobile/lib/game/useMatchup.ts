@@ -8,10 +8,8 @@
 import { useMemo } from 'react';
 import { useAuth } from '../useAuth';
 import { useHomeLeague } from '../home/useHomeLeague';
-import { resolveWeekWindow } from '../time/marketWeek';
 import { matchupView, type MatchupView } from './matchupPhase';
 import { buildMatchupLive, finalGains, type MatchupLiveViewModel } from './buildMatchupViewModel';
-import { matchupDays, type MatchupDay } from './matchupWindow';
 import { etDateParts } from '../time/etParts';
 
 /** Today's ET calendar date (YYYY-MM-DD): the trading day the chyron measures against. */
@@ -26,8 +24,6 @@ export interface MatchupDerived {
   live: MatchupLiveViewModel;
   /** The server's gains once both post; null until then ("Scoring…"). */
   final: { me: number; opp: number } | null;
-  /** The matchup week's real trading days (for the race and the "Ends" line). */
-  days: MatchupDay[];
   weekStart: string | null;
   weekEnd: string | null;
   week: number;
@@ -44,21 +40,16 @@ export function useMatchup(leagueId: string | null) {
     const raw = home.raw;
     const cw = raw.data.current_week;
     const row = raw.data.matchups.find((m) => m.week_number === cw.week_number) ?? null;
-    const window = row ? resolveWeekWindow(row.week_end, raw.marketCalendar) : null;
-    const days = window ? matchupDays(raw.marketCalendar, window) : [];
     const live = buildMatchupLive({
       data: raw.data,
       myUserId: user.id,
       quote: raw.quote,
-      bars: raw.bars,
-      days,
       now: raw.now,
     });
     return {
       view: matchupView(home.viewModel.phase),
       live,
       final: finalGains(raw.data, user.id),
-      days,
       weekStart: row?.week_start ?? null,
       weekEnd: row?.week_end ?? null,
       week: cw.week_number,
