@@ -144,6 +144,11 @@ building anything, and don't reopen a rule without him.
   impossible to miss. "That top part of the screen should like flash a color when they're
   up just to make sure that they're they really notice it", with text "that's very hard to
   miss" (a colour change and bold), plus "a sound notification or a buzz".
+- **You're always told it's your turn** (2026-10-11): "if a draft is happening, the player
+  should be notified if its their turn even if they close the app." Every turn, the FIRST
+  pick included, gets an "It's your turn" push the moment it starts, whether the app is
+  closed or open. With the app open (any tab), it buzzes and chimes once per turn and the
+  banner adds no second sound; in silent mode, just the buzz.
 - **The draft board's look** (2026-10-06): Giorgio is "not a fan" of the current draft
   board UI. A redesign is wanted, but later ("save that for later"), not in the current
   pass.
