@@ -2,14 +2,14 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "42e361851e81dffdfcea51cdb274770b899e54f0",
-    "commitShort": "42e36185",
+    "commit": "a9e8c43fa1b9194e9e465b4c8b62a411f8d5921a",
+    "commitShort": "a9e8c43f",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T03:30:27Z",
-    "sourceHash": "sha256:2a167b4977fe36c573b0231046ba43af8a36246860dac8b120380285bf8ebde7",
+    "timestamp": "2026-10-12T03:30:49Z",
+    "sourceHash": "sha256:da29c46f1b222a28f1faf3032dea291b486fbffa5f3d8eb6a213c59291cb0e13",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -455,7 +455,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 214
+        "lines": 218
       },
       "db": null,
       "declared": null,
@@ -468,7 +468,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-autopick-sweep/index.ts",
-        "line": 80
+        "line": 83
       }
     },
     {
@@ -8746,7 +8746,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('draft_watch_due')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:121"
+        "supabase/functions/draft-autopick-sweep/index.ts:125"
       ]
     },
     {
@@ -8758,7 +8758,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('due_draft_starts')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:104"
+        "supabase/functions/draft-autopick-sweep/index.ts:107"
       ]
     },
     {
@@ -8770,7 +8770,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('overdue_draft_turns')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:144"
+        "supabase/functions/draft-autopick-sweep/index.ts:148"
       ]
     },
     {
@@ -19737,17 +19737,17 @@
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
-      "supabase/functions/_shared/draft-start.ts:240 -> postpone_league_draft",
-      "supabase/functions/_shared/draft-start.ts:316 -> start_league_draft",
-      "supabase/functions/_shared/draft-start.ts:405 -> record_draft_watch",
+      "supabase/functions/_shared/draft-start.ts:248 -> postpone_league_draft",
+      "supabase/functions/_shared/draft-start.ts:334 -> start_league_draft",
+      "supabase/functions/_shared/draft-start.ts:427 -> record_draft_watch",
       "supabase/functions/_shared/draft-write.ts:179 -> get_draft_clock",
       "supabase/functions/_shared/draft-write.ts:246 -> finalize_league_draft",
       "supabase/functions/_shared/draft-write.ts:273 -> draft_feasibility_pool",
-      "supabase/functions/_shared/draft-write.ts:700 -> auto_pick_search_candidates",
+      "supabase/functions/_shared/draft-write.ts:744 -> auto_pick_search_candidates",
       "supabase/functions/_shared/market-guard.ts:48 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-autopick-sweep/index.ts:104 -> due_draft_starts",
-      "supabase/functions/draft-autopick-sweep/index.ts:121 -> draft_watch_due",
-      "supabase/functions/draft-autopick-sweep/index.ts:144 -> overdue_draft_turns",
+      "supabase/functions/draft-autopick-sweep/index.ts:107 -> due_draft_starts",
+      "supabase/functions/draft-autopick-sweep/index.ts:125 -> draft_watch_due",
+      "supabase/functions/draft-autopick-sweep/index.ts:148 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:120 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:123 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:330 -> confirm_league_roster",
@@ -19890,11 +19890,11 @@
       "supabase/functions/_shared/category-eligibility.ts:58 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:70 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:84 -> category_rules.select",
-      "supabase/functions/_shared/draft-start.ts:189 -> leagues.select",
-      "supabase/functions/_shared/draft-start.ts:193 -> league_members.select",
-      "supabase/functions/_shared/draft-start.ts:196 -> league_roster_reconfirm.select",
-      "supabase/functions/_shared/draft-start.ts:199 -> draft_postponements.select",
-      "supabase/functions/_shared/draft-start.ts:203 -> league_renewal_responses.select",
+      "supabase/functions/_shared/draft-start.ts:197 -> leagues.select",
+      "supabase/functions/_shared/draft-start.ts:201 -> league_members.select",
+      "supabase/functions/_shared/draft-start.ts:204 -> league_roster_reconfirm.select",
+      "supabase/functions/_shared/draft-start.ts:207 -> draft_postponements.select",
+      "supabase/functions/_shared/draft-start.ts:211 -> league_renewal_responses.select",
       "supabase/functions/_shared/draft-write.ts:108 -> leagues.select",
       "supabase/functions/_shared/draft-write.ts:113 -> league_members.select",
       "supabase/functions/_shared/draft-write.ts:119 -> league_draft_order.select",
@@ -19912,12 +19912,12 @@
       "supabase/functions/_shared/draft-write.ts:502 -> drafts.insert",
       "supabase/functions/_shared/draft-write.ts:525 -> draft_stalls.delete",
       "supabase/functions/_shared/draft-write.ts:528 -> draft_turn_outages.delete",
-      "supabase/functions/_shared/draft-write.ts:681 -> draft_queue.select",
-      "supabase/functions/_shared/draft-write.ts:691 -> symbols.select",
-      "supabase/functions/_shared/draft-write.ts:720 -> auto_pick_price_failures.select",
-      "supabase/functions/_shared/draft-write.ts:729 -> auto_pick_price_failures.upsert",
-      "supabase/functions/_shared/draft-write.ts:734 -> auto_pick_price_failures.delete",
-      "supabase/functions/_shared/draft-write.ts:740 -> symbols.update",
+      "supabase/functions/_shared/draft-write.ts:725 -> draft_queue.select",
+      "supabase/functions/_shared/draft-write.ts:735 -> symbols.select",
+      "supabase/functions/_shared/draft-write.ts:764 -> auto_pick_price_failures.select",
+      "supabase/functions/_shared/draft-write.ts:773 -> auto_pick_price_failures.upsert",
+      "supabase/functions/_shared/draft-write.ts:778 -> auto_pick_price_failures.delete",
+      "supabase/functions/_shared/draft-write.ts:784 -> symbols.update",
       "supabase/functions/_shared/job-status-io.ts:149 -> cron_job_status.select",
       "supabase/functions/_shared/job-status-io.ts:198 -> cron_job_status.update",
       "supabase/functions/_shared/job-status-io.ts:99 -> cron_job_status.upsert",
