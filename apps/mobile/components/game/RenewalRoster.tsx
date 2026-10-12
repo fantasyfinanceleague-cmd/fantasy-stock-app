@@ -156,8 +156,9 @@ const styles = StyleSheet.create({
   answer: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
   // A text link's hit area reaches 44 pt (the craft floor).
   link: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space[1] },
-  // Board RibMemberList's banner (ks-raised: the inset fill, radius md, 10/12 pt padding).
-  banner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: radius.md, paddingVertical: space[1], paddingHorizontal: space[4] },
+  // Board RibMemberList's banner (ks-raised: the inset fill, radius md, 10/12 pt padding). Its own
+  // height, so it keeps its size once Change (a 44 pt target) goes with the draft set.
+  banner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48, borderRadius: radius.md, paddingVertical: space[1], paddingHorizontal: space[4] },
   bold: { fontWeight: '700' },
   draftRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   disabled: { opacity: 0.5 },
