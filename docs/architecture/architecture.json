@@ -2,21 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "aad136561a9520fe3825b5c49b17f684757e075a",
-    "commitShort": "aad13656",
+    "commit": "d211b5ff90910a2fe75c17957de37b86d6244965",
+    "commitShort": "d211b5ff",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/leaver-gaps",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T02:06:13Z",
-    "sourceHash": "sha256:a2c1d584e9c1e2e7f78a725268e9c54d631033e6f9057bcd41e11b802ca738a8",
+    "timestamp": "2026-10-12T02:09:15Z",
+    "sourceHash": "sha256:7f4ba88661bb25d436478d4d77694ecca90ebe7bbe95dd8674af930ff720d035",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 102.4,
+    "ageHours": 102.5,
     "ageDays": 4.3,
     "staleAfterDays": 14,
     "stale": false,
@@ -15714,7 +15714,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('leave-league')",
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:44"
+        "apps/mobile/lib/game/useLeaveLeague.ts:47"
       ],
       "via": [
         "seamInvoke"
@@ -15748,8 +15748,8 @@
         "user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useLeaveLeague.ts:30",
-        "apps/mobile/lib/game/useLeaveLeague.ts:57"
+        "apps/mobile/lib/game/useLeaveLeague.ts:33",
+        "apps/mobile/lib/game/useLeaveLeague.ts:60"
       ]
     },
     {
@@ -19480,7 +19480,7 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
-      "apps/mobile/lib/game/useLeaveLeague.ts:44 -> leave-league (via seamInvoke)",
+      "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
       "apps/mobile/lib/home/useHomeLeague.ts:600 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:617 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
@@ -19630,8 +19630,8 @@
       "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",
       "apps/mobile/lib/game/useFinalLineups.ts:39 -> week_snapshots.select",
       "apps/mobile/lib/game/useFinalLineups.ts:49 -> trades.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:30 -> league_members.select",
-      "apps/mobile/lib/game/useLeaveLeague.ts:57 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:33 -> league_members.select",
+      "apps/mobile/lib/game/useLeaveLeague.ts:60 -> league_members.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:64 -> push_tokens.upsert",
