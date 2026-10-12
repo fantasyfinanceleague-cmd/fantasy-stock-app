@@ -18,10 +18,11 @@ import { BracketView } from '@/components/game/BracketView';
 import { DraftLobby } from '@/components/game/DraftLobby';
 import { DraftRoom } from '@/components/game/DraftRoom';
 import { LeagueRenewal } from '@/components/game/LeagueRenewal';
+import { HomeRenewalAsk } from '@/components/game/HomeRenewalAsk';
 import { HistoryList } from '@/components/game/HistoryList';
 import { ChampBanner } from '@/components/game/ChampBanner';
 import { championBanner } from '@/lib/game/history';
-import { leagueScreenFor, showRunItBackStrip, seasonSegments } from '@/lib/game/leaguePhase';
+import { leagueScreenFor, showRunItBackStrip, showsLeagueRenewalAsk, seasonSegments } from '@/lib/game/leaguePhase';
 import { useLeagueHistory } from '@/lib/game/useLeagueHistory';
 import { useSeasonPlayoffs } from '@/lib/game/useSeasonPlayoffs';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
@@ -154,6 +155,14 @@ export default function LeagueScreen() {
                   <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
                   <Button label="Run it back" onPress={() => void runItBack()} />
                 </Card>
+              ) : null}
+              {/* Board #run-it-back frame 1 (and GS-14): the member's ask sits on the League tab too. */}
+              {RUN_IT_BACK_ON && phase && activeLeague?.successor_league_id && showsLeagueRenewalAsk({ phase, isCommissioner, hasSuccessor: true }) ? (
+                <HomeRenewalAsk
+                  successorId={activeLeague.successor_league_id}
+                  isCommissioner={false}
+                  commissionerName={st.standings.find((x) => x.user_id === activeLeague.commissioner_id)?.display_name || 'Your commissioner'}
+                />
               ) : null}
               <SegmentedControl
                 options={seasonSegments({ phase: phase ?? 'regular', playoffTeams: activeLeague?.playoff_teams ?? null }).map((v) => ({

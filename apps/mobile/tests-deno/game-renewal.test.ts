@@ -49,11 +49,17 @@ Deno.test('the roster is Season 1 order (its frozen rank), newcomers last', () =
   assertEquals(orderRoster(people, season1).map((p) => p.user_id), ['roberto', 'alessandro', 'andrea', 'marta']);
 });
 
-Deno.test('the commissioner sees the reconcile list; an in player sees the read-only list; pending or out see the ask or nothing', () => {
+Deno.test('the commissioner sees the reconcile list; an in player sees the read-only list; pending or out (by choice) see the ask; removed sees nothing', () => {
   assertEquals(screenFor({ status: 'ok', full_list: true, is_commissioner: true, caller_status: 'in' }), 'reconcile');
   assertEquals(screenFor({ status: 'ok', full_list: true, is_commissioner: false, caller_status: 'in' }), 'member_list');
   assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'pending' }), 'ask');
-  assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'out' }), 'none');
+  // GS-14: out by choice keeps the ask (they can get back in until the draft is set).
+  assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'out', caller_decided_by: 'player' }), 'ask');
+  // A read that can't tell removed from out-by-choice shows the ask (the `removed` refusal covers it).
+  assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'out' }), 'ask');
+  assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'out', caller_decided_by: null }), 'ask');
+  // Removed by the commissioner: no card.
+  assertEquals(screenFor({ status: 'ok', full_list: false, caller_status: 'out', caller_decided_by: 'commissioner' }), 'none');
   assertEquals(screenFor({ status: 'not_visible' }), 'none');
 });
 
@@ -99,11 +105,13 @@ Deno.test('a member still asked sees the ask on Home', () => {
   assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen }), true);
 });
 
-Deno.test('once a member has answered, the ask goes (in → the member list; out → nothing)', () => {
+Deno.test("once a member says I'm in, the ask goes (the member list); I'm out keeps it (GS-14); removed never gets it", () => {
   const inScreen = screenFor2({ status: 'ok', full_list: true, is_commissioner: false, caller_status: 'in' });
-  const outScreen = screenFor2({ status: 'ok', full_list: false, caller_status: 'out' });
+  const outScreen = screenFor2({ status: 'ok', full_list: false, caller_status: 'out', caller_decided_by: 'player' });
+  const removedScreen = screenFor2({ status: 'ok', full_list: false, caller_status: 'out', caller_decided_by: 'commissioner' });
   assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: inScreen }), false);
-  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: outScreen }), false);
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: outScreen }), true);
+  assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: removedScreen }), false);
 });
 
 Deno.test('the commissioner never sees the ask (they have RunItBackCard); no Season 2, no ask; not read yet, no ask', () => {
@@ -112,11 +120,13 @@ Deno.test('the commissioner never sees the ask (they have RunItBackCard); no Sea
   assertEquals(showsHomeRenewalAsk({ isCommissioner: false, successorId: 'S2', screen: null }), false);
 });
 
-Deno.test('Home mounts it next to RunItBackCard, for members only, and it re-reads after an answer (source guards)', () => {
+Deno.test("Home mounts it next to RunItBackCard, for members only; I'm out re-reads in place, I'm in opens Season 2 (source guards)", () => {
   const home = SOURCES2['app/(tabs)/index.tsx'];
   // Behind Run it back's kill switch (run-it-back-gate.test.ts) since F4a.
   assertEquals(home.includes('{RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? ('), true);
   assertEquals(home.includes('<HomeRenewalAsk'), true);
   const ask = SOURCES2['components/game/HomeRenewalAsk.tsx'];
-  assertEquals(ask.includes('onAnswered={() => setKey((k) => k + 1)}'), true);
+  assertEquals(ask.includes("if (afterAskAnswer(response) === 'reread') {\n      setKey((k) => k + 1);"), true);
+  assertEquals(ask.includes('setActiveLeagueId(successorId);'), true);
+  assertEquals(ask.includes("router.push('/(tabs)/league');"), true);
 });
