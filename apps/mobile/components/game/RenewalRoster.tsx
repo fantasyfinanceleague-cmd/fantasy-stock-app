@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
+import { useState } from 'react';
 import { ActionSheetIOS, Alert, Platform, Pressable, View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
@@ -8,10 +9,12 @@ import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
 import {
-  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction, waitingOnSentence } from '@/lib/game/renewal';
+  groupCopy, countsLine, draftDisabled, nudgeWindow, orderRoster, buildNonReplySheet, askedLine, nudgedLine, type SheetAction, waitingOnSentence,
+  rosterView, rosterCommissionerName, MEMBER_DRAFT_LINE, RUNNING_BACK_BANNER, CHANGE_ANSWER } from '@/lib/game/renewal';
 import type { RosterResult } from '@/lib/game/useRenewalRoster';
 import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 import { useAuth } from '@/lib/useAuth';
+import { RenewalChangeSheet } from './RenewalChangeSheet';
 
 type FullRoster = Extract<RosterResult, { full_list: true }>;
 
@@ -27,13 +30,18 @@ export interface RenewalRosterProps {
 }
 
 /** Who's running back (R5 for the commissioner, R6 read-only for a member who is
- * in). The order is Season 1's. A non-reply's actions open the native sheet (R7). */
+ * in). The order is Season 1's. A non-reply's actions open the native sheet (R7).
+ * GS-10 (board RibMemberList): the draft card is the commissioner's; a member who is
+ * in gets "You're running back" with Change (until the draft is set) and the board's
+ * line under the list. What shows is decided in rosterView (lib/game/renewal). */
 export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, onChanged }: RenewalRosterProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const myUserId = user?.id ?? '';
   const people = orderRoster(roster.people, season1Order);
   const waiting = roster.people.filter((p) => p.group === 'pending').map((p) => p.display_name);
+  const view = rosterView(roster);
+  const [changing, setChanging] = useState(false);
 
   const runSheet = (p: FullRoster['people'][number]) => {
     const window = nudgeWindow({ lastNudgedAt: p.last_nudged_at, now });
@@ -67,6 +75,19 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
 
   return (
     <View style={styles.stack}>
+      {view.banner ? (
+        <View style={[styles.banner, { backgroundColor: colors.inset }]}>
+          <View style={styles.answer}>
+            <Icon name="check" size="callout" tone="accent" />
+            <Text variant="callout" style={[styles.bold, { color: colors.accent }]}>{RUNNING_BACK_BANNER}</Text>
+          </View>
+          {view.change ? (
+            <Pressable onPress={() => setChanging(true)} accessibilityRole="button" accessibilityLabel="Change your answer" style={styles.link} hitSlop={{ left: 8, right: 8 }}>
+              <Text variant="caption" style={[styles.bold, { color: colors.accent }]}>{CHANGE_ANSWER}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <Text variant="caption" tone="secondary">{countsLine(roster.counts)}</Text>
       <Card style={styles.card}>
         {people.map((p) => {
@@ -92,19 +113,35 @@ export function RenewalRoster({ roster, leagueId, season1Order, createdAt, now, 
         })}
       </Card>
 
-      <Card style={styles.card}>
-        <View style={styles.draftRow}>
-          <Text variant="callout">Draft time</Text>
-          <Text variant="callout" tone="secondary">Not set</Text>
-        </View>
-        <View style={[styles.draftRow, draftDisabled(roster.replies_pending) ? styles.disabled : null]}>
-          <Text variant="callout">Draft order</Text>
-          <Text variant="callout" tone="secondary">Random</Text>
-        </View>
-        {draftDisabled(roster.replies_pending) ? (
-          <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. ${waitingOnSentence(waiting)}`}</Text>
-        ) : null}
-      </Card>
+      {view.draftCard ? (
+        <Card style={styles.card}>
+          <View style={styles.draftRow}>
+            <Text variant="callout">Draft time</Text>
+            <Text variant="callout" tone="secondary">Not set</Text>
+          </View>
+          <View style={[styles.draftRow, draftDisabled(roster.replies_pending) ? styles.disabled : null]}>
+            <Text variant="callout">Draft order</Text>
+            <Text variant="callout" tone="secondary">Random</Text>
+          </View>
+          {draftDisabled(roster.replies_pending) ? (
+            <Text variant="caption" tone="secondary">{`You can set the draft once everyone has replied. ${waitingOnSentence(waiting)}`}</Text>
+          ) : null}
+        </Card>
+      ) : null}
+      {view.memberLine ? <Text variant="caption" tone="secondary">{MEMBER_DRAFT_LINE}</Text> : null}
+      {view.change ? (
+        <RenewalChangeSheet
+          visible={changing}
+          leagueId={leagueId}
+          commissionerName={rosterCommissionerName(roster.people) ?? ''}
+          current="in"
+          onClose={() => setChanging(false)}
+          onChanged={() => {
+            setChanging(false);
+            onChanged();
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -119,6 +156,10 @@ const styles = StyleSheet.create({
   answer: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
   // A text link's hit area reaches 44 pt (the craft floor).
   link: { minHeight: 44, justifyContent: 'center', paddingHorizontal: space[1] },
+  // Board RibMemberList's banner (ks-raised: the inset fill, radius md, 10/12 pt padding). Its own
+  // height, so it keeps its size once Change (a 44 pt target) goes with the draft set.
+  banner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48, borderRadius: radius.md, paddingVertical: space[1], paddingHorizontal: space[4] },
+  bold: { fontWeight: '700' },
   draftRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   disabled: { opacity: 0.5 },
 });

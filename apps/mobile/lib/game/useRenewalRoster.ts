@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { seamRpc } from './seamCalls';
-import { fixtureRoster, parseRenewalCaller, type RenewalCaller } from './renewalFixture';
+import { fixtureAnswered, fixtureRoster, parseRenewalCaller, type RenewalCaller } from './renewalFixture';
 
 /** DEV-only: who the roster fixture answers as (EXPO_PUBLIC_RENEWAL_FIXTURE: commissioner,
  * commissioner-ready, in, new, pending, out, stranger). Null in a release build and when
@@ -23,6 +23,9 @@ export type RosterResult =
       is_commissioner: boolean;
       caller_status: string;
       replies_pending: boolean;
+      /** The renewed league's draft (the SQL returns both): "the draft is set" (renewalDraftSet). */
+      draft_status?: string | null;
+      draft_date?: string | null;
       counts: { in: number; new: number; out: number; pending: number; team_count: number; max_teams: number };
       people: {
         user_id: string; display_name: string; group: 'in' | 'new' | 'out' | 'pending'; is_commissioner: boolean;
@@ -39,7 +42,8 @@ export function useRenewalRoster(successorLeagueId: string | null, fixtureCaller
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
       if (fixtureCaller) {
-        if (!cancelled) setState({ status: 'ready', roster: fixtureRoster(fixtureCaller, new Date()) as RosterResult });
+        // The seam's last answer moves the caller (a flip in a DEV capture).
+        if (!cancelled) setState({ status: 'ready', roster: fixtureRoster(fixtureAnswered(fixtureCaller), new Date()) as RosterResult });
         return;
       }
       const { data, error } = await seamRpc('get_renewal_roster', { p_league_id: successorLeagueId });

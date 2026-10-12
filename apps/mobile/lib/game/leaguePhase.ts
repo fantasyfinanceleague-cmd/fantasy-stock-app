@@ -26,6 +26,14 @@ export function showRunItBackStrip(input: { phase: SeasonPhase; isCommissioner: 
   return input.phase === 'completed' && input.isCommissioner && !input.hasSuccessor;
 }
 
+/** The member's Season 2 ask on a finished season's League tab (board #run-it-back frame 1:
+ * "The same card sits on the League tab"; GS-14: an out player keeps it there too). It
+ * mounts for every non-commissioner once there is a Season 2; the card itself decides,
+ * from the roster read, whether this player is still asked (showsHomeRenewalAsk). */
+export function showsLeagueRenewalAsk(input: { phase: SeasonPhase; isCommissioner: boolean; hasSuccessor: boolean }): boolean {
+  return input.phase === 'completed' && !input.isCommissioner && input.hasSuccessor;
+}
+
 /** The season's segments (the board): Standings and Schedule always, Playoffs once the
  * season is in the playoffs (or over) with a playoff bracket, History always. */
 export function seasonSegments(input: { phase: SeasonPhase; playoffTeams: number | null }): ('standings' | 'schedule' | 'playoffs' | 'history')[] {

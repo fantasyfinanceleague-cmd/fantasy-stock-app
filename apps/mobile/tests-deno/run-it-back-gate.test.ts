@@ -20,12 +20,19 @@ Deno.test('every Run it back entry point is behind the switch (Home and League)'
   assert(home.includes('const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);'));
   assert(home.includes('{RUN_IT_BACK_ON && league?.commissioner_id === myUserId ? <RunItBackCard /> : null}'));
   assert(home.includes('{RUN_IT_BACK_ON && league?.successor_league_id && league.commissioner_id !== myUserId ? ('));
-  assert(home.includes('{RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard'));
+  assert(home.includes('return RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId\n      ? <RenewedPreDraftHome'));
+  // The counts card mounts only inside RenewedPreDraftHome, which mounts only from that gated return.
+  assert(home.split('<RenewedPreDraftHome').length === 2, 'RenewedPreDraftHome mounted once');
+  assert(home.split('<RenewalCountsCard').length === 2, 'RenewalCountsCard mounted once');
+  assert(home.indexOf('<RenewalCountsCard') > home.indexOf('function RenewedPreDraftHome('));
+  assert(home.indexOf('<RenewalCountsCard') < home.indexOf('function HomeBody('));
   const league = SOURCES['app/(tabs)/league.tsx'];
   assert(league.includes('const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);'));
   assert(league.includes('leagueScreenFor({ phase, isRenewal: RUN_IT_BACK_ON && !!activeLeague.previous_league_id })'));
   assert(league.includes('{RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase,'));
   assert(league.includes('if (RUN_IT_BACK_ON && preDraft && activeLeagueId && activeLeague?.previous_league_id) {'));
+  // Board frame 1 / GS-14: the member's ask on a finished league's League tab.
+  assert(league.includes('{RUN_IT_BACK_ON && phase && activeLeague?.successor_league_id && showsLeagueRenewalAsk({ phase, isCommissioner, hasSuccessor: true }) ? ('));
   // Each component is mounted only from those gated spots.
   for (const name of ['<RunItBackCard', '<HomeRenewalAsk', '<RenewalCountsCard', '<RenewedPreDraft', '<LeagueRenewal ']) {
     const mounts = Object.entries(SOURCES).filter(([p, src]) => !p.startsWith('tests-deno') && src.includes(name)).map(([p]) => p);

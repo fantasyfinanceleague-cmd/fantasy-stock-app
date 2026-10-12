@@ -6,14 +6,12 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { radius, space } from '@/constants/tokens';
 import { countsLine, waitingOnSentence } from '@/lib/game/renewal';
-import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
+import type { RosterResult } from '@/lib/game/useRenewalRoster';
 
 /** R4 (Home, the commissioner while replies come in): the counts line, "Waiting on …",
- * and [See who's in], which opens the reconcile list on the League tab. */
-export function RenewalCountsCard({ successorId }: { successorId: string }) {
-  const st = useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, 0);
-  if (st.status !== 'ready' || !st.roster || st.roster.status !== 'ok' || !st.roster.full_list) return null;
-  const r = st.roster;
+ * and [See who's in], which opens the reconcile list on the League tab. Render only: Home
+ * reads the roster once and shares it with PreDraftCard (GS-11). */
+export function RenewalCountsCard({ roster: r }: { roster: Extract<RosterResult, { full_list: true }> }) {
   const waiting = r.people.filter((p) => p.group === 'pending').map((p) => p.display_name);
   return (
     <Card style={styles.card}>

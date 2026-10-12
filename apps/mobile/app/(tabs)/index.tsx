@@ -1,7 +1,7 @@
-import { useEffect, useRef, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactElement } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -21,7 +21,8 @@ import { SeasonCompleteCard } from '@/components/home/SeasonCompleteCard';
 import { RunItBackCard } from '@/components/home/RunItBackCard';
 import { HomeRenewalAsk } from '@/components/game/HomeRenewalAsk';
 import { RenewalCountsCard } from '@/components/home/RenewalCountsCard';
-import { runItBackEnabled } from '@/lib/game/renewal';
+import { heldFullRoster, homeRepliesPending, runItBackEnabled } from '@/lib/game/renewal';
+import { RENEWAL_FIXTURE_CALLER, useRenewalRoster } from '@/lib/game/useRenewalRoster';
 
 import { PhaseMessageCard } from '@/components/home/PhaseMessageCard';
 import { HomeSkeleton } from '@/components/game/LoadingSkeletons';
@@ -71,6 +72,30 @@ function thisWeekChrome(phase: PhaseResult, week: number): { isLive: boolean; ri
   }
 }
 
+/** The commissioner's Season 2 Home before the draft (board RibHomeCounts): ONE roster read,
+ * shared by the counts card (R4) and PreDraftCard, which drops its draft block while
+ * replies are pending (GS-11). Re-read whenever Home comes back into focus, so the block
+ * returns once the last reply has landed. */
+function RenewedPreDraftHome({ successorId, preDraft }: { successorId: string; preDraft: ComponentProps<typeof PreDraftCard> }) {
+  const [readKey, setReadKey] = useState(0);
+  const focused = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      // The first focus is the mount's own read.
+      if (focused.current) setReadKey((k) => k + 1);
+      focused.current = true;
+    }, []),
+  );
+  const st = useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, readKey);
+  const roster = heldFullRoster(st);
+  return (
+    <>
+      {roster ? <RenewalCountsCard roster={roster} /> : null}
+      <PreDraftCard {...preDraft} repliesPending={homeRepliesPending(st)} />
+    </>
+  );
+}
+
 function HomeBody({
   status,
   viewModel,
@@ -112,20 +137,19 @@ function HomeBody({
 
   // States 6/7: no money views at all — the draft's own cards.
   if (phase.kind === 'pre_draft') {
-    return league ? (
-      <>
-        {/* R4: the commissioner of a renewed league sees the counts while replies come in. */}
-        {RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId ? <RenewalCountsCard successorId={leagueId!} /> : null}
-        <PreDraftCard
-          leagueId={leagueId!}
-          inviteCode={league.invite_code}
-          pickSeconds={league.pick_seconds}
-          numRounds={league.num_rounds}
-          draftDate={league.draft_date}
-          numParticipants={league.num_participants}
-        />
-      </>
-    ) : null;
+    if (!league) return null;
+    const preDraft: ComponentProps<typeof PreDraftCard> = {
+      leagueId: leagueId!,
+      inviteCode: league.invite_code,
+      pickSeconds: league.pick_seconds,
+      numRounds: league.num_rounds,
+      draftDate: league.draft_date,
+      numParticipants: league.num_participants,
+    };
+    // R4: the commissioner of a renewed league sees the counts while replies come in (GS-11: and no draft block).
+    return RUN_IT_BACK_ON && league.previous_league_id && league.commissioner_id === myUserId
+      ? <RenewedPreDraftHome successorId={leagueId!} preDraft={preDraft} />
+      : <PreDraftCard {...preDraft} />;
   }
   if (phase.kind === 'drafting') {
     return league ? <DraftingCard leagueId={leagueId!} myUserId={myUserId} numRounds={league.num_rounds} /> : null;
