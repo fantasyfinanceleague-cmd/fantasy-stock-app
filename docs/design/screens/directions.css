@@ -172,7 +172,7 @@
 .dr-a-card { background: var(--c-surface); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--d-rim); }
 .dr-btn {
   display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 18px;
-  border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--c-accent); color: var(--c-on-accent);
+  border-radius: 999px; font-weight: 800; font-size: 15px; background: var(--c-accent); color: var(--c-on-accent); box-sizing: border-box;
 }
 .dr-btn--sm { height: 34px; padding: 0 14px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; font-stretch: 125%; }
 .dr-seg { display: flex; gap: 22px; padding: 0 2px; }
@@ -347,3 +347,19 @@
 .dr-pair .dr-ref__img { width: 130px; }
 .dr-theme-lbl { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--c-text-2); margin: 0 0 6px; }
 @media (max-width: 1000px) { .dr-pair { grid-template-columns: 1fr 1fr; } }
+
+/* ── The player card (Giorgio, 2026-10-12: tap any stock → a fantasy player card) ── */
+.dr { --d-scrim: oklch(10% 0.03 272 / 0.55); }
+.dr-scrim { position: absolute; inset: 0; z-index: 7; background: var(--d-scrim); }
+.dr-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; top: 92px; z-index: 8; overflow: hidden;
+  background: var(--c-surface); border-radius: 20px 20px 0 0; box-shadow: 0 -1px 0 var(--c-border);
+  display: grid; align-content: start; gap: 14px; padding: 8px 20px 28px; color: var(--c-text);
+}
+.dr-grab { justify-self: center; width: 36px; height: 5px; border-radius: 3px; background: var(--c-border-strong); }
+.dr-strip4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 14px; background: var(--c-inset); padding: 12px 6px; }
+.dr-strip4 > span { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.dr-strip4 > span + span { box-shadow: inset 1px 0 0 var(--c-line); }
+.dr-pill { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--c-inset); color: var(--c-text); }
+.dr-pill--you { background: var(--c-you-tint); color: var(--c-you-text); }
+.dr-btn--line { background: transparent; color: var(--c-text); box-shadow: inset 0 0 0 1.5px var(--c-border-strong); }

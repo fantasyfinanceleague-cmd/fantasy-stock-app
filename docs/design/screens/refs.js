@@ -99,5 +99,17 @@ window.KS_REFS = {
    0.86,
    0.7
   ]
+ },
+ "pc": {
+  "name": "ESPN Fantasy \u00b7 player card",
+  "src": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/f7/c2/d7/f7c2d761-66ff-de17-b17b-84c2d49b3ae8/Player_Card-6_5-_U00281242x2688_U0029.png/1242x2688bb.png",
+  "w": 1242,
+  "h": 2688,
+  "crop": [
+   0.12,
+   0.15,
+   0.88,
+   0.62
+  ]
  }
 };

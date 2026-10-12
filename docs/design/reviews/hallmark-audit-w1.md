@@ -131,3 +131,29 @@ fills a control darkens and carries white ink (A's cyan → deep teal; C's neon 
 
 **Recommendation:** still A (a fantasy app first, in both modes); B is now named as the
 strong alternative if Light matters most.
+
+## Addendum · Game Night as picked + the player card (2026-10-12)
+
+Giorgio picked A, Game Night, with amendments: the draft tiles carry the sector as a line at
+the bottom (not a fill), no small lines on rows, the centre column empty; tapping any stock
+opens a player card (ESPN model). 16 new frames: A's six screens as amended plus the card
+from Matchup (their NKE) and from Portfolio (your NVDA), each in Dark and Light. The direction
+call moved to the Archive, still showing the three directions as he chose between them (the
+amendments are switched off there).
+
+- **Contrast:** the card's pairs (key figures on the inset strip, the "Yours" pill, the
+  sheet's text on its surface): A Dark ≥ 5.78, A Light ≥ 4.90. Pass.
+- **Accent by area:** the card adds no accent; the live end dot is the only cyan. Pass.
+- **Honest copy (46):** the season line's Friday closes for weeks 1–5 are SAMPLE, captioned;
+  the draft price, Week 6's prices, the position, the gain and the pick are data.js's
+  ("Drafted 2nd overall · Sep 29 · $290.10" is Giorgio's own example, and it matches).
+- **Decoration (45):** ESPN's team-crest watermark is not carried (no logos; it would be
+  decoration). The acquisition marker carries information ("Drafted").
+- **Typography:** two strip labels wrap onto two lines ("Since the draft", "Their
+  position") in the 11pt tag; not tappable (gate 49 is about tappable text), left as is.
+- **Fixed:** the card's full-width button overflowed its sheet (the padding added to 100%);
+  `box-sizing: border-box`.
+- **Flagged to Giorgio, not decided by me:** his list says "season gain" in the key figures,
+  his 2026-10-05 rule keeps that term for a manager's regular-season total; drawn as "Since
+  the draft".
+- **Count:** 0 critical · 0 major · 1 minor (the two-line strip labels).
