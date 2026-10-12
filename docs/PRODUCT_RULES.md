@@ -87,6 +87,13 @@ building anything, and don't reopen a rule without him.
   one primary action per screen. Before the draft and after the season follow the same
   rules (fewer, merged cards; the countdown leads; Run it back or the ask is the only
   primary). Nothing is removed from Home; repeats are.
+- **Matchup is a fantasy-football matchup, nothing else** (2026-10-12): "The matchup page
+  should look like a matchup page from a fantasy football app, where it lists your stocks
+  like a roster and shows the head-to-head performance of each. It's that simple. There
+  really shouldn't be any other added elements." The week race chart is REMOVED ("If on
+  ... there's a whole day where it's just going to sit there blank like that, we need to
+  remove that"). Any element that can sit blank or means nothing for part of the week
+  doesn't belong on Matchup.
 - **Portfolio's gain is "since the draft"** (value − cost). It's deliberately a different
   label from "season gain"; never reuse one for the other.
 - **Stock chart ranges** (2026-10-05, option A): 1W / 1M / 3M / 1Y, with 1W the default.
