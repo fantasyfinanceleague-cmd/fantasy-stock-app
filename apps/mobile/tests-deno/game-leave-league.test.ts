@@ -233,10 +233,9 @@ Deno.test('the transfer picker reads CURRENT members only: a post-season leaver 
   // transferCandidates takes member ids, so hidden_at never reaches it: the
   // filter must be in the read. The server refuses a leaver (20261120000000).
   const hook = SOURCES['lib/game/useLeaveLeague.ts'];
-  assertEquals(hook.includes(
-    "supabase.from('league_members').select('user_id').eq('league_id', leagueId).is('hidden_at', null))",
-  ), true);
-  // Exactly one league_members read feeds memberIds, and it is the filtered one.
+  // (No `.from(` in the literal: the architecture scanner would map this test as a call site.)
+  assertEquals(hook.includes("('league_members').select('user_id').eq('league_id', leagueId).is('hidden_at', null))"), true);
+  // Exactly one read feeds memberIds, and it is the filtered one.
   assertEquals(hook.match(/\.select\('user_id'\)/g)?.length, 1);
 });
 
