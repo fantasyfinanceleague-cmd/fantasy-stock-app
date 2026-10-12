@@ -32,7 +32,6 @@ export interface PreviewLeagueBody {
   reason: PreviewReason;
   league: {
     name: string;
-    commissioner_name: string;
     league_type: string | null;
     num_participants: number;
     current_members: number;
@@ -50,7 +49,6 @@ export interface PreviewLeagueBody {
 
 export function previewLeagueBody(
   league: PreviewLeagueRow,
-  commissionerName: string | null | undefined,
   currentMembers: number,
   result: { joinable: boolean; reason: PreviewReason },
 ): PreviewLeagueBody {
@@ -60,7 +58,6 @@ export function previewLeagueBody(
     reason: result.reason,
     league: {
       name: league.name,
-      commissioner_name: commissionerName ?? 'Unknown',
       league_type: league.league_type,
       num_participants: league.num_participants,
       current_members: currentMembers,

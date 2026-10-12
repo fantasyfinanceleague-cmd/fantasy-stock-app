@@ -2,31 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "dacd6eda8f1f8e001b3277a922961b86d41154ab",
-    "commitShort": "dacd6eda",
+    "commit": "1c47117ecf617719ec0c213c9cc2403626cf114e",
+    "commitShort": "1c47117e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "security/profile-visibility-stage2",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "RM",
-        "path": "supabase/migrations/20261118000001_user_profiles_self_only.sql"
-      },
-      {
-        "code": "M",
-        "path": "supabase/migrations/deferred/README.md"
-      }
-    ],
-    "timestamp": "2026-10-11T06:29:03Z",
-    "sourceHash": "sha256:c95976f2e97bf563e9de91d65445cd78ebd0d79248428428e287387fecc6af8f",
+    "branch": "security/join-preview-no-commissioner",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-12T01:16:58Z",
+    "sourceHash": "sha256:fa7ad32aea65c12a7d9341ac442b7a025f1c3d67a504d1d3e77dcb95a8ede18e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-07T19:41:46Z",
-    "ageHours": 82.8,
-    "ageDays": 3.4,
+    "ageHours": 101.6,
+    "ageDays": 4.2,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0c6bfd662be637b5ef1ec6088832d9b8f03cc908f45eb3f258c1426f1fb3e03b",
@@ -698,7 +689,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 127
+        "lines": 121
       },
       "db": null,
       "declared": null,
@@ -9170,8 +9161,8 @@
         "user_id"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:101",
-        "supabase/functions/preview-league/index.ts:105"
+        "supabase/functions/preview-league/index.ts:95",
+        "supabase/functions/preview-league/index.ts:99"
       ]
     },
     {
@@ -9188,21 +9179,6 @@
       "callSites": [
         "supabase/functions/preview-league/index.ts:76",
         "supabase/functions/preview-league/index.ts:82"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.fn.preview-league->tbl.user_profiles",
-      "from": "fn.preview-league",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-select",
-      "payload": ".from('user_profiles').select('username')",
-      "columns": [
-        "username"
-      ],
-      "callSites": [
-        "supabase/functions/preview-league/index.ts:97"
       ]
     },
     {
@@ -19451,7 +19427,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 255,
-    "edges": 630,
+    "edges": 629,
     "flows": 8,
     "drift": 62,
     "driftHigh": 35,
@@ -19765,12 +19741,11 @@
       "supabase/functions/enrich-symbols/index.ts:285 -> symbols.update",
       "supabase/functions/leave-league/index.ts:118 -> league_notifications.update",
       "supabase/functions/leave-league/index.ts:94 -> league_notifications.update",
-      "supabase/functions/preview-league/index.ts:101 -> league_members.select",
-      "supabase/functions/preview-league/index.ts:105 -> league_members.select",
       "supabase/functions/preview-league/index.ts:76 -> leagues.select",
       "supabase/functions/preview-league/index.ts:79 -> league_invites.select",
       "supabase/functions/preview-league/index.ts:82 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:97 -> user_profiles.select",
+      "supabase/functions/preview-league/index.ts:95 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:99 -> league_members.select",
       "supabase/functions/process-week-results/index.ts:1042 -> matchups.update",
       "supabase/functions/process-week-results/index.ts:1097 -> league_standings.select",
       "supabase/functions/process-week-results/index.ts:1106 -> league_standings.update",

@@ -219,9 +219,6 @@ export default function JoinLeagueScreen() {
             {`Invite code ${trimmed.toUpperCase()}`}
           </Text>
           <ScreenTitle>{view.name}</ScreenTitle>
-          <Text variant="callout" tone="secondary">
-            {view.runBy}
-          </Text>
         </View>
         <View style={[styles.rows, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {view.rows.map((row, i) => (

@@ -12,19 +12,19 @@ import {
   refineBlock, seasonLine,
 } from '../lib/join/joinPreview.ts';
 import { fixtureJoinResponse, fixturePreviewResponse } from '../lib/join/joinFixtureGate.ts';
+import joinScreenSource from '../app/join-league.tsx' with { type: 'text' };
 
 const SERIE_A = {
-  name: 'Serie A Traders', commissioner_name: 'Roberto B.', league_type: 'matchup',
+  name: 'Serie A Traders', league_type: 'matchup',
   num_participants: 8, current_members: 6, budget_mode: 'no-budget', budget_amount: null,
   stake_mode: 'fixed_notional', notional_per_slot: 2000, duration_days: null, num_weeks: 10,
   draft_date: '2026-10-10T23:00:00Z', draft_status: 'not_started',
 };
 const league = () => parsePreviewLeague(SERIE_A)!;
 
-Deno.test('the board preview: name, run by, Managers / Draft / Stakes / Season, button names the league', () => {
+Deno.test('the board preview: name, Managers / Draft / Stakes / Season, button names the league', () => {
   const v = previewView(league(), null);
   assertEquals(v.name, 'Serie A Traders');
-  assertEquals(v.runBy, 'Run by Roberto B.');
   assertEquals(v.rows, [
     { label: 'Managers', value: '6 of 8' },
     { label: 'Draft', value: 'Sat, Oct 10 · 7:00 PM ET' },
@@ -38,7 +38,7 @@ Deno.test('the board preview: name, run by, Managers / Draft / Stakes / Season, 
 
 Deno.test('the board refusals, verbatim, naming the league', () => {
   const l = league();
-  assertEquals(blockMessage('league_full', l), 'Serie A Traders is full: 8 of 8 managers. Ask Roberto B. if they can make room.');
+  assertEquals(blockMessage('league_full', l), 'Serie A Traders is full: 8 of 8 managers. Ask your commissioner if they can make room.');
   assertEquals(blockMessage('draft_started', l), "Serie A Traders has already drafted, so it can't take new managers this season.");
   assertEquals(blockMessage('draft_in_progress', l), "Serie A Traders is drafting right now, so it can't take new managers this season.");
   assertEquals(blockMessage('already_member', l), "You're already in Serie A Traders.");
@@ -188,12 +188,28 @@ Deno.test('joined: the board copy, and a fallback when the draft has no date', (
 Deno.test('the preview reads ONLY what preview-league returns: no ids, no faces', () => {
   const v = previewView(league(), null);
   const text = JSON.stringify(v);
-  assertEquals(Object.keys(v).sort(), ['action', 'block', 'caption', 'message', 'name', 'rows', 'runBy']);
+  assertEquals(Object.keys(v).sort(), ['action', 'block', 'caption', 'message', 'name', 'rows']);
   assertStringIncludes(text, 'Serie A Traders');
   // A raw league row carrying extras must not leak through the parser.
   const parsed = parsePreviewLeague({ ...SERIE_A, id: 'secret-id', commissioner_id: 'secret-uid', invite_code: 'SERIEA7' })!;
   assertEquals(JSON.stringify(parsed).includes('secret'), false);
   assertEquals(JSON.stringify(parsed).includes('SERIEA7'), false);
+});
+
+// Giorgio, 2026-10-11 (board #call-join-commissioner A): before joining, the
+// preview names nobody. Even a body from an OLDER preview-league deploy that still
+// carries commissioner_name must not get the name onto the screen or into any
+// refusal message.
+Deno.test('names nobody before joining, even if an older server still sends commissioner_name', () => {
+  const l = parsePreviewLeague({ ...SERIE_A, commissioner_name: 'Roberto B.' })!;
+  for (const block of [null, 'league_full', 'draft_started', 'draft_in_progress', 'invite_expired', 'season_completed', 'left_league', 'already_member'] as const) {
+    assertEquals(JSON.stringify(previewView(l, block)).includes('Roberto'), false, String(block));
+  }
+  assertEquals(JSON.stringify(l).includes('Roberto'), false);
+});
+
+Deno.test('the screen renders no "Run by" line', () => {
+  assertEquals(/runBy|Run by|commissioner_name/.test(joinScreenSource), false);
 });
 
 Deno.test('the dev fixtures answer with the same bodies the real functions return', () => {

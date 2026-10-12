@@ -85,16 +85,10 @@ Deno.serve(async (req: Request) => {
     }
     if (!league) return json({ found: false, reason: 'invalid_code' }, 200);
 
-    // Commissioner display name only (username) — never commissioner_id.
-    // NOTE the column is `id`, not `user_id`: user_profiles' PK is
-    // `id UUID REFERENCES auth.users(id)` (20251210100000) and no migration ever
-    // adds a `user_id` column. Filtering on `user_id` made PostgREST error, the
-    // error was discarded by this destructure, and the preview silently fell
-    // back to 'Unknown' for every league. Carried over from the pre-existing
-    // mobile lookup this function replaced (join-league.tsx), so it had been
-    // live on mobile before it was live here.
-    const { data: commish } = await admin
-      .from('user_profiles').select('username').eq('id', league.commissioner_id).maybeSingle();
+    // No commissioner name (Giorgio, 2026-10-11, board #call-join-commissioner A):
+    // before joining, the commissioner is a user not in the caller's league, and
+    // ruling A (2026-10-08) allows no information about such users. The name is
+    // not looked up at all, so it cannot reach the response by accident.
 
     // Current member count.
     const { count: memberCount } = await admin
@@ -119,7 +113,7 @@ Deno.serve(async (req: Request) => {
 
     // Return ONLY the displayed fields (explicit pick list in shape.ts) — no
     // id / commissioner_id / invite_code.
-    return json(previewLeagueBody(league, commish?.username, current, { joinable, reason }), 200);
+    return json(previewLeagueBody(league, current, { joinable, reason }), 200);
   } catch (_e) {
     return json({ error: 'unhandled', message: 'Something went wrong. Please try again.' }, 500);
   }

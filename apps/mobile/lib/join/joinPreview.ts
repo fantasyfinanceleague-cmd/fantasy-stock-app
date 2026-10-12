@@ -7,9 +7,10 @@
  * import it).
  *
  * Two rules the file exists to hold:
- *  - The preview shows ONLY what preview-league returns: a name, the
- *    commissioner, a member COUNT (never faces), the draft time, stakes and
- *    season length. There is no league id in that response by design.
+ *  - The preview shows ONLY what preview-league returns: a name, a member
+ *    COUNT (never faces), the draft time, stakes and season length. It names
+ *    NOBODY: before joining, the commissioner is a user not in your league
+ *    (Giorgio, 2026-10-11, board #call-join-commissioner A). There is no league id in that response by design.
  *  - NO server text ever reaches the UI (house rule). `message` fields in
  *    error bodies are ignored; every error maps to a line written here.
  */
@@ -61,7 +62,6 @@ export function errorMessage(kind: JoinErrorKind): string {
 
 export interface PreviewLeague {
   name: string;
-  commissionerName: string;
   members: number;
   max: number;
   stakeMode: string | null;
@@ -94,7 +94,6 @@ export function parsePreviewLeague(raw: unknown): PreviewLeague | null {
   if (!name || max === null) return null;
   return {
     name,
-    commissionerName: str(l.commissioner_name) ?? 'Unknown',
     members: num(l.current_members) ?? 0,
     max,
     stakeMode: str(l.stake_mode),
@@ -164,10 +163,10 @@ export function draftRow(l: Pick<PreviewLeague, 'draftDate' | 'draftStatus'>): s
 }
 
 /** The refusal under the preview: board copy, naming the league. */
-export function blockMessage(block: JoinBlock, l: Pick<PreviewLeague, 'name' | 'max' | 'commissionerName'>): string {
+export function blockMessage(block: JoinBlock, l: Pick<PreviewLeague, 'name' | 'max'>): string {
   switch (block) {
     case 'league_full':
-      return `${l.name} is full: ${l.max} of ${l.max} managers. Ask ${l.commissionerName} if they can make room.`;
+      return `${l.name} is full: ${l.max} of ${l.max} managers. Ask your commissioner if they can make room.`;
     case 'draft_started':
       return `${l.name} has already drafted, so it can't take new managers this season.`;
     case 'draft_in_progress':
@@ -202,8 +201,6 @@ export interface PreviewRow {
 
 export interface PreviewView {
   name: string;
-  /** "Run by Roberto B." */
-  runBy: string;
   rows: PreviewRow[];
   block: JoinBlock | null;
   /** The Alert card under the rows; null when joinable. */
@@ -226,7 +223,6 @@ export function previewView(l: PreviewLeague, block: JoinBlock | null): PreviewV
   if (season) rows.push({ label: 'Season', value: season });
   return {
     name: l.name,
-    runBy: `Run by ${l.commissionerName}`,
     rows,
     block,
     message: block ? blockMessage(block, l) : null,

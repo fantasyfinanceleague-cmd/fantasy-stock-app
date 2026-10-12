@@ -29,17 +29,16 @@ const ROW = {
 const OK = { joinable: true, reason: null } as const;
 
 Deno.test('returns the per-slot stake for the Join screen stakes line', () => {
-  const body = previewLeagueBody(ROW as PreviewLeagueRow, 'Roberto B.', 6, OK);
+  const body = previewLeagueBody(ROW as PreviewLeagueRow, 6, OK);
   assertEquals(body.league.notional_per_slot, 2000);
   assertEquals(body.league.stake_mode, 'fixed_notional');
 });
 
 Deno.test('exact league key set: no id / commissioner_id / invite_code / internals', () => {
-  const body = previewLeagueBody(ROW as PreviewLeagueRow, 'Roberto B.', 6, OK);
+  const body = previewLeagueBody(ROW as PreviewLeagueRow, 6, OK);
   assertEquals(Object.keys(body.league).sort(), [
     'budget_amount',
     'budget_mode',
-    'commissioner_name',
     'current_members',
     'draft_date',
     'draft_status',
@@ -58,17 +57,22 @@ Deno.test('exact league key set: no id / commissioner_id / invite_code / interna
 });
 
 Deno.test('top-level shape carries found/joinable/reason through unchanged', () => {
-  const body = previewLeagueBody(ROW as PreviewLeagueRow, 'Roberto B.', 8, { joinable: false, reason: 'league_full' });
+  const body = previewLeagueBody(ROW as PreviewLeagueRow, 8, { joinable: false, reason: 'league_full' });
   assertEquals(body.found, true);
   assertEquals(body.joinable, false);
   assertEquals(body.reason, 'league_full');
   assertEquals(body.league.current_members, 8);
 });
 
-Deno.test('a missing commissioner profile reads Unknown; a missing per-slot value is null, not undefined', () => {
+Deno.test('no commissioner name: the preview names nobody before you join (Giorgio, 2026-10-11)', () => {
+  const body = previewLeagueBody(ROW as PreviewLeagueRow, 6, OK);
+  const serialised = JSON.stringify(body);
+  assertEquals(/commissioner/i.test(serialised), false);
+});
+
+Deno.test('a missing per-slot value is null, not undefined', () => {
   const row = { ...ROW, notional_per_slot: undefined } as unknown as PreviewLeagueRow;
-  const body = previewLeagueBody(row, undefined, 0, OK);
-  assertEquals(body.league.commissioner_name, 'Unknown');
+  const body = previewLeagueBody(row, 0, OK);
   assertEquals(body.league.notional_per_slot, null);
   // JSON must carry the key (undefined would be dropped silently).
   assertEquals('notional_per_slot' in JSON.parse(JSON.stringify(body)).league, true);

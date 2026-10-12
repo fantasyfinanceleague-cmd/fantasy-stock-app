@@ -57,7 +57,6 @@ export type FixtureInvokeError = { name: string; context?: { status: number } };
 
 const SERIE_A = {
   name: 'Serie A Traders',
-  commissioner_name: 'Roberto B.',
   league_type: 'matchup',
   num_participants: 8,
   current_members: 6,
