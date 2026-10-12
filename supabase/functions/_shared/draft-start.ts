@@ -31,7 +31,15 @@ import {
   toRosterReconfirm,
 } from '../draft-control/rules.ts';
 import { checkStartFeasibility, typesFromSlots } from './draft-feasibility.ts';
-import { leagueRules, loadSlots, poolGroups } from './draft-write.ts';
+import {
+  leagueRules,
+  loadSlots,
+  notifyFirstPicker,
+  poolGroups,
+  REAL_TURN_PUSH,
+  type TurnPushOutcome,
+  type TurnPushPorts,
+} from './draft-write.ts';
 import type { Slot } from './draft-validation.ts';
 import { isInGate, isPastStartRetry, isRoomTime, isTransientBlocker } from './draft-start-policy.ts';
 
@@ -261,7 +269,9 @@ async function postpone(
 // ---------------------------------------------------------------------------
 
 export type StartOutcome =
-  | { outcome: 'started' }
+  // turnPush: pick 1's "It's your turn" push, sent after the committed start.
+  // Best effort and reported only: it never changes the outcome.
+  | { outcome: 'started'; turnPush: TurnPushOutcome }
   | { outcome: 'already_started' }
   | { outcome: 'not_startable'; draftStatus: string } // left not_started some other way
   | { outcome: 'not_due'; blockers: Blockers } // TBD, or draft_date not reached
@@ -279,8 +289,16 @@ export type StartOutcome =
  *     retry each tick until START_RETRY_SECONDS past T, then postpone
  *     ('start_failed'), so nothing stays in limbo.
  * Idempotent: two callers serialize on start_league_draft's row lock.
+ * The caller whose rpc returned 'started' (and only that one) then pushes the
+ * first picker (notifyFirstPicker): a refused, failed, postponed or
+ * already-started call pushes nobody.
  */
-export async function startDraftIfDue(admin: Admin, leagueId: string, now: Date): Promise<StartOutcome> {
+export async function startDraftIfDue(
+  admin: Admin,
+  leagueId: string,
+  now: Date,
+  push: TurnPushPorts = REAL_TURN_PUSH,
+): Promise<StartOutcome> {
   try {
     const loaded = await loadStartInputs(admin, leagueId);
     if (!loaded.ok) return { outcome: 'error', reason: loaded.reason };
@@ -322,8 +340,12 @@ export async function startDraftIfDue(admin: Admin, leagueId: string, now: Date)
       return await systemFailure('start_rpc_failed');
     }
     switch (res?.status) {
-      case 'started':
-        return { outcome: 'started' };
+      case 'started': {
+        // Committed. notifyFirstPicker never throws, so the start stands whatever the push does.
+        const turnPush = await notifyFirstPicker(admin, leagueId, push);
+        console.log('draft started', leagueId, 'first-pick turn push:', turnPush);
+        return { outcome: 'started', turnPush };
+      }
       case 'already_started':
         return res.draft_status === 'in_progress'
           ? { outcome: 'already_started' }

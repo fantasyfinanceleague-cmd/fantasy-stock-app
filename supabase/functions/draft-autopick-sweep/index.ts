@@ -20,7 +20,9 @@
 //     becomes blocked), and in the gate window a blocked league is postponed
 //     and a clear one is cleared to open its room at T-1h.
 // A just-started draft's first turn is pick_seconds away, so the start pass
-// never collides with the overdue pass below.
+// never collides with the overdue pass below. A 'started' league's first
+// picker is pushed "It's your turn" right after the committed start
+// (notifyFirstPicker); its outcome is the entry's turn_push.
 //
 // Per overdue row of public.overdue_draft_turns() (service role):
 //   * league no longer in_progress         -> 'not_in_progress' (nothing to do)
@@ -68,6 +70,7 @@ interface StartResult {
   league_id: string;
   outcome: string;
   reason?: string;
+  turn_push?: string; // a 'started' league: pick 1's turn push (best effort, never the outcome)
 }
 
 interface LeagueOutcome {
@@ -114,6 +117,7 @@ Deno.serve(async (req: Request) => {
       // started / postponed / retry / not_due ... are game-flow outcomes; only 'error' is a failure.
       const entry: StartResult = { league_id: leagueId, outcome: res.outcome };
       if ('reason' in res) entry.reason = res.reason;
+      if (res.outcome === 'started') entry.turn_push = res.turnPush;
       (res.outcome === 'error' ? startErrors : starts).push(entry);
     });
   }

@@ -549,6 +549,7 @@ export type TurnPushOutcome =
   | 'disabled'
   | 'lookup_failed'
   | 'send_failed'
+  | 'context_failed' // notifyFirstPicker: the post-start context read failed
   | 'error';
 
 /** Who picks after pick `pickNumber` was recorded: the same snake math as the
@@ -558,45 +559,88 @@ export function nextTurnAfter(pickNumber: number, order: string[], numRounds: nu
 }
 
 /**
- * Push "It's your turn" to whoever picks after `filled`. NEVER throws and never
- * reports into the pick result: the pick is already committed, and a push is
- * best effort on top of it (the room's realtime update is the other signal).
+ * Push "It's your turn" to whoever holds the turn after `picksMade` picks.
+ * The ONE turn-push path: notifyNextPicker (after every recorded pick) and
+ * notifyFirstPicker (when a draft starts, picksMade = 0) both come here, so
+ * the skip rules cannot drift between them. NEVER throws and never reports
+ * into its caller's result: the pick or the start is already committed, and a
+ * push is best effort on top of it (the room's realtime update is the other
+ * signal).
  *
- * EVERY next human picker is pushed, including the manager who just picked
+ * EVERY human turn-holder is pushed, including the manager who just picked
  * when a snake turnaround gives them the next turn too (Giorgio: "everyone is
  * going to get a push", no exceptions; the app's foreground quiet hides the
  * banner while the draft room is on screen). Skipped, not failed: draft
  * complete, and bots (no device; `bot-` ids are not uuids, so a token lookup
  * would only log an error).
  */
-export async function notifyNextPicker(
+export async function notifyTurnHolder(
   admin: Admin,
   ctx: DraftContext,
-  filled: { pickNumber: number; pickerId: string },
-  pickSource: PickSource,
+  picksMade: number,
   push: TurnPushPorts = REAL_TURN_PUSH,
 ): Promise<TurnPushOutcome> {
   const leagueId = String(ctx.league.id);
   try {
-    const next = nextTurnAfter(filled.pickNumber, ctx.order, ctx.numRounds);
-    if (!next) return 'draft_complete';
-    if (next.pickerId.startsWith('bot-')) return 'bot';
-    const target = await push.getTargetToken(admin, next.pickerId);
+    const turn = currentTurn(picksMade, ctx.order, ctx.numRounds);
+    if (!turn) return 'draft_complete';
+    if (turn.pickerId.startsWith('bot-')) return 'bot';
+    const target = await push.getTargetToken(admin, turn.pickerId);
     if (target.lookupFailed) {
-      console.error('[turn-push] token lookup failed', leagueId, next.pickNumber);
+      console.error('[turn-push] token lookup failed', leagueId, turn.pickNumber);
       return 'lookup_failed';
     }
     if (!target.token) return 'no_token';
     if (!target.enabled) return 'disabled';
     // League name and id from the leagues row loadDraftContext read: never caller input.
-    const sent = await push.sendExpoPush(target.token, draftTurnMessage(String(ctx.league.name), leagueId, next.pickNumber));
+    const sent = await push.sendExpoPush(target.token, draftTurnMessage(String(ctx.league.name), leagueId, turn.pickNumber));
     if (!sent.sent) {
-      console.error('[turn-push] push not sent', leagueId, next.pickNumber, sent.reason);
+      console.error('[turn-push] push not sent', leagueId, turn.pickNumber, sent.reason);
       return 'send_failed';
     }
     return 'sent';
   } catch (e) {
-    console.error('[turn-push] failed', leagueId, filled.pickNumber, String(e));
+    console.error('[turn-push] failed', leagueId, picksMade, String(e));
+    return 'error';
+  }
+}
+
+/** Push whoever picks after pick `filled` was recorded (see notifyTurnHolder). */
+export function notifyNextPicker(
+  admin: Admin,
+  ctx: DraftContext,
+  filled: { pickNumber: number; pickerId: string },
+  _pickSource: PickSource,
+  push: TurnPushPorts = REAL_TURN_PUSH,
+): Promise<TurnPushOutcome> {
+  return notifyTurnHolder(admin, ctx, filled.pickNumber, push);
+}
+
+/**
+ * Push pick 1's holder the moment a draft STARTS (Giorgio, 2026-10-11: "if a
+ * draft is happening, the player should be notified if its their turn even if
+ * they close the app"). Pick 1 has no previous pick, so notifyNextPicker never
+ * covers it, and the everyone-notice ('draft_started') rides a once-a-minute
+ * cron that a 30 s clock can beat. Called ONLY after start_league_draft
+ * reported 'started' (committed, and by exactly one caller: the row lock
+ * serializes racing starts, the loser reads 'already_started'). Reads the
+ * context itself, AFTER the flip, because the start trigger is what locks the
+ * stored order. Never throws.
+ */
+export async function notifyFirstPicker(
+  admin: Admin,
+  leagueId: string,
+  push: TurnPushPorts = REAL_TURN_PUSH,
+): Promise<TurnPushOutcome> {
+  try {
+    const loaded = await loadDraftContext(admin, leagueId);
+    if (!loaded.ok) {
+      console.error('[turn-push] first-picker context failed', leagueId, loaded.reason);
+      return 'context_failed';
+    }
+    return await notifyTurnHolder(admin, loaded.ctx, 0, push);
+  } catch (e) {
+    console.error('[turn-push] first-picker failed', leagueId, String(e));
     return 'error';
   }
 }

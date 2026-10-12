@@ -6,9 +6,15 @@
  * The SQL side (locks, the gate, postponement, the CAS, the notices, and that
  * the expectation built here equals _draft_start_inputs) runs on real Postgres
  * in supabase/tests/draft_auto_start.pglite.test.ts.
+ *
+ * Also: the first picker's "It's your turn" push after a COMMITTED start
+ * (notifyFirstPicker, Giorgio 2026-10-11), with the push I/O injected.
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { buildStartExpect, startDraftIfDue, watchLeague } from './draft-start.ts';
+import type { TurnPushOutcome, TurnPushPorts } from './draft-write.ts';
+import type { PushMessage } from './push.ts';
+import { draftTurnMessage } from './push-copy.ts';
 import { GATE_LEAD_SECONDS, ROOM_OPEN_LEAD_SECONDS, START_RETRY_SECONDS } from './draft-start-policy.ts';
 
 const L = '00000000-0000-4000-8000-000000000001';
@@ -27,13 +33,16 @@ interface World {
   // Run it back: pending renewal replies. undefined/0 = none (every test here
   // is an ordinary league unless it says otherwise).
   renewalPending?: number | 'error';
+  // The stored draft order (league_draft_order), read after the start for the
+  // first-pick push. undefined = the members in member order; 'error' = the read fails.
+  order?: string[] | 'error';
   rpc: Record<string, unknown>; // name -> data (or { __error })
 }
 
 function world(o: Partial<World> = {}): World {
   return {
     league: {
-      id: L, commissioner_id: 'c', draft_status: 'not_started', stake_mode: 'price_tiers', draft_date: T,
+      id: L, name: 'Moon League', commissioner_id: 'c', draft_status: 'not_started', stake_mode: 'price_tiers', draft_date: T,
       num_participants: 8, league_type: 'matchup', playoff_teams: 4, num_rounds: 6, budget_amount: null,
       allow_undraftable: false,
     },
@@ -64,8 +73,14 @@ function fakeAdmin(w: World) {
         select: () => chain,
         eq: () => chain,
         order: () => {
-          if (table !== 'league_draft_slots') throw new Error(`unexpected order on ${table}`);
-          return w.slots === 'error' ? res(null, { message: 'boom' }) : res(w.slots);
+          if (table === 'league_draft_slots') return w.slots === 'error' ? res(null, { message: 'boom' }) : res(w.slots);
+          // loadDraftContext (the first-pick push, after the start):
+          if (table === 'league_draft_order') {
+            if (w.order === 'error') return res(null, { message: 'boom' });
+            return res((w.order ?? w.members).map((user_id, i) => ({ position: i + 1, user_id })));
+          }
+          if (table === 'drafts') return res([]);
+          throw new Error(`unexpected order on ${table}`);
         },
         maybeSingle: () => {
           if (table === 'leagues') return res(w.league);
@@ -75,6 +90,7 @@ function fakeAdmin(w: World) {
         },
         then: (ok: (v: unknown) => unknown) => {
           if (table === 'league_members') return res(w.members.map((user_id) => ({ user_id }))).then(ok);
+          if (table === 'trades') return res([]).then(ok);
           if (table === 'league_renewal_responses') {
             return (w.renewalPending === 'error'
               ? Promise.resolve({ data: null, error: { message: 'boom' }, count: null })
@@ -91,6 +107,9 @@ function fakeAdmin(w: World) {
       if (name === 'draft_feasibility_pool') return w.pool === 'error' ? res(null, { message: 'pool down' }) : res(w.pool);
       if (name in w.rpc) {
         const v = w.rpc[name] as Record<string, unknown> | null;
+        // A committed start flips the row, as the real function does (the
+        // post-start context read then sees in_progress and checks the order).
+        if (name === 'start_league_draft' && v?.status === 'started' && w.league) w.league.draft_status = 'in_progress';
         return v && '__error' in v ? res(null, v.__error) : res(v);
       }
       throw new Error(`unexpected rpc ${name}`);
@@ -100,11 +119,42 @@ function fakeAdmin(w: World) {
 const names = (a: ReturnType<typeof fakeAdmin>) => a.rpcs.map((r) => r.name);
 const call = (a: ReturnType<typeof fakeAdmin>, n: string) => a.rpcs.find((r) => r.name === n)!.args;
 
+/** Injected push I/O for the first-pick push. Every member has a token unless listed. */
+function fakePush(o: {
+  noToken?: string[];
+  disabled?: string[];
+  lookupFailed?: boolean;
+  lookupThrows?: boolean;
+  sendFails?: boolean;
+  sendThrows?: boolean;
+} = {}) {
+  const lookups: string[] = [];
+  const sent: Array<{ token: string; msg: PushMessage }> = [];
+  const ports: TurnPushPorts = {
+    getTargetToken: (_admin, userId) => {
+      lookups.push(userId);
+      if (o.lookupThrows) return Promise.reject(new Error('boom'));
+      if (o.lookupFailed) return Promise.resolve({ token: null, enabled: false, lookupFailed: true });
+      return Promise.resolve({
+        token: (o.noToken ?? []).includes(userId) ? null : `tok-${userId}`,
+        enabled: !(o.disabled ?? []).includes(userId),
+        lookupFailed: false,
+      });
+    },
+    sendExpoPush: (token, msg) => {
+      if (o.sendThrows) return Promise.reject(new Error('network down'));
+      sent.push({ token, msg });
+      return Promise.resolve(o.sendFails ? { sent: false, reason: 'expo_ticket_error' } : { sent: true });
+    },
+  };
+  return { ports, lookups, sent };
+}
+
 // ---- START ----------------------------------------------------------------
 
 Deno.test('start: evaluates, then flips through start_league_draft with the exact expectation', async () => {
   const a = fakeAdmin(world());
-  assertEquals(await startDraftIfDue(a, L, at(5)), { outcome: 'started' });
+  assertEquals(await startDraftIfDue(a, L, at(5), fakePush().ports), { outcome: 'started', turnPush: 'sent' });
   assertEquals(names(a), ['draft_feasibility_pool', 'start_league_draft']);
   assertEquals(call(a, 'start_league_draft').p_expect, {
     members: 4, stake_mode: 'price_tiers', budget_amount: null, num_rounds: 6, allow_undraftable: false,
@@ -177,6 +227,89 @@ Deno.test('start: already started / completed: no write', async () => {
   assertEquals(await startDraftIfDue(fakeAdmin(w), L, at(5)), { outcome: 'already_started' });
   w.league!.draft_status = 'completed';
   assertEquals(await startDraftIfDue(fakeAdmin(w), L, at(5)), { outcome: 'not_startable', draftStatus: 'completed' });
+});
+
+// ---- START -> the first picker's turn push (Giorgio, 2026-10-11) ------------
+
+Deno.test('start: the FIRST picker (by the stored order, not member order) is pushed the draft_turn copy, once', async () => {
+  const a = fakeAdmin(world({ order: ['m2', 'c', 'm1', 'm3'] }));
+  const push = fakePush();
+  assertEquals(await startDraftIfDue(a, L, at(5), push.ports), { outcome: 'started', turnPush: 'sent' });
+  assertEquals(push.lookups, ['m2']);
+  assertEquals(push.sent, [{ token: 'tok-m2', msg: draftTurnMessage('Moon League', L, 1) }]);
+});
+
+Deno.test('start: a BOT first picker is skipped without a token lookup; the start stands', async () => {
+  const push = fakePush();
+  const w = world({ members: ['bot-1', 'c', 'm1', 'm2'] });
+  assertEquals(await startDraftIfDue(fakeAdmin(w), L, at(5), push.ports), { outcome: 'started', turnPush: 'bot' });
+  assertEquals([push.lookups, push.sent], [[], []]);
+});
+
+Deno.test('start: notifications off / no token / lookup failed -> skipped, never sent; the start stands', async () => {
+  const cases: Array<[Parameters<typeof fakePush>[0], TurnPushOutcome]> = [
+    [{ disabled: ['c'] }, 'disabled'],
+    [{ noToken: ['c'] }, 'no_token'],
+    [{ lookupFailed: true }, 'lookup_failed'],
+  ];
+  for (const [o, turnPush] of cases) {
+    const push = fakePush(o);
+    assertEquals(await startDraftIfDue(fakeAdmin(world()), L, at(5), push.ports), { outcome: 'started', turnPush });
+    assertEquals(push.sent, []);
+  }
+});
+
+Deno.test('start: a push that throws or is refused never turns a committed start into an error', async () => {
+  const cases: Array<[Parameters<typeof fakePush>[0], TurnPushOutcome]> = [
+    [{ lookupThrows: true }, 'error'],
+    [{ sendThrows: true }, 'error'],
+    [{ sendFails: true }, 'send_failed'],
+  ];
+  for (const [o, turnPush] of cases) {
+    const a = fakeAdmin(world());
+    assertEquals(await startDraftIfDue(a, L, at(5), fakePush(o).ports), { outcome: 'started', turnPush });
+    assertEquals(names(a), ['draft_feasibility_pool', 'start_league_draft']); // no retry, no postpone
+  }
+});
+
+Deno.test('start: the post-start context read fails (or the order is invalid) -> context_failed, nobody pushed, start stands', async () => {
+  for (const order of ['error', ['c', 'm1', 'm2']] as const) {
+    const push = fakePush();
+    const r = await startDraftIfDue(fakeAdmin(world({ order: order as string[] | 'error' })), L, at(5), push.ports);
+    assertEquals(r, { outcome: 'started', turnPush: 'context_failed' });
+    assertEquals([push.lookups, push.sent], [[], []]);
+  }
+});
+
+Deno.test('start: a refused, failed, postponed or already-started start pushes NOBODY', async () => {
+  const rpc = world().rpc;
+  const cases: Array<[World, Date]> = [
+    [world({ members: ['c', 'm1', 'm2'] }), at(5)], // blocked -> postponed
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'room_not_open' } } }), at(5)],
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'blocked', reason: 'renewal_replies_pending' } } }), at(5)],
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'changed', actual: {} } } }), at(5)], // retry
+    [world({ rpc: { ...rpc, start_league_draft: { __error: { message: 'x' } } } }), at(5)], // retry
+    [world({ rpc: { ...rpc, start_league_draft: { __error: { message: 'x' } } } }), at(START_RETRY_SECONDS)], // start_failed
+    // The race loser: another caller's start committed first, and that caller pushed.
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'already_started', draft_status: 'in_progress' } } }), at(5)],
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'postponed' } } }), at(5)],
+    [world({ rpc: { ...rpc, start_league_draft: { status: 'not_due' } } }), at(5)],
+    [world({ postponed: true }), at(5)],
+    [world(), at(-5)], // before T
+    [world({ reconfirm: 'error' }), at(5)], // a failed read
+  ];
+  for (const [w, now] of cases) {
+    const push = fakePush();
+    const r = await startDraftIfDue(fakeAdmin(w), L, now, push.ports);
+    assert(r.outcome !== 'started', JSON.stringify(r));
+    assertEquals([push.lookups, push.sent], [[], []], JSON.stringify(r));
+  }
+  // Already in progress on read: no rpc, no push.
+  const w = world();
+  w.league!.draft_status = 'in_progress';
+  const push = fakePush();
+  assertEquals(await startDraftIfDue(fakeAdmin(w), L, at(5), push.ports), { outcome: 'already_started' });
+  assertEquals(push.lookups, []);
 });
 
 // ---- WATCH + GATE -----------------------------------------------------------
