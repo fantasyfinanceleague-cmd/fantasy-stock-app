@@ -332,6 +332,13 @@ Deno.test('the clock card: the headline and "Round X of Y · Pick N" only: no ",
   assert(card.includes('<ClockRing'));
   assert(card.includes('{stalled?.line ?'));
   assert(card.includes('{AUTO_PICK_WAITING_FOR_PRICES}'));
+  // Exactly those two went: on someone else's card the lines that say when you're up stay
+  // (U-09 "You took AAPL · you're up in 2 picks", UX rule 10 "N picks until you").
+  assert(card.includes('{keepDots(afterPickLine(lastMine, picksAway, lastMineAuto) ?? \'\')}'));
+  assert(card.includes('{picksUntilYouLine(picksAway)}'));
+  // ...shown under the same conditions as before the ruling (off your turn; before / after your first pick).
+  assert(card.includes('{!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? ('));
+  assert(card.includes('{!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? ('));
 });
 
 import { HEADER_NAME_PT, headerNamePt, headerNameWidth } from '../lib/game/draftBoardLayout.ts';

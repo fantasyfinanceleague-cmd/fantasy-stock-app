@@ -338,9 +338,9 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const onTheClock = kind === 'yours';
   const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
-  // Giorgio, 2026-10-13: the card shows the headline and "Round X of Y · Pick N", nothing else:
-  // no snake suffix (", then 12": "I don't like the then blank blank picked twice") and no
-  // "60-second picks" ("I don't think it needs that last thing at the bottom"). Both cards.
+  // Giorgio, 2026-10-13 (PRODUCT_RULES): on both cards, no snake suffix (", then 12": "I don't
+  // like the then blank blank picked twice") and no "60-second picks" ("I don't think it needs
+  // that last thing at the bottom"). Everything else stays, the your-next-pick lines included.
   const roundLine = roundPickLine(round, rounds, onClockPick);
 
   return (
