@@ -98,7 +98,8 @@ Deno.test('GS-8b: History labels the playoff order the way Standings does (sourc
   const history = SOURCES['components/game/HistoryList.tsx'];
   // The same subtitle key as Standings' header, shown only when the playoffs ordered the season.
   // (W4: inside each season's SeasonBlock, which takes the season's table as `table`.)
-  assert(history.includes('{table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}'));
+  // (1.6× at most, like the champion line beside it: W4 DL gate.)
+  assert(history.includes('{table.medals ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6}>{GAME_COPY.finalStandingsSubtitle}</Text> : null}'));
   // The podium tags under the name (ManagerRow's `tag`), in both the one-line and the stacked layout.
   assert(history.includes('tag={tag}'));
   const row = SOURCES['components/sp/gn/ManagerRow.tsx'];

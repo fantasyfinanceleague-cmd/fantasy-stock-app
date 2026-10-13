@@ -8,7 +8,7 @@ import { space } from '@/constants/tokens';
 import { shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
 import { useMedalDiscSize } from '@/components/game/MedalDisc';
-import { MOVE_CELL, RANK_CELL, RECORD_PT, ROW_GAP, ROW_PAD, figureWidth, managerListStacks, stackedRowTextCap } from '@/lib/game/leagueView';
+import { gainColumnWidth, MOVE_CELL, RANK_CELL, RECORD_PT, ROW_GAP, ROW_PAD, figureWidth, managerListStacks, stackedRowTextCap } from '@/lib/game/leagueView';
 
 // League › Standings in full on Game Night (§9C; the board's "League › Standings, in full";
 // Giorgio, on 1.2.0's table: "not even good like divide like dividing the columns and rows").
@@ -31,12 +31,15 @@ export interface StandingsTableProps {
   showMove?: boolean;
   /** The column head's "Through Week N", or null while nothing is scored (leagueView). */
   throughLabel?: string | null;
+  /** Nothing scored yet (Week 1 before its first close): no rank leads, so every rank is text2. */
+  nothingScored?: boolean;
 }
 
 /** The list's one shape (every row stacks or none does) and its caps, for the table and the
  * pinned copy of your row alike. */
 export interface StandingsLayout {
   stacked: boolean;
+  gainWidth: number;
   textCap: number;
   recordWidth: number;
   rankWidth: number;
@@ -53,12 +56,12 @@ export function useStandingsLayout(rows: readonly { record: string; seasonGain: 
     // One cap for the list: the smallest row's fitted gain, so every name is the same size.
     const textCap = Math.min(1.3, ...figures.map((f) => stackedRowTextCap({ gainText: f.gainText, fontScale, rowWidth, move: showMove, leading: rankWidth })));
     const recordWidth = Math.ceil(Math.max(0, ...rows.map((r) => figureWidth(r.record, RECORD_PT * Math.max(1, fontScale)))));
-    return { stacked, textCap, recordWidth, rankWidth };
+    return { stacked, textCap, recordWidth, rankWidth, gainWidth: gainColumnWidth(fontScale) };
   }, [rows, showMove, medals, width, fontScale, disc]);
 }
 
 /** One standings row (also the pinned copy of yours: the SAME component). */
-export function StandingsRowView({ r, seasonComplete, showMove = true, layout }: { r: StandingsRow; seasonComplete: boolean; showMove?: boolean; layout: StandingsLayout }) {
+export function StandingsRowView({ r, seasonComplete, showMove = true, layout, nothingScored = false }: { r: StandingsRow; seasonComplete: boolean; showMove?: boolean; layout: StandingsLayout; nothingScored?: boolean }) {
   // VoiceOver hears the move as the row's own label says it (ManagerRow: "up 2" / "down 3").
   return (
     <ManagerRow
@@ -75,6 +78,8 @@ export function StandingsRowView({ r, seasonComplete, showMove = true, layout }:
       stacked={layout.stacked}
       textCap={layout.textCap}
       recordWidth={layout.recordWidth}
+      gainWidth={layout.gainWidth}
+      rankLeads={!nothingScored}
     />
   );
 }
@@ -82,7 +87,7 @@ export function StandingsRowView({ r, seasonComplete, showMove = true, layout }:
 /** UX rule 7: while your row is below the fold of the scroll view it sits in
  * (useScrollFold, from BarsRefresh) and the list is on screen, onPinChange gets your row so
  * the screen can pin a copy at the bottom; null when it shouldn't. */
-export function StandingsTable({ rows, caption, seasonComplete, onPinChange, header, showMove = true, throughLabel = null }: StandingsTableProps) {
+export function StandingsTable({ rows, caption, seasonComplete, onPinChange, header, showMove = true, throughLabel = null, nothingScored = false }: StandingsTableProps) {
   const fold = useScrollFold();
   const cardRef = useRef<View>(null);
   const yourRef = useRef<View>(null);
@@ -139,14 +144,14 @@ export function StandingsTable({ rows, caption, seasonComplete, onPinChange, hea
         {layout.stacked ? null : (
           <>
             <HeadLabel text="W–L" style={[styles.headRight, { minWidth: layout.recordWidth }]} />
-            <HeadLabel text="Season gain" style={[styles.headRight, styles.headGain]} />
+            <HeadLabel text="Season gain" style={[styles.headRight, { minWidth: layout.gainWidth }]} />
           </>
         )}
       </View>
       <View style={styles.rows}>
         {rows.map((r) => (
           <View key={r.userId} ref={r.isYou ? yourRef : undefined} collapsable={false}>
-            <StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} layout={layout} />
+            <StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} layout={layout} nothingScored={nothingScored} />
           </View>
         ))}
       </View>
@@ -179,7 +184,6 @@ const styles = StyleSheet.create({
   headLabel: { flex: 1, minWidth: 0 },
   headCaps: { fontWeight: '800', letterSpacing: 0.48 },
   headRight: { textAlign: 'right' },
-  headGain: { minWidth: 86 },
   // §9C ManagerRow: tiles 6pt apart.
   rows: { gap: MANAGER_ROW_GAP },
   caption: { marginTop: space[1] },

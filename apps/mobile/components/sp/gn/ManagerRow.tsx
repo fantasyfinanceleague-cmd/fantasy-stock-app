@@ -50,6 +50,10 @@ interface ManagerRowBase {
   textCap?: number;
   /** League (W4): the record column's width, the list's widest, so the "W–L" head lines up. */
   recordWidth?: number;
+  /** League (W4): the gain column's width, the head's if wider than 86 (leagueView gainColumnWidth). */
+  gainWidth?: number;
+  /** Rank 1 reads in `text` (it leads); false when nothing is scored yet, so every rank is text2. */
+  rankLeads?: boolean;
 }
 
 /** A Standings row (the default) carries the record and the season gain; the draft lobby's
@@ -61,7 +65,7 @@ export type ManagerRowProps = ManagerRowBase & (
 );
 
 export function ManagerRow(props: ManagerRowProps) {
-  const { rank, delta, name, avatarUri, isYou = false, onPress, excerpt = false, showMove = !excerpt, medal = false, tag = null, stacked: stackedProp, textCap, recordWidth } = props;
+  const { rank, delta, name, avatarUri, isYou = false, onPress, excerpt = false, showMove = !excerpt, medal = false, tag = null, stacked: stackedProp, textCap, recordWidth, gainWidth, rankLeads = true } = props;
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   // Before any early return: a hook (the medal disc's size; League's final standings).
@@ -95,7 +99,7 @@ export function ManagerRow(props: ManagerRowProps) {
         </View>
       ) : (
         // In a list with medals the numeral's cell is the disc's width too, so the columns line up.
-        <Text variant="score.md" color={rank === 1 ? colors.text : colors.text2} style={[styles.rank, medal ? { width: Math.max(22, disc), textAlign: 'center' } : null]}>{rank}</Text>
+        <Text variant="score.md" color={rank === 1 && rankLeads ? colors.text : colors.text2} style={[styles.rank, medal ? { width: Math.max(22, disc), textAlign: 'center' } : null]}>{rank}</Text>
       )}
       {showMove ? (known ? <Move dir={move.dir} text={move.text} cap={textCap} /> : <View style={styles.move} />) : null}
       <Avatar name={name} uri={avatarUri} size={excerpt ? 24 : 32} tone={isYou ? 'you' : 'neutral'} />
@@ -118,7 +122,7 @@ export function ManagerRow(props: ManagerRowProps) {
             {tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}
           </View>
           <Text variant="callout" tone="secondary" style={[styles.record, recordWidth ? { minWidth: recordWidth } : null]}>{record}</Text>
-          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={[styles.gain, gainWidth ? { minWidth: gainWidth } : null]}>{gainText}</Text>
         </>
       ) : stacked ? (
         // Home's excerpt at large text (W4 gate): the name takes its own line(s) and the

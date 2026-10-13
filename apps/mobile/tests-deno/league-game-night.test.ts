@@ -292,3 +292,72 @@ Deno.test('SegmentTabs never shift sideways when the selection moves (each tab s
   assert(tabs.includes('sizer: {\n    opacity: 0,\n  },'));
   assert(tabs.includes('<View style={styles.labelOver} pointerEvents="none">'));
 });
+
+// ── W4 DL gate (BLOCK on 89274804): the fixes ─────────────────────────────────────
+
+import { gainColumnWidth, headCapsWidth, leagueFallback } from '../lib/game/leagueView.ts';
+import { inviteShareShown } from '../lib/game/leagueSettingsEntry.ts';
+
+Deno.test('P1: "No leagues yet" only for someone with no leagues; Run it back reads the list BEFORE switching', () => {
+  assertEquals(leagueFallback({ loading: false, leagueCount: 0 }), 'empty');
+  assertEquals(leagueFallback({ loading: true, leagueCount: 0 }), 'pending');
+  // Leagues exist, none active yet (the instant after Run it back): never the empty state.
+  assertEquals(leagueFallback({ loading: false, leagueCount: 3 }), 'pending');
+  assertEquals(leagueFallback({ loading: true, leagueCount: 3 }), 'pending');
+  const league = SOURCES['app/(tabs)/league.tsx'];
+  const run = league.slice(league.indexOf('const runItBack = async () => {'), league.indexOf('const isCommissioner ='));
+  assert(run.indexOf('await refresh();') < run.indexOf('setActiveLeagueId(res.league_id);'), 'refresh first, then switch');
+  assert(league.includes("if (leagueFallback({ loading, leagueCount: leagues.length }) === 'pending') {"));
+});
+
+Deno.test('P1 XL: the Run it back line 1.5×, History\'s season record 1.5× (under the 19.5pt gains)', () => {
+  assert(SOURCES['app/(tabs)/league.tsx'].includes('<Text variant="callout" tone="secondary" maxFontSizeMultiplier={1.5}>Start Season 2 with the same group. Season 1 stays in History.</Text>'));
+  assert(SOURCES['components/game/HistoryList.tsx'].includes('{s.myRecord ? <Text variant="callout" tone="secondary" maxFontSizeMultiplier={1.5}>{s.myRecord}</Text> : null}'));
+});
+
+Deno.test('P2: the pinned row sits on an opaque bg band down to the tab bar', () => {
+  const league = SOURCES['app/(tabs)/league.tsx'];
+  assert(league.includes('<View style={[styles.pinned, { backgroundColor: colors.bg }]} pointerEvents="box-none">'));
+  assert(league.includes("pinned: { position: 'absolute', left: 0, right: 0, bottom: 0,"));
+});
+
+Deno.test("P2: the champion row is ManagerRow's tile; yours carries the tint AND the ring", () => {
+  const src = SOURCES['components/game/BracketView.tsx'];
+  assert(src.includes('{champion.userId === myUserId ? <View testID="champion-you" pointerEvents="none" style={[styles.championYou, { backgroundColor: colors.youTint, borderColor: colors.you }]} /> : null}'));
+  assert(src.includes("championYou: { ...StyleSheet.absoluteFillObject, borderRadius: radius.row, borderWidth: YOU_RING },"));
+  assert(src.includes("champion: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, padding: space[4], borderRadius: radius.row, overflow: 'hidden' },"));
+});
+
+Deno.test('P2 GS-13: a review row with a sub-line has no minimum height; the sub-line 4pt under its label', () => {
+  const review = SOURCES['components/game/RenewalReview.tsx'];
+  assert(review.includes('<View style={[styles.row, sub ? null : styles.rowMin]}>'));
+  assert(review.includes('rowStack: { gap: space[2], paddingVertical: space[1] },'));
+  assert(!/row: \{[^}]*minHeight/.test(review.slice(review.indexOf('const styles'))), 'the row itself has no minHeight');
+});
+
+Deno.test('P3: the gain column is as wide as its "SEASON GAIN" head, so W–L sits over the records', () => {
+  assert(headCapsWidth('Season gain', 1) > 86, 'the head is wider than the board\'s 86');
+  assertEquals(gainColumnWidth(1), Math.ceil(headCapsWidth('Season gain', 1)));
+  assert(gainColumnWidth(2.35) >= gainColumnWidth(1));
+  const table = SOURCES['components/game/StandingsTable.tsx'];
+  assert(table.includes('<HeadLabel text="Season gain" style={[styles.headRight, { minWidth: layout.gainWidth }]} />'));
+  assert(table.includes('gainWidth={layout.gainWidth}'));
+  assert(SOURCES['components/sp/gn/ManagerRow.tsx'].includes('style={[styles.gain, gainWidth ? { minWidth: gainWidth } : null]}'));
+});
+
+Deno.test('P3: the small fixes (bye indent, final head, week-1 ranks, error avatar, no History title, tight bracket, one Share)', () => {
+  const bracket = SOURCES['components/game/BracketView.tsx'];
+  assert(bracket.includes('advances: { marginLeft: 24 },'));
+  assert(bracket.includes("row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[1] },"));
+  const league = SOURCES['app/(tabs)/league.tsx'];
+  assert(league.includes('throughLabel={null}'), 'final standings: no "Through Week N" beside "After the playoffs"');
+  assert(league.includes('nothingScored={throughWeek === 0}'));
+  assert(SOURCES['components/sp/gn/ManagerRow.tsx'].includes('color={rank === 1 && rankLeads ? colors.text : colors.text2}'));
+  assert(league.includes('<PhasePlaceholder title="League" showAvatar icon={() => <Icon name="alert"'));
+  assert(!SOURCES['components/game/HistoryList.tsx'].includes('<Text variant="title">History</Text>'));
+  const settings = SOURCES['app/league-settings.tsx'];
+  assertEquals((settings.match(/<InviteRow code=/g) ?? []).length, 2, 'commissioner and member share the one row');
+  assert(settings.includes('{inviteShareShown({ locked }) ? ('));
+  assertEquals(inviteShareShown({ locked: true }), true);
+  assertEquals(inviteShareShown({ locked: false }), true);
+});

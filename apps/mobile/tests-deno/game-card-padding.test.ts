@@ -21,7 +21,9 @@ Deno.test('no game screen mounts a bare sp Card (it has no padding of its own)',
   }
   // W4 League (Game Night): Schedule and History are no longer cards: their rows are the
   // standings' `surface` tiles on the page (ScheduleList's own `row`, HistoryList's ManagerRow).
-  for (const f of ['ChampBanner', 'RenewalReview', 'RenewalAsk', 'DraftLobby', 'BracketView', 'RenewalRoster']) {
+  // W4 DL gate: the bracket's game card is tighter (toward the board's ≈64pt), still padded.
+  assert(SOURCES['components/game/BracketView.tsx'].includes('card: { borderRadius: radius.lg, paddingVertical: space[3], paddingHorizontal: space[5], gap: space[2] },'));
+  for (const f of ['ChampBanner', 'RenewalReview', 'RenewalAsk', 'DraftLobby', 'RenewalRoster']) {
     assert(SOURCES[`components/game/${f}.tsx`].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), f);
   }
   assert(SOURCES['components/game/ScheduleList.tsx'].includes("row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingVertical: space[4], paddingHorizontal: space[4], borderRadius: radius.row },"));

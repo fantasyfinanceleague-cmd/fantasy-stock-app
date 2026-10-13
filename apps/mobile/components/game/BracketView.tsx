@@ -5,7 +5,7 @@ import { Text } from '@/components/sp/Text';
 import { Icon } from '@/components/sp/Icon';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { toneOf } from '@/components/sp/logic/gameNight';
+import { toneOf, YOU_RING } from '@/components/sp/logic/gameNight';
 import { radius, space } from '@/constants/tokens';
 import type { Bracket, BracketGame, BracketSide } from '@/lib/game/bracket';
 import { advancesLine, bracketChampion, bracketRounds, championLine } from '@/lib/game/leagueView';
@@ -48,7 +48,10 @@ export function BracketView({ bracket, caption, myUserId }: BracketViewProps) {
         </View>
       ))}
       {champion ? (
-        <View style={[styles.champion, { backgroundColor: colors.surface }, yourRowTint(champion.userId === myUserId, colors.youTint, 0)]} accessible accessibilityLabel={`${championLine(champion.name, GAME_COPY.champion)}${youA11y(champion.userId === myUserId)}`}>
+        // ManagerRow's tile: `surface`; when it's you, the `youTint` over it and the 1.5pt `you`
+        // ring, as your Standings row (DL ruling at the W4 gate: "the ring, yes").
+        <View style={[styles.champion, { backgroundColor: colors.surface }]} accessible accessibilityLabel={`${championLine(champion.name, GAME_COPY.champion)}${youA11y(champion.userId === myUserId)}`}>
+          {champion.userId === myUserId ? <View testID="champion-you" pointerEvents="none" style={[styles.championYou, { backgroundColor: colors.youTint, borderColor: colors.you }]} /> : null}
           <Icon name="trophy" size="headline" tone="live" />
           <Text variant="callout" maxFontSizeMultiplier={ROW_TEXT_CAP} style={styles.bold}>{championLine(champion.name, GAME_COPY.champion)}</Text>
         </View>
@@ -99,16 +102,19 @@ function SideRow({ side, winner, scored, mine }: { side: BracketSide | null; win
 
 const styles = StyleSheet.create({
   // §9C Card: surface + the rim; the sp Card has no padding or radius of its own.
-  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
+  // Toward the board's ≈64pt game card (W4 DL gate: a 6-team bracket took three screens):
+  // 8pt top and bottom, 16 at the sides, rows 4pt apart; the card holds no tap, so no 44pt rows.
+  card: { borderRadius: radius.lg, paddingVertical: space[3], paddingHorizontal: space[5], gap: space[2] },
   stack: { gap: space[3] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 44, paddingVertical: space[2] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[1] },
   seed: { minWidth: 16, textAlign: 'right' },
   // The name gives way (wraps) before the score does: at large text the score ran off the card.
   name: { flexShrink: 1, minWidth: 0 },
   end: { marginLeft: 'auto', flexShrink: 0 },
   bold: { fontWeight: '800' },
-  // Under the name, on its column (the seed's 16 + the 12 gap).
-  advances: { marginLeft: 28 },
+  // Under the name, on its column (W4 DL gate: 24).
+  advances: { marginLeft: 24 },
   // GS-7: the champion's row, a tile like the standings' (radius 12, 12pt padding).
-  champion: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingHorizontal: space[4], borderRadius: radius.row },
+  champion: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, padding: space[4], borderRadius: radius.row, overflow: 'hidden' },
+  championYou: { ...StyleSheet.absoluteFillObject, borderRadius: radius.row, borderWidth: YOU_RING },
 });

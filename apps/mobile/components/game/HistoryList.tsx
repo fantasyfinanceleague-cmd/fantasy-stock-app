@@ -19,7 +19,6 @@ export function HistoryList({ rows, myUserId, playoffs }: { rows: HistoryRow[]; 
   const seasons = historySeasons(rows).map((s) => ({ ...s, table: historyStandings(s, playoffs?.get(s.leagueId) ?? null) }));
   return (
     <View style={styles.stack}>
-      <Text variant="title">History</Text>
       {seasons.map((s) => (
         <SeasonBlock key={s.leagueId} season={s} table={s.table} myUserId={myUserId} />
       ))}
@@ -34,13 +33,14 @@ function SeasonBlock({ season: s, table, myUserId }: { season: HistorySeason; ta
     <View style={styles.season}>
       <View style={styles.head}>
         <Text variant="headline">{`Season ${s.seasonNumber}`}</Text>
-        {s.myRecord ? <Text variant="callout" tone="secondary" maxFontSizeMultiplier={1.6}>{s.myRecord}</Text> : null}
+        {/* 1.5× (19.5pt): never above the rows' gains (W4 DL gate). */}
+        {s.myRecord ? <Text variant="callout" tone="secondary" maxFontSizeMultiplier={1.5}>{s.myRecord}</Text> : null}
       </View>
       {/* GS-8b: once the playoffs order the season, say so (Standings' own subtitle), so a
           silver above a better record doesn't read as a mistake. */}
       <View style={styles.subHead}>
         {s.champion ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6}>{`Champion ${s.champion}`}</Text> : <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6}>Not finished yet</Text>}
-        {table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}
+        {table.medals ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6}>{GAME_COPY.finalStandingsSubtitle}</Text> : null}
       </View>
       <View style={styles.rows}>
         {table.places.map(({ standing: st, place, tag }) => (
@@ -58,6 +58,7 @@ function SeasonBlock({ season: s, table, myUserId }: { season: HistorySeason; ta
             stacked={layout.stacked}
             textCap={layout.textCap}
             recordWidth={layout.recordWidth}
+            gainWidth={layout.gainWidth}
           />
         ))}
       </View>

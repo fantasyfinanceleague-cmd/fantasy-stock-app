@@ -2,16 +2,12 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "6b7c803ba1ccf8a7bbf8ed692cb57e26ab562e0d",
-    "commitShort": "6b7c803b",
+    "commit": "a730b307a840a3ed771ad7982c4d84ba434d81aa",
+    "commitShort": "a730b307",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/_layout.tsx"
-      },
       {
         "code": "M",
         "path": "apps/mobile/app/(tabs)/league.tsx"
@@ -30,95 +26,27 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/RenewalAsk.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/game/RenewalReview.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/ScheduleList.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/SetupRows.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/SetupScaffold.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/components/game/StandingsTable.tsx"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/components/league/LeagueStates.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/BarsRefresh.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/gn/index.ts"
-      },
-      {
         "code": "M",
         "path": "apps/mobile/components/sp/gn/ManagerRow.tsx"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/components/sp/gn/SegmentTabs.tsx"
+        "code": "M",
+        "path": "apps/mobile/lib/game/leagueSettingsEntry.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/devSeam.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/game/leagueFixture.ts"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/lib/game/leagueView.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/seamCalls.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamTables.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useBracket.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useLeagueHistory.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useLeagueStandings.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useSeasonPlayoffs.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/LeagueContext.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/devFixture.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/shell/fixtureRoute.ts"
+        "path": "apps/mobile/lib/game/standings.ts"
       },
       {
         "code": "M",
@@ -130,10 +58,6 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/tests-deno/game-leave-league.test.ts"
       },
       {
@@ -142,30 +66,14 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/tests-deno/league-game-night.test.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/manager-row.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/run-it-back-gate.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/segmented-xl.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-13T23:12:44Z",
+    "timestamp": "2026-10-13T23:12:47Z",
     "sourceHash": "sha256:0edd848200010f50017d28b4a4ffc5a1431493ae25e63956f78f48d0413d6840",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

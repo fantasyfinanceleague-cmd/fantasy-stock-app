@@ -12,7 +12,7 @@ import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { StandingsRowView, StandingsTable, useStandingsLayout } from '@/components/game/StandingsTable';
 import { SegmentTabs } from '@/components/sp/gn';
 import { LoadFailed, TilesSkeleton } from '@/components/league/LeagueStates';
-import { BRACKET_LOAD_FAILED, HISTORY_LOAD_FAILED, leagueThroughWeek, standingsColumnLabel } from '@/lib/game/leagueView';
+import { BRACKET_LOAD_FAILED, HISTORY_LOAD_FAILED, leagueFallback, leagueThroughWeek, standingsColumnLabel } from '@/lib/game/leagueView';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { playoffLine } from '@/lib/playoffs';
 import { buildSchedule } from '@/lib/game/schedule';
@@ -145,8 +145,10 @@ export default function LeagueScreen() {
       Alert.alert('Not started', 'The renewal did not start. Try again.');
       return;
     }
-    setActiveLeagueId(res.league_id);
+    // Read the list FIRST, then switch: switching first left the tab with an id that wasn't in
+    // the list yet, so it fell through to "No leagues yet" for a moment (W4 DL gate, P1).
     await refresh();
+    setActiveLeagueId(res.league_id);
   };
   const isCommissioner = !!user?.id && activeLeague?.commissioner_id === user.id;
 
@@ -165,13 +167,15 @@ export default function LeagueScreen() {
 
   if (inSeason) {
     if (st.status === 'error') {
-      return <PhasePlaceholder title="League" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={onPull} />;
+      // showAvatar: Profile stays reachable from the failed state too (W4 DL gate).
+      return <PhasePlaceholder title="League" showAvatar icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load the standings" message="Pull down to try again." onRefresh={onPull} />;
     }
     const ready = st.status === 'ready';
     const rows = buildStandingsRows(st.standings, user?.id ?? '', st.previousRanks);
     const standings = standingsView({ rows, completed, playoffTeams: activeLeague?.playoff_teams ?? null, bracketStatus: bracket.status, playoffRows: bracket.rows });
     // "Through Week N" agrees with Home's card (leagueView.leagueThroughWeek); hidden at N = 0.
-    const throughLabel = standingsColumnLabel(leagueThroughWeek({ phase: phase ?? 'regular', week: st.week, numWeeks: activeLeague?.num_weeks ?? null }));
+    const throughWeek = leagueThroughWeek({ phase: phase ?? 'regular', week: st.week, numWeeks: activeLeague?.num_weeks ?? null });
+    const throughLabel = standingsColumnLabel(throughWeek);
     const contentWidth = width - space[6] * 2;
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -181,7 +185,8 @@ export default function LeagueScreen() {
             {ready && RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase, isCommissioner, hasSuccessor: !!activeLeague?.successor_league_id }) ? (
               <Card style={styles.strip}>
                 <Text variant="headline">You're the commissioner</Text>
-                <Text variant="callout" tone="secondary">Start Season 2 with the same group. Season 1 stays in History.</Text>
+                {/* 1.5× at most: at XL the uncapped line outgrew its heading and the button (W4 DL gate). */}
+                <Text variant="callout" tone="secondary" maxFontSizeMultiplier={1.5}>Start Season 2 with the same group. Season 1 stays in History.</Text>
                 <Button label="Run it back" onPress={() => void runItBack()} />
               </Card>
             ) : null}
@@ -233,11 +238,12 @@ export default function LeagueScreen() {
                   caption={GAME_COPY.finalStandingsCaption}
                   seasonComplete
                   showMove={false}
-                  throughLabel={throughLabel}
+                  // "After the playoffs" says what this order is; no "Through Week N" beside it (W4 DL gate).
+                  throughLabel={null}
                   onPinChange={setPinnedRow}
                 />
               ) : standings.kind === 'regular' ? (
-                <StandingsTable rows={standings.rows} caption={STANDINGS_CAPTION} seasonComplete={standings.medals} throughLabel={throughLabel} onPinChange={setPinnedRow} />
+                <StandingsTable rows={standings.rows} caption={STANDINGS_CAPTION} seasonComplete={standings.medals} throughLabel={throughLabel} nothingScored={throughWeek === 0} onPinChange={setPinnedRow} />
               ) : (
                 // GS-4: a finished season's order waits for the bracket (never the regular medals first).
                 <TilesSkeleton rows={Math.max(1, rows.length)} />
@@ -274,11 +280,16 @@ export default function LeagueScreen() {
     return <LeagueLobby leagueId={activeLeagueId} />;
   }
 
-  // First load: just the header, so the empty state never flashes before the leagues arrive (Home's rule).
-  if (loading && leagues.length === 0) {
+  // The empty state only for someone who truly has no leagues (leagueFallback). While the list
+  // loads, or while a just-switched league isn't in it yet (Run it back), the header and the
+  // tiles' skeleton: never "No leagues yet" to someone WITH leagues (W4 DL gate, P1).
+  if (leagueFallback({ loading, leagueCount: leagues.length }) === 'pending') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ShellHeader title="League" showAvatar />
+        <View style={styles.pendingBody}>
+          <TilesSkeleton />
+        </View>
       </View>
     );
   }
@@ -308,7 +319,9 @@ function PinnedRow({ row, rows, seasonComplete, showMove }: { row: StandingsRow;
   const { colors } = useTheme();
   const layout = useStandingsLayout(rows, showMove, seasonComplete);
   return (
-    <View style={styles.pinned} pointerEvents="box-none">
+    // An opaque `bg` band from the pinned row down to the tab bar, so no half-cut glyph of the
+    // list shows through the strip under it (W4 DL gate).
+    <View style={[styles.pinned, { backgroundColor: colors.bg }]} pointerEvents="box-none">
       <View style={[styles.pinnedCard, { borderColor: colors.rim }]}>
         <StandingsRowView r={row} seasonComplete={seasonComplete} showMove={showMove} layout={layout} />
       </View>
@@ -533,10 +546,11 @@ function LeagueLobby({ leagueId }: { leagueId: string }) {
 
 const styles = StyleSheet.create({
   stack: { gap: space[3] },
+  pendingBody: { paddingHorizontal: space[6], paddingTop: space[3] },
   // G-6: the sp Card has no padding or radius of its own (the Run it back strip).
   strip: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   queueFailed: { borderRadius: 14, padding: space[5], gap: space[3], alignItems: 'flex-start' },
   // UX rule 7: your row, pinned over the bottom of the standings (same row component).
-  pinned: { position: 'absolute', left: space[6], right: space[6], bottom: space[3] },
+  pinned: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space[6], paddingTop: space[2], paddingBottom: space[3] },
   pinnedCard: { borderRadius: radius.row, borderWidth: 1, overflow: 'hidden' },
 });

@@ -21,6 +21,15 @@ import type { Bracket, BracketGame, BracketSide } from './bracket';
 export const HISTORY_LOAD_FAILED = "Your league's history didn't load.";
 export const BRACKET_LOAD_FAILED = "The bracket didn't load.";
 
+// ── What League shows with no league to show ─────────────────────────────────────
+
+/** 'empty' (Home's "No leagues yet") ONLY when the list has loaded and is empty. While it
+ * loads, or while it holds leagues but none is active yet (the instant after Run it back
+ * switches to Season 2), 'pending': the header and a skeleton. */
+export function leagueFallback(input: { loading: boolean; leagueCount: number }): 'empty' | 'pending' {
+  return !input.loading && input.leagueCount === 0 ? 'empty' : 'pending';
+}
+
 // ── "Through Week N" ─────────────────────────────────────────────────────────────
 
 /** The last COMPLETED week, the way Home's card counts it (homeCopy standingsThroughWeek):
@@ -60,6 +69,22 @@ export const RECORD_PT = 13;
 export const GAIN_PT = 15;
 export const GAIN_MAX_SCALE = 1.3;
 
+/** The column head's caps (caption 12/800, uppercased, +0.48pt tracking, capped 1.3×): a
+ * width estimate that errs wide, so the gain column is never narrower than its head. */
+export const HEAD_PT = 12;
+export const HEAD_MAX_SCALE = 1.3;
+export function headCapsWidth(text: string, fontScale: number): number {
+  const s = Math.min(Math.max(1, fontScale), HEAD_MAX_SCALE);
+  const upper = text.toUpperCase();
+  return estimateNameWidth(upper, HEAD_PT * s) + 0.48 * Math.max(0, upper.length - 1);
+}
+
+/** The gain column: the board's 86pt, or the "SEASON GAIN" head's width if wider, so the
+ * W–L head sits over the records (W4 DL gate). The rows and the head share it. */
+export function gainColumnWidth(fontScale: number): number {
+  return Math.max(GAIN_MIN, Math.ceil(headCapsWidth('Season gain', fontScale)));
+}
+
 /** A tabular figure string's width: figures ≈ 0.72em, "," "." ≈ 0.3em (stackedNameCap's estimate). */
 export function figureWidth(text: string, pt: number): number {
   let em = 0;
@@ -77,7 +102,7 @@ export function nameRoom(input: { rowWidth: number; fontScale: number; move: boo
   const s = Math.max(1, input.fontScale);
   const gainScale = Math.min(s, GAIN_MAX_SCALE);
   const record = Math.max(0, ...input.rows.map((r) => figureWidth(r.record, RECORD_PT * s)));
-  const gain = Math.max(GAIN_MIN, ...input.rows.map((r) => figureWidth(r.gainText, GAIN_PT * gainScale)));
+  const gain = Math.max(gainColumnWidth(input.fontScale), ...input.rows.map((r) => figureWidth(r.gainText, GAIN_PT * gainScale)));
   const leading = input.leading ?? RANK_CELL;
   // Cells: rank, [movement], avatar, name, record, gain; a gap between each pair.
   const gaps = (input.move ? 5 : 4) * ROW_GAP;
