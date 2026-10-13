@@ -267,6 +267,8 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
+    ['call-shading', 'Matchup shading when you\'re behind'],
+    ['call-categories', 'The 11 category names'],
     ['call-game-night', 'Game Night as you picked it · the player card'],
     ['call-game-night-ask', 'A label · the Portfolio chart · the your-turn colour'],
   ];
