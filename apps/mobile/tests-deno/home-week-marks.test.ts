@@ -15,10 +15,11 @@ import { buildSeasonGainSeries, type SeasonWeekInput } from '../lib/home/seasonG
 import { buildChartGeometry } from '../lib/chart/chartGeometry.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
-// W4 capture pass (iPhone 17 Pro, the README's F1 row): date glyph bottom -> tab glyph top,
-// in points, with the tabs NOT pulled up. Re-measure if the chart's under-plot rows change.
-const MEASURED_NO_PULL_1X = 23.7;
-const MEASURED_NO_PULL_13X = 23.4;
+// W4 capture pass (both phones, the README's F1 row): the dates' lowest pixel (a descender)
+// -> the tabs' highest pixel, row-wise, in points, with the tabs NOT pulled up; standard text
+// and XL (accessibility-extra-large, fontScale 2.35).
+const MEASURED_NO_PULL_1X = 28.7;
+const MEASURED_NO_PULL_XL = 30.3;
 
 /** A built season of `n` scored weeks (plus an optional live week), laid out on a `width` chart the way SeasonChart does. */
 function season(n: number, width: number, opts: { liveDays?: number } = {}) {
@@ -288,7 +289,8 @@ Deno.test('F1: the tab labels sit 8pt (±2) under the date labels; the 24pt bloc
   // W4 (Game Night): the two end dates now sit under the marks, and the tabs under the dates.
   // Measured from device pixels on the W4 captures (README, docs/design/captures/gn-w4-home):
   // date glyph bottom -> tab glyph top with no pull-up, at standard text and at the 1.3x cap.
-  const before = [[1, MEASURED_NO_PULL_1X], [1.3, MEASURED_NO_PULL_13X], [3, MEASURED_NO_PULL_13X]] as const;
+  const before = [[1, MEASURED_NO_PULL_1X], [2.35, MEASURED_NO_PULL_XL]] as const;
+  assertEquals([rangeTabsPullUp(1), rangeTabsPullUp(2.35)], [21, 22]);
   for (const [scale, gap] of before) {
     const after = gap - rangeTabsPullUp(scale);
     assert(Math.abs(after - TAB_TEXT_UNDER_MARKS) <= 2, `${scale}x: ${after}pt`);

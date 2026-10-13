@@ -120,6 +120,18 @@ const XL_STANDINGS: GetHomeLeagueResult['standings'] = [
   { user_id: 'gianluigi', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -15235.76, display_name: 'Gianluigi B.', is_bot: false },
 ];
 
+/** The stress fixture's standings (W4 gate, §9B): 20-character names, ≥ $1,000,000 gains
+ * and losses, your row 5th so Home shows the top 3 plus yours. Ranked by record, as
+ * league_standings_ranked orders them, so a loss can sit above a gain. */
+const STRESS_STANDINGS: GetHomeLeagueResult['standings'] = [
+  { user_id: 'paolo', rank: 1, wins: 5, losses: 0, ties: 0, points_for: 1532118.4, display_name: 'Paolo Mastrantonioli', is_bot: false },
+  { user_id: 'gianluigi', rank: 2, wins: 4, losses: 1, ties: 0, points_for: 1204388.1, display_name: 'Gianluigi Buonarroti', is_bot: false },
+  { user_id: 'marco', rank: 3, wins: 3, losses: 2, ties: 0, points_for: -1098552.3, display_name: 'Marco Tagliavinicchi', is_bot: false },
+  { user_id: 'luca', rank: 4, wins: 3, losses: 2, ties: 0, points_for: 412880.15, display_name: 'Luca Vercingetorixxi', is_bot: false },
+  { user_id: FIXTURE_USER_ID, rank: 5, wins: 2, losses: 3, ties: 0, points_for: -1234567.8, display_name: 'Robertino Bartolomeo', is_bot: false },
+  { user_id: 'chiara', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -815642.95, display_name: 'Chiara Rinaldi-Sforz', is_bot: false },
+];
+
 export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
@@ -129,10 +141,12 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // (2026-10-07, X-1 re-capture): the same roster ×10 -- see
   // homeFixtureData.ts's own doc on why it's derived, not independent.
   const isXLLarge = fixture === 'xl_large_numbers';
-  const isXLMillion = fixture === 'xl_million';
+  const isStress = fixture === 'stress';
+  const isXLMillion = fixture === 'xl_million' || isStress;
   const isXL = isXLLarge || isXLMillion;
-  const robRows = isXLMillion ? XL_MILLION_ROBERTO_HOLDINGS : isXLLarge ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
-  const giaRows = isXLMillion ? XL_MILLION_GIANLUIGI_HOLDINGS : isXLLarge ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
+  // stress: the million rosters swapped, so you trail this week by a million-scale margin.
+  const robRows = isStress ? XL_MILLION_GIANLUIGI_HOLDINGS : isXLMillion ? XL_MILLION_ROBERTO_HOLDINGS : isXLLarge ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
+  const giaRows = isStress ? XL_MILLION_ROBERTO_HOLDINGS : isXLMillion ? XL_MILLION_GIANLUIGI_HOLDINGS : isXLLarge ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
   const robWeeks = isXLMillion ? XL_MILLION_ROBERTO_WEEKS : isXLLarge ? XL_ROBERTO_WEEKS : ROBERTO_WEEKS;
   // W4 capture only (EXPO_PUBLIC_MATCHUP_FIXTURE, matchupFixture.ts): 'bought' adds the
   // week's trades; 'stress' scales the XL million league's share counts to seven figures.
@@ -241,7 +255,10 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   };
 
   const regularSeasonWeeks = robWeeks.map((w, i) => {
-    const monday = new Date(Date.UTC(2026, 6, 6 + i * 7, 13, 30));
+    // Contiguous with week 6 (FIXTURE_WEEK6_START, Mon Sep 21): week 1 opens Mon Aug 17. W4's
+    // season chart sits on a calendar axis (§9C), which showed the old Jul 6 start as a
+    // seven-week flat gap before week 6 that no real league can have.
+    const monday = new Date(Date.UTC(2026, 7, 17 + i * 7, 13, 30));
     const friday = new Date(monday.getTime() + 4 * 24 * 3600 * 1000 + 6.5 * 3600 * 1000);
     return {
       week_number: w.week, week_start: monday.toISOString(), week_end: friday.toISOString(),
@@ -308,7 +325,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
       opponent_trades: [],
     },
     matchups,
-    standings: isXL ? XL_STANDINGS : isPreSeason
+    standings: isStress ? STRESS_STANDINGS : isXL ? XL_STANDINGS : isPreSeason
       ? [
           { user_id: FIXTURE_USER_ID, rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
           { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },

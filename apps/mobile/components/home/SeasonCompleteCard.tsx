@@ -264,10 +264,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space[5],
-    padding: space[5],
+    padding: space[4],
     borderRadius: radius.lg,
   },
+  // Two across (a 2 × 2 grid of the four tiles) inside the inset panel; a tile too wide
+  // for its half (large text) takes the whole row.
   tile: {
+    flexBasis: '40%',
+    flexGrow: 1,
     minWidth: 130,
     gap: space[1],
   },

@@ -261,15 +261,24 @@ export function chartLiveEnd(marketOpen: boolean, isPlayoff: boolean): boolean {
  * gap sits between their underline and the next card. */
 export const TAB_TEXT_UNDER_MARKS = 8;
 /** How far the tabs row is pulled up over the chart's bottom edge so the labels sit
- * TAB_TEXT_UNDER_MARKS under the marks: the 8pt layout gap is between BOXES, and both
- * boxes carry empty space of their own (the chart's strip under the marks' glyphs, the
- * label's line leading). Measured from device pixels (capture pass): 24.3pt glyph to
- * glyph at standard text, 22.0pt at the 1.3x cap, so the pull is 16pt there, 14pt here,
- * and linear between. The tabs keep their 44pt hit area through hitSlop, not padding,
- * and draw after the chart, so the overlap never covers a mark. */
+ * TAB_TEXT_UNDER_MARKS under the glyphs above them: the 8pt layout gap is between BOXES,
+ * and the boxes carry empty space of their own (the strip under the axis glyphs, the
+ * label's leading, the RangePills box above the label). Game Night (W4): the two end dates
+ * sit under the marks, so the tabs measure from the DATES, whose caption follows Dynamic
+ * Type uncapped (the gn Chart's axis) while the tab labels cap at 1.3x. Measured from
+ * device pixels (W4 capture pass, both phones, row-wise; the dates' lowest pixel is a
+ * descender, the "p" of "Sep"): 28.7pt date glyph → tab glyph with no pull at standard
+ * text (fontScale 1) and 30.3pt at XL (`accessibility-extra-large`, fontScale 2.35). The
+ * pull is linear in the real fontScale through those two points (21pt at 1x, 22pt at XL).
+ * The tabs keep their 44pt boxes, and draw after the chart, so the overlap never covers a
+ * mark or a date. */
+export const NO_PULL_GAP_1X = 28.7;
+export const NO_PULL_GAP_XL = 30.3;
+export const XL_FONT_SCALE = 2.35;
 export function rangeTabsPullUp(fontScale: number): number {
-  const s = Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE);
-  return Math.round(16 - ((s - 1) / (RANGE_TAB_MAX_FONT_SCALE - 1)) * 2);
+  const s = Math.min(Math.max(fontScale, 1), 3.2);
+  const noPull = NO_PULL_GAP_1X + ((s - 1) / (XL_FONT_SCALE - 1)) * (NO_PULL_GAP_XL - NO_PULL_GAP_1X);
+  return Math.round(noPull - TAB_TEXT_UNDER_MARKS);
 }
 
 /**
