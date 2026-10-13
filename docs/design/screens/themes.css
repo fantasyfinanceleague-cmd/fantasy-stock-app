@@ -1,68 +1,90 @@
-/* One design, two themes (Giorgio, 2026-09-29). Supersedes the money/game
-   surface axis: every screen is entirely Light or entirely Dark; nothing
-   inverts inside a screen. Same semantic names, two values each. Scoreboards
-   get emphasis from type scale, motion and accent, not from a dark card.
+/* One design, two themes (Giorgio, 2026-09-29), now in the v3.1 "Game Night"
+   values (DESIGN_DIRECTION §9C, 2026-10-12). Every screen is entirely Light or
+   entirely Dark; nothing inverts inside a screen. Same semantic names, two
+   values each.
 
-   Naming: --c-<role>. "*-text" variants are the text-safe (≥4.5:1) cut of a
-   colour whose fill value is too light or too loud for text. Contrast for
-   every token AND every foreground-on-fill pair the components use is
-   computed live on the board. --c-text-3 is for disabled/decorative text
-   only (≈3:1), never information. */
+   SOURCE: apps/mobile/constants/tokens/color.ts (itself ported from
+   docs/design/tokens-v3-game-night.json), key for key: each `--c-<kebab>` is a
+   ThemeColors key in camelCase there (`--c-text-2` = `text2`). Change a value
+   in the spec and the app first, never here alone. The board's TOKEN_ROWS and
+   PAIRS (board.jsx) are the app's contrastPairs.ts row for row, so the board
+   scores the same palette the app ships.
+
+   --c-text-3 is for disabled/decorative text only (about 3:1), never
+   information. The kbd/chrome keys below are the board's own illustration
+   colours (keyboard and browser mockups); the app has no such keys. */
 
 [data-ks-theme='light'] {
   color-scheme: light;
-  --c-bg: #F3F5F8;
-  --c-surface: #FFFFFF;
-  --c-inset: #F0F3F7;
-  --c-sunken: #EBEFF4;
-  /* Medals (season complete only): a filled disc with the rank numeral.
-     Fills ≥3:1 on surface, bg and the you-tint row; numeral ≥4.5:1 on the fill. */
-  --c-medal-gold: #B07A00;
-  --c-medal-silver: #7C8898;
-  --c-medal-bronze: #C27036;
-  --c-on-medal: #1A1407;
-  --c-line: #E3E8EF;
-  --c-border: #DDE3EA;
-  --c-border-strong: #76828F;
-  --c-text: #0D1B2E;
-  --c-text-2: #5B6678;
-  --c-text-3: #8A94A3;
-  --c-accent: #2860F0;
-  --c-accent-tint: #E8EEFF;
-  --c-accent-wash: rgba(40, 96, 240, 0.06);
-  --c-on-accent: #FFFFFF;
-  --c-you: #2860F0;
-  --c-you-text: #2860F0;
-  --c-you-tint: rgba(40, 96, 240, 0.08);
-  --c-opp: #E8541F;
-  --c-opp-text: #B93C0E;
-  --c-on-opp: #0D1B2E;
-  --c-on-live: #0D1B2E;
-  --c-live: #C07E00;
-  --c-live-text: #8A5B00;
-  --c-live-glow: rgba(192, 126, 0, 0.35);
-  --c-gain: #12803F;
-  --c-loss: #C8303A;
-  --c-zero: #5B6678;
-  --c-gain-tint: #EDF7F0;
-  --c-loss-tint: #FCE8E9;
-  --c-danger: #B42318;
-  --c-loss-fill: #C8303A;
-  --c-warn-tint: #FFF6DE;
-  --c-warn-line: #F5D48A;
-  --c-warn-text: #7A4B00;
-  --c-primary-bg: #0D1B2E;
-  --c-primary-fg: #FFFFFF;
-  --c-secondary-bg: #FFFFFF;
-  --c-secondary-fg: #0D1B2E;
-  --c-secondary-border: #76828F;
-  --c-inverse-bg: #0D1B2E;
-  --c-inverse-fg: #FFFFFF;
-  --c-track: #E3E8EF;
-  --c-shadow: 0 2px 8px rgba(13, 27, 46, 0.05);
+  --c-bg: #F3F5FC;
+  --c-surface: #FDFEFF;
+  --c-inset: #E7EBF6;
+  --c-sunken: #E6E9F4;
+  --c-line: #D5DAEA;
+  --c-border: #D5DAEA;
+  --c-border-strong: #737A8D;
+  --c-text: #0E142C;
+  --c-text-2: #505B72;
+  --c-text-3: #969EB2;
+  --c-accent: #00708E;
+  --c-accent-tint: rgba(0, 112, 142, 0.12);
+  --c-accent-wash: rgba(0, 112, 142, 0.05);
+  --c-on-accent: #FDFEFF;
+  --c-you: #0064DC;
+  --c-you-text: #0053C2;
+  --c-you-tint: rgba(0, 100, 220, 0.1);
+  --c-opp: #788093;
+  --c-opp-text: #505B72;
+  --c-on-opp: #06091C;
+  --c-live: #00708E;
+  --c-live-text: #006885;
+  --c-live-glow: rgba(0, 112, 142, 0.3);
+  --c-on-live: #FDFEFF;
+  --c-gain: #006C47;
+  --c-loss: #C02447;
+  --c-zero: #505B72;
+  --c-gain-tint: rgba(0, 108, 71, 0.1);
+  --c-loss-tint: rgba(192, 36, 71, 0.1);
+  --c-danger: #B7191C;
+  --c-loss-fill: #BD1F3D;
+  --c-warn-tint: #FAE7B3;
+  --c-medal-gold: #AD7300;
+  --c-medal-silver: #7C8795;
+  --c-medal-bronze: #C36C36;
+  --c-on-medal: #160E02;
+  --c-warn-line: #EFCC83;
+  --c-warn-text: #784900;
+  --c-primary-bg: #00708E;
+  --c-primary-fg: #FDFEFF;
+  --c-secondary-bg: rgba(253, 254, 255, 0.0);
+  --c-secondary-fg: #0E142C;
+  --c-secondary-border: #737A8D;
+  --c-inverse-bg: #0E142C;
+  --c-inverse-fg: #FDFEFF;
+  --c-track: #D5DAEA;
+  --c-shadow: none;
   --c-sheet-shadow: 0 8px 24px rgba(13, 27, 46, 0.12);
-  --c-scrim: rgba(13, 27, 46, 0.38);
-  --c-tabbar: rgba(255, 255, 255, 0.92);
+  --c-scrim: rgba(14, 20, 44, 0.38);
+  --c-tabbar: rgba(253, 254, 255, 0.94);
+  --c-on-you: #FAFCFE;
+  --c-rim: #D5DAEA;
+  --c-money-bg: #FDFEFF;
+  --c-clock-cell: #131832;
+  --c-on-clock-cell: #FDFEFF;
+  --c-clock-cell-live: #35EEFF;
+  --c-on-cat: #FDFEFF;
+  --c-cat-tech: #3E66B3;
+  --c-cat-finance: #047E44;
+  --c-cat-health: #944887;
+  --c-cat-energy: #637200;
+  --c-cat-transport: #0076A1;
+  --c-cat-retail: #A34C1B;
+  --c-cat-food: #A54358;
+  --c-cat-media: #7355A9;
+  --c-cat-industrials: #007F79;
+  --c-cat-real-estate: #8D5F00;
+  --c-cat-misc: #5F636F;
+  /* Board-only: the illustrative keyboard and browser chrome. */
   --c-kbd-bg: #D1D4DB;
   --c-kbd-key: #FFFFFF;
   --c-kbd-key-2: #ABB0BA;
@@ -72,56 +94,75 @@
 
 [data-ks-theme='dark'] {
   color-scheme: dark;
-  --c-bg: #0D1B2E;
-  --c-surface: #16263D;
-  --c-inset: #1E3250;
-  --c-sunken: #0A1524;
-  --c-medal-gold: #E8AF2E;
-  --c-medal-silver: #B9C3CF;
-  --c-medal-bronze: #DC8A55;
-  --c-on-medal: #0D1B2E;
-  --c-line: #263A58;
-  --c-border: #263A58;
-  --c-border-strong: #8DA0BD;
-  --c-text: #F3F6FA;
-  --c-text-2: #9AAAC4;
-  --c-text-3: #6B7D99;
-  --c-accent: #7FA6FF;
-  --c-accent-tint: rgba(127, 166, 255, 0.16);
-  --c-accent-wash: rgba(127, 166, 255, 0.07);
-  --c-on-accent: #FFFFFF;
-  --c-you: #3366FF;
-  --c-you-text: #8AB0FF;
-  --c-you-tint: rgba(51, 102, 255, 0.18);
-  --c-opp: #FF6A3D;
-  --c-opp-text: #FF8F66;
-  --c-on-opp: #0D1B2E;
-  --c-on-live: #0D1B2E;
-  --c-live: #FFC53D;
-  --c-live-text: #FFC53D;
-  --c-live-glow: rgba(255, 197, 61, 0.45);
-  --c-gain: #4ADE8B;
-  --c-loss: #FF7A7A;
-  --c-zero: #9AAAC4;
-  --c-gain-tint: rgba(74, 222, 139, 0.14);
-  --c-loss-tint: rgba(255, 122, 122, 0.14);
-  --c-danger: #FF8A80;
-  --c-loss-fill: #D93A44;
-  --c-warn-tint: rgba(255, 197, 61, 0.1);
-  --c-warn-line: rgba(255, 197, 61, 0.35);
-  --c-warn-text: #FFC53D;
-  --c-primary-bg: #FFFFFF;
-  --c-primary-fg: #0D1B2E;
-  --c-secondary-bg: transparent;
-  --c-secondary-fg: #F3F6FA;
-  --c-secondary-border: #8DA0BD;
-  --c-inverse-bg: #F3F6FA;
-  --c-inverse-fg: #0D1B2E;
-  --c-track: #263A58;
+  --c-bg: #060A1F;
+  --c-surface: #0E132F;
+  --c-inset: #181F3E;
+  --c-sunken: #030513;
+  --c-line: #222C4C;
+  --c-border: #222C4C;
+  --c-border-strong: #58698C;
+  --c-text: #F3F5FB;
+  --c-text-2: #98A8C5;
+  --c-text-3: #5E6981;
+  --c-accent: #35EEFF;
+  --c-accent-tint: rgba(53, 238, 255, 0.16);
+  --c-accent-wash: rgba(53, 238, 255, 0.06);
+  --c-on-accent: #080D25;
+  --c-you: #0067DF;
+  --c-you-text: #83BAFF;
+  --c-you-tint: rgba(0, 103, 223, 0.22);
+  --c-opp: #7F8DA5;
+  --c-opp-text: #98A8C5;
+  --c-on-opp: #080D25;
+  --c-live: #35EEFF;
+  --c-live-text: #35EEFF;
+  --c-live-glow: rgba(53, 238, 255, 0.35);
+  --c-on-live: #080D25;
+  --c-gain: #39EEBA;
+  --c-loss: #F76D89;
+  --c-zero: #98A8C5;
+  --c-gain-tint: rgba(57, 238, 186, 0.12);
+  --c-loss-tint: rgba(247, 109, 137, 0.14);
+  --c-danger: #FB8371;
+  --c-loss-fill: #C12440;
+  --c-warn-tint: rgba(244, 191, 63, 0.1);
+  --c-medal-gold: #ECAE30;
+  --c-medal-silver: #BBC5D1;
+  --c-medal-bronze: #DE8F57;
+  --c-on-medal: #080D25;
+  --c-warn-line: rgba(244, 191, 63, 0.35);
+  --c-warn-text: #FAC547;
+  --c-primary-bg: #35EEFF;
+  --c-primary-fg: #080D25;
+  --c-secondary-bg: rgba(14, 19, 47, 0.0);
+  --c-secondary-fg: #F3F5FB;
+  --c-secondary-border: #58698C;
+  --c-inverse-bg: #F3F5FB;
+  --c-inverse-fg: #060A1F;
+  --c-track: #222C4C;
   --c-shadow: none;
-  --c-sheet-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
-  --c-scrim: rgba(0, 0, 0, 0.55);
-  --c-tabbar: rgba(13, 27, 46, 0.92);
+  --c-sheet-shadow: none;
+  --c-scrim: rgba(2, 3, 12, 0.55);
+  --c-tabbar: rgba(4, 6, 23, 0.94);
+  --c-on-you: #FAFCFE;
+  --c-rim: #253154;
+  --c-money-bg: #020309;
+  --c-clock-cell: #01020A;
+  --c-on-clock-cell: #F3F5FB;
+  --c-clock-cell-live: #35EEFF;
+  --c-on-cat: #0A0F27;
+  --c-cat-tech: #97BEFF;
+  --c-cat-finance: #83D39D;
+  --c-cat-health: #E9A3DB;
+  --c-cat-energy: #B7C874;
+  --c-cat-transport: #66CCF4;
+  --c-cat-retail: #F9A781;
+  --c-cat-food: #FBA0AD;
+  --c-cat-media: #C6AEFC;
+  --c-cat-industrials: #59D4CD;
+  --c-cat-real-estate: #E1B767;
+  --c-cat-misc: #A6ABB8;
+  /* Board-only: the illustrative keyboard and browser chrome. */
   --c-kbd-bg: #2A2B2F;
   --c-kbd-key: #5A5B60;
   --c-kbd-key-2: #414246;
