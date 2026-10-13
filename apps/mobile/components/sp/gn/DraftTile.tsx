@@ -40,6 +40,8 @@ export interface DraftTileProps {
 const TILE_HEIGHT = 44;
 // Six tiles share a phone's width: the text grows with Dynamic Type up to 1.2×, the tile grows with it.
 const TILE_MAX_SCALE = 1.2;
+// A five-letter ticker (GOOGL) shrinks to fit a six-across tile, never under the 11pt floor (§9B): 13 × 0.85 = 11.05.
+export const TICKER_MIN_SCALE = 0.85;
 
 export function DraftTile({ pick, state, ticker, category = null, clock, yours = false, auto = false, spokenTicker, width, height }: DraftTileProps) {
   const { colors } = useTheme();
@@ -64,7 +66,7 @@ export function DraftTile({ pick, state, ticker, category = null, clock, yours =
         {sectorText ? <Text variant="caption" color={look.labelInk} maxFontSizeMultiplier={TILE_MAX_SCALE} style={styles.label}>{sectorText}</Text> : null}
       </View>
       {state === 'picked' && ticker ? (
-        <Text variant="ticker.tile" color={look.tickerInk} numberOfLines={1} maxFontSizeMultiplier={TILE_MAX_SCALE}>{ticker}</Text>
+        <Text variant="ticker.tile" color={look.tickerInk} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TICKER_MIN_SCALE} maxFontSizeMultiplier={TILE_MAX_SCALE}>{ticker}</Text>
       ) : null}
       {state === 'onClock' && clock ? (
         <Text variant="ticker.tile" color={look.tickerInk} maxFontSizeMultiplier={TILE_MAX_SCALE}>{clock}</Text>

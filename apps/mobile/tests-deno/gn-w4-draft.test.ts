@@ -262,3 +262,36 @@ Deno.test('every "·" line the draft surfaces draw goes through keepDots (source
   assert(SOURCES['components/game/DraftLobby.tsx'].includes("{keepDots('Draft order · waiting')}"));
   assert(SOURCES['components/game/DraftComplete.tsx'].includes('{keepDots(rosterPickCaption(r))}'));
 });
+
+Deno.test('a five-letter ticker shrinks to fit its tile, never under 11pt; the title wraps beside the ring', () => {
+  const tile = SOURCES['components/sp/gn/DraftTile.tsx'];
+  assert(tile.includes('adjustsFontSizeToFit minimumFontScale={TICKER_MIN_SCALE}'));
+  const scale = Number(tile.match(/TICKER_MIN_SCALE = ([0-9.]+)/)?.[1]);
+  assert(13 * scale >= 11, `${13 * scale}`);
+  // `display` never wraps by default (sp Text's NEVER_WRAP); beside the ring it must.
+  assert(SOURCES['components/game/DraftRoom.tsx'].includes('<Text variant="display" numberOfLines={2} style={styles.yourTurnTitle}'));
+});
+
+// ── The standout stays loudest (checklist §5): the clock card's headline at every size ──
+
+import { CARD_LINE_MAX_SCALE } from '../lib/game/draftClockCard.ts';
+import { type as TYPE } from '../constants/tokens/type.ts';
+
+Deno.test('the clock card\'s headline outranks its other lines at every text size', () => {
+  const cap = (v: keyof typeof TYPE, scale: number, own?: number) => TYPE[v].fontSize * Math.min(scale, own ?? TYPE[v].maxScale ?? Infinity);
+  for (const s of [1, 1.35, 1.6, 2.35, 3.12]) {
+    // "{Name} is up" / "Auto-picking…" (headline) and your "You're on the clock" (display at 26).
+    const headline = cap('headline', s);
+    const title = 26 * Math.min(s, TYPE.display.maxScale ?? Infinity);
+    for (const line of [cap('callout', s, CARD_LINE_MAX_SCALE), cap('caption', s, CARD_LINE_MAX_SCALE)]) {
+      assert(line < headline, `${s}: ${line} vs headline ${headline}`);
+      assert(line < title, `${s}: ${line} vs title ${title}`);
+    }
+  }
+  // Every callout and caption on the card carries the cap.
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  const card = room.slice(room.indexOf('<Card style={[styles.card, onTheClock ?'), room.indexOf('<DraftBoard'));
+  const lines = card.match(/<Text variant="(callout|caption)"[^>]*>/g) ?? [];
+  assertEquals(lines.length, 6);
+  for (const l of lines) assert(l.includes('maxFontSizeMultiplier={CARD_LINE_MAX_SCALE}'), l);
+});

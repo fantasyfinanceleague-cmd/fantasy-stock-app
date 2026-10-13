@@ -39,12 +39,14 @@ Deno.test('the flash is a layer under the text that never takes a touch', () => 
 // it was §9A's warn-tint), the 2 pt live edge stays, and the clock moved into the ring that
 // runs down ("then rests with an accent ring that runs down"). The title is 26/28 (the board).
 Deno.test('rest: the accent tint, a 2 pt live edge, the clock in its ring, the 26 pt title in liveText', () => {
-  assert(room.includes("onTheClock ? [styles.yourTurnCard, { backgroundColor: colors.accentTint, borderColor: colors.live }] : null"));
-  assert(room.includes('yourTurnCard: { borderWidth: 2 },'));
+  assert(room.includes("onTheClock ? { backgroundColor: colors.accentTint } : null"));
+  // The edge is an overlay over the card's rim (as a border, the rim showed inside it: a double line).
+  assert(room.includes('testID="your-turn-edge" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.yourTurnEdge, { borderColor: colors.live }]}'));
+  assert(room.includes('yourTurnEdge: { borderWidth: 2, borderRadius: radius.lg },'));
   assert(!room.includes('colors.warnTint'));
   assert(room.includes('<ClockRing'));
   assert(room.includes('yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },'));
-  assert(room.includes('variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}'));
+  assert(room.includes('variant="display" numberOfLines={2} style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}'));
   assert(room.includes('const titleRest = colors.liveText;'));
 });
 

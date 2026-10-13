@@ -2,39 +2,15 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7fd346e45a19bdefb0126d3db493064e78c39e44",
-    "commitShort": "7fd346e4",
+    "commit": "fd22943a98c1787c9167eefe959a8caaeccec578",
+    "commitShort": "fd22943a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
-        "code": "A",
-        "path": "apps/mobile/components/game/DraftBoard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/DraftComplete.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/DraftLobby.tsx"
-      },
-      {
         "code": "M",
         "path": "apps/mobile/components/game/DraftRoom.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/LoadingSkeletons.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/QueueEditor.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/sp/gn/ClockRing.tsx"
       },
       {
         "code": "M",
@@ -42,51 +18,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/gameNight.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/constants/tokens/contrastPairs.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/game/draftBoardLayout.ts"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/lib/game/draftClockCard.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/game/keepDots.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamCalls.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamFixtures.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamRoom.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/game/symbolCategories.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/game/useSymbolCategories.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-board.test.ts"
       },
       {
         "code": "M",
@@ -97,27 +29,11 @@
         "path": "apps/mobile/tests-deno/game-your-turn-card.test.ts"
       },
       {
-        "code": "A",
+        "code": "M",
         "path": "apps/mobile/tests-deno/gn-w4-draft.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/manager-row.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sp-contrast.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/tokens-v3-game-night.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T20:47:20Z",
+    "timestamp": "2026-10-13T20:47:23Z",
     "sourceHash": "sha256:14feccaefff71fe444d5577231a3709f62bd8153efdb116f1c996722db27a54e",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

@@ -21,7 +21,7 @@ import { yourTurnKey } from '@/lib/game/yourTurnPush';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick } from '@/lib/game/draftBoard';
-import { clockCardKind, clockRingTone } from '@/lib/game/draftClockCard';
+import { CARD_LINE_MAX_SCALE, clockCardKind, clockRingTone } from '@/lib/game/draftClockCard';
 import { useSymbolCategories } from '@/lib/game/useSymbolCategories';
 import { keepDots } from '@/lib/game/keepDots';
 import { DraftBoard } from '@/components/game/DraftBoard';
@@ -338,8 +338,10 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
           tint with a 2 pt live edge, the ring running down, "You're on the clock" in liveText.
           The flash is a live layer over the tint, under the text; it never takes a touch.
           Someone else's turn: the plain card, the same ring. B-4: no clock, no ring. */}
-      <Card style={[styles.card, onTheClock ? [styles.yourTurnCard, { backgroundColor: colors.accentTint, borderColor: colors.live }] : null]}>
+      <Card style={[styles.card, onTheClock ? { backgroundColor: colors.accentTint } : null]}>
         {onTheClock ? <Animated.View testID="your-turn-flash" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.live }, flashStyle]} /> : null}
+        {/* The 2 pt live edge, drawn over the card's 1 pt rim (a border sat inside it: a double line). */}
+        {onTheClock ? <View testID="your-turn-edge" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.yourTurnEdge, { borderColor: colors.live }]} /> : null}
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
         <View style={[styles.clockRow, largeText ? styles.clockRowStacked : null]}>
           {clockLabel ? (
@@ -352,25 +354,25 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
               textAnimatedStyle={onTheClock ? clockInk : undefined}
             />
           ) : null}
-          <View style={styles.clockText} accessible accessibilityLabel={[headline, clockLabel].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
+          <View style={[styles.clockText, largeText ? styles.clockTextStacked : null]} accessible accessibilityLabel={[headline, clockLabel].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
             {onTheClock ? (
-              <Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>
+              <Text variant="display" numberOfLines={2} style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>
             ) : (
               <Text variant="headline" style={styles.headline}>{headline}</Text>
             )}
-            <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks)))}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks)))}</Text>
           </View>
         </View>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
         {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
-          <Text variant="callout" color={colors.youText} style={styles.bold} accessibilityLiveRegion="polite">{keepDots(afterPickLine(lastMine, picksAway, lastMineAuto) ?? '')}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} color={colors.youText} style={styles.bold} accessibilityLiveRegion="polite">{keepDots(afterPickLine(lastMine, picksAway, lastMineAuto) ?? '')}</Text>
         ) : null}
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
-          <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary">{picksUntilYouLine(picksAway)}</Text>
         ) : null}
-        <Text variant="caption" tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{`${room.pickSeconds}-second picks`}</Text>
-        {stalled?.line ? <Text variant="caption" tone="secondary">{stalled.line}</Text> : null}
-        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
+        <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{`${room.pickSeconds}-second picks`}</Text>
+        {stalled?.line ? <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary">{stalled.line}</Text> : null}
+        {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
       <DraftBoard
@@ -447,9 +449,10 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[3] },
-  // Your turn at rest: the 2 pt live edge (colour set inline, over the accent tint); the
-  // title at the board's 26/28 in ExtraBold (its 900 maps to 800: §9C Type).
-  yourTurnCard: { borderWidth: 2 },
+  // Your turn at rest: the 2 pt live edge (colour set inline, over the accent tint and the
+  // card's rim, at the card's radius); the title at the board's 26/28 in ExtraBold (its 900
+  // maps to 800: §9C Type).
+  yourTurnEdge: { borderWidth: 2, borderRadius: radius.lg },
   yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },
   headline: { fontFamily: typeFontFamily.extraBold },
   // The sp Card clips (overflow hidden), which cut the search's dropdown off at the card edge;
@@ -462,9 +465,12 @@ const styles = StyleSheet.create({
   clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   clockRowStacked: { flexDirection: 'column', alignItems: 'flex-start' },
   clockText: { flex: 1, gap: space[1], alignSelf: 'stretch', justifyContent: 'center' },
+  // Stacked, the block is sized by its text: `flex: 1` in a column grew it into an empty gap (XL capture).
+  clockTextStacked: { flex: 0 },
   bold: { fontFamily: typeFontFamily.bold },
   logRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 32 },
   logPick: { minWidth: 24, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  logTicker: { minWidth: 56 },
+  // Holds a five-letter ticker (GOOGL at 16/800) so the labels line up.
+  logTicker: { minWidth: 64 },
   logWho: { flex: 1 },
 });

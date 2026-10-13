@@ -40,3 +40,9 @@ export function clockRingArc(secondsLeft: number | null, total: number, size = C
 export function clockRingTone(kind: ClockState['kind']): 'live' | 'loss' {
   return kind === 'last10' ? 'loss' : 'live';
 }
+
+/** The clock card's headline is its loudest text at every text size (checklist §5, "the standout
+ * stays loudest"). `headline` and `display` cap at 1.6×; `callout` and `caption` don't, so at
+ * XXXL the round line outgrew "Auto-picking…" (W4 capture). The card's other lines take the
+ * same cap: 13 × 1.6 = 20.8 < 17 × 1.6 = 27.2. */
+export const CARD_LINE_MAX_SCALE = 1.6;

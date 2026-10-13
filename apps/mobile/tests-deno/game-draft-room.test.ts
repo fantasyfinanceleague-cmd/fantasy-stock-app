@@ -372,7 +372,7 @@ Deno.test('your turn: "You\'re on the clock" as the header in liveText, the cloc
   const room = SOURCES['components/game/DraftRoom.tsx'];
   assertEquals(room.includes("const kind = clockCardKind({ isMyTurn, stalled: stalled !== null, clockKind: shownClock.kind });"), true);
   assertEquals(room.includes("const onTheClock = kind === 'yours';"), true);
-  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>'), true);
+  assertEquals(room.includes('<Text variant="display" numberOfLines={2} style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>'), true);
   assertEquals(room.includes("accessibilityRole={onTheClock ? 'header' : undefined}"), true);
   assertEquals(room.includes('yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },'), true);
   // The last 10 s stay in loss on and off your turn (navy only under the flash).
