@@ -183,7 +183,12 @@ building anything, and don't reopen a rule without him.
     mockup must use realistic movement: "why is there just like a flat line for half the
     chart and then like a slight pop-up? Like, that's not how it should be."
   - **No Save (star) on a stock you already own**: "there probably shouldn't be a save option
-    if you already have the stock, if it's one of yours."
+    if you already have the stock, if it's one of yours." Clarified the same day: "if I am
+    looking at the player card of a stock I already own, there shouldn't be a save button
+    because there's no reason to save it if I already own it. You should only have the save
+    if it's a stock that's not currently being held or an opponent's stock that you want to
+    keep tabs on." So Save shows on unowned stocks and on other managers' stocks; never on
+    yours.
 - **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
   to scrape anything and the more secure and locked down this can be the better." Chosen over
   keeping the public stock-symbol list readable (option B): the symbols table becomes
