@@ -422,7 +422,9 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
           ? new Date('2026-12-15T18:00:00.000Z')
           : isPreSeason
             ? new Date('2026-07-30T14:00:00.000Z') // Thursday, a few days before leagueStartDate
-            : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+            : fixture === 'monday_preclose'
+              ? new Date('2026-09-21T14:30:00.000Z') // Monday 10:30 AM ET, before the week's first close
+              : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
 
   // leader_flip: a call-counter alternates whose price is higher, to
   // exercise H3's leader-change wash under the live poll. Module-scoped

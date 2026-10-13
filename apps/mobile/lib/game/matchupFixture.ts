@@ -14,7 +14,9 @@
  *  - 'stress'   unslotted, the longest company names in the universe's style (§9B's stress
  *               fixture; pair with EXPO_PUBLIC_HOME_FIXTURE=xl_million for ≥ $1,000,000).
  */
-import { ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, fixtureQty, type HoldingRow } from '../home/homeFixtureData';
+import {
+  ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, XL_ROBERTO_HOLDINGS, XL_GIANLUIGI_HOLDINGS, fixtureQty, type HoldingRow,
+} from '../home/homeFixtureData';
 import type { LedgerActivityRow, PortfolioLedger } from '../money/portfolioLedger';
 import type { Category } from '../../components/sp/logic/gameNight';
 import type { SlotRow } from './matchupRoster';
@@ -28,6 +30,8 @@ export function parseMatchupFixture(raw: string | undefined): MatchupFixtureVari
 const NAMES: Record<string, string> = {
   NVDA: 'NVIDIA', AAPL: 'Apple', CRM: 'Salesforce', TSLA: 'Tesla', COST: 'Costco Wholesale', V: 'Visa',
   AMZN: 'Amazon.com', JPM: 'JPMorgan Chase & Co.', DIS: 'Walt Disney', NKE: 'Nike', KO: 'Coca-Cola', BA: 'Boeing',
+  // The XL leagues' own extra holdings (homeFixtureData.ts).
+  PLTR: 'Palantir', XOM: 'Exxon Mobil',
 };
 
 /** §9B stress: real listed names at their full, longest form. */
@@ -36,6 +40,7 @@ const STRESS_NAMES: Record<string, string> = {
   TSLA: 'Tesla, Inc. Common Stock', COST: 'Costco Wholesale Corporation Common Stock', V: 'Visa Inc. Class A Common Stock',
   AMZN: 'Amazon.com, Inc. Common Stock', JPM: 'JPMorgan Chase & Co. Common Stock', DIS: 'The Walt Disney Company Common Stock',
   NKE: 'Nike, Inc. Class B Common Stock', KO: 'The Coca-Cola Company Common Stock', BA: 'The Boeing Company Common Stock',
+  PLTR: 'Palantir Technologies Inc. Class A Common Stock', XOM: 'Exxon Mobil Corporation Common Stock',
 };
 
 const CATEGORY: Record<string, Category> = {
@@ -47,6 +52,7 @@ const CATEGORY: Record<string, Category> = {
 const PICKS: Record<string, number> = {
   NVDA: 2, AAPL: 11, CRM: 14, TSLA: 23, COST: 26, V: 35,
   AMZN: 5, JPM: 8, DIS: 17, NKE: 20, KO: 29, BA: 32,
+  PLTR: 38, XOM: 41,
 };
 
 const DRAFTED_AT = '2026-09-01T00:30:00.000Z'; // Mon Aug 31, 8:30 PM ET
@@ -64,8 +70,11 @@ export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: s
       : { kind: 'draft', user_id: userId, symbol: h.symbol, action: 'buy', quantity: fixtureQty(h), round: null, pick_number: PICKS[h.symbol],
         occurred_at: DRAFTED_AT, total_value: null, price: h.draft });
   };
-  for (const h of ROBERTO_HOLDINGS) add(me, h);
-  for (const h of GIANLUIGI_HOLDINGS) add(opp, h);
+  // The XL leagues (EXPO_PUBLIC_HOME_FIXTURE=xl_large_numbers / xl_million) hold the same
+  // symbols plus PLTR and XOM: every symbol either league can hold has its pick.
+  const withXl = (base: HoldingRow[], xl: HoldingRow[]) => [...base, ...xl.filter((x) => !base.some((b) => b.symbol === x.symbol))];
+  for (const h of withXl(ROBERTO_HOLDINGS, XL_ROBERTO_HOLDINGS)) add(me, h);
+  for (const h of withXl(GIANLUIGI_HOLDINGS, XL_GIANLUIGI_HOLDINGS)) add(opp, h);
   return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES) }, members: [] };
 }
 

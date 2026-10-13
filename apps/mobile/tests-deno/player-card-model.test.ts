@@ -251,3 +251,19 @@ Deno.test('Matchup: Sell hands off to the stock sheet only once the card has lef
   assert(src.includes("ownership = { owner: { name: opp.name }, save: null };"), 'no watchlist exists yet: Save hidden, never dead');
   assert(SOURCES['components/sp/Sheet.tsx'].includes('onClosedRef.current?.();'));
 });
+
+// ── Found in the W4 capture pass (17e, XL) ────────────────────────────────────────
+
+Deno.test('XL: the card stacks its three figures and caps its small text; the scoreboard names never break mid-word', () => {
+  const card = strip(SOURCES['components/sp/gn/PlayerCard.tsx']);
+  assert(card.includes('const stacked = useLargeText();'));
+  assert(card.includes('stacked ? styles.stripStacked : null'));
+  assert(/figureStacked: \{\s*flex: 0,/.test(card), 'a stacked figure takes no flex share, or it collapses');
+  assert(card.includes('const CARD_TEXT_MAX_SCALE = 1.6;'));
+  const sb = strip(SOURCES['components/sp/gn/Scoreboard.tsx']);
+  assert(sb.includes('maxFontSizeMultiplier={NAME_MAX_SCALE}'));
+  assert(sb.includes('stacked ? (mirror ? styles.whoStackedMirror : styles.whoStacked)'), 'the avatar sits over the name at large text');
+  const row = strip(SOURCES['components/sp/gn/RosterRow.tsx']);
+  assert((row.match(/maxFontSizeMultiplier=\{ROW_TEXT_MAX_SCALE\}/g) ?? []).length >= 3, 'ticker, company and percent capped');
+  assert(row.includes('minimumFontScale={0.7}') && 17 * 0.7 >= 11, 'a seven-figure week shrinks, never under 11pt');
+});

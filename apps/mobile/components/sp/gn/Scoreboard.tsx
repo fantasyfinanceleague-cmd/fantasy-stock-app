@@ -9,6 +9,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { scoreboardModel, type ScoreSide } from '@/components/sp/logic/gameNight';
 import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
+import { useLargeText } from '@/components/sp/useLargeText';
 
 // Stockpile — <Scoreboard>, Game Night (§9C "Scoreboard"; Giorgio, 2026-10-12: "I like the
 // way that where you are is kind of shaded. And then I like the way that it says like the
@@ -38,6 +39,8 @@ export interface GnScoreboardProps {
 }
 
 const AVATAR = { hero: 44, compact: 32 } as const;
+/** The names' Dynamic Type ceiling (the headline's 1.6): beyond it two names can't share a card. */
+const NAME_MAX_SCALE = 1.6;
 
 export function Scoreboard({ you, opponent, final = false, size = 'hero', mine = true, showLine = true }: GnScoreboardProps) {
   const model = scoreboardModel(you, opponent, final);
@@ -61,6 +64,9 @@ export function Scoreboard({ you, opponent, final = false, size = 'hero', mine =
 function Half({ side, team, mirror, size }: { side: 'you' | 'opp'; team: ScoreSide & { avatarUri?: string | null }; mirror: boolean; size: 'hero' | 'compact' }) {
   const { colors } = useTheme();
   const you = side === 'you';
+  // At the large text sizes the avatar sits over the name, so the name keeps the half's
+  // whole width instead of breaking mid-word beside a 44pt disc.
+  const stacked = useLargeText();
   return (
     <View
       testID={you ? 'scoreboard-you' : undefined}
@@ -71,7 +77,7 @@ function Half({ side, team, mirror, size }: { side: 'you' | 'opp'; team: ScoreSi
         you ? { backgroundColor: colors.youTint } : null,
       ]}
     >
-      <View style={[styles.who, mirror ? styles.whoMirror : null]}>
+      <View style={[styles.who, stacked ? (mirror ? styles.whoStackedMirror : styles.whoStacked) : mirror ? styles.whoMirror : null]}>
         {you ? (
           <Avatar name={team.name} uri={team.avatarUri} size={AVATAR[size]} tone="you" ring />
         ) : (
@@ -80,7 +86,9 @@ function Half({ side, team, mirror, size }: { side: 'you' | 'opp'; team: ScoreSi
             <Avatar name={team.name} uri={team.avatarUri} size={AVATAR[size]} tone="opp" />
           </View>
         )}
-        <Text variant={size === 'compact' ? 'callout' : 'headline'} numberOfLines={1} style={[styles.name, you ? { fontWeight: YOUR_NAME_WEIGHT } : null]}>
+        {/* The board's 15pt name (a 17pt headline cut "Roberto B." to "Robert…" beside the 44pt
+            avatar on a 17e); a long name wraps to a second line before it truncates. */}
+        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={2} maxFontSizeMultiplier={NAME_MAX_SCALE} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
           {team.name}
         </Text>
       </View>
@@ -129,8 +137,19 @@ const styles = StyleSheet.create({
   whoMirror: {
     flexDirection: 'row-reverse',
   },
+  whoStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  whoStackedMirror: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
   name: {
     flexShrink: 1,
+  },
+  oppName: {
+    fontWeight: '600',
   },
   ringFootprint: {
     padding: AVATAR_RING + AVATAR_RING_GAP,

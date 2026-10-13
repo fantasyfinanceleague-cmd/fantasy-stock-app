@@ -44,6 +44,9 @@ export interface RosterRowProps {
   gutter?: number;
 }
 
+/** A half is half a phone wide: the stock's name caps at 1.6× (the app's row ceiling). */
+const ROW_TEXT_MAX_SCALE = 1.6;
+
 /** The empty centre column (the 4pt scale). */
 const CENTRE_GAP = space[4];
 
@@ -80,15 +83,15 @@ function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null
   const toneColor = colors[tone];
   const name = (
     <View style={[styles.name, mirror ? styles.alignEnd : null]}>
-      <Text variant="ticker" numberOfLines={1}>{half.ticker}</Text>
-      <Text variant="caption" tone="secondary" numberOfLines={1}>{half.company}</Text>
+      <Text variant="ticker" numberOfLines={1} maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{half.ticker}</Text>
+      <Text variant="caption" tone="secondary" numberOfLines={1} maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{half.company}</Text>
     </View>
   );
   const num = (
     <View style={[styles.num, stacked ? (mirror ? styles.alignEnd : null) : mirror ? null : styles.alignEnd]}>
       {/* A seven-figure week shrinks to fit its half, never under 11pt (17 × 0.7). */}
-      <Text variant="score.md" color={toneColor} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatMoney(half.weekGain, { sign: 'always' })}</Text>
-      <Text variant="caption" color={toneColor} style={styles.pct}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
+      <Text variant="score.md" color={toneColor} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={stacked && mirror ? styles.textEnd : null}>{formatMoney(half.weekGain, { sign: 'always' })}</Text>
+      <Text variant="caption" color={toneColor} style={styles.pct} numberOfLines={1} maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
     </View>
   );
   const a11y = rosterHalfLabel(whose, half);
@@ -148,8 +151,10 @@ const styles = StyleSheet.create({
   contentStacked: {
     gap: space[2],
   },
+  // The week keeps its size; the company truncates first. Only a number wider than 64% of
+  // the half (a seven-figure week) shrinks to fit.
   num: {
-    flexShrink: 1,
+    flexShrink: 0,
     maxWidth: '64%',
   },
   innerCornersLeft: {
@@ -171,6 +176,9 @@ const styles = StyleSheet.create({
   },
   pct: {
     fontWeight: '700',
+  },
+  textEnd: {
+    textAlign: 'right',
   },
   groupWrap: {
     alignItems: 'center',

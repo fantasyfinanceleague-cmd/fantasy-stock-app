@@ -2,39 +2,15 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "e83d93ac426594d4620c484acc7a7a12cc8af474",
-    "commitShort": "e83d93ac",
+    "commit": "280dda7d1f45a7f68a5ae5d7cc8d857fde7f13c9",
+    "commitShort": "280dda7d",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/gn-w4-matchup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/matchup.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/design-gallery.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/LoadingSkeletons.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/Avatar.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/gn/index.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/sp/gn/PlayerCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/gn/RangePills.tsx"
       },
       {
         "code": "M",
@@ -46,102 +22,22 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/avatar.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/gameNight.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/icon.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/Sheet.tsx"
-      },
-      {
-        "code": "??",
         "path": "apps/mobile/lib/game/matchupFixture.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/game/matchupRoster.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/game/matchupRosterView.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/game/playerCardModel.ts"
-      },
-      {
         "code": "M",
-        "path": "apps/mobile/lib/game/useFinalLineups.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useMatchup.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/game/useRosterData.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/money/tierContract.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-night-primitives.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/loading-skeletons.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/matchup-league-key.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/matchup-no-race.test.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/matchup-roster.test.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/player-card-model.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sp-avatar.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sp-icon.test.ts"
+        "path": "apps/mobile/lib/home/useHomeLeague.ts"
       }
     ],
-    "timestamp": "2026-10-13T03:15:56Z",
-    "sourceHash": "sha256:e61df1d0b0278b6f65cc25649bc714aa87f58c9e6ebf15edc5ba0f4d724fc2cd",
+    "timestamp": "2026-10-13T04:47:26Z",
+    "sourceHash": "sha256:9a51b1d4cfb208b8e0c379d1d3b3e91b4750523b46b49ebddd4f56535ec2488d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 23.4,
+    "ageHours": 25,
     "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
@@ -16762,7 +16658,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:617"
+        "apps/mobile/lib/home/useHomeLeague.ts:623"
       ]
     },
     {
@@ -16774,7 +16670,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:600"
+        "apps/mobile/lib/home/useHomeLeague.ts:606"
       ]
     },
     {
@@ -16786,7 +16682,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:573"
+        "apps/mobile/lib/home/useHomeLeague.ts:579"
       ]
     },
     {
@@ -18784,7 +18680,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:600",
+            "apps/mobile/lib/home/useHomeLeague.ts:606",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -18847,7 +18743,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:617",
+            "apps/mobile/lib/home/useHomeLeague.ts:623",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19847,8 +19743,8 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:600 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:617 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:606 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:623 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
@@ -19899,7 +19795,7 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:573 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:579 -> get_home_league",
       "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",

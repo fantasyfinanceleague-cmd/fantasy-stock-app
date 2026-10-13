@@ -19,6 +19,7 @@ import type { AxisSpec } from '@/components/sp/logic/chartAxis';
 import type { LinePointIn } from '@/components/sp/logic/lineChart';
 import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
 import { Chart } from '@/components/sp/gn/Chart';
+import { useLargeText } from '@/components/sp/useLargeText';
 
 // Stockpile — <PlayerCard>, Game Night (§9C "PlayerCard", in the order of Giorgio's review on
 // ESPN's player card, 2026-10-12): tapping ANY stock, yours or theirs, on Matchup or
@@ -66,6 +67,9 @@ interface PlayerCardBase {
 export type PlayerCardProps = PlayerCardBase & PlayerCardOwnership;
 
 const SHEET_GUTTER = space[6];
+/** The card's small text (callout, caption, body) caps at 1.6× — the app's row ceiling — so a
+ * sheet at XL keeps its three figures and its lines readable instead of ballooning. */
+const CARD_TEXT_MAX_SCALE = 1.6;
 
 export function PlayerCard(props: PlayerCardProps) {
   const { visible, onClose, onClosed } = props;
@@ -84,6 +88,8 @@ export function PlayerCardBody(props: PlayerCardProps) {
   } = props;
   const { colors } = useTheme();
   const action = cardAction(props);
+  // At the large text sizes the three figures stack (side by side they truncated to "+5.8…").
+  const stacked = useLargeText();
   const weekTone = colors[toneOf(weekGain)];
   const money = (n: number) => formatMoney(n, { sign: 'always' });
   const pct = (n: number) => formatPercent(n, { sign: 'always' });
@@ -98,7 +104,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
         </View>
         <View style={styles.headText}>
           <Text variant="ticker.card" accessibilityRole="header" testID="player-card-ticker">{ticker}</Text>
-          <Text variant="callout" tone="secondary" numberOfLines={1}>{company}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" numberOfLines={1}>{company}</Text>
         </View>
         <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" style={styles.close} hitSlop={4}>
           <Icon name="close" size="title" tone="text2" />
@@ -106,22 +112,22 @@ export function PlayerCardBody(props: PlayerCardProps) {
       </View>
       <View style={styles.pills}>
         {owner === 'you' ? (
-          <View style={[styles.pill, { backgroundColor: colors.youTint }]} accessible accessibilityLabel={ownerLabel}><Text variant="callout" color={colors.youText} style={styles.pillText}>Yours</Text></View>
+          <View style={[styles.pill, { backgroundColor: colors.youTint }]} accessible accessibilityLabel={ownerLabel}><Text variant="callout" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} color={colors.youText} style={styles.pillText}>Yours</Text></View>
         ) : (
           // One stop for VoiceOver: "Owned by Gianluigi B." (not the avatar's name, then the line).
           <View style={[styles.pill, styles.ownerPill, { backgroundColor: colors.inset }]} accessible accessibilityLabel={ownerLabel}>
             <Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="opp" />
-            <Text variant="callout" style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text>
           </View>
         )}
-        {category ? <CategoryPill category={category} /> : slot ? <View style={[styles.pill, { backgroundColor: colors.inset }]}><Text variant="callout" style={styles.pillText}>{slot}</Text></View> : null}
+        {category ? <CategoryPill category={category} /> : slot ? <View style={[styles.pill, { backgroundColor: colors.inset }]}><Text variant="callout" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} style={styles.pillText}>{slot}</Text></View> : null}
       </View>
 
       {/* 2. Three key figures */}
-      <View style={[styles.strip, { backgroundColor: colors.inset }]}>
-        <Figure label="Price" value={formatMoney(price)} sub={`${pct(todayPct)} today`} subColor={colors[toneOf(todayPct)]} />
-        <Figure label="Week gain" value={money(weekGain)} valueColor={weekTone} sub={pct(weekPct)} subColor={weekTone} />
-        <Figure label={sinceLabel(acquisition)} value={money(sinceGain)} valueColor={colors[toneOf(sinceGain)]} sub={pct(sincePct)} subColor={colors[toneOf(sinceGain)]} />
+      <View style={[styles.strip, stacked ? styles.stripStacked : null, { backgroundColor: colors.inset }]}>
+        <Figure stacked={stacked} label="Price" value={formatMoney(price)} sub={`${pct(todayPct)} today`} subColor={colors[toneOf(todayPct)]} />
+        <Figure stacked={stacked} label="Week gain" value={money(weekGain)} valueColor={weekTone} sub={pct(weekPct)} subColor={weekTone} />
+        <Figure stacked={stacked} label={sinceLabel(acquisition)} value={money(sinceGain)} valueColor={colors[toneOf(sinceGain)]} sub={pct(sincePct)} subColor={colors[toneOf(sinceGain)]} />
       </View>
 
       {/* 3. The season line, dated axis, no acquisition marker */}
@@ -129,7 +135,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
         <View style={styles.titleRow}>
           <Text variant="headline" style={styles.title}>Season</Text>
           {/* The board's caption: the entry price per share → the price now. */}
-          <Text variant="caption" tone="secondary" style={styles.tabular} testID="player-card-season-caption">{`${formatMoney(acquisition.price)} → ${formatMoney(price)}`}</Text>
+          <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" style={styles.tabular} testID="player-card-season-caption">{`${formatMoney(acquisition.price)} → ${formatMoney(price)}`}</Text>
         </View>
         <Chart points={season.points} base={season.base} axis={season.axis} height={128} bleed={SHEET_GUTTER} drawKey={`${ticker}-season`} formatValue={(v) => formatMoney(v)} accessibilityLabel={`${ticker} this season`} />
       </View>
@@ -138,7 +144,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
       <View style={styles.section}>
         <View style={styles.titleRow}>
           <Text variant="headline" style={styles.title}>This week</Text>
-          <Text variant="callout" color={weekTone} style={styles.titleFigure}>{`${money(weekGain)} · ${pct(weekPct)}`}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} color={weekTone} style={styles.titleFigure}>{`${money(weekGain)} · ${pct(weekPct)}`}</Text>
         </View>
         <Chart points={week.points} base={week.base} axis={{ kind: 'week' }} height={70} bleed={SHEET_GUTTER} live={marketOpen} drawKey={`${ticker}-week`} formatValue={(v) => formatMoney(v)} accessibilityLabel={`${ticker} this week`} />
       </View>
@@ -160,7 +166,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
             <Text variant="headline" style={styles.actionText}>{action.label}</Text>
           </PressableScale>
           {action.note ? (
-            <Text variant="caption" tone="secondary" style={styles.center}>{action.note}</Text>
+            <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{action.note}</Text>
           ) : null}
         </View>
       ) : null}
@@ -168,21 +174,21 @@ export function PlayerCardBody(props: PlayerCardProps) {
       {/* 6. How you got it — at the bottom, in its inset panel (the board: radius 14, 12 / 14) */}
       <View style={[styles.how, { backgroundColor: colors.inset }]} accessible accessibilityLabel={`${howTitle(owner === 'you' ? 'you' : 'other')}: ${acquisitionLine(acquisition)}`}>
         <CardLabel text={howTitle(owner === 'you' ? 'you' : 'other')} />
-        <Text variant="body" style={styles.howLine}>{acquisitionLine(acquisition)}</Text>
+        <Text variant="body" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} style={styles.howLine}>{acquisitionLine(acquisition)}</Text>
       </View>
 
       {/* 7. The Alpaca credit */}
-      <Text variant="caption" tone="secondary" style={styles.center}>{MONEY_COPY.alpacaCredit}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{MONEY_COPY.alpacaCredit}</Text>
     </ScrollView>
   );
 }
 
-function Figure({ label, value, sub, valueColor, subColor }: { label: string; value: string; sub: string; valueColor?: string; subColor?: string }) {
+function Figure({ stacked, label, value, sub, valueColor, subColor }: { stacked: boolean; label: string; value: string; sub: string; valueColor?: string; subColor?: string }) {
   return (
-    <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}, ${sub}`}>
+    <View style={[styles.figure, stacked ? styles.figureStacked : null]} accessible accessibilityLabel={`${label}, ${value}, ${sub}`}>
       <CardLabel text={label} />
       <Text variant="score.md" color={valueColor} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
-      <Text variant="caption" color={subColor} style={styles.figureSub} numberOfLines={1}>{sub}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} color={subColor} style={styles.figureSub} numberOfLines={1}>{sub}</Text>
     </View>
   );
 }
@@ -191,7 +197,7 @@ function Figure({ label, value, sub, valueColor, subColor }: { label: string; va
  * capitals at NORMAL width (not the Expanded tag face), `text2`. Uppercased in JS. */
 function CardLabel({ text }: { text: string }) {
   return (
-    <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.92} style={styles.cardLabel}>
+    <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.92} style={styles.cardLabel}>
       {text.toUpperCase()}
     </Text>
   );
@@ -246,11 +252,19 @@ const styles = StyleSheet.create({
     gap: space[3],
     paddingLeft: space[2],
   },
+  stripStacked: {
+    flexDirection: 'column',
+    gap: space[4],
+  },
   strip: {
     flexDirection: 'row',
     borderRadius: radius.lg,
     paddingVertical: space[4],
     paddingHorizontal: space[3],
+  },
+  // A column of auto height: no flex share, or the figures collapse.
+  figureStacked: {
+    flex: 0,
   },
   figure: {
     flex: 1,
@@ -271,9 +285,10 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    gap: space[3],
+    columnGap: space[3],
   },
   title: {
     fontWeight: '800',
