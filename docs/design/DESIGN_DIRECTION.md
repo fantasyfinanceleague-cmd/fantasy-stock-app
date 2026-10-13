@@ -954,6 +954,8 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   `score.md` is a row size now and is not in the ramp.
 - The 11pt floor stands (§9B), including text that shrinks to fit: a `minimumFontScale` never
   takes a label under 11pt (12pt caption → 0.92 at least), and avatar initials floor at 11pt.
+  A disc under 24pt (the player card's 20pt owner disc) shows ONE initial, the first name's:
+  two wide initials ("MW") at 11pt are as wide as a 20pt disc and would clip.
 - **Uppercase is set in the string, never with `textTransform`** (W3, 2026-10-12): React
   Native measures the text before the transform, so an uppercased label can clip its last
   glyph. Tags, strip labels and chip defaults call `.toUpperCase()` on the label.
