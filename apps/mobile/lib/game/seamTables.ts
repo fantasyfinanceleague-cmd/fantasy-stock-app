@@ -70,16 +70,16 @@ export function seamWeekClosed(homeFixture: string | null | undefined): boolean 
   return ['scored', 'complete', 'complete_runner_up', 'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs'].includes(homeFixture ?? '');
 }
 
-/** A team's week-6 gain at Friday's close, to the cent: the Home fixture's own formula
- * (week6Gains: shares × (Friday close − Monday open)), so it matches the posted gain. */
-function closedGain(user: string, lost = false): number {
-  return Math.round((HOLDINGS[user] ?? []).reduce((s, h) => s + h.quantity * (closeFor(user, h, lost) - h.start), 0) * 100) / 100;
-}
-
 /** Under SCORED_OUTCOME=lost, your week is mirrored: each Friday close = 2 × Monday open −
  * Friday close, so your total is exactly minus your won total and the rows still add up. */
 export function closeFor(user: string, h: SeamHolding, lost: boolean): number {
   return lost && user === SEAM_ME ? Math.round((2 * h.start - h.close) * 100) / 100 : h.close;
+}
+
+/** A team's week-6 gain at Friday's close, to the cent: the Home fixture's own formula
+ * (week6Gains: shares × (Friday close − Monday open)), so it matches the posted gain. */
+function closedGain(user: string, lost = false): number {
+  return Math.round((HOLDINGS[user] ?? []).reduce((s, h) => s + h.quantity * (closeFor(user, h, lost) - h.start), 0) * 100) / 100;
 }
 
 function snapshotRows(weekClosed: boolean, lost = false) {
