@@ -526,7 +526,8 @@ building anything, and don't reopen a rule without him.
   relayed by the Orchestrator during the W4 League gate): the invite row's Share is hidden from an
   hour before the draft until the season ends, for members and the commissioner alike; the invite
   code itself stays visible. Share is shown before the draft (a renewed season too), when a code
-  can be used. No new copy.
+  can be used; hidden while locked and after the season, until a renewal (a completed season
+  refuses a join: preview-league's 'season_completed'). No new copy.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens

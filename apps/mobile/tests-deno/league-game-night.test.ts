@@ -366,9 +366,10 @@ Deno.test("Share hides while teams are locked (Giorgio, 2026-10-13, B, #call-sha
   // Locked: an hour before the draft until the season ends.
   assertEquals(inviteShareShown('locked_order_set'), false);
   assertEquals(inviteShareShown('locked_season'), false);
-  // Open: before the draft (a renewed Season 2 too) and after the season.
+  // After the season, until a renewal: a code can't be used (preview-league: 'season_completed').
+  assertEquals(inviteShareShown('after_season'), false);
+  // Shown only before the draft (a renewed Season 2 too), when a code can be used.
   assertEquals(inviteShareShown('before_draft'), true);
-  assertEquals(inviteShareShown('after_season'), true);
   // The code itself is always drawn; only the pill is conditional.
   const row = SOURCES['app/league-settings.tsx'].slice(SOURCES['app/league-settings.tsx'].indexOf('function InviteRow('));
   assert(row.indexOf('>Invite code</Text>') < row.indexOf('{inviteShareShown(window) ? ('));

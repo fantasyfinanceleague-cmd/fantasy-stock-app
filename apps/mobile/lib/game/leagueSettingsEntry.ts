@@ -26,12 +26,13 @@ export function showsLeagueSettingsRow(
 export const SETTINGS_LOCKED = 'Settings are locked once the draft starts.';
 
 /** The invite row's Share pill, for the commissioner and the member alike: the ONE place the
- * condition lives. Giorgio, 2026-10-13 (B, board #call-share-locked): HIDDEN while teams are
- * locked, from an hour before the draft until the season ends (the leave rule's locked
- * windows); shown before the draft (a renewed Season 2 too) and after the season. The code
- * itself always stays visible. */
+ * condition lives. Giorgio, 2026-10-13 (B, board #call-share-locked): Share "comes back at
+ * renewal and before the draft, when a code can be used", so it shows ONLY before the draft (a
+ * renewed season's too). Hidden while teams are locked (an hour before the draft until the
+ * season ends) AND after the season: preview-league refuses a completed season
+ * ('season_completed'), so a code shared then can't be used. The code itself always shows. */
 export function inviteShareShown(window: LeaveWindow): boolean {
-  return window !== 'locked_order_set' && window !== 'locked_season';
+  return window === 'before_draft';
 }
 
 /** What Share sends (unchanged from the member's row). */
