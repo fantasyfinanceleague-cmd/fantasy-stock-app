@@ -108,6 +108,11 @@ building anything, and don't reopen a rule without him.
   job or is not shown (a control that can't act in the current state is hidden, or disabled
   with the reason beside it; never a silent no-op). Audited once the UI redesign lands
   (plan `plans/2026-10-12-visual-language-reset.md`, W8) and checked at every gate after.
+- **1.3 = the visual-language reset** (2026-10-12): "let's do the 1.3." The Game Night
+  redesign ships as 1.3 with every screen on the new skin in both themes, after Giorgio's
+  walkthrough in both themes; no 1.2.x with a partial reskin. The old direction's sections
+  (`DESIGN_DIRECTION.md` §1, §9, §9A) are superseded by the Game Night token spec ("Yes, on
+  point two"); §4, §5 and §9B stay.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
 - **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature. See **League size** under League lifecycle.
