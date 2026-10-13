@@ -60,18 +60,24 @@ Deno.test('the header row: each manager\'s initials over their column, yours mar
 
 import { SOURCES } from './sourceManifest.generated.ts';
 
-Deno.test('the room draws the header and marks your picks; the on-clock outline is live (G-11; source guard)', () => {
+// W4 Draft (Game Night): the board moved to components/game/DraftBoard.tsx, laid out by column.
+// G-1's intent stands (you find your own column and picks) as shading B: your column on one
+// youTint slab, your avatar ringed and your name in 800. G-11's stands as the navy on-the-clock
+// cell, whose ring is clockCellLive (never `you`, so it can't vanish in your column).
+Deno.test('the board draws each manager over their column, shades YOUR column, and the on-clock cell wins its tile (G-1, G-11; source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('{boardHeader(room.order, room.names, myUserId).map((h) => ('), true);
-  assertEquals(room.includes('color={h.you ? colors.youText : colors.text2}'), true);
-  assertEquals(room.includes('mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,'), true);
-  // Order matters: the on-clock outline is applied after yours, so it wins the border.
-  assertEquals(room.indexOf('mine ? { borderColor: colors.you') < room.indexOf('cell.onClock ? { borderColor: colors.live'), true);
-  // G-11 (ruled): live at 2 pt in both themes (accent === you in Light vanished in your column).
-  assertEquals(room.includes('cell.onClock ? { borderColor: colors.live, borderWidth: 2 } : null,'), true);
-  assertEquals(room.includes('cell.onClock ? { borderColor: colors.accent'), false);
-  // Your pick numbers in youText (key screen 4's .ks-cell--you .ks-cell__n).
-  assertEquals(room.includes("color={mine ? colors.youText : undefined}>{cell.pick}</Text>"), true);
+  const board = SOURCES['components/game/DraftBoard.tsx'];
+  assertEquals(room.includes('<DraftBoard'), true);
+  assertEquals(board.includes("const you = manager === myUserId;"), true);
+  assertEquals(board.includes('you ? { backgroundColor: colors.youTint } : null'), true);
+  assertEquals(board.includes("tone={you ? 'you' : 'opp'} ring={you}"), true);
+  assertEquals(board.includes('you ? styles.yourName : null'), true);
+  assertEquals(board.includes("yourName: { fontWeight: '800' },"), true);
+  // The pick on the clock is the on-clock cell even in your column (it is tested first).
+  assertEquals(board.includes("const state = cell.onClock ? 'onClock' : made ? 'picked' : 'empty';"), true);
+  assertEquals(board.includes('yours={you}'), true);
+  // Nothing else is shaded: the slab is the only youTint on the board.
+  assertEquals((board.match(/colors\.youTint/g) ?? []).length, 1);
 });
 
 import { indexPicks } from '../lib/game/draftBoard.ts';

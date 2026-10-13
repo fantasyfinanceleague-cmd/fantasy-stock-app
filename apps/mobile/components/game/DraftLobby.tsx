@@ -8,8 +8,9 @@ import type { PreDraftData } from '@/lib/home/usePreDraftData';
 import { countdownLabel, draftDateTimeLabel, orderWasSetLine } from '@/lib/home/draftCountdown';
 import { managersProgressCaption, orderWaitingLine, pickClockLine } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
-import { mySnakePicks } from '@/lib/game/draftLobby';
-import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
+import { managersProgressShown, mySnakePicks, orderSetLine } from '@/lib/game/draftLobby';
+import { keepDots } from '@/lib/game/keepDots';
+import { MANAGER_ROW_GAP, ManagerRow } from '@/components/sp/gn';
 
 export interface DraftLobbyProps {
   data: PreDraftData;
@@ -40,35 +41,38 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
         <Card style={styles.card}>
           <Text variant="tag" tone="secondary">Draft starts in</Text>
           <Text variant="score.md" style={styles.countdown}>{countdown ?? '—'}</Text>
-          <Text variant="caption" tone="secondary">{when ? `${when} · ${pickClockLine(pickSeconds, rounds)}` : pickClockLine(pickSeconds, rounds)}</Text>
+          <Text variant="caption" tone="secondary">{keepDots(when ? `${when} · ${pickClockLine(pickSeconds, rounds)}` : pickClockLine(pickSeconds, rounds))}</Text>
         </Card>
       ) : null}
 
       {data.waiting || !order ? (
         <Card style={styles.card}>
-          <Text variant="tag" tone="secondary">Draft order · waiting</Text>
+          <Text variant="tag" tone="secondary">{keepDots('Draft order · waiting')}</Text>
           <Text variant="callout">{orderWaitingLine(data.minMembers)}</Text>
-          <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text>
+          {managersProgressShown(data.memberCount, data.minMembers) ? <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text> : null}
         </Card>
       ) : (
-        <Card style={styles.card}>
-          <Text variant="tag" tone="secondary">Draft order</Text>
-          {orderWasSetLine(data.finalizeAt) ? <Text variant="caption" tone="secondary">{orderWasSetLine(data.finalizeAt)}</Text> : null}
-          {seat > 0 ? (
-            <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
-              {`You pick ${ordinal(seat)}`}
-              {yourPicks.length > 1 ? <Text variant="callout" tone="secondary">{`, then ${yourPicks.slice(1).map(ordinal).join(', ')}…`}</Text> : null}
-            </Text>
-          ) : null}
+        // Game Night (W4): the order is Standings' ManagerRow tiles on the page (`surface`, radius
+        // 12, 6pt apart, divided by space), your row tinted and ringed, your name bold (shading B,
+        // S-10: no "(you)").
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text variant="tag" tone="secondary">Draft order</Text>
+            {orderSetLine(orderWasSetLine(data.finalizeAt), draftDate) ? <Text variant="caption" tone="secondary">{orderSetLine(orderWasSetLine(data.finalizeAt), draftDate)}</Text> : null}
+            {seat > 0 ? (
+              <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
+                {`You pick ${ordinal(seat)}`}
+                {yourPicks.length > 1 ? <Text variant="callout" tone="secondary">{`, then ${yourPicks.slice(1).map(ordinal).join(', ')}…`}</Text> : null}
+              </Text>
+            ) : null}
+          </View>
           <View style={styles.order}>
+            {/* Standings' ManagerRow itself, its order kind (the seat, the avatar, the name). */}
             {order.map((id, i) => (
-              <View key={id} style={[styles.orderRow, yourRowTint(id === myUserId, colors.youTint)]} accessible accessibilityLabel={`${i + 1}, ${nameOf(id)}${youA11y(id === myUserId)}`}>
-                <Text variant="caption" tone="secondary" style={styles.seatNo}>{i + 1}</Text>
-                <Text variant="callout" style={yourNameStyle(id === myUserId)}>{nameOf(id)}</Text>
-              </View>
+              <ManagerRow key={id} kind="order" rank={i + 1} name={nameOf(id)} isYou={id === myUserId} />
             ))}
           </View>
-        </Card>
+        </View>
       )}
     </View>
   );
@@ -78,9 +82,9 @@ const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both); bare, the
   // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
-  stack: { gap: space[3] },
+  stack: { gap: space[5] },
   countdown: { marginVertical: space[1] },
-  order: { gap: space[2], marginTop: space[2] },
-  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  seatNo: { minWidth: 18, textAlign: 'right' },
+  section: { gap: space[4] },
+  sectionHead: { gap: space[2] },
+  order: { gap: MANAGER_ROW_GAP },
 });

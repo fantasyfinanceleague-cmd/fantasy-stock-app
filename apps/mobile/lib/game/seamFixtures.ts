@@ -4,9 +4,9 @@
  * writing anything. Reads return the board's own data (the Season 1 roster and the
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
-import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
+import { STRESS_SEATS, draftRoomClock, draftRoomClockRead, type DraftRoomVariant } from './seamRoom';
 import { SEAM_ME, seamLivePrices, seamPreviousRanks } from './seamTables';
-import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
+import { draftStartStatusFixture, fixtureOrderSet, fixtureStartsAtMs, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
 
 const SUCCESSOR = 'fixture-season-2';
@@ -56,25 +56,52 @@ export function fixtureSeasonPlayoffs() {
   ];
 }
 
-/** The draft board's clock and order (the board's Serie A / Stock Scudetto draft). */
-function fixtureDraftRoom(roomVariant: DraftRoomVariant = 'on_clock') {
-  const order = ['paolo', SEAM_ME, 'alessandro', 'francesco', 'gianluigi', 'andrea'];
+/** The draft order as get_draft_order returns it. With EXPO_PUBLIC_DRAFT_START_FIXTURE set
+ * (the lobby's captures) it agrees with that start state: set only once the room is open, with
+ * finalize_at = the draft time − 1h; before that it's open and unrevealed ("Draft order ·
+ * waiting"). Without it (the room's captures) the order is set, as it is in a running draft. */
+export function fixtureDraftOrder(userIds: readonly string[], draftStartFixture?: string | null, nowMs = Date.now()) {
+  const start = parseDraftStartFixture(draftStartFixture);
+  const set = start ? fixtureOrderSet(start.state) : true;
+  const startsAt = start ? fixtureStartsAtMs(start.state, nowMs) : null;
+  return {
+    ok: true,
+    mode: 'random',
+    state: set ? 'finalized' : 'open',
+    revealed: set,
+    finalized: set,
+    order: set ? userIds.map((user_id, i) => ({ position: i + 1, user_id })) : null,
+    draft_date: startsAt !== null ? new Date(startsAt).toISOString() : null,
+    finalize_at: startsAt !== null ? new Date(startsAt - 60 * 60 * 1000).toISOString() : null,
+    member_count: userIds.length,
+    min_members: 4,
+    waiting_for_members: userIds.length < 4,
+    server_now: new Date(nowMs).toISOString(),
+  };
+}
+
+/** The draft board's clock, order and names (the board's Serie A / Stock Scudetto draft; 16
+ * seats in the stress fixture). */
+function fixtureDraftRoom(roomVariant: DraftRoomVariant = 'on_clock', draftStartFixture?: string | null) {
+  const seats = roomVariant === 'stress'
+    ? STRESS_SEATS.map((s) => ({ id: s.id === '__me__' ? SEAM_ME : s.id, name: s.name }))
+    : [
+      { id: 'paolo', name: 'Paolo M.' },
+      { id: SEAM_ME, name: 'Roberto B.' },
+      { id: 'alessandro', name: 'Alessandro D.' },
+      { id: 'francesco', name: 'Francesco T.' },
+      { id: 'gianluigi', name: 'Gianluigi B.' },
+      { id: 'andrea', name: 'Andrea P.' },
+    ];
   return {
     clock: [draftRoomClock(roomVariant, Date.now())],
-    order: { ok: true, mode: 'random', state: 'finalized', order: order.map((user_id, i) => ({ position: i + 1, user_id })) },
-    names: [
-      { user_id: 'paolo', display_name: 'Paolo M.', is_bot: false },
-      { user_id: SEAM_ME, display_name: 'Roberto B.', is_bot: false },
-      { user_id: 'alessandro', display_name: 'Alessandro D.', is_bot: false },
-      { user_id: 'francesco', display_name: 'Francesco T.', is_bot: false },
-      { user_id: 'gianluigi', display_name: 'Gianluigi B.', is_bot: false },
-      { user_id: 'andrea', display_name: 'Andrea P.', is_bot: false },
-    ],
+    order: fixtureDraftOrder(seats.map((s) => s.id), draftStartFixture),
+    names: seats.map((s) => ({ user_id: s.id, display_name: s.name, is_bot: false })),
   };
 }
 
 /** The fixture for a call, or null when there is none (the real call is then NOT made). */
-export function fixtureFor(name: string, args: Record<string, unknown>, roomVariant: DraftRoomVariant = 'on_clock'): { data: unknown; error: null } | null {
+export function fixtureFor(name: string, args: Record<string, unknown>, roomVariant: DraftRoomVariant = 'on_clock', draftStartFixture?: string | null): { data: unknown; error: null } | null {
   switch (name) {
     // ---- Run it back: writes ----
     case 'renew_league': return { data: { status: 'renewed', league_id: SUCCESSOR, invite_code: 'SCUD26', invited: 4 }, error: null };
@@ -93,9 +120,12 @@ export function fixtureFor(name: string, args: Record<string, unknown>, roomVari
     // The through-week ranking (the League tab's movement): last week's order.
     case 'league_standings_ranked': return typeof args.p_through_week === 'number' ? { data: seamPreviousRanks(), error: null } : null;
     // ---- the draft room: reads ----
-    case 'get_draft_clock': return { data: fixtureDraftRoom(roomVariant).clock, error: null };
-    case 'get_draft_order': return { data: fixtureDraftRoom().order, error: null };
-    case 'get_league_display_names': return { data: fixtureDraftRoom().names, error: null };
+    case 'get_draft_clock':
+      // 'failed': the read errors (the room's "Couldn't load" card). 'loading' is seamCalls' (a read that never answers).
+      if (draftRoomClockRead(roomVariant) === 'error') return { data: null, error: { message: 'fixture: the clock read failed' } } as unknown as { data: unknown; error: null };
+      return { data: fixtureDraftRoom(roomVariant).clock, error: null };
+    case 'get_draft_order': return { data: fixtureDraftRoom(roomVariant, draftStartFixture).order, error: null };
+    case 'get_league_display_names': return { data: fixtureDraftRoom(roomVariant).names, error: null };
     default: return null;
   }
 }

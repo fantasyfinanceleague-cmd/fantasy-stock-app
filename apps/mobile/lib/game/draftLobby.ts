@@ -16,6 +16,23 @@ export function mySnakePicks(seat: number, managers: number, rounds: number): nu
   return picks;
 }
 
+/** The lobby's "Draft order set {when} ET, an hour before the draft" line, or null when it
+ * would name nothing true. The order only moves forward (open → finalized → locked; the DB
+ * trigger refuses any step back), and a postponement at the 'start' stage clears the draft time
+ * after the room opened, so a finalized order with NO draft time is reachable: then "an hour
+ * before the draft" names a draft that has no time, and the line is hidden (checklist §5,
+ * labels in their emptiest state; no new copy). The order itself still shows. */
+export function orderSetLine(line: string | null, draftDate: string | null): string | null {
+  return draftDate ? line : null;
+}
+
+/** The waiting card's "3 of 4 managers" progress, only while it still counts toward the
+ * minimum: with the league full enough (scheduled, the order not set until T−1h) it read
+ * "6 of 4 managers" (W4 gate capture; checklist §5, labels that read as nonsense). */
+export function managersProgressShown(memberCount: number, minMembers: number): boolean {
+  return memberCount < minMembers;
+}
+
 /** Odd manager counts that don't divide the weeks evenly get a 1–2 (or 2–3) split. */
 export function byeSplit(managers: number, weeks: number): { lo: number; hi: number } | null {
   if (managers % 2 === 0) return null;

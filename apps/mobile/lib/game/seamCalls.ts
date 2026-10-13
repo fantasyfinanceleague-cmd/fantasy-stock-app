@@ -10,7 +10,7 @@ import { fixtureFor, invokeFixtureFor } from './seamFixtures';
 import { seamTableRows, seamWeekClosed, type SeamTableName } from './seamTables';
 import { markFixtureRenewed } from '../shell/devFixture';
 import { markFixtureAnswer } from './renewalFixture';
-import { parseDraftRoomVariant, roomVariantAfterAutoPick } from './seamRoom';
+import { draftRoomClockRead, parseDraftRoomVariant, roomVariantAfterAutoPick } from './seamRoom';
 
 /** EXPO_PUBLIC_DRAFT_ROOM_FIXTURE: how far the board's draft has gone (seamRoom.ts).
  * 'turn_arrives' moves on once, when the room's auto-pick backstop reaches the seam. */
@@ -19,7 +19,9 @@ import { saveLeagueSlots, type SlotDraft } from '../categoryData';
 
 export async function seamRpc(name: string, args: Record<string, unknown>) {
   if (SEAM_ON) {
-    const f = fixtureFor(name, args, roomVariant);
+    // DRAFT_ROOM_FIXTURE=loading: the room's clock read never answers, so its skeleton stays up for the capture.
+    if (name === 'get_draft_clock' && draftRoomClockRead(roomVariant) === 'pending') return new Promise<never>(() => {});
+    const f = fixtureFor(name, args, roomVariant, process.env.EXPO_PUBLIC_DRAFT_START_FIXTURE);
     // A renewal adds Season 2 to the fixture league list, as the real list would.
     if (f && name === 'renew_league') markFixtureRenewed();
     // An answer moves the fixture roster's caller, as the real roster would.

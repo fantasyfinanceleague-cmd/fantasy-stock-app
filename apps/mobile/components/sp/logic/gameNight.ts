@@ -115,6 +115,27 @@ export interface DraftTileLook {
   tickerInk: string;
 }
 
+/** VoiceOver's label for a draft tile. Whose pick it is comes first on yours ("Yours, pick
+ * 11, AAPL, Tech"), as RosterRow's "Yours, NVDA …" (W3); an auto-pick says so, since the tile
+ * has no room for the old "Auto" tag (the pick log keeps the source in words). */
+export function draftTileLabel(t: {
+  pick: number;
+  state: DraftTileState;
+  /** What VoiceOver says for the ticker ("No pick" for a legacy SKIP row's dash). */
+  spoken?: string;
+  category?: Category | null;
+  clock?: string;
+  yours?: boolean;
+  auto?: boolean;
+}): string {
+  const lead = t.yours ? 'Yours, pick' : 'Pick';
+  if (t.state === 'onClock') return `${lead} ${t.pick}, on the clock${t.clock ? `, ${t.clock}` : ''}`;
+  if (t.state === 'empty') return `${lead} ${t.pick}, open`;
+  return [`${lead} ${t.pick}`, t.spoken ?? '', t.category ? CATEGORIES[t.category].pill : '', t.auto ? 'auto-picked' : '']
+    .filter(Boolean)
+    .join(', ');
+}
+
 export function draftTileLook(state: DraftTileState, category: Category | null, c: ThemeColors): DraftTileLook {
   if (state === 'onClock') {
     return { fill: c.clockCell, line: null, ring: c.clockCellLive, labelInk: c.clockCellLive, tickerInk: c.onClockCell };

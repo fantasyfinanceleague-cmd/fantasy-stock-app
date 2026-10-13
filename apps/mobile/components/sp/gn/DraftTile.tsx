@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { radius } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { CATEGORIES, CLOCK_RING, draftTileLook, SECTOR_LINE, type Category, type DraftTileState } from '@/components/sp/logic/gameNight';
+import { CATEGORIES, CLOCK_RING, draftTileLabel, draftTileLook, SECTOR_LINE, type Category, type DraftTileState } from '@/components/sp/logic/gameNight';
 
 // Stockpile — <DraftTile>, Game Night (§9C; Giorgio, 2026-10-12: "the game night one. Look,
 // but with the broadcast touch of having like it color coded just with that line at the
@@ -25,20 +25,29 @@ export interface DraftTileProps {
   category?: Category | null;
   /** The on-the-clock cell's clock ("0:42"). */
   clock?: string;
+  /** In your column (the board's slab marks it; VoiceOver hears "Yours"). */
+  yours?: boolean;
+  /** Made by auto-pick (VoiceOver only: the pick log says it in words). */
+  auto?: boolean;
+  /** What VoiceOver says for the ticker, when it isn't the ticker (a legacy SKIP's "—" is "No pick"). */
+  spokenTicker?: string;
+  /** The board's column width minus its pads (draftBoardLayout); the tile fills its column without it. */
+  width?: number;
+  /** One height for every tile on the board (draftBoardLayout's tileHeight), so rounds line up. */
+  height?: number;
 }
 
 const TILE_HEIGHT = 44;
 // Six tiles share a phone's width: the text grows with Dynamic Type up to 1.2×, the tile grows with it.
 const TILE_MAX_SCALE = 1.2;
+// A five-letter ticker (GOOGL) shrinks to fit a six-across tile, never under the 11pt floor (§9B): 13 × 0.85 = 11.05.
+export const TICKER_MIN_SCALE = 0.85;
 
-export function DraftTile({ pick, state, ticker, category = null, clock }: DraftTileProps) {
+export function DraftTile({ pick, state, ticker, category = null, clock, yours = false, auto = false, spokenTicker, width, height }: DraftTileProps) {
   const { colors } = useTheme();
   const look = draftTileLook(state, category, colors);
   const sectorText = state === 'picked' && category ? CATEGORIES[category].code : null;
-  const a11y =
-    state === 'onClock' ? `Pick ${pick}, on the clock${clock ? `, ${clock}` : ''}`
-      : state === 'empty' ? `Pick ${pick}, open`
-        : `Pick ${pick}, ${ticker ?? ''}${category ? `, ${CATEGORIES[category].pill}` : ''}`;
+  const a11y = draftTileLabel({ pick, state, spoken: spokenTicker ?? ticker, category, clock, yours, auto });
 
   return (
     <View
@@ -46,6 +55,8 @@ export function DraftTile({ pick, state, ticker, category = null, clock }: Draft
       accessibilityLabel={a11y}
       style={[
         styles.tile,
+        width !== undefined ? { width } : null,
+        height !== undefined ? { height } : null,
         { backgroundColor: look.fill },
         look.ring ? { borderWidth: CLOCK_RING, borderColor: look.ring } : null,
       ]}
@@ -55,7 +66,7 @@ export function DraftTile({ pick, state, ticker, category = null, clock }: Draft
         {sectorText ? <Text variant="caption" color={look.labelInk} maxFontSizeMultiplier={TILE_MAX_SCALE} style={styles.label}>{sectorText}</Text> : null}
       </View>
       {state === 'picked' && ticker ? (
-        <Text variant="ticker.tile" color={look.tickerInk} numberOfLines={1}>{ticker}</Text>
+        <Text variant="ticker.tile" color={look.tickerInk} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={TICKER_MIN_SCALE} maxFontSizeMultiplier={TILE_MAX_SCALE}>{ticker}</Text>
       ) : null}
       {state === 'onClock' && clock ? (
         <Text variant="ticker.tile" color={look.tickerInk} maxFontSizeMultiplier={TILE_MAX_SCALE}>{clock}</Text>
