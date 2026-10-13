@@ -824,7 +824,9 @@ values; the studied DNA in [`design.md`](design.md); the audit in
 ### Colour, both themes (62 keys)
 
 Every existing `ThemeColors` key keeps its name (`apps/mobile/constants/tokens/color.ts`), so the
-port is a value swap plus the new keys marked NEW.
+port is a value swap plus the **14 new keys** marked NEW (48 existing + 14 = 62): `onYou`, `rim`,
+`lit`, `leadWash`, `moneyBg`, `clockCell`, `onClockCell`, `clockCellLive`, `onTile`, and the five
+sector tiles.
 
 | Key | Dark | Light | Role |
 |---|---|---|---|
@@ -923,8 +925,19 @@ port is a value swap plus the new keys marked NEW.
 - The condensed Black cut (62/900) leaves the app's numbers; it stays only for the landing's
   hero. The board's 900-weight touches (the player-card ticker, "You're on the clock") map to
   800: no new font file.
-- **Test to update:** `type.ts`'s ordering invariant (`score ≥ display ≥ title ≥ headline`)
-  becomes `score.xl ≥ display ≥ title ≥ headline`; `score.md` is a row size now.
+- **The type-ramp invariant** (Design Lead ruling, 2026-10-12, asked by the W3 worker): the
+  invariant exists so that each screen's standout number stays the loudest text **on its own
+  screen** at every Dynamic Type size. Under Game Night, `score.xl` (Matchup) and `display`
+  never share a screen, and their caps differ (1.2 vs 1.6), so `score.xl ≥ display` holds at
+  1× only (at 1.35×, 38.4 < 43.2). `type.ts` therefore checks:
+  - at **1× only**: `score.xl ≥ display`;
+  - at **every fontScale**: `display ≥ title ≥ headline`, and each screen standout against
+    `display`: `hero ≥ display` (46×1.2 = 55.2 ≥ 32×1.6 = 51.2) and `money ≥ display`
+    (44×1.2 = 52.8 ≥ 51.2).
+  Not taken: capping `display` at 1.2 (it takes Dynamic Type away from page titles, a §9B
+  regression to satisfy a test), or raising `score.xl` to 1.6 (two 51pt totals don't fit
+  side by side in the Scoreboard's halves). No value changes.
+  `score.md` is a row size now and is not in the ramp.
 - The 11pt floor stands (§9B).
 
 ### Shape and space
