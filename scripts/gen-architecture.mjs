@@ -564,19 +564,6 @@ const FLOWS = [
     ],
   },
   {
-    id: 'flow.season-reset',
-    title: 'Season reset',
-    trigger: { kind: 'user', detail: 'Commissioner taps reset in league settings' },
-    steps: [
-      { edge: 'e.ui.league-settings->pg.start_new_league_season', detail: 'Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.', anchors: [['apps/mobile/app/league-settings.tsx', "rpc('start_new_league_season'"]] },
-      { edge: 'e.pg.start_new_league_season->tbl.leagues', detail: 'GATE 1 — commissioner check: `commissioner_id = auth.uid()::text`. auth.uid() is NULL for anon, so it fails closed. Checked BEFORE the state guard so an unauthorized caller learns nothing about league state.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'Only the commissioner can start a new season']] },
-      { edge: 'e.pg.start_new_league_season->tbl.league_seasons#insert', detail: 'WRITE 1 — new league_seasons row at MAX(season_number)+1. This is what preserves the old season, so it must succeed before anything is destroyed.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'INSERT INTO league_seasons']] },
-      { edge: 'e.pg.start_new_league_season->tbl.league_standings#update', detail: 'WRITE 2 — every standings row for the league zeroed: wins, losses, ties, points_for, points_against.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'UPDATE league_standings']] },
-      { edge: 'e.pg.start_new_league_season->tbl.matchups#delete', detail: 'WRITE 3 — DESTRUCTIVE: every matchup for the league is deleted outright. History survives only via league_seasons.final_standings, so if WRITE 1 did not capture it, it is gone.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'DELETE FROM matchups']] },
-      { edge: 'e.pg.start_new_league_season->tbl.leagues#update', detail: 'WRITE 4 — league pointed at the new season: current_season_id, season_status=active, current_week=1. All four writes share one implicit transaction, so a failure rolls back the whole reset.', anchors: [['supabase/migrations/20260718000000_lockdown_start_new_league_season.sql', 'season_status = \'active\'']] },
-    ],
-  },
-  {
     id: 'flow.quote-fanout',
     title: 'Quote / symbol fan-out',
     trigger: { kind: 'user', detail: 'Any screen needing prices, names, or search' },

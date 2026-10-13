@@ -6,7 +6,7 @@ Supabase CLI applies only the timestamped `.sql` files directly in
 Do **not** move a file back to the parent directory until its stated precondition
 is met.
 
-**Currently held:** 3 files (see *Held* below): `20260929000000_drop_I6_I2b.sql`, `20261115000008_drop_start_new_league_season.sql` and `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead).
+**Currently held:** 1 file (see *Held* below): `20261116000002_revoke_anon_default_grants.sql` (a PROPOSAL awaiting Giorgio's go-ahead).
 
 ## How to use it
 
@@ -18,105 +18,6 @@ is met.
    HUMAN ACTION, effect-verify, and move its section to *History*.
 
 ## Held
-
-### `20260929000000_drop_I6_I2b.sql`
-
-Drops the interim policies `[I6]` `league_members_insert_bot` and `[I2b]`
-`leagues_update_member_draft_complete`. Retired by
-`supabase/functions/draft-control` (mobile draft launch blocker — start a draft
-and add bots, which the web-only client-side UPDATE/insert paths made
-unreachable once the web app was paused).
-
-**Where to run every step below:** same as the sibling entry above — after
-merge to `main`, only from `/Users/giorgio/fantasy-stock-deploy`, confirmed
-linked (`cat supabase/.temp/project-ref` prints `haiaaifjcclsvmkfqgmd`),
-refreshed with
-`git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`,
-then `supabase db push --dry-run` and `supabase db push`.
-
-**Precondition: ALL of the following, in order.**
-1. `20260926000000_finalize_league_draft_rpc.sql` is applied (check
-   `schema_migrations`) and `finalize_league_draft`'s `proacl` shows
-   `service_role` only — same check as the sibling entry above.
-2. `draft-control` is **deployed**
-   (`supabase functions deploy draft-control --project-ref haiaaifjcclsvmkfqgmd`)
-   and effect-verified: a no-credential POST reaches our code (401 from the
-   function, not the gateway's generic 401 — see CLAUDE.md's verify_jwt
-   guidance).
-3. `validate-and-record-pick` with the `bot_pick` action (this branch) is
-   **deployed**. Content check before deploying, same pattern as the sibling
-   entry: `grep -c bot_pick supabase/functions/validate-and-record-pick/index.ts`
-   must be ≥ 1.
-4. **Effect-verified with a REAL mobile test league**, drafted end-to-end
-   through draft-control + validate-and-record-pick alone (no direct
-   PostgREST writes), including at least one `bot_pick`-driven pick or skip so
-   the bot path is proven, not just asserted:
-   ```sql
-   SELECT l.draft_status, l.league_start_date, l.league_end_date,
-          (SELECT count(*) FROM league_members m WHERE m.league_id = l.id) AS n_members,
-          (SELECT count(*) FILTER (WHERE m.user_id LIKE 'bot-%') FROM league_members m WHERE m.league_id = l.id) AS n_bots,
-          (SELECT count(*) FROM matchups m WHERE m.league_id = l.id) AS n_matchups
-   FROM leagues l WHERE l.id = '<test league id>';
-   ```
-   `draft_status` must be `completed` with `n_matchups > 0`.
-5. No client performs a direct `leagues.update({draft_status: ...})` on the
-   member path, or a direct `league_members.insert` of a `bot-*` row. True on
-   `main` once this branch merges (mobile routes both through the new
-   functions) and true on web today only because it is paused — re-verify this
-   bullet specifically if web is ever unpaused before this migration is
-   promoted.
-
-**Timestamp note:** same as the sibling entry — if migrations newer than
-`20260929000000` are applied before this is promoted, rename it to a fresh
-timestamp when promoting instead of passing `--include-all`.
-
-**After applying:** confirm both policies are gone
-(`SELECT policyname FROM pg_policies WHERE tablename IN ('leagues','league_members') AND policyname IN ('leagues_update_member_draft_complete','league_members_insert_bot');`
-must return zero rows) and re-run the effect-verify query above against a
-*second* fresh test league to prove drafting still works with the policies
-gone. Then move this section to *History*.
-
-### `20261115000008_drop_start_new_league_season.sql`
-
-Drops `start_new_league_season(uuid)`. Phase 0 of Run it back
-(`20261023000000_lock_start_new_league_season.sql`) already revoked EXECUTE
-from PUBLIC, anon, authenticated and service_role, so the function is
-unreachable from every API role; this removes it for good. Design:
-`docs/migrations/RUN_IT_BACK_DESIGN.md` §3.
-
-**Where to run:** only from `/Users/giorgio/fantasy-stock-deploy`, refreshed
-with
-`git -C /Users/giorgio/fantasy-stock-deploy fetch origin && git -C /Users/giorgio/fantasy-stock-deploy checkout --detach origin/main`,
-then `supabase db push --dry-run` (must list exactly this file) and
-`supabase db push`.
-
-**Precondition: ALL of the following.**
-1. `20261023000000` is applied (`schema_migrations`), and the function's
-   `proacl` is exactly `{postgres=X/postgres}`:
-   ```sql
-   SELECT proname, proacl FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE n.nspname = 'public' AND proname = 'start_new_league_season';
-   ```
-2. **No shipped client calls it.** The mobile build that removes the
-   `league-settings.tsx` "Start New Season" button (and its
-   `rpc('start_new_league_season')`) is the one testers have installed, and no
-   older build (1.0.0, 1.1.0) is still in use. Check on `main` first:
-   `grep -rn start_new_league_season apps/` must return nothing.
-3. Nothing server-side calls it:
-   `grep -rn start_new_league_season supabase/functions scripts` returns
-   only comments (today: `scripts/gen-architecture.mjs` annotations, which
-   should be removed in the same PR that promotes this file, then
-   `node scripts/gen-architecture.mjs` re-run).
-
-**Timestamp note:** if migrations newer than `20261115000008` have been
-applied before this is promoted, rename it to a fresh timestamp rather than
-passing `--include-all`.
-
-**After applying:** the proacl query above must return zero rows. Then
-re-capture `docs/architecture/db-snapshot.json` and move this section to
-*History*. (`supabase/tests/season_result.pglite.test.ts` keeps slicing the
-function from the historical `20260718000000` file, which is never
-rewritten, so it is unaffected.)
 
 ### `20261116000002_revoke_anon_default_grants.sql` — PROPOSAL (lockdown audit #7)
 
@@ -153,6 +54,8 @@ privilege, no anon-callable function, the default-privilege rules), then the
 signed-in app end to end and a signed-out `GET /rest/v1/<table>` → 401/42501.
 
 ## History
+
+- 2026-10-12: promoted after 1.1.0 was retired (Giorgio, the only 1.1.0 user, is on 1.2.0; his go: "go with your recommendation" on the release-now recommendation, with an explicit go at db push): `20261115000008_drop_start_new_league_season.sql` → `20261121000000_drop_start_new_league_season.sql`; `20260929000000_drop_I6_I2b.sql` → `20261121000001_drop_I6_I2b.sql`. Post-apply checks: the function and both policies are gone; drafting is re-verified on a fresh test league (Giorgio's 1.2.0 walkthrough draft).
 
 - 2026-10-10: `20261118000001_user_profiles_self_only.sql` (audit #8 stage 2) promoted to the apply path. Giorgio is the only 1.1.0 user and accepted its degradation ("just me on 1.1.0, go with C").
 
