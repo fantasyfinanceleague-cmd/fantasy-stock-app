@@ -292,7 +292,7 @@ Deno.test('the clock card\'s headline outranks its other lines at every text siz
   const room = SOURCES['components/game/DraftRoom.tsx'];
   const card = room.slice(room.indexOf('<Card style={[styles.card, onTheClock ?'), room.indexOf('<DraftBoard'));
   const lines = card.match(/<Text variant="(callout|caption)"[^>]*>/g) ?? [];
-  assertEquals(lines.length, 6);
+  assertEquals(lines.length, 5); // "N-second picks" left the card (Giorgio, 2026-10-13)
   for (const l of lines) assert(l.includes('maxFontSizeMultiplier={CARD_LINE_MAX_SCALE}'), l);
 });
 
@@ -314,11 +314,24 @@ Deno.test('Draft and the search are offered only on YOUR running clock, never au
   assert(room.slice(at, at + 120).includes('setSelected(null);'));
 });
 
-Deno.test('"60-second picks" sits in the text column beside the ring, and VoiceOver reads every line', () => {
-  const room = SOURCES['components/game/DraftRoom.tsx'];
-  const col = room.slice(room.indexOf('<View style={[styles.clockText'), room.indexOf('{/* The board\'s "After the pick" state'));
-  assert(col.includes('{pickSecondsLine}</Text>'));
-  assert(room.includes('accessibilityLabel={[headline, clockLabel, roundLine, pickSecondsLine].filter(Boolean).join(\', \')}'));
+// Giorgio, 2026-10-13 (PRODUCT_RULES): "I don't like the then blank blank picked twice. I think it
+// just should show the you're on the clock and then what round and pick number it is. I don't think
+// it needs that last thing at the bottom." Both cards; the ring and the status lines stay.
+Deno.test('the clock card: the headline and "Round X of Y · Pick N" only: no ", then N", no "-second picks" (both cards)', () => {
+  const room = strip(SOURCES['components/game/DraftRoom.tsx']);
+  const card = room.slice(room.indexOf('<Card style={[styles.card, onTheClock ?'), room.indexOf('<DraftBoard'));
+  assert(room.includes('const roundLine = roundPickLine(round, rounds, onClockPick);'));
+  assert(!room.includes('snakeThenPick'));
+  assert(!/second picks/.test(room));
+  // The ring still reads the pick length for its arc; no LINE says it.
+  assert(card.includes('totalSeconds={room.pickSeconds}'));
+  assert(!card.includes('-second'));
+  // VoiceOver follows the same rule.
+  assert(room.includes('accessibilityLabel={[headline, clockLabel, roundLine].filter(Boolean).join(\', \')}'));
+  // The ring and the status lines stay.
+  assert(card.includes('<ClockRing'));
+  assert(card.includes('{stalled?.line ?'));
+  assert(card.includes('{AUTO_PICK_WAITING_FOR_PRICES}'));
 });
 
 import { HEADER_NAME_PT, headerNamePt, headerNameWidth } from '../lib/game/draftBoardLayout.ts';
@@ -410,4 +423,14 @@ Deno.test('the 90-second clock fixture: 88 s left of a 90 s pick', () => {
   assertEquals(c.pick_seconds, 90);
   assertEquals(new Date(String(c.deadline_at)).getTime(), 88_000);
   assertEquals(draftRoomPicks('on_clock_90').length, 10);
+});
+
+Deno.test('no "Auto" tag on the board (Giorgio, 2026-10-13, final): the tile draws no auto mark', () => {
+  const tile = strip(SOURCES['components/sp/gn/DraftTile.tsx']);
+  // `auto` reaches only the VoiceOver label; nothing on the tile says it.
+  assert(!/>\s*Auto\s*</i.test(tile));
+  assert(!/['"`]AUTO['"`]/.test(tile));
+  assert(!/auto\s*\?\s*</.test(tile));
+  assert(tile.includes('draftTileLabel({ pick, state, spoken: spokenTicker ?? ticker, category, clock, yours, auto })'));
+  assert(!strip(SOURCES['components/game/DraftBoard.tsx']).includes('variant="tag"'));
 });

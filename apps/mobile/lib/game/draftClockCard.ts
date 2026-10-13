@@ -49,17 +49,11 @@ export const CARD_LINE_MAX_SCALE = 1.6;
 
 /** Whether the room offers the search and the Draft button: only on YOUR running clock
  * (`yours`), never just because the pick is yours (W4 gate, P1: it was gated on `isMyTurn`, so
- * the one primary stayed up after the clock ran out). What the server does in the other two:
- * - `auto_picking` (past the deadline): the room has already asked the server to auto-pick
- *   (validate-and-record-pick action 'auto_pick', 0–3 s jitter) and the sweep cron backs it. A
- *   manual pick is NOT refused by any clock check; it lands only if it commits before the
- *   auto-pick (the unique (league_id, pick_number) index: the loser gets 'pick_conflict').
- *   "A missed turn is always auto-picked" (PRODUCT_RULES), so the room never offers that race.
- * - `stalled`: the auto-pick walked the whole pool and nothing passed the gate; the card says
- *   "No stock left fits …'s next slot" and the clock is stopped. A manual pick goes through the
- *   same gatePick, so it is refused for the same reason; the only exception is the documented
- *   residual (a stock whose live price is in its bracket while its cache is >10% outside).
- *   The room keeps to the ruled copy and offers no pick; the commissioner fixes the slot. */
+ * the one primary stayed up after the clock ran out). The server agrees (PRODUCT_RULES › Draft,
+ * "No late picks", 2026-10-13; validate-and-record-pick since #258): once your clock has expired
+ * it refuses your own pick ('pick_clock_expired', 2 s grace for latency) and only the auto-pick
+ * fills the turn, a stalled turn included ("the auto pick has to work"). So `auto_picking` and
+ * `stalled` offer nothing to tap. */
 export function draftOffered(kind: ClockCardKind): boolean {
   return kind === 'yours';
 }

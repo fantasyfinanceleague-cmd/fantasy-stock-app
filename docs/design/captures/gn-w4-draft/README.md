@@ -7,6 +7,11 @@ and the app reloaded per fixture). Every still exists in `-light` and `-dark` (t
 `simctl ui appearance`, shot with `simctl io screenshot`). Recordings live outside the repo in
 `~/fantasy-stock-design-review/gn-w4-draft/`; their frame sheets are here.
 
+**Giorgio's rulings (2026-10-13, in PRODUCT_RULES):** the clock card shows only the headline and
+"Round X of Y · Pick N" (no ", then N", no "60-second picks"), on both cards; the ring, its digits
+and the status lines stay. No "Auto" tag on the board (final). Every clock-card still below was
+re-shot after the ruling: 01, 02, 03, 03b, 04, 05, 06, 07, 07b, 08, 08b, 10, 10b, 19.
+
 **Gate pass 2 (the Design Lead's BLOCK, 5 items):** re-shot 01, 02, 03, 03b, 04, 05, 06, 07,
 08, 13–16; new 07b, 08b, 10/10b at 16 managers, 13b, 19 (Light). The 12-manager stills and the
 old self-contradicting lobby 13 are gone.
@@ -15,7 +20,7 @@ old self-contradicting lobby 13 are gone.
 
 | # | Files | State | Env (plus `GAME_SEAM=1`) |
 |---|---|---|---|
-| 1 | `01-on_clock-{17e,17pro}-*` | **Your turn**: the ring, "You're on the clock", "60-second picks" in the text column (P3); header names at 11pt read whole ("Alessandro", "Francesco") | `SHELL_FIXTURE=drafting`, `DRAFT_ROOM_FIXTURE=on_clock` |
+| 1 | `01-on_clock-{17e,17pro}-*` | **Your turn**: the ring, "You're on the clock", "Round 2 of 6 · Pick 11" and nothing else (Giorgio's ruling); header names at 11pt read whole ("Alessandro", "Francesco") | `SHELL_FIXTURE=drafting`, `DRAFT_ROOM_FIXTURE=on_clock` |
 | 1b, 1c | `01b-…search_roster-17e-*`, `01c-…log_queue-17e-*` | The search, your roster, the pick log, the queue (pass 1) | same, scrolled |
 | 2 | `02-selected_draft_shows-17e-*` | **AAPL selected with the clock RUNNING** (the on-clock cell at 0:19 / 0:16): Draft offered | `on_clock_90` (new: a 90 s league clock, 88 s left, so a selection can be made by hand) |
 | 3, 3b | `03-on_clock-xl-17e-*`, `03b-on_clock-xxxl-17e-*` | XL / XXXL: the ring over the title, the board scrolls sideways | `on_clock_90`, `accessibility-extra-large` / `-extra-extra-extra-large` |
@@ -39,39 +44,31 @@ old self-contradicting lobby 13 are gone.
 | 17 | `17-draft_time_picker-17e-*` | The draft-time picker (pass 1) | `HOME_FIXTURE=pre_draft`, `no_date` |
 | 21 | `21-queue-moved_save_appears-17e-*` | The queue after a move: Save appears (pass 1) | `on_clock` |
 
-**The lobby's 20pt gaps** (countdown card ↔ draft order ↔ queue ↔ settings) are `league.tsx`'s
-`BarsRefresh` `gap: space[6]`, not this branch's files; asked of the Orchestrator (the League
-worker owns `league.tsx`). `DraftLobby`'s own blocks are 16.
+**Lobby gap: League branch.** The 20pt gaps between the lobby's blocks are `league.tsx`'s
+`gap: space[6]`; the League worker changes it to 16 in its branch (not this one). `DraftLobby`'s
+own blocks are 16.
 
 ## Recordings (frame sheets here)
 
 | File | Shows |
 |---|---|
-| `18-flash-17e-{light,dark}.mov` · `-frames.png` | The your-turn flash, both themes (pass 1) |
-| `19-reduce-motion-17e-light.mov` · `-frames.png` | **Reduce Motion, Light** (new): straight into the rest state (one change, no flash); the chime logged once |
-| `19-reduce-motion-17e-dark.mov` · `-frames.png` | Reduce Motion, Dark (pass 1) |
-| `20-tap-through-room-17e-dark.mov` | Search → AAPL → Draft appears → Draft → queue ↓ → Save appears → Save (pass 1) |
+| `18-flash-17e-{light,dark}.mov` · `-frames.png` | The your-turn flash, both themes (pass 1: the card still carries the removed "60-second picks"; the flash itself is unchanged) |
+| `19-reduce-motion-17e-{light,dark}.mov` · `-frames.png` | **Reduce Motion, both themes** (re-shot after the ruling): straight into the rest state (one change, no flash); the chime logged once each |
+| `20-tap-through-room-17e-dark.mov` | Search → AAPL → Draft appears → Draft → queue ↓ → Save appears → Save (pass 1, the pre-ruling card) |
 | `20b-tap-through-complete-17e-dark.mov` | Draft complete → "See your Week 1 matchup" → Matchup (pass 1) |
 
-## What the server does (item 2, read-only: `validate-and-record-pick`, `_shared/auto-pick.ts`)
+## What the server does (item 2)
 
-- **Auto-picking** (past the deadline): the room has already asked the server to auto-pick
-  (`action: 'auto_pick'`, 0–3 s jitter; the sweep cron backs it). A manual pick is NOT refused by
-  any clock check: the manual path prices, gates (`gatePick`: turn, rules, feasibility) and
-  inserts; it lands only if it commits before the auto-pick, and the loser of that race gets
-  `pick_conflict` (the unique `(league_id, pick_number)` index).
-- **Stalled**: the auto-pick walked the whole pool and nothing passed the gate; the ruled card
-  says "No stock left fits …'s next slot" and the clock is stopped. A manual pick runs the same
-  `gatePick`, so it is refused for the same reason, except the documented residual (a stock
-  whose live price is in its bracket while its cache is > 10% outside).
-- **So the room offers search + Draft only on your RUNNING clock** (`draftOffered(kind)`, kind
-  `yours`): not while auto-picking (a race against the auto-pick the room itself requested, and
-  "a missed turn is always auto-picked"), not while stalled (the ruled copy). A selection left
-  when the clock ends is dropped.
+Read first on `ac24fb9a` (no deadline check on a manual pick: it raced the auto-pick); since
+**#258** (merged during this pass, PRODUCT_RULES › Draft, "No late picks", 2026-10-13) the server
+refuses a manager's own pick once their clock has expired (`pick_clock_expired`, a 2 s latency
+grace) and only the auto-pick fills the turn, a stalled turn included. The room matches it: search
++ Draft only on your RUNNING clock (`draftOffered(kind)`), never while auto-picking or stalled, and
+a selection left when the clock ends is dropped.
 
 ## Measurements (from pixels, 3× → pt)
 
-- **Accent by area** (`accent-split.txt`, all 66 stills): rest **≤ 2.33%** (XL on the clock);
+- **Accent by area** (`accent-split.txt`, all 66 stills): rest **≤ 2.30%** (XL on the clock);
   none over 5%. (The split files the your-turn card's 2pt top/bottom edges under "primary".)
 - **GOOGL / CMCSA at 16 managers**: the columns widen to the widest first name
   (`headerNameWidth`: "Bartholomew" ≈ 74pt at 11pt), so the tile is ≈ 70pt and both tickers draw at

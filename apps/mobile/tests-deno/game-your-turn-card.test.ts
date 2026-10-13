@@ -76,7 +76,8 @@ Deno.test('every line on the card takes the ink: the clock, the title, the round
   assert(SOURCES['components/sp/gn/ClockRing.tsx'].includes('animatedStyle={textAnimatedStyle}'));
   assert(room.includes('animatedStyle={titleInk}'));
   assert(room.includes('animatedStyle={onTheClock ? bodyInk : undefined}'));
-  assertEquals((room.match(/animatedStyle=\{onTheClock \? captionInk : undefined\}/g) ?? []).length, 2); // "N-second picks", waiting for prices
+  // Waiting for prices only: "N-second picks" left the card (Giorgio, 2026-10-13).
+  assertEquals((room.match(/animatedStyle=\{onTheClock \? captionInk : undefined\}/g) ?? []).length, 1);
 });
 
 Deno.test('the sp Text takes a UI-thread style as an opt-in (Animated.Text only when given one)', () => {

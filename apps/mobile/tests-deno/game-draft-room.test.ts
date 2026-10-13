@@ -141,7 +141,8 @@ Deno.test('picks until you follows the snake (4 teams; you are seat 2)', () => {
 
 Deno.test('the room renders both lines (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes('roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))'), true);
+  // Giorgio, 2026-10-13: "Round X of Y · Pick N" only, no snake suffix (gn-w4-draft.test.ts pins it).
+  assertEquals(room.includes('const roundLine = roundPickLine(round, rounds, onClockPick);'), true);
   // Before your first pick, the picks-until line; after it, the board's "You took …" line.
   assertEquals(room.includes('!isMyTurn && !lastMine && picksUntilYouLine(picksAway)'), true);
 });

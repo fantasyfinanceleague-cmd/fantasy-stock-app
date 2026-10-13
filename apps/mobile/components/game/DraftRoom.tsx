@@ -25,7 +25,7 @@ import { CARD_LINE_MAX_SCALE, clockCardKind, clockRingTone, draftOffered } from 
 import { useSymbolCategories } from '@/lib/game/useSymbolCategories';
 import { keepDots } from '@/lib/game/keepDots';
 import { DraftBoard } from '@/components/game/DraftBoard';
-import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick, liveClock } from '@/lib/game/draftRoom';
+import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, liveClock } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
 import { DraftComplete } from '@/components/game/DraftComplete';
@@ -338,8 +338,10 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const onTheClock = kind === 'yours';
   const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
-  const roundLine = roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks));
-  const pickSecondsLine = `${room.pickSeconds}-second picks`;
+  // Giorgio, 2026-10-13: the card shows the headline and "Round X of Y · Pick N", nothing else:
+  // no snake suffix (", then 12": "I don't like the then blank blank picked twice") and no
+  // "60-second picks" ("I don't think it needs that last thing at the bottom"). Both cards.
+  const roundLine = roundPickLine(round, rounds, onClockPick);
 
   return (
     <View style={styles.stack}>
@@ -363,15 +365,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
               textAnimatedStyle={onTheClock ? clockInk : undefined}
             />
           ) : null}
-          <View style={[styles.clockText, largeText ? styles.clockTextStacked : null]} accessible accessibilityLabel={[headline, clockLabel, roundLine, pickSecondsLine].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
+          <View style={[styles.clockText, largeText ? styles.clockTextStacked : null]} accessible accessibilityLabel={[headline, clockLabel, roundLine].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
             {onTheClock ? (
               <Text variant="display" numberOfLines={2} style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>
             ) : (
               <Text variant="headline" style={styles.headline}>{headline}</Text>
             )}
             <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundLine)}</Text>
-            {/* In the text column, beside the ring (it sat under the ring on the 17e: W4 gate P3). */}
-            <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{pickSecondsLine}</Text>
           </View>
         </View>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}

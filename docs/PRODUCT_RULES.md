@@ -380,6 +380,16 @@ building anything, and don't reopen a rule without him.
 - **The draft board's look** (2026-10-06): Giorgio is "not a fan" of the current draft
   board UI. A redesign is wanted, but later ("save that for later"), not in the current
   pass.
+- **The clock card shows only the turn and the pick** (2026-10-13, on the W4 Draft room,
+  relayed by the Orchestrator): "I don't like the then blank blank picked twice. I think it
+  just should show the you're on the clock and then what round and pick number it is. I don't
+  think it needs that last thing at the bottom." So both clock cards (yours and someone
+  else's) show the headline ("You're on the clock" / "{Name} is up") and "Round 2 of 6 ·
+  Pick 11": no snake suffix (", then 12") and no "60-second picks" line. The clock ring and its
+  digits stay, and so do the status lines (a stalled turn, auto-pick waiting for prices).
+- **No "Auto" tag on the draft board** (2026-10-13, final; the A/B was cancelled): "no auto
+  tag". A tile shows the pick, the category code and the ticker; an auto-pick is said in the
+  pick log's words and to VoiceOver, never as a mark on the tile.
 
 ## Trading
 
