@@ -216,10 +216,10 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
           ) : finalLines.status !== 'ready' ? (
             <RosterRowsSkeleton />
           ) : finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows ? (
-            <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final />
+            <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final seamResumesAt={null} />
           ) : null
         ) : (
-          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} />
+          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} />
         )
       ) : null}
     </View>
@@ -227,8 +227,10 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
 }
 
 /** The roster and the player card it opens. */
-function Roster({ derived, raw, roster, myRows, theirRows, final }: {
+function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt }: {
   derived: MatchupDerived;
+  /** Capture seam only: the Home fixture's next open (the shell fixture has no market row). */
+  seamResumesAt: string | null;
   raw: HomeRawInputs;
   roster: RosterData;
   myRows: LineupRow[];
@@ -318,7 +320,7 @@ function Roster({ derived, raw, roster, myRows, theirRows, final }: {
   // seam plays the Home fixture's own market.
   const gate = decideTradeGate(new Date(), market);
   const marketOpen = SEAM_ON ? derived.view.kind === 'scoreboard' && !derived.view.closed : gate.open;
-  const opens = marketOpensLabel(market?.next_open_at ?? null);
+  const opens = marketOpensLabel(SEAM_ON ? seamResumesAt : market?.next_open_at ?? null);
 
   if (roster.ledgerStatus === 'error' || roster.slots.status === 'error') {
     return <LoadFailure title="Couldn't load this matchup" message={MONEY_COPY.loadRetryMessage} onRetry={roster.retry} />;

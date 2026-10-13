@@ -475,6 +475,10 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     if (isPreSeason) {
       return robRows.find((h) => h.symbol === sym)?.draft ?? giaRows.find((h) => h.symbol === sym)?.draft ?? null;
     }
+    // Monday morning: every stock still at Monday's open, so every week gain is $0.00.
+    if (fixture === 'monday_preclose') {
+      return robRows.find((h) => h.symbol === sym)?.mon ?? giaRows.find((h) => h.symbol === sym)?.mon ?? null;
+    }
     return robRows.find((h) => h.symbol === sym)?.thu ?? giaRows.find((h) => h.symbol === sym)?.thu ?? null;
   };
 

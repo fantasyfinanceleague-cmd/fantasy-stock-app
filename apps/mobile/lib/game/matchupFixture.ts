@@ -11,21 +11,31 @@
  *  - 'tiers'    price tiers by entry price: $200 or more ×5 · $100–$200 ×2 · up to $100 ×2.
  *  - 'bought'   unslotted; Roberto's COST was bought, not drafted, and today (a 1-point
  *               season line). Gianluigi's NKE was bought Sep 8.
+ *  - 'stress'   unslotted, the longest company names in the universe's style (§9B's stress
+ *               fixture; pair with EXPO_PUBLIC_HOME_FIXTURE=xl_million for ≥ $1,000,000).
  */
 import { ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, fixtureQty, type HoldingRow } from '../home/homeFixtureData';
 import type { LedgerActivityRow, PortfolioLedger } from '../money/portfolioLedger';
 import type { Category } from '../../components/sp/logic/gameNight';
 import type { SlotRow } from './matchupRoster';
 
-export type MatchupFixtureVariant = 'unslotted' | 'category' | 'tiers' | 'bought';
+export type MatchupFixtureVariant = 'unslotted' | 'category' | 'tiers' | 'bought' | 'stress';
 
 export function parseMatchupFixture(raw: string | undefined): MatchupFixtureVariant {
-  return raw === 'category' || raw === 'tiers' || raw === 'bought' ? raw : 'unslotted';
+  return raw === 'category' || raw === 'tiers' || raw === 'bought' || raw === 'stress' ? raw : 'unslotted';
 }
 
 const NAMES: Record<string, string> = {
   NVDA: 'NVIDIA', AAPL: 'Apple', CRM: 'Salesforce', TSLA: 'Tesla', COST: 'Costco Wholesale', V: 'Visa',
   AMZN: 'Amazon.com', JPM: 'JPMorgan Chase & Co.', DIS: 'Walt Disney', NKE: 'Nike', KO: 'Coca-Cola', BA: 'Boeing',
+};
+
+/** §9B stress: real listed names at their full, longest form. */
+const STRESS_NAMES: Record<string, string> = {
+  NVDA: 'NVIDIA Corporation Common Stock', AAPL: 'Apple Inc. Common Stock', CRM: 'Salesforce, Inc. Common Stock',
+  TSLA: 'Tesla, Inc. Common Stock', COST: 'Costco Wholesale Corporation Common Stock', V: 'Visa Inc. Class A Common Stock',
+  AMZN: 'Amazon.com, Inc. Common Stock', JPM: 'JPMorgan Chase & Co. Common Stock', DIS: 'The Walt Disney Company Common Stock',
+  NKE: 'Nike, Inc. Class B Common Stock', KO: 'The Coca-Cola Company Common Stock', BA: 'The Boeing Company Common Stock',
 };
 
 const CATEGORY: Record<string, Category> = {
@@ -56,7 +66,7 @@ export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: s
   };
   for (const h of ROBERTO_HOLDINGS) add(me, h);
   for (const h of GIANLUIGI_HOLDINGS) add(opp, h);
-  return { activity: rows, symbol_names: { ...NAMES }, members: [] };
+  return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES) }, members: [] };
 }
 
 function bySide(me: string, opp: string, slotOf: (sym: string) => string): Record<string, Record<string, string | null>> {
