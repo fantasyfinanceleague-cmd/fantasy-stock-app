@@ -928,8 +928,11 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
 | `money` **NEW** | Medium (100/500) | 44 / 46, −0.015em, tabular, maxScale 1.2 | Portfolio value (regular weight: rule 5) |
 | `score.xl` | ExtraBold (100/800) | 32 / 36, tabular, maxScale 1.2 | Matchup scoreboard totals |
 | `score.lg` | ExtraBold | 28 / 30, tabular, maxScale 1.2 | This week (Home) |
-| `score.md` | ExtraBold | 17 / 22, tabular, maxScale 1.3 | Roster week gain; standings season gain at 15 / 20 |
-| `ticker` **NEW** | ExtraBold | 16 / 20, +0.01em | Tickers on rows; 26 / 28 on the player card |
+| `score.md` | ExtraBold | 17 / 22, tabular, maxScale 1.3 | Roster week gain |
+| `score.sm` **NEW (W3)** | ExtraBold | 15 / 20, tabular, maxScale 1.3 | Standings season gain |
+| `ticker` **NEW** | ExtraBold | 16 / 20, +0.01em | Tickers on rows |
+| `ticker.card` **NEW (W3)** | ExtraBold | 26 / 28, +0.01em, maxScale 1.3 | The player card's ticker |
+| `ticker.tile` **NEW (W3)** | ExtraBold | 13 / 16, maxScale 1.2 | The draft tile's ticker |
 | `tag` | Expanded ExtraBold (125/800) | 11 / 14, +0.06em, uppercase | Broadcast tags, group headers, strip labels |
 | `display`, `title`, `headline`, `body`, `callout`, `caption` | unchanged | unchanged | §9 |
 
@@ -949,7 +952,15 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   regression to satisfy a test), or raising `score.xl` to 1.6 (two 51pt totals don't fit
   side by side in the Scoreboard's halves). No value changes.
   `score.md` is a row size now and is not in the ramp.
-- The 11pt floor stands (§9B).
+- The 11pt floor stands (§9B), including text that shrinks to fit: a `minimumFontScale` never
+  takes a label under 11pt (12pt caption → 0.92 at least), and avatar initials floor at 11pt.
+  A disc under 24pt (the player card's 20pt owner disc) shows ONE initial, the first name's:
+  two wide initials ("MW") at 11pt are as wide as a 20pt disc and would clip.
+- **Uppercase is set in the string, never with `textTransform`** (W3, 2026-10-12): React
+  Native measures the text before the transform, so an uppercased label can clip its last
+  glyph. Tags, strip labels and chip defaults call `.toUpperCase()` on the label.
+- `score.sm`, `ticker.card` and `ticker.tile` were added by the W3 worker and accepted at the W3
+  gate (Design Lead, 2026-10-12): they were values this spec gave in prose, now named variants.
 
 ### Shape and space
 
@@ -962,7 +973,8 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
 
 ### Components (the W3 primitives)
 
-- **`Card`**: `surface` + `rim`; no shadow in Dark.
+- **`Card`**: `surface` + the 1pt `rim`, no shadow in either theme (Dark: lightness steps;
+  Light: the rim is the card's edge on the tinted page). Only the sheet casts a shadow.
 - **`Scoreboard`** (Matchup): two halves in one card; avatars (44, you ringed in `you` with a
   2pt `bg` gap) at the outer edges; names; totals in `score.xl`; **your half** fills with
   `youTint`, win or lose; under the card, one line: "{name} leads by {margin}" (or "won by").
@@ -987,8 +999,8 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   `accent` pills with `onAccent` ink on money screens.
 - **`Chart`**: one line, 2.5pt, in `gain` or `loss` by the window's sign, edge to edge (it runs
   past the gutter to the screen's edge), a dashed zero/base line in `borderStrong`, the end dot
-  in `live` with a 9pt `liveGlow` halo; it stops at the last real point. W/L marks under the
-  axis on Home (calm-Home spec).
+  in `live` with a 9pt `liveGlow` halo; it stops at the last real point. On Home the W/L marks
+  sit between the plot and the two date labels (calm-Home spec; the order below).
 - **The X axis (every chart, Giorgio 2026-10-12: "a real X axis with dates"; this-week
   charts "Mon…Fri"):**
   - **Labels only:** `caption` (12/16 Medium), `text2`, tabular; no axis line, no tick marks, no
@@ -1009,7 +1021,8 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   - **Home's season chart** (the approved calm-Home chart): the W/L marks stay; the axis adds
     **two** date labels under them, the first week's start date under the first mark (left)
     and today's date at the live end (right), so marks and labels never collide (the chart
-    grows by the label row). Confirmed by Giorgio, 2026-10-12.
+    grows by the label row). Top to bottom: the plot, the W/L marks, the two dates (the board
+    draws exactly this). Confirmed by Giorgio, 2026-10-12.
   - **The 0- and 1-point states** draw the full axis (a week chart on Monday morning shows Mon
     … Fri with a dot at Monday's open).
   - **Scrub:** the scrub label names the point's date or day ("Wed · +$41.26").
@@ -1036,7 +1049,8 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
      transaction: "Drafted 2nd overall · Sep 29 · $290.10" / "Claimed off waivers · Oct 7 ·
      $187.20" / "Bought · Oct 2 · $214.80". The amount is the price per share.
   7. The Alpaca credit.
-- **Tab bar**: `tabbar`, active in `accent`, inactive `text2`.
+- **Tab bar**: `tabbar`, active in `accent`, inactive `text2`; no rule line along its top
+  (rule 2: separation is surface, never a line; removed in W3).
 
 ### Motion (Game Night's notes on top of §4)
 
@@ -1051,19 +1065,31 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
 ### Contrast evidence (v3.1)
 
 Computed from the values above against **the app's own tables**
-(`apps/mobile/constants/tokens/contrastPairs.ts`: 18 `TOKEN_ROWS` + 40 `PAIRS`, with the three
-re-pointed rows) plus **49 new scored Game Night pairs**: your side (B) on the card surface and
-on the page, the clock cell, the money page, the "Yours" pill, the accent fill, your ring, the
-owner's avatar disc, the 11 category pills (`onCat`) and the 11 category lines on the tile and on
-an inset (graphic, 3:1). Translucent fills composited over what they sit on, WCAG 2.x.
+(`apps/mobile/constants/tokens/contrastPairs.ts`), **110 checks per theme**: 17 scored
+`TOKEN_ROWS` (of 18; `text3` is measured, not scored) and 93 `PAIRS`. The pairs are the 40
+existing rows (three re-pointed), 50 Game Night rows and W3's 3 Chip rows. The Game Night rows
+cover:
+- your side (B) on the card surface and on the page;
+- the clock cell;
+- the money page (text, captions, gain and loss);
+- the "Yours" pill, the accent fill, your ring;
+- the owner's avatar disc on its pill (`opp` on `inset`, graphic);
+- the 11 category pills (`onCat`);
+- the 11 category lines on the tile and on an inset (graphic, 3:1).
+Translucent fills are composited over what they sit on, WCAG 2.x.
+
+Corrected at the W3 gate (2026-10-12): this section first said 107. It counted your text on your
+card-surface half twice (that row already existed) and lacked loss on the money page, which W3
+added.
 
 | Theme | Scored | Pass | Tightest |
 |---|---|---|---|
-| Dark | 107 | 107 | `borderStrong` on `surface` 3.29 (needs 3); `onYou` on `you` 5.07; `you` on `surface` 3.49 (needs 3) |
-| Light | 107 | 107 | `loss` in your column 4.66; `accent` on its tint 4.69; `medalSilver` on the you-tint row 3.11 (needs 3) |
+| Dark | 110 | 110 | `borderStrong` on `surface` 3.29 (needs 3); `onYou` on `you` 5.07; `you` on `surface` 3.49 (needs 3) |
+| Light | 110 | 110 | `loss` in your column 4.67; `accent` on its tint 4.69; `medalSilver` on the you-tint row 3.11 (needs 3); the owner's disc 3.32 (needs 3) |
 
-**W3 adds the new pairs to `contrastPairs.ts` and the board's `PAIRS` together** (the rule in that
-file: the two lists stay identical); the category pairs replace the five sample tile pairs.
+**`contrastPairs.ts` and the board's `PAIRS` are identical, row for row** (the board's `themes.css`
+is the app's `color.ts` key for key, so both score one palette); add a pair to both or to
+neither. The category pairs replaced the five sample tile pairs.
 
 ### Decided with Giorgio (2026-10-12)
 

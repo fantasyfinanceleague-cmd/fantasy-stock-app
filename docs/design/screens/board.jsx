@@ -84,34 +84,61 @@
   }
 
   // ── Themes: one design, two complete themes ───────────────────────────
+  // Both tables are apps/mobile/constants/tokens/contrastPairs.ts, row for row, with each
+  // ThemeColors key in the board's kebab form (`text2` → `text-2`). Keep them identical:
+  // add a pair there AND here when a component puts text or a graphic on a fill.
   const TOKEN_ROWS = [
-    // [token, role, min contrast vs surface (text 4.5, graphics 3)]
-    ['text', 'Primary text', 4.5], ['text-2', 'Secondary text', 4.5], ['accent', 'Links, accent text', 4.5],
-    ['you-text', 'Your name / score text', 4.5], ['opp-text', 'Opponent text', 4.5], ['live-text', 'Live tags', 4.5],
-    ['gain', 'Money up', 4.5], ['loss', 'Money down', 4.5], ['zero', 'Money flat', 4.5], ['danger', 'Errors', 4.5],
-    ['you', 'Your fills (tug, avatar)', 3], ['opp', 'Opponent fills', 3], ['live', 'Live dot, clock ring', 3], ['border-strong', 'Control borders', 3],
+    // [token, role, min contrast vs surface (text 4.5, graphics 3, 0 = unscored)]
+    ['text', 'Primary text', 4.5],
+    ['text-2', 'Secondary text', 4.5],
+    ['accent', 'Links, accent text', 4.5],
+    ['you-text', 'Your name / score text', 4.5],
+    ['opp-text', 'Opponent text', 4.5],
+    ['live-text', 'Live tags', 4.5],
+    ['gain', 'Money up', 4.5],
+    ['loss', 'Money down', 4.5],
+    ['zero', 'Money flat', 4.5],
+    ['danger', 'Errors', 4.5],
+    ['you', 'Your fills (tug, avatar)', 3],
+    ['opp', 'Opponent fills', 3],
+    ['live', 'Live dot, clock ring', 3],
+    ['border-strong', 'Control borders', 3],
+    // Disabled/decorative text ONLY, never information — measured, not scored.
     ['text-3', 'Disabled / decorative text ONLY, never information', 0],
+    // Medals (§9A, season complete only): each disc is a graphic on the surface.
+    ['medal-gold', 'Medal disc, gold, on the surface', 3],
+    ['medal-silver', 'Medal disc, silver, on the surface', 3],
+    ['medal-bronze', 'Medal disc, bronze, on the surface', 3],
   ];
   // Every foreground-on-fill pair the components actually render, with the
   // background it really sits on. rgba tints are composited over `over`.
   // [fg token, bg token, over (for translucent bgs), min, where it's used]
   const PAIRS = [
-    ['on-accent', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
+    // §9C: `onAccent` split — fills that take white in BOTH themes (you, loss-fill) read `onYou`.
+    ['on-you', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
     ['on-opp', 'opp', null, 4.5, 'Opponent avatar initials'],
-    ['on-accent', 'loss-fill', null, 4.5, 'Sell button label'],
+    ['on-you', 'loss-fill', null, 4.5, 'Sell button label'],
     ['primary-fg', 'primary-bg', null, 4.5, 'Primary button label'],
     ['inverse-fg', 'inverse-bg', null, 4.5, 'FINAL chip, selected toggle'],
     ['secondary-fg', 'secondary-bg', 'surface', 4.5, 'Secondary button label'],
     ['text', 'inset', null, 4.5, 'Chips, draft cells, search field, panels'],
     ['text-2', 'inset', null, 4.5, 'Chip meta, race-chart day labels'],
     ['live-text', 'inset', null, 4.5, 'LIVE chip'],
-    ['live-text', 'surface', null, 4.5, 'Broadcast tags on cards'],
+    // 3b-1 carry-over, fixed 3b-2: the header phase chip's `inset` fill was
+    // nearly invisible against `bg` in Light (#F0F3F7 vs #F3F5F8) — the chip
+    // sits on the PAGE background there, not a card, so it now uses
+    // `surface` + a hairline instead (PhaseChip's `onPageBackground` prop,
+    // ShellHeader — retrofits Matchup/League/Portfolio's header chip too).
+    ['live-text', 'surface', null, 4.5, 'Broadcast tags on cards, and the header chip on the page background (3b-2 retrofit)'],
+    ['text', 'surface', null, 4.5, 'Default-style header chip on the page background (3b-2 retrofit)'],
     ['text-2', 'sunken', null, 4.5, 'Segmented-control labels'],
     ['text', 'bg', null, 4.5, 'Screen text'],
     ['text-2', 'bg', null, 4.5, 'Captions on the screen background'],
     ['gain', 'bg', null, 4.5, 'Gain on the screen background (Home hero)'],
     ['loss', 'bg', null, 4.5, 'Loss on the screen background'],
+    ['danger', 'bg', null, 4.5, 'Field errors on the screen background (3b-1 auth, username)'],
     ['gain', 'inset', null, 4.5, 'Gain inside panels'],
+    ['loss', 'inset', null, 4.5, 'Loss inside panels (3b-1 onboarding FINAL vignette)'],
     ['accent', 'accent-tint', 'surface', 4.5, 'Selected web nav, icon tiles'],
     ['gain', 'gain-tint', 'surface', 4.5, 'Cash tile "$", done check'],
     ['text', 'you-tint', 'surface', 4.5, 'Your standings row'],
@@ -120,24 +147,99 @@
     ['warn-text', 'warn-tint', 'bg', 4.5, '"Your call" notes'],
     ['text', 'warn-tint', 'bg', 4.5, 'Sign-ups-paused banner'],
     ['text', 'warn-tint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
-    ['danger', 'bg', null, 4.5, 'Field errors on the screen background'],
-    ['loss', 'inset', null, 4.5, 'Losses inside a panel (onboarding FINAL art, lineups)'],
     ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
-    ['on-medal', 'medal-gold', null, 4.5, 'Medal numeral 1 (season complete)'],
-    ['on-medal', 'medal-silver', null, 4.5, 'Medal numeral 2'],
-    ['on-medal', 'medal-bronze', null, 4.5, 'Medal numeral 3'],
-    ['medal-gold', 'surface', null, 3, 'Gold medal disc on a card (graphic)'],
-    ['medal-silver', 'surface', null, 3, 'Silver medal disc on a card (graphic)'],
-    ['medal-bronze', 'surface', null, 3, 'Bronze medal disc on a card (graphic)'],
-    ['medal-gold', 'you-tint', 'surface', 3, 'Gold disc on your standings row (graphic)'],
-    ['medal-silver', 'you-tint', 'surface', 3, 'Silver disc on your standings row (graphic)'],
-    ['medal-bronze', 'you-tint', 'surface', 3, 'Bronze disc on your standings row (graphic)'],
     ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
     ['text-2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
-    ['on-accent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
+    ['on-you', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
     ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
-    ['on-live', 'live', null, 4.5, 'Your turn: card text during the gold flash'],
-    ['live-text', 'warn-tint', 'surface', 4.5, 'Your turn: the title on the resting card'],
+    // Medals: the rank numeral on each disc (text, 4.5)...
+    ['on-medal', 'medal-gold', null, 4.5, 'Medal rank numeral on the gold disc'],
+    ['on-medal', 'medal-silver', null, 4.5, 'Medal rank numeral on the silver disc'],
+    ['on-medal', 'medal-bronze', null, 4.5, 'Medal rank numeral on the bronze disc'],
+    // ...and each disc on the caller's you-tint row, composited over the surface (graphic, 3).
+    ['medal-gold', 'you-tint', 'surface', 3, 'Medal disc, gold, on the you-tint row (graphic)'],
+    ['medal-silver', 'you-tint', 'surface', 3, 'Medal disc, silver, on the you-tint row (graphic)'],
+    ['medal-bronze', 'you-tint', 'surface', 3, 'Medal disc, bronze, on the you-tint row (graphic)'],
+    // Your turn (Design Lead, 2026-10-06; board #your-turn): the flash fills the clock card with
+    // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
+    ['on-live', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
+    ['live-text', 'warn-tint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
+
+    // ── Game Night, §9C v3.1 (2026-10-12): the 49 new scored pairs. §9C names them by group
+    // (your side on the card surface and on the page, the clock cell, the money page, the
+    // "Yours" pill, the accent fill, your ring, the owner's avatar disc, the 11 category pills
+    // and the 11 category lines on the tile and on an inset); these are those groups row by
+    // row. The owner's avatar disc is the existing `onOpp` on `opp` row above, and your text on
+    // your card-surface half is the existing "Your standings row" row. The board's PAIRS must
+    // carry the same rows.
+    // Your side, shaded in your colour, win or lose (shading B): on the card surface (your
+    // Scoreboard half, your Standings row)...
+    ['text-2', 'you-tint', 'surface', 4.5, 'Your side on a card: secondary text (your Scoreboard half, your Standings record)'],
+    ['gain', 'you-tint', 'surface', 4.5, 'Your side on a card: gain (your Standings season gain, movement up)'],
+    ['loss', 'you-tint', 'surface', 4.5, 'Your side on a card: loss (your Standings season gain, movement down)'],
+    // ...and on the page (your roster column, its slab off the screen edge).
+    ['text', 'you-tint', 'bg', 4.5, 'Your roster column: your ticker'],
+    ['text-2', 'you-tint', 'bg', 4.5, 'Your roster column: company and week %'],
+    ['gain', 'you-tint', 'bg', 4.5, 'Your roster column: week gain'],
+    ['loss', 'you-tint', 'bg', 4.5, 'Your roster column: week loss'],
+    // The draft's on-the-clock cell.
+    ['on-clock-cell', 'clock-cell', null, 4.5, 'Draft: the clock in the on-the-clock cell'],
+    ['clock-cell-live', 'clock-cell', null, 4.5, 'Draft: the pick number (and its ring) in the on-the-clock cell'],
+    // The money page (Portfolio, the stock sheet's screen).
+    ['text', 'money-bg', null, 4.5, 'Money page: the value and rows'],
+    ['text-2', 'money-bg', null, 4.5, 'Money page: captions'],
+    ['gain', 'money-bg', null, 4.5, 'Money page: gain'],
+    ['loss', 'money-bg', null, 4.5, 'Money page: loss'],
+    // The "Yours" pill on the player card (the sheet's surface).
+    ['you-text', 'you-tint', 'surface', 4.5, 'Player card: the "Yours" pill'],
+    // The accent fill (the money range pills, the Draft button).
+    ['on-accent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
+    // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
+    ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
+    // The owner's avatar disc against the "Owned by" pill it sits in (§9C; the board draws it).
+    ['opp', 'inset', null, 3, 'Owner avatar disc in the "Owned by" pill (graphic)'],
+    // The 11 category pills (text on the fill)...
+    ['on-cat', 'cat-tech', null, 4.5, 'Category pill: Tech'],
+    ['on-cat', 'cat-finance', null, 4.5, 'Category pill: Finance'],
+    ['on-cat', 'cat-health', null, 4.5, 'Category pill: Health'],
+    ['on-cat', 'cat-energy', null, 4.5, 'Category pill: Energy'],
+    ['on-cat', 'cat-transport', null, 4.5, 'Category pill: Autos'],
+    ['on-cat', 'cat-retail', null, 4.5, 'Category pill: Retail'],
+    ['on-cat', 'cat-food', null, 4.5, 'Category pill: Food'],
+    ['on-cat', 'cat-media', null, 4.5, 'Category pill: Media'],
+    ['on-cat', 'cat-industrials', null, 4.5, 'Category pill: Industry'],
+    ['on-cat', 'cat-real-estate', null, 4.5, 'Category pill: Property'],
+    ['on-cat', 'cat-misc', null, 4.5, 'Category pill: Misc'],
+    // ...the 11 category lines on the draft tile's surface (graphic)...
+    ['cat-tech', 'surface', null, 3, 'Draft tile: the TEC line (graphic)'],
+    ['cat-finance', 'surface', null, 3, 'Draft tile: the FIN line (graphic)'],
+    ['cat-health', 'surface', null, 3, 'Draft tile: the HLT line (graphic)'],
+    ['cat-energy', 'surface', null, 3, 'Draft tile: the NRG line (graphic)'],
+    ['cat-transport', 'surface', null, 3, 'Draft tile: the AUT line (graphic)'],
+    ['cat-retail', 'surface', null, 3, 'Draft tile: the RTL line (graphic)'],
+    ['cat-food', 'surface', null, 3, 'Draft tile: the F&B line (graphic)'],
+    ['cat-media', 'surface', null, 3, 'Draft tile: the MED line (graphic)'],
+    ['cat-industrials', 'surface', null, 3, 'Draft tile: the IND line (graphic)'],
+    ['cat-real-estate', 'surface', null, 3, 'Draft tile: the PRP line (graphic)'],
+    ['cat-misc', 'surface', null, 3, 'Draft tile: the MSC line (graphic)'],
+    // ...and on an inset (graphic).
+    ['cat-tech', 'inset', null, 3, 'The Tech line on an inset (graphic)'],
+    ['cat-finance', 'inset', null, 3, 'The Finance line on an inset (graphic)'],
+    ['cat-health', 'inset', null, 3, 'The Health line on an inset (graphic)'],
+    ['cat-energy', 'inset', null, 3, 'The Energy line on an inset (graphic)'],
+    ['cat-transport', 'inset', null, 3, 'The Autos line on an inset (graphic)'],
+    ['cat-retail', 'inset', null, 3, 'The Retail line on an inset (graphic)'],
+    ['cat-food', 'inset', null, 3, 'The Food line on an inset (graphic)'],
+    ['cat-media', 'inset', null, 3, 'The Media line on an inset (graphic)'],
+    ['cat-industrials', 'inset', null, 3, 'The Industry line on an inset (graphic)'],
+    ['cat-real-estate', 'inset', null, 3, 'The Property line on an inset (graphic)'],
+    ['cat-misc', 'inset', null, 3, 'The Misc line on an inset (graphic)'],
+
+    // W3's own, beyond §9C's 49 — the Chip renders text and a dot on its tint (§9C "Chip":
+    // accentTint + liveText, the dot drawn), on the page (the header) and on cards / sheets.
+    ['live-text', 'accent-tint', 'bg', 4.5, 'LIVE chip on the page background'],
+    ['live-text', 'accent-tint', 'surface', 4.5, 'LIVE chip on a card or sheet'],
+    ['live', 'accent-tint', 'bg', 3, 'Live dot inside the LIVE chip (graphic)'],
   ];
   function readTheme(theme) {
     const el = document.createElement('div');
@@ -201,10 +303,11 @@
         </header>
         <div className="b-tokens">
           <ul className="b-inv__notes" style={{ margin: 0 }}>
-            <li><b>The money/game split is gone as a colour.</b> Matchup, Draft room, scoreboards and onboarding are light in Light; Portfolio, sheets and forms are dark in Dark. No dark card inside a light screen, or the reverse.</li>
-            <li><b>What replaces the dark scoreboard for emphasis:</b> the condensed 900 score type (the biggest thing on any screen), a faint accent wash at the top of the scoreboard card, the tug bar and live dot in colour, broadcast-style tags, and motion (digit rolls, lead changes, re-sorts).</li>
-            <li><b>Text-safe cuts.</b> Yellow, orange and bright blue are too light for text on white, so each has a darker "-text" value in Light. The fills (tug bar, live dot, avatars) keep their colour.</li>
-            <li><b>Rules that still hold:</b> team colours mark people (you blue, opponent orange); data colours mark money (gain green, loss red, zero grey, never green).</li>
+            <li><b>The values are Game Night v3.1</b> (DESIGN_DIRECTION §9C, 2026-10-12): the app's <code>color.ts</code> key for key, and the table below is the app's <code>contrastPairs.ts</code> row for row. The 1.2.0 screens on this board now take these colours but keep their 1.2.0 shapes until W4 redraws them; the Game Night frames are under Approved screens.</li>
+            <li><b>Never a dark card inside a light screen, or the reverse.</b> Money screens (Portfolio, the stock sheet) have their own page, <code>--c-money-bg</code>: near-black in Dark, the white surface in Light.</li>
+            <li><b>Emphasis:</b> ExtraBold 800 game numbers, your side shaded in your colour win or lose (<code>--c-you-tint</code>), the cyan accent (deep teal in Light) for live and your turn, and motion. Depth: in Dark, lightness steps of one hue and no shadows; in Light, white cards with a 1pt rim on the tinted page, and only the sheet casts a shadow.</li>
+            <li><b>Every fill has its own ink:</b> <code>--c-on-accent</code> is dark in Dark and white in Light; <code>--c-on-you</code> is white in both; the 11 category pills read <code>--c-on-cat</code>; the on-the-clock cell reads <code>--c-on-clock-cell</code>.</li>
+            <li><b>Rules that still hold:</b> you are blue; the opponent is marked by position (the right-hand side) on a slate, not by colour; data colours mark money (gain green, loss red, zero grey, never green).</li>
             <li><b>Settings:</b> Profile › Appearance, with System, Light and Dark; System is the default and the choice is saved on the device. All three options stay (your call).</li>
           </ul>
           {vals ? (

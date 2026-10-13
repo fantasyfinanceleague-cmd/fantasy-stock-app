@@ -70,7 +70,7 @@ with the reason beside it**. A silent no-op is a P1.
 |---|---|---|
 | Tokens only | grep the branch's changed files for `#[0-9A-Fa-f]{3,8}` and `rgba(` outside `constants/tokens/` | any colour literal in a component |
 | Every fill has its own ink | for each fill on the screen (accent, you, loss-fill, your-side tint, clock cell, category pills, the band of a chip), name the `on*` token its text reads | text on a fill reads page text (`text`/`text2`) |
-| Contrast | the worker's `contrastPairs.ts` test green in both themes; the board's `PAIRS` updated in the same change | a red test, or the two lists differ |
+| Contrast | the worker's `contrastPairs.ts` test green in both themes (110 checks per theme as of W3); the board's `TOKEN_ROWS`/`PAIRS` and `themes.css` updated in the same change | a red test, the two lists differ, or `themes.css` differs from `color.ts` |
 | Accent by area | `python3 ~/fantasy-stock-design-review/tools/game-night/app_accent_area.py <capture> <dark\|light> docs/design/tokens-v3-game-night.json` on every capture | accent > 5% of a frame (data colours are reported apart) |
 | No rule lines between rows | inspect the row stack in the capture at 1:1 | a divider line between list rows (separation is space, surface or your side's tint) |
 | Depth | Dark: page / card / inset are lightness steps, no shadows; Light: white cards with the rim on the tinted page, the sheet's shadow only | a drop shadow on Dark; a card without its rim |
@@ -79,7 +79,9 @@ with the reason beside it**. A silent no-op is a P1.
 | No sparklines on rows | Portfolio holdings, Matchup roster, watchlist, search rows | any small line on a row (the player card carries the lines) |
 | Draft tiles | `surface` tile, the 3pt category line at the bottom, label row (pick · 3-letter code) | a colour-filled tile ("a carbon copy of Sleeper"); a sample sector instead of the app's category |
 | Block rhythm | measured from pixels, glyph to glyph, in points (the existing gate step) | a flush stack; a gap off the token |
-| 11pt floor, 44pt targets, drawn icons, colour never the only code | §9B | §9B |
+| Uppercase in the string | grep the changed files for `textTransform` | any `textTransform` (React Native measures before the transform and can clip the last glyph; uppercase with `.toUpperCase()`, §9C Type) |
+| Shrink-to-fit floor | grep for `minimumFontScale` and check size × scale | any label that can shrink under 11pt; avatar initials under 11pt |
+| 11pt floor, 44pt targets, drawn icons, colour never the only code | §9B (text tabs need `minWidth: 44`, not only `hitSlop`) | §9B |
 
 ## 6. Per screen: the states to capture and what to check
 
@@ -88,7 +90,8 @@ with the reason beside it**. A silent no-op is a P1.
   themes; the season line with 0 points (week 1, Monday before the first close) and 1 point.
 - **Check:** the team value is the one standout (`hero`, 46/800); This week is the rimmed card
   with 28pt scores and the "Live" chip; Standings is the rimmed card with your row's tint;
-  24pt between blocks; the range tabs 8pt under the marks (the F1 rule).
+  24pt between blocks; the season chart top to bottom: the plot, the W/L marks, the two end
+  dates (§9C X axis); the range tabs 8pt under that (the F1 rule).
 
 ### Matchup + the player card
 - **States:** live while you lead and while you're BEHIND; final (won and lost); the reveal;
