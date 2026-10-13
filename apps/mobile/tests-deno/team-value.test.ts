@@ -51,18 +51,54 @@ Deno.test('price_tiers: stake = drafted roster cost basis, one share per pick', 
   assertAlmostEquals(result.value, 216.3 + 100.2, 1e-9);
 });
 
-Deno.test('budget_cap: cash can go NEGATIVE when the budget headroom (beyond draft cost) is spent — flagged, not smoothed', () => {
-  const drafts = [{ symbol: 'JPM', entryPrice: 1000, quantity: 1 }]; // draftCost = 1000 = stake
-  // A further buy with no matching sell — legal under budget_cap when
-  // budgetAmount > draftCost, but this helper only knows the draft-cost
-  // stake, so the extra spend must show as negative cash, not be hidden.
+Deno.test('budget_cap: a post-draft net buy inside the budget is capital put in, never negative cash (W4 defect b)', () => {
+  const drafts = [{ symbol: 'JPM', entryPrice: 1000, quantity: 1 }]; // draftCost = 1000
+  // A further buy with no matching sell: legal under budget_cap when budgetAmount > draftCost.
   const trades = [{ symbol: 'DIS', action: 'buy' as const, quantity: 1, price: 500 }];
   const prices: Record<string, number> = { JPM: 1100, DIS: 510 };
   const result = teamValue(base({ stakeMode: 'budget_cap', notionalPerSlot: null, numRounds: null, drafts, trades, price: (s) => prices[s] ?? null }));
-  assertAlmostEquals(result.cash, -500, 1e-9);
-  assertEquals(result.cashWentNegative, true);
-  // value still adds up: holdings + cash, negative cash included, not clamped.
-  assertAlmostEquals(result.value, 1100 + 510 - 500, 1e-9);
+  // Never "Cash from sales −$500": no sale paid for the buy, so there's no cash at all…
+  assertEquals(result.cash, 0);
+  assertEquals(result.cashWentNegative, false);
+  // …and the $500 is stake (money put in), so the value is the holdings alone.
+  assertAlmostEquals(result.stake, 1500, 1e-9);
+  assertAlmostEquals(result.value, 1100 + 510, 1e-9);
+  // The gain is unchanged by the split: holdings − every dollar put in.
+  assertAlmostEquals(result.value - result.stake, (1100 + 510) - (1000 + 500), 1e-9);
+});
+
+Deno.test('budget_cap: a sale then a smaller buy leaves the difference as cash from sales', () => {
+  const drafts = [{ symbol: 'JPM', entryPrice: 1000, quantity: 1 }, { symbol: 'KO', entryPrice: 70, quantity: 1 }];
+  const trades = [
+    { symbol: 'JPM', action: 'sell' as const, quantity: 1, price: 1200 },
+    { symbol: 'DIS', action: 'buy' as const, quantity: 1, price: 500 },
+  ];
+  const prices: Record<string, number> = { KO: 72, DIS: 505 };
+  const result = teamValue(base({ stakeMode: 'budget_cap', notionalPerSlot: null, numRounds: null, drafts, trades, price: (s) => prices[s] ?? null }));
+  assertAlmostEquals(result.cash, 700, 1e-9);
+  assertAlmostEquals(result.stake, 1070, 1e-9);
+  assertAlmostEquals(result.value, 72 + 505 + 700, 1e-9);
+});
+
+Deno.test('budget_cap: a buy BEFORE the sale nets out — the end state decides, cash never dips', () => {
+  const drafts = [{ symbol: 'JPM', entryPrice: 1000, quantity: 1 }];
+  const trades = [
+    { symbol: 'DIS', action: 'buy' as const, quantity: 1, price: 500 },
+    { symbol: 'JPM', action: 'sell' as const, quantity: 1, price: 1100 },
+  ];
+  const result = teamValue(base({ stakeMode: 'budget_cap', notionalPerSlot: null, numRounds: null, drafts, trades, price: () => 500 }));
+  assertAlmostEquals(result.cash, 600, 1e-9);
+  assertAlmostEquals(result.stake, 1000, 1e-9);
+  assertAlmostEquals(result.value, 500 + 600, 1e-9);
+});
+
+Deno.test('price_tiers: a net buy (no budget at all) is capital put in, the same rule', () => {
+  const drafts = [{ symbol: 'JPM', entryPrice: 204.9, quantity: 1 }];
+  const trades = [{ symbol: 'DIS', action: 'buy' as const, quantity: 1, price: 104.2 }];
+  const result = teamValue(base({ stakeMode: 'price_tiers', notionalPerSlot: null, numRounds: null, drafts, trades, price: (s) => (s === 'JPM' ? 210 : 100) }));
+  assertEquals(result.cash, 0);
+  assertAlmostEquals(result.stake, 204.9 + 104.2, 1e-9);
+  assertAlmostEquals(result.value, 310, 1e-9);
 });
 
 Deno.test('legacy NULL stake_mode is treated as one-share (draft-cost stake), like price_tiers', () => {

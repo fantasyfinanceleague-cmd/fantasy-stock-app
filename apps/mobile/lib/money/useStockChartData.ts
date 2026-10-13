@@ -12,6 +12,8 @@ import { supabase } from '@/lib/supabase';
 import type { DailyBar } from './stockChartSeries';
 import { MONEY_FIXTURE_CONFIG } from './devFixture';
 import { stressChartBars } from './stressFixture';
+import { MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { seamBars } from './portfolioSeam';
 
 export interface StockChartData {
   status: 'loading' | 'ready' | 'error';
@@ -30,6 +32,11 @@ export function useStockChartData(symbol: string, enabled: boolean): StockChartD
     }
     if (MONEY_FIXTURE_CONFIG) {
       setState({ status: 'ready', bars: stressChartBars(symbol) });
+      return;
+    }
+    // The game capture seam: the fixture's own daily path, no network.
+    if (SEAM_ON) {
+      setState({ status: 'ready', bars: seamBars(symbol, MATCHUP_FIXTURE_VARIANT) });
       return;
     }
     let cancelled = false;

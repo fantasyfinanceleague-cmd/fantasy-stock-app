@@ -12,6 +12,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { radius, space, typeFontFamily } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
+import { effectiveBudgetCap } from '@/lib/money/budgetFigures';
 import { supabase } from '@/lib/supabase';
 import { seamInvoke } from '@/lib/game/seamCalls';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
@@ -191,7 +192,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   // U-06: the board's roster strip (Home's grid), "1 of 6 · $2,000 per slot" or, in a budget-cap league, what's left.
   const mine = myDraftedSoFar(room.picks, room.order, myUserId);
-  const caption = rosterCaption(mine.symbols.length, rounds, { stakeMode, notionalPerSlot, budgetLeft: budgetLeft(budgetAmount, mine.prices) });
+  const caption = rosterCaption(mine.symbols.length, rounds, { stakeMode, notionalPerSlot, budgetLeft: budgetLeft(effectiveBudgetCap(stakeMode, budgetAmount), mine.prices) });
   // UX rule 10: how far away your next pick is (the snake, from Home's draftTurn).
   const picksAway = m > 0 && myUserId ? picksUntilTurn(room.order, room.pickCount, rounds, myUserId) : -1;
 

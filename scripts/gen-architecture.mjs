@@ -541,14 +541,14 @@ const FLOWS = [
   {
     id: 'flow.place-trade',
     title: 'Buy or sell a stock',
-    trigger: { kind: 'user', detail: 'User confirms a buy or sell in TradeModal (post-draft add/drop)' },
+    trigger: { kind: 'user', detail: 'User confirms a buy or sell in the stock sheet\'s review (post-draft add/drop; the legacy TradeModal was deleted in W4 Portfolio)' },
     steps: [
-      { edge: 'e.ui.TradeModal->fn.quote', detail: 'Live quote for display before confirming. Advisory only — the fill price is re-derived server-side.', anchors: [['apps/mobile/components/TradeModal.tsx', "invoke('quote'"]] },
-      { edge: 'e.ui.TradeModal->fn.record-trade', detail: 'The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser().', anchors: [['apps/mobile/components/TradeModal.tsx', "invoke('record-trade'"]] },
+      { edge: 'e.ui.money.useStockSheetData->fn.ticker-quotes', detail: 'Live quote for display before confirming. Advisory only — the fill price is re-derived server-side.', anchors: [['apps/mobile/lib/money/useStockSheetData.ts', "invoke('ticker-quotes'"]] },
+      { edge: 'e.ui.money.recordTrade->fn.record-trade', detail: 'The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser(). The same function answers the review\'s advisory preview (slot map, would_fill — which ignores the budget, so the client refuses an over-budget buy itself).', anchors: [['apps/mobile/lib/money/recordTrade.ts', "invoke('record-trade'"]] },
       { edge: 'e.fn.record-trade->pg.check_and_bump_rate_limit', detail: 'Per-user and per-IP buckets.', anchors: [['supabase/functions/record-trade/index.ts', "p_bucket: 'record-trade'"]] },
-      { edge: 'e.fn.record-trade->tbl.leagues', detail: 'League rules: stake mode, budget, notional, allow_undraftable.', anchors: [['supabase/functions/record-trade/index.ts', 'allowUndraftable: league.allow_undraftable']] },
+      { edge: 'e.fn.record-trade->tbl.leagues', detail: 'League rules: stake mode, budget, notional, allow_undraftable.', anchors: [['supabase/functions/record-trade/commit.ts', 'allowUndraftable: league.allow_undraftable']] },
       { edge: 'e.fn.record-trade->tbl.symbols', detail: 'is_draftable gate for buys (bypassed only when the commissioner set allow_undraftable).', anchors: [['supabase/functions/record-trade/index.ts', ".from('symbols').select('is_draftable')"]] },
-      { edge: 'e.fn.record-trade->tbl.trades#insert', detail: 'Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.', anchors: [['supabase/functions/record-trade/index.ts', 'validateTradeAdd({']] },
+      { edge: 'e.fn.record-trade->tbl.trades#insert', detail: 'Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.', anchors: [['supabase/functions/record-trade/commit.ts', 'validateTradeAdd({']] },
     ],
   },
   {

@@ -6,6 +6,10 @@
  * synthesizes a point for a day with no bar (a closed market, a feed gap).
  */
 import { formatMoney, formatPercent } from '../../components/sp/logic/money';
+import { dayOffset, type AxisSpec } from '../../components/sp/logic/chartAxis';
+import type { LinePointIn } from '../../components/sp/logic/lineChart';
+import { weekLine } from '../game/playerCardModel';
+import type { MarketCalendarSession } from '../time/marketWeek';
 
 export interface DailyBar {
   /** YYYY-MM-DD. */
@@ -139,5 +143,60 @@ export function stockScrubLabel(bar: DailyBar, baseline: number, isLatest: boole
     money: formatMoney(delta, { sign: 'always' }),
     percent: formatPercent(pct, { sign: 'always' }),
     gain: delta >= 0,
+  };
+}
+
+// ── Game Night (W4): the sheet's line on the §9C X axis ─────────────────────────────────
+
+function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+function mondayOfIso(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return addDaysIso(iso, dow === 0 ? -6 : 1 - dow);
+}
+
+/**
+ * The stock sheet's line for one range, on the Game Night Chart (§9C "The X axis"):
+ *   - 1W: the trading week on the Mon…Fri axis ("1W on a stock"): from the last close before
+ *     Monday, each closed session's close at its day's end, the live price at the fraction of
+ *     a running session; the days to come stay empty.
+ *   - 1M / 3M / 1Y: a dated axis from the range's first close to today ("MMM d"; 1Y in months),
+ *     the closes in the window, then the live price as today's point.
+ * The base (the dashed line) is the range's first value: the Design Lead's 2026-10-06 ruling
+ * (the range's FIRST close, not the previous close) carried over. Real bars only: a day with no
+ * bar is never invented.
+ */
+export function stockLineSeries(input: {
+  range: ChartRange;
+  bars: readonly DailyBar[];
+  price: number | null;
+  todayEt: string;
+  now: Date;
+  /** This week's sessions (the 1W axis). */
+  sessions: readonly MarketCalendarSession[];
+}): { points: LinePointIn[]; base: number; axis: AxisSpec } {
+  const { range, price, todayEt, now, sessions } = input;
+  const bars = [...input.bars].filter((b) => b.close > 0).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  if (range === '1W') {
+    const monday = mondayOfIso(todayEt);
+    const before = bars.filter((b) => b.date < monday);
+    const week = bars.filter((b) => b.date >= monday);
+    const startValue = before.length ? before[before.length - 1].close : week[0]?.close ?? price;
+    if (startValue == null) return { points: [], base: 0, axis: { kind: 'week' } };
+    const line = weekLine({ sessions, start: { t: 0, value: startValue }, bars: week, price, now });
+    return { points: line.points, base: line.base, axis: { kind: 'week' } };
+  }
+  const cutoff = addDaysIso(todayEt, -rangeLookbackDays(range));
+  const inWindow = bars.filter((b) => b.date >= cutoff && (price == null ? b.date <= todayEt : b.date < todayEt));
+  const series = price != null ? [...inWindow, { date: todayEt, close: price }] : inWindow;
+  const start = series[0]?.date ?? todayEt;
+  return {
+    points: series.map((b) => ({ t: dayOffset(start, b.date), value: b.close })),
+    base: series[0]?.close ?? price ?? 0,
+    axis: { kind: 'dated', start, end: todayEt < start ? start : todayEt, months: range === '1Y' },
   };
 }

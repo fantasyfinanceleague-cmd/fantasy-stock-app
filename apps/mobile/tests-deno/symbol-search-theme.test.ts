@@ -22,9 +22,9 @@ Deno.test('the ruled tokens: field inset / text / text2 placeholder; results sur
   assertEquals(field.includes('{ borderBottomColor: colors.line }'), true);
 });
 
-Deno.test('no caller passes its own colours into the field (theming it is safe for all four)', () => {
-  // (The legacy app/(tabs)/draft.tsx is a redirect since S-2: no field there any more.)
-  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx', 'components/TradeModal.tsx']) {
+Deno.test('no caller passes its own colours into the field (theming it is safe for all of them)', () => {
+  // (The legacy app/(tabs)/draft.tsx is a redirect since S-2; the orphaned TradeModal was deleted in W4.)
+  for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx']) {
     const src = SOURCES[p];
     const at = src.indexOf('<SymbolSearchField');
     const el = src.slice(at, src.indexOf('/>', at));

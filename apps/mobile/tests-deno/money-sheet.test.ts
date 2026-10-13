@@ -101,3 +101,33 @@ Deno.test('today change: per-share move and percent; null without a prior close'
   assertEquals(today?.pct.toFixed(2), '3.81');
   assertEquals(stockSheetModel({ ...BASE, prevClose: null }).todayChange, null);
 });
+
+// ── W4 defect (a): the buy review could offer a buy the server refused as over_budget ──
+// record-trade's preview `would_fill` ignores the budget (commit.ts slotPreview: "minus the
+// budget/roster checks (the client shows those itself)"), so the CLIENT must refuse first.
+
+Deno.test('budget: a share that costs more than the budget left is refused BEFORE the review', () => {
+  const m = stockSheetModel({ ...BASE, budgetLeft: 318.36 });
+  assertEquals(m.buy, { enabled: false, reason: 'NVDA costs more than your budget left.', blockedBy: 'budget' });
+});
+
+Deno.test('budget: exactly the budget left is a legal buy (the server refuses only spent + price > cap)', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 318.37 }).buy.enabled, true);
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 5000 }).buy.enabled, true);
+});
+
+Deno.test('budget: a $0 cap (NULL budget_amount, defect d) refuses every buy; no budget (other modes) refuses none', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 0 }).buy.blockedBy, 'budget');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: -12.5 }).buy.blockedBy, 'budget');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: null }).buy.enabled, true);
+});
+
+Deno.test('budget: an earlier rule still names the block (owned beats budget; unpriced never compares)', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 1, owner: { kind: 'other', name: 'Paolo M.', isBot: false } }).buy.blockedBy, 'owned');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 1, price: null }).buy.blockedBy, 'price');
+});
+
+Deno.test('roster full: Buy disabled with the roster reason, ahead of the budget', () => {
+  const m = stockSheetModel({ ...BASE, rosterFull: true, budgetLeft: 1 });
+  assertEquals(m.buy, { enabled: false, reason: 'Your roster is full. Sell a holding first.', blockedBy: 'full' });
+});

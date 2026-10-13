@@ -20,8 +20,8 @@ import { usePortfolioLedger } from './usePortfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { STRESS_CALLER, buildStressMarket } from './stressFixture';
 import { FIXTURE_LEAGUE_ID } from './fixtureMode';
-import { SEAM_ON } from '../game/devSeam';
-import { seamSheetQuote } from '../game/matchupFixture';
+import { MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { seamQuote } from './portfolioSeam';
 
 /** A quote is fresh for two minutes, the same window as useStockPrices. */
 const QUOTE_TTL_MS = 120_000;
@@ -106,7 +106,7 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
 
       // The game capture seam: the Matchup fixture's quote and the ledger's name; no network.
       if (SEAM_ON) {
-        const q = seamSheetQuote(sym);
+        const q = seamQuote(sym, MATCHUP_FIXTURE_VARIANT);
         setState({
           status: 'ready',
           price: q?.price ?? null,

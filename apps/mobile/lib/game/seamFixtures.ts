@@ -153,6 +153,11 @@ const SEARCH_SAMPLE = [
   { symbol: 'COST', name: 'Costco Wholesale', price: 912.3 },
   { symbol: 'V', name: 'Visa Inc.', price: 291.4 },
 ];
+/** A search sample's price, for the stock sheet under the seam (a stock nobody holds). */
+export function seamSearchPrice(symbol: string): number | null {
+  return SEARCH_SAMPLE.find((s) => s.symbol === symbol.toUpperCase())?.price ?? null;
+}
+
 export function symbolsSearchFixture(body: Record<string, unknown>): { items: { symbol: string; name: string; price: number; is_draftable: boolean }[] } {
   const q = String(body.q ?? '').trim().toUpperCase();
   const limit = typeof body.limit === 'number' ? body.limit : 8;

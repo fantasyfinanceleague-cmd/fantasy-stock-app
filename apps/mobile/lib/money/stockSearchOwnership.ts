@@ -22,8 +22,12 @@ export interface OwnershipSuffix {
  * conflict (more than one owner -- a data-integrity failure) or no owner at
  * all both show nothing, never a guess.
  */
-export function ownershipSuffix(owner: StockSheetFacts['owner'], conflict: boolean): OwnershipSuffix {
-  if (conflict || !owner) return { text: null, mine: false };
+export function ownershipSuffix(owner: StockSheetFacts['owner'], conflict: boolean, roomless = false): OwnershipSuffix {
+  if (conflict) return { text: null, mine: false };
+  // W4: nobody owns it, but every slot of yours is held (budget / tier leagues): "No free
+  // slot" (the board's watchlist wording, #call-watchlist C), so the row says why its sheet
+  // won't offer a buy before it's opened. It stays tappable: the sheet names the next step.
+  if (!owner) return roomless ? { text: COPY.noFreeSlot, mine: false } : { text: null, mine: false };
   if (owner.kind === 'me') return { text: COPY.youOwnThis, mine: true };
   return { text: COPY.ownedBy(owner.name ?? 'another manager'), mine: false };
 }

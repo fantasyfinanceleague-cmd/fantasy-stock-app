@@ -77,6 +77,8 @@ export interface PortfolioView {
   slotsText: string | null;
   perSlotText: string | null;
   cashText: string | null;
+  /** cashText's two halves, for the row layout: "Cash from sales" · "$1,234.56". */
+  cashValueText: string | null;
   buyRowText: string | null;
   unpricedNote: string | null;
   rows: HoldingRow[];
@@ -154,6 +156,7 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
     slotsText: fixed ? COPY.slotsInvested(held.length, i.numRounds) : null,
     perSlotText: fixed && i.perSlotNotional != null ? COPY.perSlotAtDraft(formatMoney(i.perSlotNotional)) : null,
     cashText: !fixed && Math.abs(i.cash) >= 0.005 ? `${COPY.cashFromSales} ${formatMoney(i.cash)}` : null,
+    cashValueText: !fixed && Math.abs(i.cash) >= 0.005 ? formatMoney(i.cash) : null,
     buyRowText: i.buyRow ? buyRowLine(i.buyRow)?.text ?? null : null,
     unpricedNote: unpricedNote(held.filter((h) => h.price == null).length),
     rows,

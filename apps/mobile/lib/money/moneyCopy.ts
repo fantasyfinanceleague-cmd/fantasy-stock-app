@@ -103,6 +103,10 @@ export const COPY = {
   // sheet's pre-review block -- distinct sentences from ownedBy / symbol_owned's refusal
   // copy, each the exact wording for its own moment.
   youOwnThis: 'You own this',
+  // W4 (board verbatim): the watchlist's "No free slot" (#call-watchlist C), and the search's
+  // empty-state hint (#buy-a-stock's approved copy list).
+  noFreeSlot: 'No free slot',
+  searchHint: 'Type a ticker (AMZN) or a company name (Amazon).',
   notInLeagueList: "Not in this league's list",
   ownerBlocksBuy: (name: string, symbol: string) => `${name} owns ${symbol}. A stock has one owner per league.`,
   sellAll: (qty: string, value: string) => `Sell all ${qty} sh ≈ ${value}`,

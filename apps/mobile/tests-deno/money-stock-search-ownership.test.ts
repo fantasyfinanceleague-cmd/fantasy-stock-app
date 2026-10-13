@@ -34,9 +34,19 @@ Deno.test('a ledger conflict (more than one owner): no suffix, never a guess', (
 // same pattern used elsewhere in this suite (e.g. the C-1 quiet-wiring test).
 Deno.test('wiring: the search row never rejoins the ownership text onto the company name', () => {
   assertEquals(searchScreenSrc.includes('${item.name} · ${suffix}'), false);
-  assertEquals(searchScreenSrc.includes('subtitle2'), true);
+  // W4 (Game Night row): the status is its own <Text> line, between the ticker and the company.
+  assertEquals(searchScreenSrc.includes('testID="search-row-status"'), true);
 });
 
 Deno.test("wiring: the search row colours 'You own this' with the mine flag, not a fixed tone", () => {
-  assertEquals(searchScreenSrc.includes('suffix.mine ? colors.youText'), true);
+  assertEquals(searchScreenSrc.includes('status.mine ? colors.youText'), true);
+});
+
+Deno.test('W4: a free stock when every slot is held reads "No free slot"; owners still win', () => {
+  assertEquals(ownershipSuffix(null, false, true), { text: 'No free slot', mine: false });
+  assertEquals(ownershipSuffix(null, false, false), { text: null, mine: false });
+  assertEquals(ownershipSuffix({ kind: 'me' }, false, true), { text: 'You own this', mine: true });
+  assertEquals(ownershipSuffix({ kind: 'other', name: 'Paolo M.', isBot: false }, false, true).text, 'Owned by Paolo M.');
+  // A ledger conflict says nothing, roomless or not (never a guess).
+  assertEquals(ownershipSuffix(null, true, true), { text: null, mine: false });
 });

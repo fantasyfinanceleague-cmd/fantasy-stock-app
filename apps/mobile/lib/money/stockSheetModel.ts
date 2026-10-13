@@ -10,6 +10,12 @@
  *   market closed              → both actions disabled with the open time; the
  *                                sheet still informs (previews stay allowed).
  *   price unknown              → the action is disabled; never a $0 figure.
+ *   roster full (budget/tier)  → Buy disabled ("Your roster is full. Sell a holding first.").
+ *   price over the budget left → Buy disabled ("{SYMBOL} costs more than your budget left."),
+ *                                BEFORE the review (W4 defect (a)): the preview's would_fill
+ *                                ignores the budget, so the review used to offer a buy the
+ *                                server then refused as over_budget, showing "Budget left
+ *                                after −$X" on the way.
  *
  * A stock is owned by at most one manager in a league (symbol_owned), so the
  * owner is either the caller, another manager, or nobody.
@@ -34,6 +40,10 @@ export interface StockSheetInput {
   leagueName: string;
   /** e.g. "Friday's close", for the closed-market note. */
   lastCloseLabel: string | null;
+  /** budget_cap only: the server's cap minus cash spent (budgetFigures); null elsewhere or unread. */
+  budgetLeft?: number | null;
+  /** budget_cap / price_tiers: every slot is held, so a buy has nowhere to go. */
+  rosterFull?: boolean;
 }
 
 export interface ActionState {
@@ -47,7 +57,7 @@ export interface StockSheetModel {
   /** blockedBy names WHY buy is disabled, so the sheet can show the right
    * pre-review block (E-3, 3e UX audit): 'owned' gets a warn card and a
    * visible disabled Review buy, the others keep the plain caption. */
-  buy: ActionState & { blockedBy: 'closed' | 'price' | 'owned' | 'held' | null };
+  buy: ActionState & { blockedBy: 'closed' | 'price' | 'owned' | 'held' | 'full' | 'budget' | null };
   sell: ActionState & { summary: string | null };
   ownershipLine: string;
   ownerBadge: 'Bot' | null;
@@ -81,6 +91,16 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
   if (buyReason === null && held) {
     buyReason = COPY.alreadyHeld;
     buyBlockedBy = 'held';
+  }
+  if (buyReason === null && input.rosterFull) {
+    buyReason = COPY.rosterFull;
+    buyBlockedBy = 'full';
+  }
+  // One share per buy in a budget league: the share's price must fit the budget left, the
+  // server's own check (spent + price > cap → over_budget). A cent of float slack, as there.
+  if (buyReason === null && input.budgetLeft != null && priced && input.price! > input.budgetLeft + 1e-9) {
+    buyReason = COPY.costsMoreThanBudget(input.symbol.toUpperCase());
+    buyBlockedBy = 'budget';
   }
 
   // Sell: only a holding can be sold, and it needs the market and a price.

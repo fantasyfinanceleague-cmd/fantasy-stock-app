@@ -1,10 +1,14 @@
 /**
- * usePortfolioData: the caller's Portfolio for the active league (3e), built on
- * the shared league ledger. Requests: the ledger (shared with the stock sheet,
- * once per league per session), one batch quote for the held symbols, and one
- * daily-bars read for their previous closes. Three at most. Each read is
- * error-checked: a failed quote leaves those holdings at cost (captioned); a
- * failed bars read hides "today"; neither shows a $0.
+ * usePortfolioData: the caller's Portfolio for the active league (3e; W4 Game Night), built
+ * on the shared league ledger. Requests: the ledger (shared with the stock sheet, once per
+ * league per session), one batch quote for the held symbols, one daily-bars read, and the
+ * record-trade preview (slot labels and the buy row). Each read is error-checked: a failed
+ * quote leaves those holdings at cost (captioned); a failed bars read hides "today" and draws
+ * the value line with its base and axis only; neither shows a $0.
+ *
+ * W4: the bars read now starts at the draft and covers every stock ever held (the same one
+ * request, wider), so it also feeds the value line (portfolioChart) and each player card's
+ * season line, with no new request.
  */
 import { useCallback, useEffect, useState } from 'react';
 
@@ -20,38 +24,70 @@ import { previewBody } from './tradeBodies';
 import { slotLabelFor, slotLabelsBySymbol } from './tierContract';
 import { categoryNameOf, loadCategoryNames } from './categoryNames';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
-import { buildStressMarket, STRESS_CALLER, STRESS_LEAGUE_NAME } from './stressFixture';
+import { buildStressMarket, stressChartBars, STRESS_CALLER, STRESS_LEAGUE_NAME } from './stressFixture';
 import { FIXTURE_LEAGUE_ID, fixtureLeague } from './fixtureMode';
-import { userCashSpentFromLedger } from './budgetFigures';
+import { budgetLeftOf, effectiveBudgetCap, userCashSpentFromLedger } from './budgetFigures';
+import { draftDateOf, type ChartActivityRow, type ChartStake } from './portfolioChart';
+import { seamBars, seamOpenSales, seamPortfolioLeague, seamQuote } from './portfolioSeam';
+import { MATCHUP_FIXTURE_VARIANT, PORTFOLIO_STAKE_VARIANT, SEAM_ON } from '../game/devSeam';
+import type { DailyBar } from './prevClose';
 import type { BuyRowInput } from './buyRowLine';
+
+export interface PortfolioChartInputs {
+  /** The caller's ledger rows, for the value line (portfolioChart.dailyValues). */
+  rows: ChartActivityRow[];
+  /** Daily bars per symbol ever held, from the draft on. */
+  bars: Record<string, DailyBar[]>;
+  stake: ChartStake;
+  /** The draft's instant (the 1W line starts there in a season drafted this week). */
+  draftAt: string | null;
+  /** The header's value: the line's live end. */
+  liveValue: number;
+}
 
 export interface PortfolioData {
   status: 'loading' | 'ready' | 'error';
   /** Re-runs the ledger and the price reads (the Try again control). */
   refresh: () => void;
   view: PortfolioView | null;
+  chart: PortfolioChartInputs | null;
+  /** Live prices and previous closes by symbol (the player card's figures). */
+  prices: Record<string, number>;
   /** New network reads this load cost (the shared ledger counts only when this load fetched it). */
   requestCount: number | null;
   leagueName: string | null;
 }
 
 const NOOP = () => {};
-const EMPTY: Omit<PortfolioData, 'refresh'> & { refresh: () => void } = { status: 'loading', view: null, requestCount: null, leagueName: null, refresh: NOOP };
+const EMPTY: Omit<PortfolioData, 'refresh'> & { refresh: () => void } = { status: 'loading', view: null, chart: null, prices: {}, requestCount: null, leagueName: null, refresh: NOOP };
+
+/** The league settings Portfolio reads: the stress money fixture's, the capture seam's, or the real league's. */
+function settingsOf(activeLeague: { stake_mode: string | null; notional_per_slot: number | null; num_rounds: number; budget_amount: number | null } | null) {
+  if (MONEY_FIXTURE_CONFIG) return fixtureLeague(MONEY_FIXTURE_CONFIG.stake);
+  if (SEAM_ON) return seamPortfolioLeague(PORTFOLIO_STAKE_VARIANT, MATCHUP_FIXTURE_VARIANT);
+  if (!activeLeague) return null;
+  return {
+    stake_mode: activeLeague.stake_mode as 'fixed_notional' | 'budget_cap' | 'price_tiers' | null,
+    notional_per_slot: activeLeague.notional_per_slot,
+    budget_amount: activeLeague.budget_amount,
+    num_rounds: activeLeague.num_rounds,
+  };
+}
 
 export function usePortfolioData(): PortfolioData {
   const { user } = useSession();
   const { activeLeague } = useLeagueContext();
   // Key on primitives, not the league object: a LeagueContext refresh that rebuilds
   // the object must not refetch the quotes and bars.
-  const fixtureSettings = MONEY_FIXTURE_CONFIG ? fixtureLeague(MONEY_FIXTURE_CONFIG.stake) : null;
+  const settings = settingsOf(activeLeague);
   const leagueId = activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null);
   // DEV fixture: the stress league's settings (price tiers, six rounds, no notional), so the
   // numbers match the stress holdings. Production reads the real league.
   const leagueName = MONEY_FIXTURE ? STRESS_LEAGUE_NAME : (activeLeague?.name ?? null);
-  const stakeMode = fixtureSettings ? fixtureSettings.stake_mode : (activeLeague?.stake_mode ?? null);
-  const notional = fixtureSettings ? fixtureSettings.notional_per_slot : (activeLeague?.notional_per_slot ?? null);
-  const numRounds = fixtureSettings ? fixtureSettings.num_rounds : (activeLeague?.num_rounds ?? null);
-  const budgetAmount = fixtureSettings ? fixtureSettings.budget_amount : (activeLeague?.budget_amount ?? null);
+  const stakeMode = settings?.stake_mode ?? null;
+  const notional = settings?.notional_per_slot ?? null;
+  const numRounds = settings?.num_rounds ?? null;
+  const budgetAmount = settings?.budget_amount ?? null;
   const userId = user?.id ?? null;
   const ledgerState = usePortfolioLedger(leagueId);
   const [state, setState] = useState<Omit<PortfolioData, 'refresh'>>(EMPTY);
@@ -99,20 +135,39 @@ export function usePortfolioData(): PortfolioData {
 
       const holdings = portfolioHoldings(costDrafts, costTrades);
       const symbols = holdings.map((h) => h.symbol);
+      const everHeld = [...new Set(mine.map((a) => a.symbol.toUpperCase()))];
+      const chartRows: ChartActivityRow[] = mine.map((a) => ({
+        kind: a.kind, action: a.action as 'buy' | 'sell', symbol: a.symbol.toUpperCase(), quantity: a.quantity, price: a.price as number, occurredAt: a.occurred_at,
+      }));
+      const draftDate = draftDateOf(chartRows);
       let requests = ledgerState.fetchedNow ? 1 : 0;
 
       const prices: Record<string, number> = {};
       const prevCloses: Record<string, number> = {};
+      const bars: Record<string, DailyBar[]> = {};
       if (market) {
         for (const [sym, p] of Object.entries(market.prices)) prices[sym] = p;
         for (const [sym, p] of Object.entries(market.prevCloses)) prevCloses[sym] = p;
+        for (const sym of everHeld) bars[sym] = stressChartBars(sym);
+      } else if (SEAM_ON) {
+        // The capture seam: the Matchup fixture's quotes and daily paths, no network.
+        for (const sym of everHeld) {
+          const q = seamQuote(sym, MATCHUP_FIXTURE_VARIANT);
+          if (q) {
+            prices[sym] = q.price;
+            prevCloses[sym] = q.prevClose;
+          }
+          bars[sym] = seamBars(sym, MATCHUP_FIXTURE_VARIANT);
+        }
       } else {
         // priceReads.readPriceMarks: the same quote + daily-bars read the stock sheet uses
-        // (shared, error-checked the same way — a failed read leaves its marks empty, never $0).
-        const marks = await readPriceMarks(symbols);
+        // (shared, error-checked the same way — a failed read leaves its marks empty, never $0),
+        // widened to every stock ever held since the draft for the value line.
+        const marks = await readPriceMarks(symbols, new Date(), { barsSymbols: everHeld, barsStart: draftDate });
         requests += marks.requests;
         Object.assign(prices, marks.prices);
         Object.assign(prevCloses, marks.prevCloses);
+        Object.assign(bars, marks.bars);
       }
       if (cancelled) return;
 
@@ -122,7 +177,9 @@ export function usePortfolioData(): PortfolioData {
       let slotLabels: Record<string, string> = {};
       let sales: BuyRowInput['sales'] = [];
       let openSlotLabels: string[] = [];
-      if (!market && leagueId) {
+      if (SEAM_ON) {
+        sales = seamOpenSales(ledger, callerId);
+      } else if (!market && leagueId) {
         requests += 1;
         const preview = await fetchPreview(previewBody(leagueId));
         if (preview) {
@@ -140,18 +197,14 @@ export function usePortfolioData(): PortfolioData {
       // budget_cap's "budget left": the league's own budget_amount minus cash spent, from the
       // ledger alone (same formula the budget review already shows) -- no extra request either.
       const cashSpent = userCashSpentFromLedger(ledger, callerId);
-      const budgetLeft = budgetAmount == null ? null : Math.round((budgetAmount - cashSpent) * 100) / 100;
+      // The server's cap (a NULL budget_amount is $0 there and here: effectiveBudgetCap).
+      const cap = effectiveBudgetCap(stakeMode, budgetAmount);
+      const budgetLeft = cap == null ? null : budgetLeftOf(cap, cashSpent);
       const rosterFull = holdings.length >= numRounds;
 
       const price = (sym: string) => prices[sym] ?? null;
-      const summary = portfolioSummary({
-        stakeMode,
-        notionalPerSlot: notional,
-        numRounds,
-        drafts: costDrafts,
-        trades: costTrades,
-        price,
-      });
+      const stake: ChartStake = { stakeMode, notionalPerSlot: notional, numRounds };
+      const summary = portfolioSummary({ ...stake, drafts: costDrafts, trades: costTrades, price });
 
       const viewHoldings: ViewHolding[] = holdings.map((h) => ({
         symbol: h.symbol,
@@ -173,18 +226,26 @@ export function usePortfolioData(): PortfolioData {
         slotLabels,
         buyRow: { stakeMode, sales, budgetLeft, rosterFull, openSlotLabels },
       });
+      const firstDraft = mine.filter((a) => a.kind === 'draft').map((a) => a.occurred_at).sort()[0] ?? null;
 
       if (__DEV__) {
         console.log(`[portfolio] ${requests} new request(s) (ledger ${ledgerState.fetchedNow ? 'fetched' : 'shared'}, ${symbols.length} holding(s))`);
       }
-      setState({ status: 'ready', view, requestCount: requests, leagueName });
+      setState({
+        status: 'ready',
+        view,
+        chart: { rows: chartRows, bars, stake, draftAt: firstDraft, liveValue: summary.value },
+        prices,
+        requestCount: requests,
+        leagueName,
+      });
     })();
 
     return () => {
       cancelled = true;
     };
     // `tick` re-runs the price reads on Try again.
-  }, [leagueId, leagueName, stakeMode, notional, numRounds, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
+  }, [leagueId, leagueName, stakeMode, notional, numRounds, budgetAmount, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
   return { ...state, refresh };
 }
