@@ -227,7 +227,7 @@ Deno.test('uppercase tags are uppercased in JS, not textTransform (iOS measured 
   assert(text.includes("const upperInJs = typeStyle.textTransform === 'uppercase' && typeof children === 'string';"));
   assert(text.includes('textTransform: upperInJs ? undefined : typeStyle.textTransform,'));
   const chip = strip(SOURCES['components/sp/PhaseChip.tsx']);
-  assert(!/textTransform/.test(chip), 'PhaseChip draws its own capitals');
+  assert(!/textTransform\s*:/.test(chip), 'PhaseChip draws its own capitals (no textTransform style)');
   assert(chip.includes('meta.label.toUpperCase()'));
-  assert(!/textTransform/.test(strip(SOURCES['components/sp/gn/PlayerCard.tsx'])));
+  assert(!/textTransform\s*:/.test(strip(SOURCES['components/sp/gn/PlayerCard.tsx'])));
 });
