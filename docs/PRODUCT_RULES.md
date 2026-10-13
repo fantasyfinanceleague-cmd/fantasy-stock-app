@@ -162,6 +162,28 @@ building anything, and don't reopen a rule without him.
   season line chart of that holding, how it was acquired (drafted, with pick and date and
   price; claimed off waivers, with date and price; bought, with date and price) and the
   rest of the ESPN-style overview.
+- **The stock player card, after the first mockups** (2026-10-12, Giorgio's review of the
+  Design Lead's frames):
+  - **Order like ESPN; acquisition at the bottom.** "I want the order of like the layout to be
+    like you're on ESPN Fantasy. So like the fact that it says like drafted and then like kind
+    of at the top, no, that should be at the bottom. It should say the date that you picked
+    them up, whether that be draft and then you say the, and then it shows the pick and the
+    amount that it was drafted at, or you show like the waiver wire, the date, and then …
+    the price." So the "How you got it" block is the LAST section of the card: the date,
+    then Draft (with the pick) or Waiver claim or Buy, then the price.
+  - **Three key figures, not four.** "I like the kind of initial top card with like the price,
+    the week gain since draft their position. I don't love the their position. In that, I
+    think it does seem a little cluttered. Maybe we just go with three." So the strip is
+    price · week gain · since draft (or since acquired); no "their position" figure.
+  - **The season chart gets a real X axis with dates**, and NO "Drafted" label or marker on
+    the chart: "there should be a, some sort of X axis with like dates on it. Also, if at the
+    bottom, like we don't need to say drafted on that chart, like A player can see from this
+    pop-up card if they were drafted or picked up on waivers."
+  - **The this-week chart shows the days of the week on its X axis** (Mon … Fri) and the
+    mockup must use realistic movement: "why is there just like a flat line for half the
+    chart and then like a slight pop-up? Like, that's not how it should be."
+  - **No Save (star) on a stock you already own**: "there probably shouldn't be a save option
+    if you already have the stock, if it's one of yours."
 - **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
   to scrape anything and the more secure and locked down this can be the better." Chosen over
   keeping the public stock-symbol list readable (option B): the symbols table becomes
