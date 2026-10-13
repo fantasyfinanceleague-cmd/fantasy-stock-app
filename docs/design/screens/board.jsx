@@ -370,6 +370,10 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
+    ['call-mx-withheld', 'A final week whose stock-by-stock results can\'t be shown'],
+    ['call-mx-empty', 'How an empty slot reads'],
+    ['call-mx-bye', 'The bye week'],
+    ['call-mx-order', 'Saying why the rows are in this order'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──

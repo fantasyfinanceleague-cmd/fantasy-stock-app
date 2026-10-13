@@ -1230,7 +1230,230 @@
     );
   }
 
-  window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-12)
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL (2026-10-12, from the W4 Matchup gate): four Matchup states the approved frames
+  // never drew. Game Night as built, both themes; data.js's numbers at the canonical moment.
+  // ═════════════════════════════════════════════════════════════════════
+  /** A Game Night Matchup phone: header, the My/All switch, then the state's body. */
+  function MxPhone({ t, label, final, children }) {
+    return (
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`}>
+        <Device tab="matchup" full label={label}>
+          <Head chip={final ? <FinalChip /> : <LiveChip />} />
+          <Body gap={18}>
+            <div className="dr-seg"><span className="on">My matchup</span><span>All matchups</span></div>
+            {children}
+          </Body>
+        </Device>
+      </div>
+    );
+  }
+  /** One mirrored row; a missing side is an empty slot, drawn per `empty` ('blank' | 'marked'). */
+  function MxRow({ a, b, empty = 'blank', bare }) {
+    const slot = (r, mirror) => {
+      if (r) return bare ? <NameHalf r={r} mirror={mirror} /> : <Half d="a" r={r} mirror={mirror} lit={!mirror} litBg="var(--c-you-tint)" />;
+      return <EmptyHalf mirror={mirror} marked={empty === 'marked'} />;
+    };
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 10px minmax(0,1fr)', gap: 6 }}>
+        {slot(a, false)}<span />{slot(b, true)}
+      </div>
+    );
+  }
+  /** Your side's slab geometry (runs off the screen edge, inner corners rounded), shared by every half. */
+  const slab = (mirror, you) => ({
+    minHeight: 64, padding: '12px 12px', display: 'flex', alignItems: 'center', justifyContent: mirror ? 'flex-end' : 'flex-start',
+    marginLeft: mirror ? 0 : -G, paddingLeft: mirror ? 12 : G, marginRight: mirror ? -G : 0, paddingRight: mirror ? G : 12,
+    borderRadius: mirror ? '12px 0 0 12px' : '0 12px 12px 0', background: you ? 'var(--c-you-tint)' : undefined,
+  });
+  /** A held stock with no figures: the ticker and the company only. */
+  function NameHalf({ r, mirror }) {
+    return (
+      <div style={slab(mirror, !mirror)}>
+        <span style={{ display: 'grid', gap: 1, justifyItems: mirror ? 'end' : 'start', minWidth: 0 }}>
+          <span className="dr-t" style={{ fontSize: 16 }}>{r.t}</span>
+          <span className="dr-cap" style={{ whiteSpace: 'nowrap' }}>{r.co}</span>
+        </span>
+      </div>
+    );
+  }
+  /** An empty slot. Blank = as built (your tint stays, nothing in it). Marked = a dashed rim and "Empty". */
+  function EmptyHalf({ mirror, marked }) {
+    const s = slab(mirror, !mirror);
+    if (!marked) return <div style={s} aria-label="Empty slot, as built" />;
+    return (
+      <div style={{ ...s, boxSizing: 'border-box', border: '1.5px dashed var(--c-border-strong)', [mirror ? 'borderRight' : 'borderLeft']: 'none' }}>
+        <span className="dr-t dr-muted" style={{ fontSize: 16 }}>Empty</span>
+      </div>
+    );
+  }
+  const mxLine = (text) => <span className="dr-call" style={{ textAlign: 'center' }}>{text}</span>;
+  const mxNote = (text) => <span className="dr-cap" style={{ textAlign: 'center', display: 'block' }}>{text}</span>;
+  /** Four figures per call: A Dark, A Light, B Dark, B Light. */
+  function MxCall({ id, title, intro, a, b, rec, notes, frame }) {
+    const fig = (opt, t) => (
+      <figure key={opt + t} className="b-fig b-fig--inv" style={{ margin: 0 }}>
+        <Fit>{frame(opt, t)}</Fit>
+        <figcaption><b>{opt === 'A' ? `A · ${a}` : `B · ${b}`} · {t === 'dark' ? 'Dark' : 'Light'}</b></figcaption>
+      </figure>
+    );
+    return (
+      <section className="b-sec" id={id} aria-labelledby={`${id}-h`}>
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id={`${id}-h`}>Your call: {title}</h2>
+            <p className="b-job">{intro}</p>
+          </div>
+        </header>
+        <ul className="b-inv__notes">
+          {notes}
+          <li><b>Recommended: {rec}</b></li>
+        </ul>
+        <div className="b-concepts b-concepts--three">{fig('A', 'dark')}{fig('A', 'light')}{fig('B', 'dark')}{fig('B', 'light')}</div>
+      </section>
+    );
+  }
+
+  const MX_FINAL = K.MATCHUP.final;
+  const byPick = (rows) => [...rows].sort((p, q) => p.pick - q.pick);
+  function CallWithheld() {
+    const a = byPick(MX_FINAL.you.rows), b = byPick(MX_FINAL.opp.rows);
+    const note = "Stock-by-stock results aren't available for this week.";
+    return (
+      <MxCall
+        id="call-mx-withheld" title="a final week whose stock-by-stock results can't be shown"
+        intro={<>Rare, but real: a week is scored and its final is posted, but the stored figures for each stock don't add up to that final to the cent (a price that was corrected later, for example). The app then shows no rows at all, because a row that disagrees with the score would be wrong. Today the screen is the banner and the scoreboard, and nothing under them. Week 6's final, both rows withheld; the scores are data.js's.</>}
+        a="the scoreboard and one line" b="who held what, without figures"
+        notes={<>
+          <li><b>A:</b> the scoreboard as usual, then one line saying why nothing follows: "{note}"<NEW /></li>
+          <li><b>B:</b> the same line, then both lineups as rows with the ticker and company only, no numbers, in draft order. You can still see who held what, and nothing contradicts the score. Your side keeps its shade.</li>
+        </>}
+        rec="B. The page doesn't sit blank, and it shows only what is certain. The line is new copy either way."
+        frame={(opt, t) => (
+          <MxPhone t={t} final label={`Final with the rows withheld, option ${opt}, ${t}`}>
+            <Scoreboard d="a" final />
+            {mxNote(note)}
+            {opt === 'B' ? <div style={{ display: 'grid', gap: 6 }}>{a.map((r, i) => <MxRow key={r.t} a={r} b={b[i]} bare />)}</div> : null}
+          </MxPhone>
+        )}
+      />
+    );
+  }
+
+  // SAMPLE for the empty-slot call: Stock Scudetto as a category league where you sold TSLA on
+  // Tuesday and Gianluigi B. sold BA, and neither has bought a replacement yet. The holdings and
+  // every number are data.js's; the slots and the two sales are invented.
+  const EMPTY_SLOTS = [
+    { name: 'Tech & Media', you: ['NVDA', 'AAPL'], opp: ['AMZN', 'DIS'] },
+    { name: 'Consumer', you: ['COST', null], opp: ['NKE', 'KO'] },
+    { name: 'Financials', you: ['V'], opp: ['JPM'] },
+    { name: 'Flex', you: ['CRM'], opp: [null] },
+  ];
+  function CallEmpty() {
+    const L = K.MATCHUP.live;
+    const row = (side, t) => (t ? L[side].rows.find((r) => r.t === t) : null);
+    const groups = EMPTY_SLOTS.map((g) => {
+      const sort = (side, ts) => [...ts.filter(Boolean).map((t) => row(side, t)).sort((p, q) => q.weekGain - p.weekGain), ...ts.filter((t) => !t).map(() => null)];
+      return { g, a: sort('you', g.you), b: sort('opp', g.opp) };
+    });
+    return (
+      <MxCall
+        id="call-mx-empty" title="how an empty slot reads"
+        intro={<>A slot is empty when a manager has sold a stock and not yet bought its replacement (cash from a sale). In a slotted league the row still exists, so one side has nothing in it. Today your empty half is your shade with nothing inside, and the other side's is blank. In the frames: a category league (SAMPLE slots) where you sold TSLA and Gianluigi B. sold BA; Thu 1:37 PM ET.</>}
+        a="as built: the slot is just space" b="marked: a dashed edge and “Empty”"
+        notes={<>
+          <li><b>A:</b> as built. Your empty half is a plain tinted slab; theirs is nothing. The worry from the gate: a blank slab looks like a row that is still loading.</li>
+          <li><b>B:</b> the empty half keeps its place and says so: a dashed edge and "Empty"<NEW />, the way Sleeper and ESPN mark an open lineup spot. Yours keeps your shade inside it.</li>
+        </>}
+        rec="B. An open spot is a fact about the lineup, and fantasy apps always say it."
+        frame={(opt, t) => (
+          <MxPhone t={t} label={`Matchup with an empty slot, option ${opt}, ${t}`}>
+            <Scoreboard d="a" />
+            <div style={{ display: 'grid', gap: 6 }}>
+              {groups.map(({ g, a, b }) => [
+                <GroupHead key={g.name} d="a" g={{ ...g, you: g.you }} />,
+                ...a.map((r, i) => <MxRow key={`${g.name}${i}`} a={r} b={b[i]} empty={opt === 'A' ? 'blank' : 'marked'} />),
+              ])}
+            </div>
+          </MxPhone>
+        )}
+      />
+    );
+  }
+
+  function CallBye() {
+    const L = K.MATCHUP.live;
+    const mine = [...L.you.rows].sort((p, q) => q.weekGain - p.weekGain);
+    const bye = 'Bye week · no result';
+    return (
+      <MxCall
+        id="call-mx-bye" title="the bye week"
+        intro={<>With an odd number of managers, someone sits out each week. Today Matchup shows one line on an empty page ("{bye}", the shipped copy). Your stocks still move that week; it just doesn't count. Roberto B. on a bye in Week 6, Thu 1:37 PM ET; his holdings and numbers are data.js's.</>}
+        a="as built: one line" b="your half, and your stocks"
+        notes={<>
+          <li><b>A:</b> as built. The line and nothing else.</li>
+          <li><b>B:</b> the scoreboard card with your half as usual (avatar, name, this week's total) and the other half saying "Bye week" where an opponent would be; the shipped line under the card; then your stocks in one column, best week first, so you can still follow them. No new words: both phrases are the shipped line's.</li>
+        </>}
+        rec="B. Nothing on Matchup sits blank, and the bye still reads as a bye."
+        frame={(opt, t) => (
+          <MxPhone t={t} label={`Bye week, option ${opt}, ${t}`}>
+            {opt === 'A' ? mxLine(bye) : <>
+              <div style={{ display: 'grid', gap: 10 }}>
+                <div className="dr-a-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                  <div style={{ display: 'grid', gap: 8, justifyItems: 'start', padding: '16px 14px', background: 'var(--c-you-tint)', borderRadius: '14px 0 0 14px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Av init="RB" you size={44} /><span className="dr-call" style={{ fontWeight: 800, fontSize: 15 }}>Roberto B.</span></span>
+                    <span className="dr-score" style={{ fontSize: 32, lineHeight: '36px' }}>{SD(L.you).primary}</span>
+                  </div>
+                  <div style={{ display: 'grid', placeItems: 'center', padding: '16px 14px' }}><span className="dr-call dr-muted" style={{ fontWeight: 700, fontSize: 15 }}>Bye week</span></div>
+                </div>
+                {mxLine(bye)}
+              </div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {mine.map((r) => <Half key={r.t} d="a" r={r} lit litBg="var(--c-you-tint)" />)}
+              </div>
+            </>}
+          </MxPhone>
+        )}
+      />
+    );
+  }
+
+  function CallOrder() {
+    const L = K.MATCHUP.live;
+    // The order at Thu 1:37 PM: each stock's gain at Wednesday's close (the last close whose
+    // trading has ended, Giorgio's rule); the numbers shown are live.
+    const wed = (r) => r.qty * (r.prev - r.mon);
+    const sortWed = (rows) => [...rows].sort((p, q) => wed(q) - wed(p));
+    const a = sortWed(L.you.rows), b = sortWed(L.opp.rows);
+    const cap = "Ordered by Wednesday's close";
+    return (
+      <MxCall
+        id="call-mx-order" title="saying why the rows are in this order"
+        intro={<>Your rule: the rows are re-ordered once a day, after trading ends, never while you watch. So at Thu 1:37 PM ET the order is Wednesday's close, while every number is live. On a day that turns, a column can look unsorted: Gianluigi B.'s AMZN was his best stock at Wednesday's close and sits on top, but it is down {K.formatMoney(Math.abs(b[0].weekGain))} this week right now. Week 6, data.js's numbers.</>}
+        a="as built: no label" b="a short label over the rows"
+        notes={<>
+          <li><b>A:</b> as built. The order is right by your rule, but nothing says what it is.</li>
+          <li><b>B:</b> one small line between the scoreboard and the rows: "{cap}"<NEW />. It changes with the day ("Thursday's close" from Thursday evening on).</li>
+          <li><b>Not offered:</b> re-ordering live. You ruled it out (rows that jump while you look).</li>
+        </>}
+        rec="B. One line keeps the order from reading as a bug, at the cost of a little more text."
+        frame={(opt, t) => (
+          <MxPhone t={t} label={`Matchup order at midday, option ${opt}, ${t}`}>
+            <Scoreboard d="a" />
+            {opt === 'B' ? mxNote(cap) : null}
+            <div style={{ display: 'grid', gap: 6, marginTop: opt === 'B' ? -8 : 0 }}>{a.map((r, i) => <MxRow key={r.t} a={r} b={b[i]} />)}</div>
+          </MxPhone>
+        )}
+      />
+    );
+  }
+
+  function MatchupCalls() {
+    return <><CallWithheld /><CallEmpty /><CallBye /><CallOrder /></>;
+  }
+
+  window.KSDirections = MatchupCalls; // waiting on Giorgio: the four Matchup calls (2026-10-12)
   window.KSGameNight = GameNight;
   window.KSShadingArchived = () => <Amended.Provider value={false}><ShadingCall archived /></Amended.Provider>;
   window.KSRedesignAnswers = RedesignAnswers;
