@@ -138,6 +138,10 @@ export function decideAutoPickGate(requestedPickNumber: number, clock: DraftCloc
  * The auto-pick may fire inside this window too; the (league_id, pick_number)
  * unique index lets the first committed insert win (the other gets
  * pick_conflict). Ruling: Giorgio, 2026-10-13 (docs/PRODUCT_RULES.md › Draft).
+ * NOMINAL: the clock is read BEFORE pricing (Alpaca) and the insert, so a pick
+ * that passes at deadline + 1.9 s commits later still. The effective window is
+ * this grace plus the request's own processing time; the unique
+ * (league_id, pick_number) index settles any race with the auto-pick.
  */
 export const MANUAL_PICK_GRACE_MS = 2_000;
 
@@ -168,7 +172,9 @@ export type ManualPickClockGate =
  * get_draft_clock has no pause: deadline_at = turn start + pick_seconds, and
  * a STALLED turn (the auto-pick found nothing legal, or is waiting for prices)
  * keeps its past deadline, so it stays expired here — the turn belongs to the
- * auto-pick, which the sweep retries.
+ * auto-pick, which the sweep retries. RULED (Giorgio, 2026-10-13: "the auto
+ * pick has to work"): no manual rescue of a stalled turn after the clock; the
+ * fix for a stall belongs in the auto-pick, not in this gate.
  */
 export function decideManualPickClock(pickNumber: number, clock: DraftClock | null): ManualPickClockGate {
   if (!clock) return { kind: 'clock_unreadable' };
