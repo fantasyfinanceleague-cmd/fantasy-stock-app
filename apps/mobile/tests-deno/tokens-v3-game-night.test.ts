@@ -19,13 +19,14 @@ import { parseColor } from '../components/sp/logic/contrast.ts';
 
 const THEMES = ['light', 'dark'] as const;
 const hex = spec.hex as Record<string, { light: string; dark: string }>;
-const NEW_KEYS = [
-  'onYou', 'rim', 'lit', 'leadWash', 'moneyBg', 'clockCell', 'onClockCell', 'clockCellLive', 'onTile',
-  'tileTech', 'tileComm', 'tileCons', 'tileFin', 'tileHealth',
+const CAT_KEYS = [
+  'catTech', 'catFinance', 'catHealth', 'catEnergy', 'catTransport', 'catRetail', 'catFood', 'catMedia',
+  'catIndustrials', 'catRealEstate', 'catMisc',
 ] as const;
+const NEW_KEYS = ['onYou', 'rim', 'moneyBg', 'clockCell', 'onClockCell', 'clockCellLive', 'onCat', ...CAT_KEYS] as const;
 
-Deno.test('v3 port: the spec has 62 colour keys, and every one is in both themes at its exact value', () => {
-  assertEquals(Object.keys(hex).length, 62);
+Deno.test('v3.1 port: the spec has 66 colour keys, and every one is in both themes at its exact value', () => {
+  assertEquals(Object.keys(hex).length, 66);
   for (const theme of THEMES) {
     for (const [key, v] of Object.entries(hex)) {
       assertEquals((color[theme] as unknown as Record<string, string>)[key], v[theme], `${theme}.${key}`);
@@ -33,15 +34,18 @@ Deno.test('v3 port: the spec has 62 colour keys, and every one is in both themes
   }
 });
 
-Deno.test('v3 port: ThemeColors = the 62 spec keys + the two CSS shadow reference strings, nothing else', () => {
+Deno.test('v3.1 port: ThemeColors = the 66 spec keys + the two CSS shadow reference strings, nothing else', () => {
   for (const theme of THEMES) {
     const keys = Object.keys(color[theme]).sort();
     assertEquals(keys, [...Object.keys(hex), 'shadow', 'sheetShadow'].sort(), theme);
   }
 });
 
-Deno.test('v3 port: the 14 NEW keys are present in both themes (§9C says "13"; its own list is 9 + 5 tiles)', () => {
-  assertEquals(NEW_KEYS.length, 14);
+Deno.test('v3.1 port: the 18 NEW keys are present in both themes; lit, leadWash and the sample tiles are gone', () => {
+  assertEquals(NEW_KEYS.length, 18);
+  for (const gone of ['lit', 'leadWash', 'onTile', 'tileTech', 'tileComm', 'tileCons', 'tileFin', 'tileHealth']) {
+    assert(!(gone in color.light) && !(gone in color.dark), `${gone} should be gone (v3.1)`);
+  }
   for (const theme of THEMES) {
     for (const key of NEW_KEYS) {
       assert(typeof color[theme][key] === 'string' && color[theme][key].length > 0, `${theme}.${key}`);
@@ -93,32 +97,35 @@ Deno.test('contrast: the three §9C rows are re-pointed from onAccent to onYou',
   assert(!PAIRS.some(([f, b]) => f === 'onAccent' && (b === 'you' || b === 'lossFill')), 'no onAccent left on a you / loss fill');
 });
 
-// The Game Night rows (§9C's groups, row by row; your shaded side in place of the lit slab
-// and the leader's wash, Giorgio 2026-10-12). The board's PAIRS must carry the same.
+// The Game Night rows (§9C v3.1's 49, by its groups) + W3's three Chip rows. The board's
+// PAIRS must carry the same.
 const GAME_NIGHT_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
+  ['text2', 'youTint', 'surface', 4.5], ['gain', 'youTint', 'surface', 4.5], ['loss', 'youTint', 'surface', 4.5],
   ['text', 'youTint', 'bg', 4.5], ['text2', 'youTint', 'bg', 4.5], ['gain', 'youTint', 'bg', 4.5], ['loss', 'youTint', 'bg', 4.5],
   ['onClockCell', 'clockCell', null, 4.5], ['clockCellLive', 'clockCell', null, 4.5],
-  ['onTile', 'tileTech', null, 4.5], ['onTile', 'tileComm', null, 4.5], ['onTile', 'tileCons', null, 4.5],
-  ['onTile', 'tileFin', null, 4.5], ['onTile', 'tileHealth', null, 4.5],
-  ['tileTech', 'surface', null, 3], ['tileComm', 'surface', null, 3], ['tileCons', 'surface', null, 3],
-  ['tileFin', 'surface', null, 3], ['tileHealth', 'surface', null, 3],
   ['text', 'moneyBg', null, 4.5], ['text2', 'moneyBg', null, 4.5], ['gain', 'moneyBg', null, 4.5], ['loss', 'moneyBg', null, 4.5],
   ['youText', 'youTint', 'surface', 4.5], ['onAccent', 'accent', null, 4.5], ['you', 'bg', null, 3],
+  ...CAT_KEYS.map((k) => ['onCat', k, null, 4.5] as [string, string, null, number]),
+  ...CAT_KEYS.map((k) => [k, 'surface', null, 3] as [string, string, null, number]),
+  ...CAT_KEYS.map((k) => [k, 'inset', null, 3] as [string, string, null, number]),
+];
+const W3_CHIP_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
   ['liveText', 'accentTint', 'bg', 4.5], ['liveText', 'accentTint', 'surface', 4.5], ['live', 'accentTint', 'bg', 3],
-  ['text2', 'youTint', 'surface', 4.5], ['gain', 'youTint', 'surface', 4.5], ['loss', 'youTint', 'surface', 4.5],
 ];
 
 Deno.test('contrast: every Game Night pair is in PAIRS (sp-contrast.test.ts scores each in both themes)', () => {
-  for (const [fg, bg, over, min] of GAME_NIGHT_PAIRS) {
+  assertEquals(GAME_NIGHT_PAIRS.length, 49, '§9C v3.1: 49 new pairs');
+  for (const [fg, bg, over, min] of [...GAME_NIGHT_PAIRS, ...W3_CHIP_PAIRS]) {
     assert(PAIRS.some(([f, b, o, m]) => f === fg && b === bg && o === over && m === min), `${fg} on ${bg}${over ? ` over ${over}` : ''} >= ${min}`);
   }
-  assertEquals(PAIRS.length, 40 + GAME_NIGHT_PAIRS.length);
+  assertEquals(PAIRS.length, 40 + GAME_NIGHT_PAIRS.length + W3_CHIP_PAIRS.length);
 });
 
-Deno.test('every new fill key has its pair: a tile is scored as a pill AND as a line', () => {
-  for (const tile of ['tileTech', 'tileComm', 'tileCons', 'tileFin', 'tileHealth']) {
-    assert(PAIRS.some(([f, b]) => f === 'onTile' && b === tile), `${tile} pill`);
-    assert(PAIRS.some(([f, b, , m]) => f === tile && b === 'surface' && m === 3), `${tile} line`);
+Deno.test('every category has its pair: a pill (onCat) AND a line on the tile and on an inset', () => {
+  for (const k of CAT_KEYS) {
+    assert(PAIRS.some(([f, b]) => f === 'onCat' && b === k), `${k} pill`);
+    assert(PAIRS.some(([f, b, , m]) => f === k && b === 'surface' && m === 3), `${k} line on the tile`);
+    assert(PAIRS.some(([f, b, , m]) => f === k && b === 'inset' && m === 3), `${k} line on an inset`);
   }
 });
 
@@ -134,8 +141,4 @@ Deno.test('depth from lightness steps of one hue (Dark): bg < surface < inset; s
   assert(lum(d.bg) < lum(d.surface) && lum(d.surface) < lum(d.inset), 'bg → surface → inset rises');
   assert(lum(d.sunken) < lum(d.bg), 'sunken sits below the page');
   assert(lum(d.moneyBg) < lum(d.bg), 'the money page is darker than the game page');
-});
-
-Deno.test("Giorgio's shading ruling: no PAIRS row puts anything on lit or leadWash (your side is shaded, not the winner's)", () => {
-  assert(!PAIRS.some(([, b]) => b === 'lit' || b === 'leadWash'));
 });

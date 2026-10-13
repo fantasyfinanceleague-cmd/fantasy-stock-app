@@ -58,30 +58,27 @@ export interface CategoryInfo {
   pill: string;
   /** The 3-letter draft-tile code. */
   code: string;
-  /** Its colour token; null = neutral (Misc), or no token yet. */
-  color: keyof ThemeColors | null;
+  /** Its colour token (§9C v3.1's 11 `cat*`; Misc is the neutral `catMisc`). */
+  color: keyof ThemeColors;
 }
 
-/**
- * Giorgio's names and codes (2026-10-12). The colours are §9C's five sample tiles until
- * the Design Lead's 11 `cat*` tokens land: swapping to them is THIS TABLE ONLY (data, not
- * code). Until then the categories without a token draw no line and a neutral pill.
- */
+/** Giorgio's names and codes and §9C v3.1's colours (2026-10-12). Data only: a new
+ * category or colour is a row here, not code. */
 export const CATEGORIES: Record<Category, CategoryInfo> = {
-  tech: { pill: 'Tech', code: 'TEC', color: 'tileTech' },
-  finance: { pill: 'Finance', code: 'FIN', color: 'tileFin' },
-  health: { pill: 'Health', code: 'HLT', color: 'tileHealth' },
-  energy: { pill: 'Energy', code: 'NRG', color: null },
-  transport: { pill: 'Autos', code: 'AUT', color: null },
-  retail: { pill: 'Retail', code: 'RTL', color: 'tileCons' },
-  food: { pill: 'Food', code: 'F&B', color: null },
-  media: { pill: 'Media', code: 'MED', color: 'tileComm' },
-  industrials: { pill: 'Industry', code: 'IND', color: null },
-  realestate: { pill: 'Property', code: 'PRP', color: null },
-  misc: { pill: 'Misc', code: 'MSC', color: null },
+  tech: { pill: 'Tech', code: 'TEC', color: 'catTech' },
+  finance: { pill: 'Finance', code: 'FIN', color: 'catFinance' },
+  health: { pill: 'Health', code: 'HLT', color: 'catHealth' },
+  energy: { pill: 'Energy', code: 'NRG', color: 'catEnergy' },
+  transport: { pill: 'Autos', code: 'AUT', color: 'catTransport' },
+  retail: { pill: 'Retail', code: 'RTL', color: 'catRetail' },
+  food: { pill: 'Food', code: 'F&B', color: 'catFood' },
+  media: { pill: 'Media', code: 'MED', color: 'catMedia' },
+  industrials: { pill: 'Industry', code: 'IND', color: 'catIndustrials' },
+  realestate: { pill: 'Property', code: 'PRP', color: 'catRealEstate' },
+  misc: { pill: 'Misc', code: 'MSC', color: 'catMisc' },
 };
 
-/** §9C: the sector line's height at the bottom of a draft tile. */
+/** §9C: the category line's height at the bottom of a draft tile. */
 export const SECTOR_LINE = 3;
 /** §9C: the on-the-clock cell's ring. */
 export const CLOCK_RING = 2;
@@ -104,8 +101,7 @@ export function draftTileLook(state: DraftTileState, category: Category | null, 
     return { fill: c.clockCell, line: null, ring: c.clockCellLive, labelInk: c.clockCellLive, tickerInk: c.onClockCell };
   }
   if (state === 'empty') return { fill: c.sunken, line: null, ring: null, labelInk: c.text2, tickerInk: c.text2 };
-  const key = category ? CATEGORIES[category].color : null;
-  return { fill: c.surface, line: key ? c[key] : null, ring: null, labelInk: c.text2, tickerInk: c.text };
+  return { fill: c.surface, line: category ? c[CATEGORIES[category].color] : null, ring: null, labelInk: c.text2, tickerInk: c.text };
 }
 
 export interface PillLook {
@@ -113,11 +109,9 @@ export interface PillLook {
   ink: string;
 }
 
-/** A category pill: its colour with `onTile` ink; a neutral category (or one without a
- * token yet) is `inset` + `text`. */
+/** A category pill (§9C v3.1): the `cat*` fill with `onCat` ink. */
 export function categoryPillLook(category: Category, c: ThemeColors): PillLook {
-  const key = CATEGORIES[category].color;
-  return key ? { fill: c[key], ink: c.onTile } : { fill: c.inset, ink: c.text };
+  return { fill: c[CATEGORIES[category].color], ink: c.onCat };
 }
 
 // ── ManagerRow (Standings) ───────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ import { Chart } from '@/components/sp/gn/Chart';
 //      reason while closed, NEVER Save; a stock you don't own → Save / Saved.
 //   6. "How you got it" at the BOTTOM ("How they got it" on theirs).
 //   7. The Alpaca credit.
-// Giorgio, 2026-10-12: the owner's avatar sits in "Owned by …"; no game log.
+// Giorgio, 2026-10-12: the owner's avatar (a 20pt `opp` disc, `onOpp` initials) sits in "Owned by …"; no game log.
 // No new copy: every string is the spec's or the app's own (moneyCopy).
 
 export interface PlayerCardProps {
@@ -111,7 +111,7 @@ export function PlayerCardBody({
           <View style={[styles.pill, { backgroundColor: colors.youTint }]}><Text variant="callout" color={colors.youText} style={styles.pillText}>Yours</Text></View>
         ) : (
           <View style={[styles.pill, styles.ownerPill, { backgroundColor: colors.inset }]}>
-            <Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="neutral" />
+            <Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="opp" />
             <Text variant="callout" style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text>
           </View>
         )}

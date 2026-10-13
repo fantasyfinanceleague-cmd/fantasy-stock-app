@@ -64,7 +64,7 @@ Deno.test('Categories: the 11 real slugs, Giorgio\'s pill names and 3-letter cod
     Object.values(CATEGORIES).map((c) => `${c.pill}/${c.code}`),
     ['Tech/TEC', 'Finance/FIN', 'Health/HLT', 'Energy/NRG', 'Autos/AUT', 'Retail/RTL', 'Food/F&B', 'Media/MED', 'Industry/IND', 'Property/PRP', 'Misc/MSC'],
   );
-  assertEquals(CATEGORIES.misc.color, null); // Misc is neutral
+  assertEquals(CATEGORIES.misc.color, 'catMisc'); // Misc: the neutral category colour (v3.1)
 });
 
 Deno.test('DraftTile: a picked tile is `surface` with its category as a 3pt LINE — never a category fill', () => {
@@ -75,12 +75,12 @@ Deno.test('DraftTile: a picked tile is `surface` with its category as a 3pt LINE
       const look = draftTileLook('picked', k, c);
       const key = CATEGORIES[k].color;
       assertEquals(look.fill, c.surface, `${theme} ${k}: fill`);
-      assertEquals(look.line, key ? c[key] : null, `${theme} ${k}: line`);
+      assertEquals(look.line, c[key], `${theme} ${k}: line`);
       assert(look.fill !== look.line, `${theme} ${k}: filled with its category`);
       assertEquals(look.tickerInk, c.text);
       assertEquals(look.labelInk, c.text2);
-      // Its pill: the colour with onTile ink, or neutral.
-      assertEquals(categoryPillLook(k, c), key ? { fill: c[key], ink: c.onTile } : { fill: c.inset, ink: c.text });
+      // Its pill: the category colour with onCat ink (§9C v3.1).
+      assertEquals(categoryPillLook(k, c), { fill: c[key], ink: c.onCat });
     }
     assertEquals(draftTileLook('picked', null, c).line, null);
   }
@@ -200,7 +200,7 @@ Deno.test('PlayerCard: the order — header, three figures, season (dated), this
   assertEquals((src.match(/<Figure /g) ?? []).length, 3, 'three key figures, no position');
   assert(!/position/i.test(src.replace(/position: 'absolute'/g, '')), 'no position figure');
   assert(!/marks=|<Circle|'Drafted'/.test(src), 'no acquisition marker on the chart');
-  assert(src.includes('<Avatar name={owner.name}'), 'the owner\'s avatar beside "Owned by …"');
+  assert(src.includes('<Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="opp" />'), 'the owner\'s avatar: a 20pt opp disc in "Owned by …"');
   assert(!/game log|GameLog/i.test(src), 'no game log');
   assert(!/marks/.test(strip(SOURCES['components/sp/gn/Chart.tsx'])), 'the Chart takes no marker');
 });

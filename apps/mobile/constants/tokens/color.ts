@@ -1,4 +1,4 @@
-// Stockpile — theme colour tokens, v3 "Game Night" (§9C, 2026-10-12).
+// Stockpile — theme colour tokens, v3.1 "Game Night" (§9C, 2026-10-12).
 // SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9C and
 // docs/design/tokens-v3-game-night.json (OKLCH source + the hex column this
 // file ports; translucent roles are rgba()). Values are copied verbatim from
@@ -13,15 +13,16 @@
 //   - `opp` is a mid slate, not orange: Game Night marks the opponent by
 //     POSITION (the right-hand side), not colour; `onOpp` is dark ink.
 //   - `primaryBg` is the accent (a cyan / deep-teal pill).
-//   - `live` / `liveText` / `onLive` are the accent, not gold.
-//     YOUR-TURN COLOUR IS OPEN WITH GIORGIO (cyan vs gold). If he keeps gold,
-//     revert exactly these three keys, both themes, to the §9A gold values —
-//     nothing else changes:
+//   - `live` / `liveText` / `onLive` are the accent, not gold: the your-turn
+//     flash is cyan (Giorgio, 2026-10-12). Were it ever reverted to gold, it is
+//     exactly these three keys, both themes, back to the §9A values:
 //       light: live '#C07E00', liveText '#8A5B00', onLive '#0D1B2E'
 //       dark:  live '#FFC53D', liveText '#FFC53D', onLive '#0D1B2E'
 //     (`liveGlow` follows `live`: §9A had rgba(192,126,0,0.35) Light /
 //     rgba(255,197,61,0.45) Dark.)
 //   - `bg` is for game screens; money screens use `moneyBg`.
+//   - v3.1: YOUR side is shaded (`youTint`), never the leader's — `lit` and
+//     `leadWash` are gone; the 11 `cat*` + `onCat` replace the five sample tiles.
 //
 // Elevation (§9C rule 1): depth comes from lightness steps of one hue
 // (272°), never a shadow on Dark; in Light the only shadow is the sheet's.
@@ -101,26 +102,29 @@ export interface ThemeColors {
   onYou: string;
   /** Card rim: a 1pt inset edge on every card, both themes (§9C rule 1). NEW v3. */
   rim: string;
-  /** Matchup roster: the slab under the half that wins the row (§9C RosterRow). NEW v3. */
-  lit: string;
-  /** Scoreboard: the leader's half (§9C Scoreboard). NEW v3. */
-  leadWash: string;
   /** Money screens' page (Portfolio, the stock sheet): near-black in Dark, the white surface in Light. NEW v3. */
   moneyBg: string;
-  /** Draft: the on-the-clock cell's fill. NEW v3. */
+  /** Draft: the on-the-clock cell's fill (navy in both themes). NEW v3. */
   clockCell: string;
   /** The on-the-clock cell's clock. NEW v3. */
   onClockCell: string;
-  /** The on-the-clock cell's pick number (cyan in both themes: the cell is dark in both). NEW v3. */
+  /** The on-the-clock cell's pick number and ring (cyan in both themes: the cell is dark in both). NEW v3. */
   clockCellLive: string;
-  /** Ink on a sector pill (a filled `tile*`). NEW v3. */
-  onTile: string;
-  /** Sector colours: the draft tile's 3pt bottom line and the sector pill (§9C DraftTile). NEW v3. */
-  tileTech: string;
-  tileComm: string;
-  tileCons: string;
-  tileFin: string;
-  tileHealth: string;
+  /** Ink on a category pill: dark in Dark, white in Light. NEW v3.1. */
+  onCat: string;
+  /** The 11 categories (supabase/seed/categories.json): the draft tile's 3pt line and the
+   * category pill. NEW v3.1 (replace v3's five sample tiles). */
+  catTech: string;
+  catFinance: string;
+  catHealth: string;
+  catEnergy: string;
+  catTransport: string;
+  catRetail: string;
+  catFood: string;
+  catMedia: string;
+  catIndustrials: string;
+  catRealEstate: string;
+  catMisc: string;
 }
 
 const light: ThemeColors = {
@@ -174,21 +178,25 @@ const light: ThemeColors = {
   sheetShadow: '0 8px 24px rgba(13, 27, 46, 0.12)',
   scrim: 'rgba(14, 20, 44, 0.38)',
   tabbar: 'rgba(253, 254, 255, 0.94)',
-  // NEW in v3 (§9C).
+  // NEW in v3 / v3.1 (§9C).
   onYou: '#FAFCFE',
   rim: '#D5DAEA',
-  lit: '#D5EEFF',
-  leadWash: 'rgba(0, 108, 71, 0.09)',
   moneyBg: '#FDFEFF',
   clockCell: '#131832',
   onClockCell: '#FDFEFF',
   clockCellLive: '#35EEFF',
-  onTile: '#0E142C',
-  tileTech: '#6991DC',
-  tileComm: '#956ED2',
-  tileCons: '#CE7B3A',
-  tileFin: '#23A28C',
-  tileHealth: '#CD568B',
+  onCat: '#FDFEFF',
+  catTech: '#3E66B3',
+  catFinance: '#047E44',
+  catHealth: '#944887',
+  catEnergy: '#637200',
+  catTransport: '#0076A1',
+  catRetail: '#A34C1B',
+  catFood: '#A54358',
+  catMedia: '#7355A9',
+  catIndustrials: '#007F79',
+  catRealEstate: '#8D5F00',
+  catMisc: '#5F636F',
 };
 
 const dark: ThemeColors = {
@@ -242,21 +250,25 @@ const dark: ThemeColors = {
   sheetShadow: 'none',
   scrim: 'rgba(2, 3, 12, 0.55)',
   tabbar: 'rgba(4, 6, 23, 0.94)',
-  // NEW in v3 (§9C).
+  // NEW in v3 / v3.1 (§9C).
   onYou: '#FAFCFE',
   rim: '#253154',
-  lit: '#002C4A',
-  leadWash: 'rgba(57, 238, 186, 0.12)',
   moneyBg: '#020309',
   clockCell: '#01020A',
   onClockCell: '#F3F5FB',
   clockCellLive: '#35EEFF',
-  onTile: '#0A0F27',
-  tileTech: '#A7C0F9',
-  tileComm: '#B7A1F5',
-  tileCons: '#F8BD8A',
-  tileFin: '#4DE3CA',
-  tileHealth: '#E181B0',
+  onCat: '#0A0F27',
+  catTech: '#97BEFF',
+  catFinance: '#83D39D',
+  catHealth: '#E9A3DB',
+  catEnergy: '#B7C874',
+  catTransport: '#66CCF4',
+  catRetail: '#F9A781',
+  catFood: '#FBA0AD',
+  catMedia: '#C6AEFC',
+  catIndustrials: '#59D4CD',
+  catRealEstate: '#E1B767',
+  catMisc: '#A6ABB8',
 };
 
 export const color = { light, dark };

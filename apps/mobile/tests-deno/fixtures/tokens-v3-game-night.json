@@ -1,5 +1,5 @@
 {
- "version": "v3 · Game Night",
+ "version": "v3.1 · Game Night",
  "date": "2026-10-12",
  "source": "docs/design/DESIGN_DIRECTION.md §9C",
  "oklch": {
@@ -203,14 +203,6 @@
    "dark": "oklch(32% 0.065 268)",
    "light": "oklch(89% 0.022 270)"
   },
-  "lit": {
-   "dark": "oklch(28% 0.075 240)",
-   "light": "oklch(93.5% 0.035 238)"
-  },
-  "leadWash": {
-   "dark": "oklch(85% 0.16 168 / 0.12)",
-   "light": "oklch(46% 0.12 165 / 0.09)"
-  },
   "moneyBg": {
    "dark": "oklch(10% 0.02 272)",
    "light": "oklch(99.6% 0.003 272)"
@@ -227,29 +219,53 @@
    "dark": "oklch(87% 0.14 205)",
    "light": "oklch(87% 0.14 205)"
   },
-  "onTile": {
+  "onCat": {
    "dark": "oklch(18% 0.05 272)",
-   "light": "oklch(20% 0.05 272)"
+   "light": "oklch(99.6% 0.003 272)"
   },
-  "tileTech": {
-   "dark": "oklch(81% 0.085 266)",
-   "light": "oklch(66% 0.12 262)"
+  "catFood": {
+   "dark": "oklch(80% 0.11 10)",
+   "light": "oklch(52% 0.13 10)"
   },
-  "tileComm": {
-   "dark": "oklch(76% 0.12 295)",
-   "light": "oklch(62% 0.15 300)"
+  "catRetail": {
+   "dark": "oklch(80% 0.11 46)",
+   "light": "oklch(52% 0.13 46)"
   },
-  "tileCons": {
-   "dark": "oklch(84% 0.095 62)",
-   "light": "oklch(66% 0.13 56)"
+  "catRealEstate": {
+   "dark": "oklch(80% 0.11 82)",
+   "light": "oklch(52% 0.13 82)"
   },
-  "tileFin": {
-   "dark": "oklch(83% 0.13 180)",
-   "light": "oklch(64% 0.11 178)"
+  "catEnergy": {
+   "dark": "oklch(80% 0.11 118)",
+   "light": "oklch(52% 0.13 118)"
   },
-  "tileHealth": {
-   "dark": "oklch(72% 0.13 350)",
-   "light": "oklch(62% 0.16 355)"
+  "catFinance": {
+   "dark": "oklch(80% 0.11 154)",
+   "light": "oklch(52% 0.13 154)"
+  },
+  "catIndustrials": {
+   "dark": "oklch(80% 0.11 190)",
+   "light": "oklch(52% 0.13 190)"
+  },
+  "catTransport": {
+   "dark": "oklch(80% 0.11 226)",
+   "light": "oklch(52% 0.13 226)"
+  },
+  "catTech": {
+   "dark": "oklch(80% 0.11 262)",
+   "light": "oklch(52% 0.13 262)"
+  },
+  "catMedia": {
+   "dark": "oklch(80% 0.11 298)",
+   "light": "oklch(52% 0.13 298)"
+  },
+  "catHealth": {
+   "dark": "oklch(80% 0.11 334)",
+   "light": "oklch(52% 0.13 334)"
+  },
+  "catMisc": {
+   "dark": "oklch(74% 0.02 270)",
+   "light": "oklch(50% 0.02 270)"
   }
  },
  "hex": {
@@ -453,14 +469,6 @@
    "dark": "#253154",
    "light": "#D5DAEA"
   },
-  "lit": {
-   "dark": "#002C4A",
-   "light": "#D5EEFF"
-  },
-  "leadWash": {
-   "dark": "rgba(57, 238, 186, 0.12)",
-   "light": "rgba(0, 108, 71, 0.09)"
-  },
   "moneyBg": {
    "dark": "#020309",
    "light": "#FDFEFF"
@@ -477,29 +485,53 @@
    "dark": "#35EEFF",
    "light": "#35EEFF"
   },
-  "onTile": {
+  "onCat": {
    "dark": "#0A0F27",
-   "light": "#0E142C"
+   "light": "#FDFEFF"
   },
-  "tileTech": {
-   "dark": "#A7C0F9",
-   "light": "#6991DC"
+  "catFood": {
+   "dark": "#FBA0AD",
+   "light": "#A54358"
   },
-  "tileComm": {
-   "dark": "#B7A1F5",
-   "light": "#956ED2"
+  "catRetail": {
+   "dark": "#F9A781",
+   "light": "#A34C1B"
   },
-  "tileCons": {
-   "dark": "#F8BD8A",
-   "light": "#CE7B3A"
+  "catRealEstate": {
+   "dark": "#E1B767",
+   "light": "#8D5F00"
   },
-  "tileFin": {
-   "dark": "#4DE3CA",
-   "light": "#23A28C"
+  "catEnergy": {
+   "dark": "#B7C874",
+   "light": "#637200"
   },
-  "tileHealth": {
-   "dark": "#E181B0",
-   "light": "#CD568B"
+  "catFinance": {
+   "dark": "#83D39D",
+   "light": "#047E44"
+  },
+  "catIndustrials": {
+   "dark": "#59D4CD",
+   "light": "#007F79"
+  },
+  "catTransport": {
+   "dark": "#66CCF4",
+   "light": "#0076A1"
+  },
+  "catTech": {
+   "dark": "#97BEFF",
+   "light": "#3E66B3"
+  },
+  "catMedia": {
+   "dark": "#C6AEFC",
+   "light": "#7355A9"
+  },
+  "catHealth": {
+   "dark": "#E9A3DB",
+   "light": "#944887"
+  },
+  "catMisc": {
+   "dark": "#A6ABB8",
+   "light": "#5F636F"
   }
  }
 }

@@ -103,33 +103,26 @@ export const PAIRS: readonly ContrastPair[] = [
   ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
   ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
 
-  // ── Game Night (§9C, 2026-10-12): the new pairs. §9C names them by group (the lit slab, the
-  // leader's wash, the clock cell, the sector pills and lines, the money page, the "Yours"
-  // pill, the accent fill, your ring) — these are those groups, row by row, as the W3
-  // primitives render them. The board's PAIRS must carry the same rows.
-  // Your side, shaded in your colour, win or lose (Giorgio, 2026-10-12, replacing §9C's lit
-  // slab and leader wash, whose tokens stay ported but unused until §9C is revised): your
-  // roster half sits on the page, so `youTint` over `bg`. (Your Scoreboard half is youTint
-  // over the card's surface: the existing "Your standings row" pair, text on youTint/surface.)
-  ['text', 'youTint', 'bg', 4.5, 'Roster: your ticker on your shaded half'],
-  ['text2', 'youTint', 'bg', 4.5, 'Roster: your company and week % on your shaded half'],
-  ['gain', 'youTint', 'bg', 4.5, 'Roster: your week gain on your shaded half'],
-  ['loss', 'youTint', 'bg', 4.5, 'Roster: your week loss on your shaded half'],
+  // ── Game Night, §9C v3.1 (2026-10-12): the 49 new scored pairs. §9C names them by group
+  // (your side on the card surface and on the page, the clock cell, the money page, the
+  // "Yours" pill, the accent fill, your ring, the owner's avatar disc, the 11 category pills
+  // and the 11 category lines on the tile and on an inset); these are those groups row by
+  // row. The owner's avatar disc is the existing `onOpp` on `opp` row above, and your text on
+  // your card-surface half is the existing "Your standings row" row. The board's PAIRS must
+  // carry the same rows.
+  // Your side, shaded in your colour, win or lose (shading B): on the card surface (your
+  // Scoreboard half, your Standings row)...
+  ['text2', 'youTint', 'surface', 4.5, 'Your side on a card: secondary text (your Scoreboard half, your Standings record)'],
+  ['gain', 'youTint', 'surface', 4.5, 'Your side on a card: gain (your Standings season gain, movement up)'],
+  ['loss', 'youTint', 'surface', 4.5, 'Your side on a card: loss (your Standings season gain, movement down)'],
+  // ...and on the page (your roster column, its slab off the screen edge).
+  ['text', 'youTint', 'bg', 4.5, 'Your roster column: your ticker'],
+  ['text2', 'youTint', 'bg', 4.5, 'Your roster column: company and week %'],
+  ['gain', 'youTint', 'bg', 4.5, 'Your roster column: week gain'],
+  ['loss', 'youTint', 'bg', 4.5, 'Your roster column: week loss'],
   // The draft's on-the-clock cell.
   ['onClockCell', 'clockCell', null, 4.5, 'Draft: the clock in the on-the-clock cell'],
   ['clockCellLive', 'clockCell', null, 4.5, 'Draft: the pick number (and its ring) in the on-the-clock cell'],
-  // Sector pills (text on the fill)...
-  ['onTile', 'tileTech', null, 4.5, 'Sector pill: Tech'],
-  ['onTile', 'tileComm', null, 4.5, 'Sector pill: Comm'],
-  ['onTile', 'tileCons', null, 4.5, 'Sector pill: Cons'],
-  ['onTile', 'tileFin', null, 4.5, 'Sector pill: Fin'],
-  ['onTile', 'tileHealth', null, 4.5, 'Sector pill: Hlth'],
-  // ...and the draft tile's 3pt sector line on the tile's surface (graphic).
-  ['tileTech', 'surface', null, 3, 'Draft tile: the Tech line (graphic)'],
-  ['tileComm', 'surface', null, 3, 'Draft tile: the Comm line (graphic)'],
-  ['tileCons', 'surface', null, 3, 'Draft tile: the Cons line (graphic)'],
-  ['tileFin', 'surface', null, 3, 'Draft tile: the Fin line (graphic)'],
-  ['tileHealth', 'surface', null, 3, 'Draft tile: the Hlth line (graphic)'],
   // The money page (Portfolio, the stock sheet's screen).
   ['text', 'moneyBg', null, 4.5, 'Money page: the value and rows'],
   ['text2', 'moneyBg', null, 4.5, 'Money page: captions'],
@@ -137,19 +130,50 @@ export const PAIRS: readonly ContrastPair[] = [
   ['loss', 'moneyBg', null, 4.5, 'Money page: loss'],
   // The "Yours" pill on the player card (the sheet's surface).
   ['youText', 'youTint', 'surface', 4.5, 'Player card: the "Yours" pill'],
-  // The accent fill (the primary pill, the money range pills).
+  // The accent fill (the money range pills, the Draft button).
   ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
   // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
   ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
-  // Chip (§9C: accentTint + liveText, the dot drawn). Not among §9C's named groups; added
-  // by W3 because the Chip renders text and a dot on that fill: on the page (the header)
-  // and on cards / sheets.
+  // The 11 category pills (text on the fill)...
+  ['onCat', 'catTech', null, 4.5, 'Category pill: Tech'],
+  ['onCat', 'catFinance', null, 4.5, 'Category pill: Finance'],
+  ['onCat', 'catHealth', null, 4.5, 'Category pill: Health'],
+  ['onCat', 'catEnergy', null, 4.5, 'Category pill: Energy'],
+  ['onCat', 'catTransport', null, 4.5, 'Category pill: Autos'],
+  ['onCat', 'catRetail', null, 4.5, 'Category pill: Retail'],
+  ['onCat', 'catFood', null, 4.5, 'Category pill: Food'],
+  ['onCat', 'catMedia', null, 4.5, 'Category pill: Media'],
+  ['onCat', 'catIndustrials', null, 4.5, 'Category pill: Industry'],
+  ['onCat', 'catRealEstate', null, 4.5, 'Category pill: Property'],
+  ['onCat', 'catMisc', null, 4.5, 'Category pill: Misc'],
+  // ...the 11 category lines on the draft tile's surface (graphic)...
+  ['catTech', 'surface', null, 3, 'Draft tile: the TEC line (graphic)'],
+  ['catFinance', 'surface', null, 3, 'Draft tile: the FIN line (graphic)'],
+  ['catHealth', 'surface', null, 3, 'Draft tile: the HLT line (graphic)'],
+  ['catEnergy', 'surface', null, 3, 'Draft tile: the NRG line (graphic)'],
+  ['catTransport', 'surface', null, 3, 'Draft tile: the AUT line (graphic)'],
+  ['catRetail', 'surface', null, 3, 'Draft tile: the RTL line (graphic)'],
+  ['catFood', 'surface', null, 3, 'Draft tile: the F&B line (graphic)'],
+  ['catMedia', 'surface', null, 3, 'Draft tile: the MED line (graphic)'],
+  ['catIndustrials', 'surface', null, 3, 'Draft tile: the IND line (graphic)'],
+  ['catRealEstate', 'surface', null, 3, 'Draft tile: the PRP line (graphic)'],
+  ['catMisc', 'surface', null, 3, 'Draft tile: the MSC line (graphic)'],
+  // ...and on an inset (graphic).
+  ['catTech', 'inset', null, 3, 'The Tech line on an inset (graphic)'],
+  ['catFinance', 'inset', null, 3, 'The Finance line on an inset (graphic)'],
+  ['catHealth', 'inset', null, 3, 'The Health line on an inset (graphic)'],
+  ['catEnergy', 'inset', null, 3, 'The Energy line on an inset (graphic)'],
+  ['catTransport', 'inset', null, 3, 'The Autos line on an inset (graphic)'],
+  ['catRetail', 'inset', null, 3, 'The Retail line on an inset (graphic)'],
+  ['catFood', 'inset', null, 3, 'The Food line on an inset (graphic)'],
+  ['catMedia', 'inset', null, 3, 'The Media line on an inset (graphic)'],
+  ['catIndustrials', 'inset', null, 3, 'The Industry line on an inset (graphic)'],
+  ['catRealEstate', 'inset', null, 3, 'The Property line on an inset (graphic)'],
+  ['catMisc', 'inset', null, 3, 'The Misc line on an inset (graphic)'],
+
+  // W3's own, beyond §9C's 49 — the Chip renders text and a dot on its tint (§9C "Chip":
+  // accentTint + liveText, the dot drawn), on the page (the header) and on cards / sheets.
   ['liveText', 'accentTint', 'bg', 4.5, 'LIVE chip on the page background'],
   ['liveText', 'accentTint', 'surface', 4.5, 'LIVE chip on a card or sheet'],
   ['live', 'accentTint', 'bg', 3, 'Live dot inside the LIVE chip (graphic)'],
-  // ManagerRow (§9C): your Standings row is the you-tint over the tile's surface; its
-  // record and its season gain / movement sit on it. Also W3's, beyond §9C's groups.
-  ['text2', 'youTint', 'surface', 4.5, 'Your Standings row: the W–L record'],
-  ['gain', 'youTint', 'surface', 4.5, 'Your Standings row: season gain up, movement up'],
-  ['loss', 'youTint', 'surface', 4.5, 'Your Standings row: season gain down, movement down'],
 ];

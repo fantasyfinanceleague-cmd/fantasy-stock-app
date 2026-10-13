@@ -426,7 +426,7 @@ function GameNightGallery() {
         </View>
       </Section>
 
-      <Section title="GN · CategoryPill (11 categories; 5 coloured until the cat tokens land)">
+      <Section title="GN · CategoryPill (the 11 categories)">
         <View style={[styles.row, styles.wrap]}>
           {(Object.keys(CATEGORIES) as Category[]).map((k) => <CategoryPill key={k} category={k} />)}
         </View>
