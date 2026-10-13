@@ -155,11 +155,12 @@ Deno.test('seasonLine: from the entry price on the acquisition date to the live 
 });
 
 Deno.test('seasonLine: a stock bought today is ONE point on its full (same-day) axis', () => {
-  const o = openingOf('me', 'COST', fixtureLedger('bought', 'me', 'g').activity)!;
-  assertEquals(o.dateIso, '2026-09-24');
-  const s = seasonLine({ opening: o, bars: fixtureSeasonBars('COST'), todayEt: '2026-09-24', price: 918.1 });
-  assertEquals(s.points, [{ t: 0, value: 918.1 }]);
+  const o = openingOf('me', 'MSFT', fixtureLedger('bought', 'me', 'g').activity)!;
+  assertEquals([o.acquisition.kind, o.dateIso], ['bought', '2026-09-24']);
+  const s = seasonLine({ opening: o, bars: fixtureSeasonBars('MSFT'), todayEt: '2026-09-24', price: 418.92 });
+  assertEquals(s.points, [{ t: 0, value: 418.92 }]);
   assertEquals(s.axis, { kind: 'dated', start: '2026-09-24', end: '2026-09-24' });
+  assertEquals(s.base, 412.3, 'the dashed base is the buy price');
 });
 
 const week = standardWeekSessions('2026-09-25T20:00:00Z');

@@ -20,6 +20,8 @@ import { usePortfolioLedger } from './usePortfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { STRESS_CALLER, buildStressMarket } from './stressFixture';
 import { FIXTURE_LEAGUE_ID } from './fixtureMode';
+import { SEAM_ON } from '../game/devSeam';
+import { seamSheetQuote } from '../game/matchupFixture';
 
 /** A quote is fresh for two minutes, the same window as useStockPrices. */
 const QUOTE_TTL_MS = 120_000;
@@ -96,6 +98,23 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
           facts,
           leagueName,
           requestCase,
+          requestCount: 0,
+          refresh,
+        });
+        return;
+      }
+
+      // The game capture seam: the Matchup fixture's quote and the ledger's name; no network.
+      if (SEAM_ON) {
+        const q = seamSheetQuote(sym);
+        setState({
+          status: 'ready',
+          price: q?.price ?? null,
+          prevClose: q?.prevClose ?? null,
+          companyName: ledger.symbol_names[sym] ?? knownName ?? null,
+          facts,
+          leagueName,
+          requestCase: facts.held ? 'held' : facts.owner?.kind === 'other' ? 'owned-by-other' : 'free',
           requestCount: 0,
           refresh,
         });

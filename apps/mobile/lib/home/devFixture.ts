@@ -84,9 +84,11 @@ export const HOME_FIXTURE: HomeFixture | null = __DEV__ ? parse(process.env.EXPO
 /** Capture only (game-screens re-gate, GS-2): how week 6 ended under HOME_FIXTURE=scored.
  * `lost` swaps the two posted gains, `tied` posts equal gains; unset = you won (as before).
  * Every other fixture ignores it. */
-export type ScoredOutcome = 'won' | 'lost' | 'tied';
+/** `withheld` (W4): the posted totals swapped against the week's prices, so the stock-by-stock
+ * rows can't reconcile and Matchup withholds their figures (#call-mx-withheld). You lost. */
+export type ScoredOutcome = 'won' | 'lost' | 'tied' | 'withheld';
 const rawOutcome = __DEV__ ? process.env.EXPO_PUBLIC_SCORED_OUTCOME : undefined;
-export const SCORED_OUTCOME: ScoredOutcome = rawOutcome === 'lost' || rawOutcome === 'tied' ? rawOutcome : 'won';
+export const SCORED_OUTCOME: ScoredOutcome = rawOutcome === 'lost' || rawOutcome === 'tied' || rawOutcome === 'withheld' ? rawOutcome : 'won';
 
 if (HOME_FIXTURE) {
   console.warn(`[dev] HOME FIXTURE "${HOME_FIXTURE}" — fake league data, no Supabase reads for Home.`);

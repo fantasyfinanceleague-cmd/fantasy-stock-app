@@ -25,7 +25,8 @@ import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 
 export interface GnScoreboardProps {
   you: ScoreSide & { avatarUri?: string | null };
-  opponent: ScoreSide & { avatarUri?: string | null };
+  /** null only with `bye` (a bye week has no opponent). */
+  opponent: (ScoreSide & { avatarUri?: string | null }) | null;
   final?: boolean;
   /** 'hero' is Matchup's header; 'compact' is a game in All matchups (smaller avatars and
    * totals, the same two halves and the same line). */
@@ -36,6 +37,9 @@ export interface GnScoreboardProps {
   /** Before the season (both at $0.00, no game played) there's nobody leading or even: the
    * line is left off. Default true. */
   showLine?: boolean;
+  /** A bye week (#call-mx-bye, B): no opponent. Their half reads `label` ("Bye week") and the
+   * line under the card is `line` (the app's "Bye week · no result") — never a "leads by". */
+  bye?: { label: string; line: string };
 }
 
 const AVATAR = { hero: 44, compact: 32 } as const;
@@ -48,22 +52,32 @@ const WHO_GAP = space[3];
 /** The leads-by line under the card. */
 export const LINE_MAX_SCALE = 1.3;
 
-export function Scoreboard({ you, opponent, final = false, size = 'hero', mine = true, showLine = true }: GnScoreboardProps) {
-  const model = scoreboardModel(you, opponent, final);
+export function Scoreboard({ you, opponent, final = false, size = 'hero', mine = true, showLine = true, bye }: GnScoreboardProps) {
+  const { colors } = useTheme();
+  const model = opponent ? scoreboardModel(you, opponent, final) : null;
+  const line = bye || !model ? bye?.line ?? '' : model.line;
   // Each half's width, measured: decides whether a name fits beside its avatar.
   const [cardWidth, setCardWidth] = useState(0);
-  const label = `${you.name}${mine ? ', you' : ''}, ${formatMoney(you.gain, { sign: 'always' })}. ${opponent.name}, ${formatMoney(opponent.gain, { sign: 'always' })}.${showLine ? ` ${model.line}.` : ''}`;
+  const label = bye
+    ? `${you.name}, you, ${formatMoney(you.gain, { sign: 'always' })}. ${line}.`
+    : `${you.name}${mine ? ', you' : ''}, ${formatMoney(you.gain, { sign: 'always' })}. ${opponent?.name ?? ''}, ${formatMoney(opponent?.gain ?? 0, { sign: 'always' })}.${showLine ? ` ${line}.` : ''}`;
 
   return (
     <View style={styles.wrap}>
       <Card style={styles.card} accessible accessibilityLabel={label} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
         <Half side={mine ? 'you' : 'opp'} team={you} mirror={false} size={size} halfWidth={cardWidth / 2} />
-        <Half side="opp" team={opponent} mirror size={size} halfWidth={cardWidth / 2} />
+        {bye || !opponent ? (
+          <View style={[styles.half, styles.byeHalf]} testID="scoreboard-bye">
+            <Text variant="callout" color={colors.text2} maxFontSizeMultiplier={NAME_MAX_SCALE} style={styles.byeLabel}>{bye?.label ?? ''}</Text>
+          </View>
+        ) : (
+          <Half side="opp" team={opponent} mirror size={size} halfWidth={cardWidth / 2} />
+        )}
       </Card>
       {showLine ? (
         // Capped at 1.3× so the totals above stay the loudest thing on the card at XL.
         <Text variant="callout" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.line} importantForAccessibility="no" accessibilityElementsHidden>
-          {model.line}
+          {line}
         </Text>
       ) : null}
     </View>
@@ -171,5 +185,12 @@ const styles = StyleSheet.create({
   },
   line: {
     textAlign: 'center',
+  },
+  byeHalf: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  byeLabel: {
+    fontWeight: '600',
   },
 });

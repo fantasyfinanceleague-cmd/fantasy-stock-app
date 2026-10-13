@@ -34,6 +34,8 @@ import {
 } from './buildHomeViewModel';
 import type { MarketInfo } from './homePhase';
 import { standardWeekSessions, type MarketCalendarSession } from '../time/marketWeek';
+import { matchupWeekExtras, parseMatchupFixture } from '../game/matchupFixture';
+import type { HoldingRow } from './homeFixtureData';
 import {
   HOME_FIXTURE,
   ROBERTO_HOLDINGS,
@@ -132,9 +134,13 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const robRows = isXLMillion ? XL_MILLION_ROBERTO_HOLDINGS : isXLLarge ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
   const giaRows = isXLMillion ? XL_MILLION_GIANLUIGI_HOLDINGS : isXLLarge ? XL_GIANLUIGI_HOLDINGS : GIANLUIGI_HOLDINGS;
   const robWeeks = isXLMillion ? XL_MILLION_ROBERTO_WEEKS : isXLLarge ? XL_ROBERTO_WEEKS : ROBERTO_WEEKS;
-  const myDrafts = robRows.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: fixtureQty(h), created_at: '2026-08-01T00:00:00Z' }));
-  const mySnapshots = robRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
-  const oppSnapshots = giaRows.map((h) => ({ symbol: h.symbol, quantity: fixtureQty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
+  // W4 capture only (EXPO_PUBLIC_MATCHUP_FIXTURE, matchupFixture.ts): 'bought' adds the
+  // week's trades; 'stress' scales the XL million league's share counts to seven figures.
+  const matchupExtras = matchupWeekExtras(parseMatchupFixture(process.env.EXPO_PUBLIC_MATCHUP_FIXTURE));
+  const qty = (h: HoldingRow) => fixtureQty(h) * matchupExtras.qtyScale;
+  const myDrafts = robRows.map((h) => ({ symbol: h.symbol, entry_price: h.draft, quantity: qty(h), created_at: '2026-08-01T00:00:00Z' }));
+  const mySnapshots = robRows.map((h) => ({ symbol: h.symbol, quantity: qty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
+  const oppSnapshots = giaRows.map((h) => ({ symbol: h.symbol, quantity: qty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
 
   const isPreSeason = fixture === 'pre_season';
   const isBye = fixture === 'bye';
@@ -171,9 +177,11 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     // total is −robGain6 and Gianluigi (−$38.88) wins; never the two totals swapped.
     : outcome === 'lost' ? { team1_gain: cents(-robGain6), team2_gain: giaGain6 }
     : outcome === 'tied' ? { team1_gain: robGain6, team2_gain: robGain6 }
+    // The withheld state: the two totals swapped, so no per-stock row set adds up to them.
+    : outcome === 'withheld' ? { team1_gain: giaGain6, team2_gain: robGain6 }
     : { team1_gain: robGain6, team2_gain: giaGain6 };
   // Your and Gianluigi's records count week 6 once it is scored (their real game).
-  const w6 = { won: outcome === 'won' ? 1 : 0, lost: outcome === 'lost' ? 1 : 0, tied: outcome === 'tied' ? 1 : 0 };
+  const w6 = { won: outcome === 'won' ? 1 : 0, lost: outcome === 'lost' || outcome === 'withheld' ? 1 : 0, tied: outcome === 'tied' ? 1 : 0 };
 
   const week6 = {
     week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
@@ -290,11 +298,12 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const playoffCurrentWeek = isEliminated ? round2Week : round1Week;
 
   const data: GetHomeLeagueResult = {
-    my_ledger: { drafts: myDrafts, trades: [] },
+    my_ledger: { drafts: myDrafts, trades: matchupExtras.trades },
     current_week: {
       week_number: isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : 6,
-      my_snapshots: isBye || isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : mySnapshots,
-      my_trades: [],
+      // W4: on a bye you still hold your stocks (Matchup lists them under the bye scoreboard).
+      my_snapshots: isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : mySnapshots,
+      my_trades: matchupExtras.trades,
       opponent_snapshots: isBye || isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : oppSnapshots,
       opponent_trades: [],
     },
@@ -450,6 +459,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   leaderFlipCall += 1;
   const leaderFlipFlipped = leaderFlipCall % 2 === 0;
   const quote = (sym: string) => {
+    if (matchupExtras.quotes[sym] !== undefined) return matchupExtras.quotes[sym];
     // A holding with no live price (XL's PLTR) counts at cost, never a quote.
     if (robRows.find((h) => h.symbol === sym)?.unpriced) return null;
     if (fixture === 'leader_flip') {
@@ -466,7 +476,9 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
       // landing within a few cents of the board's own example (+$163.40
       // vs +$171.02), that genuinely flip who's ahead.
       if (mine) return flipped ? mine.mon + 0.765 * (mine.thu - mine.mon) : mine.thu;
-      if (theirs) return flipped ? theirs.mon + 1.89 * (theirs.thu - theirs.mon) : theirs.mon;
+      // W4 gate: unflipped, the opponent is at Thursday's price like every live state (it was
+      // Monday's open, so every one of their rows read $0.00 between flips).
+      if (theirs) return flipped ? theirs.mon + 1.89 * (theirs.thu - theirs.mon) : theirs.thu;
       return null;
     }
     // R4 (Design Lead, 2026-09-30): pre-season has to price at the DRAFT
@@ -522,6 +534,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   // the (known-wrong) nominal timestamps for lack of any calendar rows.
   const marketCalendar: MarketCalendarSession[] = matchups.flatMap((m) => standardWeekSessions(m.week_end));
 
+  Object.assign(bars, matchupExtras.bars);
   return { data, meta, market, now, quote, bars, marketCalendar };
 }
 

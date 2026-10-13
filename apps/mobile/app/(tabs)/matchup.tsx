@@ -37,11 +37,11 @@ import type { HomeRawInputs } from '@/lib/home/useHomeLeague';
 import { toLiveSnapshots, toLiveTrades } from '@/lib/home/buildHomeViewModel';
 import { resolveWeekWindow } from '@/lib/time/marketWeek';
 import { cardSlotPill, closesBefore, lastWeekClose, orderBarsAt, weekSessions } from '@/lib/game/matchupRoster';
-import { buildRosterView, type RosterSideInput } from '@/lib/game/matchupRosterView';
+import { BYE_HALF, buildRosterView, buildWithheldView, orderLabel, WITHHELD_LINE, type RosterSideInput } from '@/lib/game/matchupRosterView';
 import { useRosterData, type RosterData } from '@/lib/game/useRosterData';
 import { openingOf, playerCardData } from '@/lib/game/playerCardModel';
-import { fixtureSeasonBars } from '@/lib/game/matchupFixture';
-import { SEAM_ON } from '@/lib/game/devSeam';
+import { fixtureSeasonBars, fixtureWeekBars } from '@/lib/game/matchupFixture';
+import { MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '@/lib/game/devSeam';
 import { useStockChartData } from '@/lib/money/useStockChartData';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { decideTradeGate } from '@/lib/money/tradeGate';
@@ -199,7 +199,16 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
   }
 
   if (view.kind === 'bye') {
-    return <Text variant="callout" tone="secondary">{COPY.byeNoResult}</Text>;
+    // A bye (#call-mx-bye, B): your half as usual, "Bye week" in theirs, the app's bye line,
+    // then your stocks in one column under the same order rules.
+    return (
+      <View style={styles.stack}>
+        <Scoreboard you={{ name: youName, gain: live.me.gain }} opponent={null} bye={{ label: BYE_HALF, line: COPY.byeNoResult }} />
+        {raw && live.me.lineup.length ? (
+          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={null} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} orderAsOf={orderAsOf} />
+        ) : null}
+      </View>
+    );
   }
 
   if (view.kind === 'playoff_bye' || view.kind === 'playoff_pending' || view.kind === 'eliminated' || view.kind === 'missed_playoffs') {
@@ -250,11 +259,40 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
             <RosterRowsSkeleton />
           ) : finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows ? (
             <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final seamResumesAt={null} orderAsOf={orderAsOf} />
-          ) : null
+          ) : (
+            // The posted rows don't add up to the result: who held what, without figures.
+            <Withheld raw={raw} roster={roster} me={user.id} opp={live.opp} />
+          )
         ) : (
           <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} orderAsOf={orderAsOf} />
         )
       ) : null}
+    </View>
+  );
+}
+
+/** A final week whose per-stock rows don't reconcile (#call-mx-withheld, B): the line, then
+ * both lineups as ticker + company with no figures, in draft order, your side shaded. */
+function Withheld({ raw, roster, me, opp }: { raw: HomeRawInputs; roster: RosterData; me: string; opp: { userId: string; name: string } }) {
+  if (roster.ledgerStatus === 'error') {
+    return <LoadFailure title="Couldn't load this matchup" message={MONEY_COPY.loadRetryMessage} onRetry={roster.retry} />;
+  }
+  if (!roster.ledger) return <RosterRowsSkeleton />;
+  const cw = raw.data.current_week;
+  const symbolsOf = (snaps: typeof cw.my_snapshots, trades: typeof cw.my_trades) => [...snaps.map((x) => x.symbol), ...trades.filter((t) => t.action === 'buy').map((t) => t.symbol)];
+  const group = buildWithheldView({
+    me: { userId: me, symbols: symbolsOf(cw.my_snapshots, cw.my_trades) },
+    opp: { userId: opp.userId, symbols: symbolsOf(cw.opponent_snapshots, cw.opponent_trades) },
+    activity: roster.ledger.activity,
+    names: roster.ledger.symbol_names,
+  });
+  const half = (c: { symbol: string; company: string } | null) => (c ? { ticker: c.symbol, company: c.company, weekGain: 0, weekPct: 0, figures: false } : null);
+  return (
+    <View style={styles.roster}>
+      <Text variant="caption" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.center} testID="roster-withheld">{WITHHELD_LINE}</Text>
+      {group.rows.map((r, i) => (
+        <RosterRow key={`${r.left?.symbol ?? '-'}|${r.right?.symbol ?? '-'}|${i}`} left={half(r.left)} right={half(r.right)} opponentName={opp.name} />
+      ))}
     </View>
   );
 }
@@ -269,13 +307,14 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   raw: HomeRawInputs;
   roster: RosterData;
   myRows: LineupRow[];
-  theirRows: LineupRow[];
+  /** null = a bye week: your stocks in one column (#call-mx-bye, B). */
+  theirRows: LineupRow[] | null;
   final: boolean;
 }) {
   const { user } = useAuth();
   const { market } = useLeagueContext();
   const stockSheet = useStockSheet();
-  const opp = derived.live.opp!;
+  const opp = theirRows ? derived.live.opp : null;
   const me = user!.id;
   const [selected, setSelected] = useState<{ side: 'me' | 'opp'; symbol: string } | null>(null);
   // The card stays mounted while it leaves, with the stock it was showing.
@@ -286,9 +325,11 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   const cw = raw.data.current_week;
   const sides = useMemo(() => {
     const mineIn: RosterSideInput = { userId: me, lineup: myRows, snapshots: toLiveSnapshots(cw.my_snapshots), trades: toLiveTrades(cw.my_trades) };
-    const theirIn: RosterSideInput = { userId: opp.userId, lineup: theirRows, snapshots: toLiveSnapshots(cw.opponent_snapshots), trades: toLiveTrades(cw.opponent_trades) };
+    const theirIn: RosterSideInput | null = opp && theirRows
+      ? { userId: opp.userId, lineup: theirRows, snapshots: toLiveSnapshots(cw.opponent_snapshots), trades: toLiveTrades(cw.opponent_trades) }
+      : null;
     return { me: mineIn, opp: theirIn };
-  }, [me, opp.userId, myRows, theirRows, cw]);
+  }, [me, opp, myRows, theirRows, cw]);
 
   const now = raw.now;
   const sessions = useMemo(() => {
@@ -306,7 +347,7 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   const rowPrice = (symbol: string) => (final ? raw.bars[symbol]?.find((b) => b.date === closeOn)?.close ?? raw.quote(symbol) : raw.quote(symbol));
 
   const ready = roster.ledgerStatus === 'ready' && roster.slots.status === 'ready' && roster.ledger;
-  const groups = useMemo(() => {
+  const view = useMemo(() => {
     if (!ready || !roster.ledger) return null;
     return buildRosterView({
       me: sides.me,
@@ -327,6 +368,7 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   const card = useMemo(() => {
     if (!shown || !roster.ledger) return null;
     const side = shown.side === 'me' ? sides.me : sides.opp;
+    if (!side) return null;
     const row = side.lineup.find((r) => r.symbol.toUpperCase() === shown.symbol);
     const price = rowPrice(shown.symbol);
     if (!row || price == null) return null;
@@ -339,8 +381,10 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
       trades: side.trades,
       weekGain: row.cents / 100,
       price,
-      bars: raw.bars[shown.symbol] ?? [],
-      seasonBars: SEAM_ON ? fixtureSeasonBars(shown.symbol) : seasonBars.status === 'ready' ? seasonBars.bars : null,
+      // Under the capture seam the fixture's own daily bars (a real move every day); MSFT, bought
+      // this week in the 'bought' fixture, has its bars in Home's raw inputs.
+      bars: SEAM_ON && fixtureWeekBars(shown.symbol, MATCHUP_FIXTURE_VARIANT).length ? fixtureSeasonBars(shown.symbol, MATCHUP_FIXTURE_VARIANT) : raw.bars[shown.symbol] ?? [],
+      seasonBars: SEAM_ON ? fixtureSeasonBars(shown.symbol, MATCHUP_FIXTURE_VARIANT) : seasonBars.status === 'ready' ? seasonBars.bars : null,
       sessions,
       now,
     });
@@ -360,7 +404,7 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   if (roster.ledgerStatus === 'error' || roster.slots.status === 'error') {
     return <LoadFailure title="Couldn't load this matchup" message={MONEY_COPY.loadRetryMessage} onRetry={roster.retry} />;
   }
-  if (!groups) return <RosterRowsSkeleton />;
+  if (!view) return <RosterRowsSkeleton />;
 
   const open = (side: 'me' | 'opp', symbol: string) => {
     setSelected({ side, symbol });
@@ -370,13 +414,13 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
   // was got, and it has a price); otherwise it isn't pressable at all — never a dead tap.
   const activity = roster.ledger?.activity ?? [];
   const openable = (side: 'me' | 'opp', symbol: string) =>
-    openingOf(side === 'me' ? me : opp.userId, symbol, activity) !== null && rowPrice(symbol) != null;
+    openingOf(side === 'me' ? me : opp?.userId ?? '', symbol, activity) !== null && rowPrice(symbol) != null;
   const half = (side: 'me' | 'opp', c: { symbol: string; company: string; weekGain: number; weekPct: number } | null) =>
     c ? { ticker: c.symbol, company: c.company, weekGain: c.weekGain, weekPct: c.weekPct, onPress: openable(side, c.symbol) ? () => open(side, c.symbol) : undefined } : null;
 
   let ownership: PlayerCardOwnership | null = null;
   if (card && shown) {
-    if (shown.side === 'opp') {
+    if (shown.side === 'opp' && opp) {
       // No watchlist exists in the app yet, so there's nothing to save to: Save is not drawn.
       ownership = { owner: { name: opp.name }, save: null };
     } else if (card.data.held > 0) {
@@ -395,7 +439,13 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
 
   return (
     <View style={styles.roster}>
-      {groups.map((g, gi) => (
+      {/* The close the order is using (#call-mx-order, B); none while the draft order holds. */}
+      {view.orderedBy ? (
+        <Text variant="caption" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.center} testID="roster-ordered-by">
+          {orderLabel(view.orderedBy)}
+        </Text>
+      ) : null}
+      {view.groups.map((g, gi) => (
         <Fragment key={g.label ?? `group-${gi}`}>
           {g.label ? <GroupHead label={g.label} /> : null}
           {g.rows.map((r, ri) => (
@@ -403,7 +453,8 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
               key={`${r.left?.symbol ?? '-'}|${r.right?.symbol ?? '-'}|${ri}`}
               left={half('me', r.left)}
               right={half('opp', r.right)}
-              opponentName={opp.name}
+              opponentName={opp?.name ?? ''}
+              single={!sides.opp}
             />
           ))}
         </Fragment>

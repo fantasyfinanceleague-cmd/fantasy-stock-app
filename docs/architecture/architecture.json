@@ -2,19 +2,23 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "14ec6e0a14fc57bbae0c33572601e111e0a95d2e",
-    "commitShort": "14ec6e0a",
+    "commit": "a9a2c55343976f392ecf726c2759557fbab111b3",
+    "commitShort": "a9a2c553",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/gn-w4-matchup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/matchup.tsx"
+        "path": "apps/mobile/app/design-gallery.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/money/StockSheetBody.tsx"
       },
       {
         "code": "M",
@@ -26,23 +30,11 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/gameNight.ts"
+        "path": "apps/mobile/lib/game/devSeam.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/largeText.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/lineChart.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/Text.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/matchupRoster.ts"
+        "path": "apps/mobile/lib/game/matchupFixture.ts"
       },
       {
         "code": "M",
@@ -50,15 +42,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/playerCardModel.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamCalls.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/seamTables.ts"
+        "path": "apps/mobile/lib/home/devFixture.ts"
       },
       {
         "code": "M",
@@ -66,7 +50,15 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-night-primitives.test.ts"
+        "path": "apps/mobile/lib/money/usePortfolioLedger.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/money/useStockSheetData.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/matchup-calls.test.ts"
       },
       {
         "code": "M",
@@ -77,15 +69,15 @@
         "path": "apps/mobile/tests-deno/player-card-model.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T05:26:24Z",
-    "sourceHash": "sha256:5e71592d77ba773491b00f2459544a2eeb25c1ba49a7404b8f8bc1fb2d1b8adc",
+    "timestamp": "2026-10-13T07:26:03Z",
+    "sourceHash": "sha256:8a204234d697735811d6273adcffd6790e7eb2489ed56f71ef4b956f1a2983a5",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 25.6,
+    "ageHours": 27.6,
     "ageDays": 1.1,
     "staleAfterDays": 14,
     "stale": false,
@@ -16706,7 +16698,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:626"
+        "apps/mobile/lib/home/useHomeLeague.ts:639"
       ]
     },
     {
@@ -16718,7 +16710,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:609"
+        "apps/mobile/lib/home/useHomeLeague.ts:622"
       ]
     },
     {
@@ -16730,7 +16722,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:582"
+        "apps/mobile/lib/home/useHomeLeague.ts:595"
       ]
     },
     {
@@ -17125,7 +17117,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/lib/money/usePortfolioLedger.ts:31"
+        "apps/mobile/lib/money/usePortfolioLedger.ts:39"
       ]
     },
     {
@@ -17149,7 +17141,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/mobile/lib/money/useStockSheetData.ts:133"
+        "apps/mobile/lib/money/useStockSheetData.ts:152"
       ]
     },
     {
@@ -17161,7 +17153,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('ticker-quotes')",
       "callSites": [
-        "apps/mobile/lib/money/useStockSheetData.ts:117"
+        "apps/mobile/lib/money/useStockSheetData.ts:136"
       ]
     },
     {
@@ -18728,7 +18720,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:609",
+            "apps/mobile/lib/home/useHomeLeague.ts:622",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -18745,7 +18737,7 @@
           ],
           "detail": "ticker-quotes — batch prices for the ticker strip.",
           "files": [
-            "apps/mobile/lib/money/useStockSheetData.ts:117",
+            "apps/mobile/lib/money/useStockSheetData.ts:136",
             "apps/mobile/lib/useStockPrices.ts:32",
             "apps/web/src/Ticker.jsx:28"
           ]
@@ -18762,7 +18754,7 @@
           "files": [
             "apps/mobile/components/TradeModal.tsx:102",
             "apps/mobile/components/TradeModal.tsx:151",
-            "apps/mobile/lib/money/useStockSheetData.ts:133",
+            "apps/mobile/lib/money/useStockSheetData.ts:152",
             "apps/mobile/lib/useStockNames.ts:13",
             "apps/web/src/components/TradeModal.jsx:82"
           ]
@@ -18791,7 +18783,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:626",
+            "apps/mobile/lib/home/useHomeLeague.ts:639",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19579,6 +19571,14 @@
     "wrappers": [
       {
         "surface": "client",
+        "name": "loadPortfolioLedger",
+        "file": "apps/mobile/lib/money/usePortfolioLedger.ts",
+        "line": 21,
+        "kind": "seam-stub",
+        "detail": "rpc:get_portfolio_ledger"
+      },
+      {
+        "surface": "client",
         "name": "loadSlots",
         "file": "apps/mobile/lib/game/useRosterData.ts",
         "line": 43,
@@ -19791,15 +19791,15 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:609 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:626 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:622 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:639 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
       "apps/mobile/lib/money/recordTrade.ts:48 -> record-trade",
       "apps/mobile/lib/money/useStockChartData.ts:39 -> historical-bars",
-      "apps/mobile/lib/money/useStockSheetData.ts:117 -> ticker-quotes",
-      "apps/mobile/lib/money/useStockSheetData.ts:133 -> symbol-name",
+      "apps/mobile/lib/money/useStockSheetData.ts:136 -> ticker-quotes",
+      "apps/mobile/lib/money/useStockSheetData.ts:152 -> symbol-name",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -19843,12 +19843,12 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:582 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:595 -> get_home_league",
       "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
-      "apps/mobile/lib/money/usePortfolioLedger.ts:31 -> get_portfolio_ledger",
+      "apps/mobile/lib/money/usePortfolioLedger.ts:39 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
       "apps/web/src/context/UserProfilesContext.jsx:30 -> get_visible_profiles",
@@ -20140,6 +20140,7 @@
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "wrappers": [
+      "loadPortfolioLedger seam-stub apps/mobile/lib/money/usePortfolioLedger.ts",
       "loadSlots seam-stub apps/mobile/lib/game/useRosterData.ts",
       "seamInsertLeague seam-stub apps/mobile/lib/game/seamCalls.ts",
       "seamInsertMember seam-stub apps/mobile/lib/game/seamCalls.ts",

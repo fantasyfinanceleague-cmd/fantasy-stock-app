@@ -404,6 +404,13 @@ function GameNightGallery() {
             <Avatar name="Gianluigi B." size={44} tone="opp" />
             <Avatar name="Paolo M." size={32} tone="neutral" />
           </View>
+          {/* §9C: a disc under 24pt shows ONE initial — the player card's 20pt owner disc. */}
+          <View style={[styles.row, styles.wrap]} testID="gallery-one-initial">
+            <Avatar name="Marco W." size={20} tone="opp" />
+            <Text variant="caption" tone="secondary">Marco W.</Text>
+            <Avatar name="Gianluigi B." size={20} tone="opp" />
+            <Text variant="caption" tone="secondary">Gianluigi B.</Text>
+          </View>
         </Card>
         <View style={[styles.row, styles.wrap]}>
           <PhaseChip phase="live_open" label="Live" onPageBackground />

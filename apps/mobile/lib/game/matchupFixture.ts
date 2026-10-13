@@ -7,15 +7,19 @@
  *
  * Variants (EXPO_PUBLIC_MATCHUP_FIXTURE, capture only):
  *  - unset      an unslotted league (one list, best first).
- *  - 'category' category slots: Tech ×3 · Finance · Retail ×2 · Flex ×3.
+ *  - 'category' category slots: Tech · Retail ×2 · Finance · Flex ×3 — one slot open on each side.
  *  - 'tiers'    price tiers by entry price: $200 or more ×5 · $100–$200 ×2 · up to $100 ×2.
- *  - 'bought'   unslotted; Roberto's COST was bought, not drafted, and today (a 1-point
- *               season line). Gianluigi's NKE was bought Sep 8.
+ *  - 'bought'   unslotted, a realistic week of trades (a manager can't add to a stock the
+ *               league owns — draft-validation's symbol_owned — so a buy is always a NEW
+ *               stock): Roberto sold V on Tuesday and bought MSFT on Thursday morning (a
+ *               1-point season line; its week line starts at the buy). Gianluigi's NKE was
+ *               bought Sep 8.
  *  - 'stress'   unslotted, the longest company names in the universe's style (§9B's stress
  *               fixture; pair with EXPO_PUBLIC_HOME_FIXTURE=xl_million for ≥ $1,000,000).
  */
 import {
-  ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, XL_ROBERTO_HOLDINGS, XL_GIANLUIGI_HOLDINGS, fixtureQty, type HoldingRow,
+  ROBERTO_HOLDINGS, GIANLUIGI_HOLDINGS, XL_ROBERTO_HOLDINGS, XL_GIANLUIGI_HOLDINGS, XL_MILLION_ROBERTO_HOLDINGS,
+  XL_MILLION_GIANLUIGI_HOLDINGS, fixtureQty, type HoldingRow,
 } from '../home/homeFixtureData';
 import type { LedgerActivityRow, PortfolioLedger } from '../money/portfolioLedger';
 import type { Category } from '../../components/sp/logic/gameNight';
@@ -56,26 +60,54 @@ const PICKS: Record<string, number> = {
 };
 
 const DRAFTED_AT = '2026-09-01T00:30:00.000Z'; // Mon Aug 31, 8:30 PM ET
-/** The fixtures' "now" is Thursday Sep 24 (1:37 PM ET); 'bought' buys COST that morning. */
-const TODAY_BUY_AT = '2026-09-24T14:05:00.000Z';
 const NKE_BUY_AT = '2026-09-08T15:00:00.000Z';
+
+/** §9B stress: the XL million league's share counts ×15 — your week tops $1,000,000 and the
+ * card's figures (week, since the draft) move with the same shares. */
+export const STRESS_QTY_SCALE = 15;
+
+const V_ROW = ROBERTO_HOLDINGS.find((h) => h.symbol === 'V')!;
+/** Tuesday 11:10 AM ET: V sold at $286.10 (it had run up from Monday's $284.20). */
+const V_SELL = { at: '2026-09-22T15:10:00.000Z', price: 286.1 };
+/** Thursday 10:05 AM ET: MSFT bought with the proceeds at $412.30; live $418.92 at 1:37 PM. */
+export const MSFT_BUY = { at: '2026-09-24T14:05:00.000Z', price: 412.3, live: 418.92, prevClose: 409.64 };
+
+/** The 'bought' week's trades (sell V, buy MSFT), as get_home_league returns my_trades. */
+export function boughtWeekTrades(): { symbol: string; action: 'buy' | 'sell'; quantity: number; price: number; created_at: string }[] {
+  const vQty = fixtureQty(V_ROW);
+  const msftQty = Math.round(((vQty * V_SELL.price) / MSFT_BUY.price) * 1e4) / 1e4;
+  return [
+    { symbol: 'V', action: 'sell', quantity: vQty, price: V_SELL.price, created_at: V_SELL.at },
+    { symbol: 'MSFT', action: 'buy', quantity: msftQty, price: MSFT_BUY.price, created_at: MSFT_BUY.at },
+  ];
+}
 
 export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: string): PortfolioLedger {
   const rows: LedgerActivityRow[] = [];
   const add = (userId: string, h: HoldingRow) => {
-    const bought = variant === 'bought' && (h.symbol === 'COST' || h.symbol === 'NKE');
+    const bought = variant === 'bought' && h.symbol === 'NKE';
+    const q = fixtureQty(h) * (variant === 'stress' ? STRESS_QTY_SCALE : 1);
     rows.push(bought
-      ? { kind: 'trade', user_id: userId, symbol: h.symbol, action: 'buy', quantity: fixtureQty(h), round: null, pick_number: null,
-        occurred_at: h.symbol === 'COST' ? TODAY_BUY_AT : NKE_BUY_AT, total_value: null, price: h.symbol === 'COST' ? h.thu - 6.4 : h.draft }
-      : { kind: 'draft', user_id: userId, symbol: h.symbol, action: 'buy', quantity: fixtureQty(h), round: null, pick_number: PICKS[h.symbol],
+      ? { kind: 'trade', user_id: userId, symbol: h.symbol, action: 'buy', quantity: q, round: null, pick_number: null,
+        occurred_at: NKE_BUY_AT, total_value: null, price: h.draft }
+      : { kind: 'draft', user_id: userId, symbol: h.symbol, action: 'buy', quantity: q, round: null, pick_number: PICKS[h.symbol],
         occurred_at: DRAFTED_AT, total_value: null, price: h.draft });
   };
   // The XL leagues (EXPO_PUBLIC_HOME_FIXTURE=xl_large_numbers / xl_million) hold the same
   // symbols plus PLTR and XOM: every symbol either league can hold has its pick.
   const withXl = (base: HoldingRow[], xl: HoldingRow[]) => [...base, ...xl.filter((x) => !base.some((b) => b.symbol === x.symbol))];
-  for (const h of withXl(ROBERTO_HOLDINGS, XL_ROBERTO_HOLDINGS)) add(me, h);
-  for (const h of withXl(GIANLUIGI_HOLDINGS, XL_GIANLUIGI_HOLDINGS)) add(opp, h);
-  return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES) }, members: [] };
+  // The stress fixture plays the XL million league: its own share counts and draft prices,
+  // so the card's "Since the draft" and the row's week agree.
+  const mine = variant === 'stress' ? XL_MILLION_ROBERTO_HOLDINGS : withXl(ROBERTO_HOLDINGS, XL_ROBERTO_HOLDINGS);
+  const theirs = variant === 'stress' ? XL_MILLION_GIANLUIGI_HOLDINGS : withXl(GIANLUIGI_HOLDINGS, XL_GIANLUIGI_HOLDINGS);
+  for (const h of mine) add(me, h);
+  for (const h of theirs) add(opp, h);
+  if (variant === 'bought') {
+    for (const t of boughtWeekTrades()) {
+      rows.push({ kind: 'trade', user_id: me, symbol: t.symbol, action: t.action, quantity: t.quantity, round: null, pick_number: null, occurred_at: t.created_at, total_value: null, price: t.price });
+    }
+  }
+  return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES), MSFT: 'Microsoft' }, members: [] };
 }
 
 function bySide(me: string, opp: string, slotOf: (sym: string) => string): Record<string, Record<string, string | null>> {
@@ -86,16 +118,14 @@ function bySide(me: string, opp: string, slotOf: (sym: string) => string): Recor
 /** The variant's slots and each side's recorded slot per symbol (the server's record). */
 export function fixtureSlots(variant: MatchupFixtureVariant, me: string, opp: string): { slots: SlotRow[]; bySide: Record<string, Record<string, string | null>> } | null {
   if (variant === 'category') {
+    // Both rosters fill it, each leaving ONE slot open: Roberto's second Retail, Gianluigi's Tech.
     const slots: SlotRow[] = [
-      { id: 'tech', slot_index: 0, slot_count: 3, price_min: null, price_max: null, category: 'tech' },
-      { id: 'finance', slot_index: 1, slot_count: 1, price_min: null, price_max: null, category: 'finance' },
-      { id: 'retail', slot_index: 2, slot_count: 2, price_min: null, price_max: null, category: 'retail' },
+      { id: 'tech', slot_index: 0, slot_count: 1, price_min: null, price_max: null, category: 'tech' },
+      { id: 'retail', slot_index: 1, slot_count: 2, price_min: null, price_max: null, category: 'retail' },
+      { id: 'finance', slot_index: 2, slot_count: 1, price_min: null, price_max: null, category: 'finance' },
       { id: 'flex', slot_index: 3, slot_count: 3, price_min: null, price_max: null, category: null },
     ];
-    const slotOf = (sym: string) => {
-      const c = CATEGORY[sym];
-      return c === 'tech' || c === 'finance' || c === 'retail' ? c : 'flex';
-    };
+    const slotOf = (sym: string) => (sym === 'NVDA' ? 'tech' : CATEGORY[sym] === 'retail' ? 'retail' : CATEGORY[sym] === 'finance' ? 'finance' : 'flex');
     return { slots, bySide: bySide(me, opp, slotOf) };
   }
   if (variant === 'tiers') {
@@ -112,12 +142,52 @@ export function fixtureSlots(variant: MatchupFixtureVariant, me: string, opp: st
 }
 
 
-/** Daily closes for the card's season line: from the acquisition to Monday's open of the
- * fixture week, a deterministic walk (never flat), then the fixture week's own bars. */
-export function fixtureSeasonBars(symbol: string): { date: string; close: number }[] {
-  const h = [...ROBERTO_HOLDINGS, ...GIANLUIGI_HOLDINGS].find((r) => r.symbol === symbol);
+/** A deterministic PRNG per symbol (mulberry32 over a string hash): every stock its own
+ * path, the same path on every run. */
+function rng(seed: string): () => number {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
+
+/** The holding a symbol is in this variant (the stress fixture plays the XL million league). */
+function holdingFor(symbol: string, variant: MatchupFixtureVariant): HoldingRow | undefined {
+  const rows = variant === 'stress'
+    ? [...XL_MILLION_ROBERTO_HOLDINGS, ...XL_MILLION_GIANLUIGI_HOLDINGS]
+    : [...ROBERTO_HOLDINGS, ...GIANLUIGI_HOLDINGS, ...XL_ROBERTO_HOLDINGS, ...XL_GIANLUIGI_HOLDINGS];
+  return rows.find((r) => r.symbol === symbol);
+}
+
+/** The fixture week's daily closes: Monday and Tuesday move on their own (no flat days, no
+ * single Thursday pop — Giorgio rejected that shape), Wednesday's close IS the fixture's
+ * `prev` (the close the roster is ordered by), Thursday is live. */
+export function fixtureWeekBars(symbol: string, variant: MatchupFixtureVariant = 'unslotted'): { date: string; close: number }[] {
+  const h = holdingFor(symbol, variant);
   if (!h) return [];
-  const out: { date: string; close: number }[] = [];
+  const rand = rng(`${symbol}-week`);
+  const move = h.prev - h.mon;
+  const noise = () => (rand() - 0.5) * 0.012 * h.mon; // ±0.6% a day
+  const monClose = r2(h.mon + move * (0.15 + rand() * 0.45) + noise());
+  const tueClose = r2(h.mon + move * (0.35 + rand() * 0.6) + noise());
+  return [{ date: '2026-09-21', close: monClose }, { date: '2026-09-22', close: tueClose }, { date: '2026-09-23', close: h.prev }];
+}
+
+/** Daily closes for the card's season line: from the session after the draft to the Friday
+ * before the fixture week, a seeded Brownian bridge from the draft price to Monday's open
+ * (each stock its own volatility and shape), then the fixture week's own bars. */
+export function fixtureSeasonBars(symbol: string, variant: MatchupFixtureVariant = 'unslotted'): { date: string; close: number }[] {
+  const h = holdingFor(symbol, variant);
+  if (!h) return [];
   const start = Date.UTC(2026, 8, 1); // Tue Sep 1, the first session after the draft
   const end = Date.UTC(2026, 8, 18); // Fri Sep 18
   const days: number[] = [];
@@ -125,12 +195,52 @@ export function fixtureSeasonBars(symbol: string): { date: string; close: number
     const dow = new Date(t).getUTCDay();
     if (dow !== 0 && dow !== 6) days.push(t);
   }
-  days.forEach((t, i) => {
-    const f = (i + 1) / (days.length + 1);
-    const wiggle = Math.sin(i * 1.7 + symbol.length) * 0.012 * h.draft;
-    const close = Math.round((h.draft + (h.mon - h.draft) * f + wiggle) * 100) / 100;
-    out.push({ date: new Date(t).toISOString().slice(0, 10), close });
+  const rand = rng(`${symbol}-season`);
+  const vol = 0.008 + rand() * 0.014; // 0.8%–2.2% a day
+  // A random walk, then bridged so it ends exactly at Monday's open.
+  const walk: number[] = [0];
+  for (let i = 1; i <= days.length + 1; i++) {
+    const z = (rand() + rand() + rand() - 1.5) * 2; // ~N(0, 1)
+    walk.push(walk[i - 1] + z * vol);
+  }
+  const n = walk.length - 1;
+  const target = Math.log(h.mon / h.draft);
+  const out = days.map((t, i) => {
+    const k = i + 1;
+    const bridged = walk[k] - (k / n) * walk[n] + (k / n) * target;
+    return { date: new Date(t).toISOString().slice(0, 10), close: r2(h.draft * Math.exp(bridged)) };
   });
-  out.push({ date: '2026-09-21', close: h.mon }, { date: '2026-09-22', close: Math.round(((h.mon + h.prev) / 2) * 100) / 100 }, { date: '2026-09-23', close: h.prev });
-  return out;
+  return [...out, ...fixtureWeekBars(symbol, variant)];
+}
+
+// ── 'bought': the week's trades, in get_home_league's shape ─────────────────────
+
+/** What a Home fixture adds under EXPO_PUBLIC_MATCHUP_FIXTURE: the week's trades, the extra
+ * quote and the extra daily bars. Empty for every other variant. */
+export function matchupWeekExtras(variant: MatchupFixtureVariant): {
+  trades: ReturnType<typeof boughtWeekTrades>;
+  quotes: Record<string, number>;
+  bars: Record<string, { date: string; close: number }[]>;
+  /** Share-count multiplier: 'stress' takes the XL million league to seven-figure weeks. */
+  qtyScale: number;
+} {
+  if (variant === 'stress') return { trades: [], quotes: {}, bars: {}, qtyScale: STRESS_QTY_SCALE };
+  if (variant !== 'bought') return { trades: [], quotes: {}, bars: {}, qtyScale: 1 };
+  return {
+    qtyScale: 1,
+    trades: boughtWeekTrades(),
+    quotes: { MSFT: MSFT_BUY.live },
+    bars: { MSFT: [{ date: '2026-09-21', close: 404.18 }, { date: '2026-09-22', close: 407.02 }, { date: '2026-09-23', close: MSFT_BUY.prevClose }, { date: '2026-09-24', close: MSFT_BUY.live }] },
+  };
+}
+
+// ── The stock sheet under the capture seam (Sell's tap-through) ──────────────────
+
+/** A seam stock's quote for the stock sheet: the fixture's live price and the last close
+ * before it (Wednesday's), so the existing sheet opens with its real Buy / Sell controls. */
+export function seamSheetQuote(symbol: string): { price: number; prevClose: number } | null {
+  const sym = symbol.toUpperCase();
+  if (sym === 'MSFT') return { price: MSFT_BUY.live, prevClose: MSFT_BUY.prevClose };
+  const h = [...ROBERTO_HOLDINGS, ...GIANLUIGI_HOLDINGS].find((r) => r.symbol === sym);
+  return h ? { price: h.thu, prevClose: h.prev } : null;
 }

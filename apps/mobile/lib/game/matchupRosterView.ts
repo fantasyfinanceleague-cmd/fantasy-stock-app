@@ -27,6 +27,12 @@ export interface RosterCell {
   weekPct: number;
 }
 
+export interface RosterView {
+  groups: RosterViewGroup[];
+  /** The close the rows are ordered by (YYYY-MM-DD), or null before any settled close. */
+  orderedBy: string | null;
+}
+
 export interface RosterViewGroup {
   /** The GroupHead ("Tech ×3"); null = no head. */
   label: string | null;
@@ -55,7 +61,8 @@ export function seqOf(userId: string, activity: readonly LedgerActivityRow[] | n
  * one close for both sides); before one exists, the draft/slot order. */
 export function buildRosterView(input: {
   me: RosterSideInput;
-  opp: RosterSideInput;
+  /** null = a bye week: your stocks alone, ordered the same way (#call-mx-bye, B). */
+  opp: RosterSideInput | null;
   activity: readonly LedgerActivityRow[] | null;
   names: Readonly<Record<string, string>>;
   /** The league's slots (empty = unslotted) and each user's recorded slot per symbol. */
@@ -66,9 +73,9 @@ export function buildRosterView(input: {
   bars: BarsBySymbol;
   /** When `bars` was fetched: a bar counts for a close only if fetched after it. */
   barsAt: Date;
-}): RosterViewGroup[] {
+}): RosterView {
   const { me, opp, activity, names, slots, slotOf, closes, bars, barsAt } = input;
-  const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });
+  const ordering = orderingClose({ closes, sides: opp ? [me, opp] : [me], bars, barsAt });
 
   const entries = (side: RosterSideInput, gains: Record<string, number> | null): RosterEntry[] => {
     const seqs = seqOf(side.userId, activity);
@@ -96,18 +103,59 @@ export function buildRosterView(input: {
     };
   };
   const mineCell = cell(me, cents(me));
-  const theirCell = cell(opp, cents(opp));
+  const theirCell = opp ? cell(opp, cents(opp)) : () => null;
 
   const slotById = new Map(slots.map((s) => [s.id, s]));
   const groups = rosterGroups({
     mine: entries(me, ordering?.gains[0] ?? null),
-    theirs: entries(opp, ordering?.gains[1] ?? null),
+    theirs: opp ? entries(opp, ordering?.gains[1] ?? null) : [],
     slots: slots.map((s) => ({ id: s.id, index: s.slot_index, label: slotGroupLabel(s) })),
     hasClose: ordering !== null,
   });
-  return groups.map((g) => ({
-    label: g.slot ? slotGroupLabel(slotById.get(g.slot.id)!) : null,
-    rows: pairRows(g).map((r) => ({ left: mineCell(r.left), right: theirCell(r.right) })),
-  }));
+  return {
+    groups: groups.map((g) => ({
+      label: g.slot ? slotGroupLabel(slotById.get(g.slot.id)!) : null,
+      rows: pairRows(g).map((r) => ({ left: mineCell(r.left), right: theirCell(r.right) })),
+    })),
+    // The close the order is CURRENTLY using (null: the draft/slot order — no label).
+    orderedBy: ordering?.close.date ?? null,
+  };
 }
+
+/** A final week whose per-stock rows don't reconcile (#call-mx-withheld, B): who held what,
+ * without figures — each side's week stocks in DRAFT order (pick, then later buys in the
+ * order bought), one flat list, the halves carrying no numbers. */
+export function buildWithheldView(input: {
+  me: { userId: string; symbols: readonly string[] };
+  opp: { userId: string; symbols: readonly string[] };
+  activity: readonly LedgerActivityRow[] | null;
+  names: Readonly<Record<string, string>>;
+}): RosterViewGroup {
+  const side = (s: { userId: string; symbols: readonly string[] }) => {
+    const seqs = seqOf(s.userId, input.activity);
+    const uniq = [...new Set(s.symbols.map((x) => x.toUpperCase()))];
+    return uniq
+      .map((sym, i) => ({ sym, seq: seqs.get(sym) ?? 1e15 + i }))
+      .sort((a, b) => a.seq - b.seq || (a.sym < b.sym ? -1 : 1))
+      .map(({ sym }) => ({ symbol: sym, company: input.names[sym] ?? '', weekGain: 0, weekPct: 0 }));
+  };
+  const mine = side(input.me);
+  const theirs = side(input.opp);
+  const n = Math.max(mine.length, theirs.length);
+  return { label: null, rows: Array.from({ length: n }, (_, i) => ({ left: mine[i] ?? null, right: theirs[i] ?? null })) };
+}
+
+/** Giorgio's approved copy (#call-mx-order, B): the small line over the rows naming the close
+ * the order uses — "Ordered by Wednesday's close". */
+export function orderLabel(closeDateIso: string): string {
+  const [y, m, d] = closeDateIso.split('-').map(Number);
+  const day = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `Ordered by ${day}'s close`;
+}
+
+/** Giorgio's approved copy (#call-mx-withheld, B). */
+export const WITHHELD_LINE = "Stock-by-stock results aren't available for this week.";
+
+/** Giorgio's approved copy (#call-mx-bye, B): the opponent's half in a bye week. */
+export const BYE_HALF = 'Bye week';
 

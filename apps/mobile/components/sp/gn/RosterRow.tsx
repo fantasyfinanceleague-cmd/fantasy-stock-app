@@ -32,6 +32,9 @@ export interface RosterHalf {
   /** Week change in percent (2.5 = +2.50%). */
   weekPct: number;
   onPress?: () => void;
+  /** false = who held what, without figures (a final week whose per-stock results can't be
+   * reconciled — Giorgio, #call-mx-withheld, B). */
+  figures?: boolean;
 }
 
 export interface RosterRowProps {
@@ -42,7 +45,12 @@ export interface RosterRowProps {
   opponentName: string;
   /** The screen gutter your shaded half bleeds past (20 on a phone screen). */
   gutter?: number;
+  /** One column, your stocks only, full width (a bye week — #call-mx-bye, B). */
+  single?: boolean;
 }
+
+/** Giorgio's approved copy (#call-mx-empty, B): an open slot reads "Empty". */
+export const EMPTY_SLOT = 'Empty';
 
 /** A half is half a phone wide: the stock's name caps at 1.6× (the app's row ceiling). */
 const ROW_TEXT_MAX_SCALE = 1.6;
@@ -52,7 +60,14 @@ const PCT_MAX_SCALE = 1.3;
 /** The empty centre column (the 4pt scale). */
 const CENTRE_GAP = space[4];
 
-export function RosterRow({ left, right, opponentName, gutter = space[6] }: RosterRowProps) {
+export function RosterRow({ left, right, opponentName, gutter = space[6], single = false }: RosterRowProps) {
+  if (single) {
+    return (
+      <View style={styles.row}>
+        <Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" single />
+      </View>
+    );
+  }
   return (
     <View style={styles.row}>
       <Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" />
@@ -63,11 +78,12 @@ export function RosterRow({ left, right, opponentName, gutter = space[6] }: Rost
 }
 
 /** VoiceOver's label for a half: whose it is first, then the stock and its week. */
-export function rosterHalfLabel(whose: string, half: Pick<RosterHalf, 'ticker' | 'company' | 'weekGain' | 'weekPct'>): string {
+export function rosterHalfLabel(whose: string, half: Pick<RosterHalf, 'ticker' | 'company' | 'weekGain' | 'weekPct' | 'figures'>): string {
+  if (half.figures === false) return `${whose}, ${half.ticker}, ${half.company}`;
   return `${whose}, ${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
 }
 
-function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number; whose: string }) {
+function Half({ half, mirror, shaded, gutter, whose, single = false }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number; whose: string; single?: boolean }) {
   const { colors } = useTheme();
   // At the large text sizes a half stacks: the stock over its week (side by side, a long
   // number left the ticker no room).
@@ -78,8 +94,22 @@ function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null
     mirror ? { marginRight: -gutter, paddingRight: gutter, paddingLeft: space[4] } : { marginLeft: -gutter, paddingLeft: gutter, paddingRight: space[4] },
     mirror ? styles.innerCornersRight : styles.innerCornersLeft,
     shaded ? { backgroundColor: colors.youTint } : null,
+    single ? styles.halfSingle : null,
   ];
-  if (!half) return <View style={slab} />;
+  if (!half) {
+    // An open slot: a dashed edge and "Empty", on either side (#call-mx-empty, B). Your side
+    // keeps its tint; the edge is the line colour that reads on both fills.
+    return (
+      <View
+        testID={shaded ? 'roster-empty-yours' : 'roster-empty-theirs'}
+        style={[slab, styles.emptyHalf, { borderColor: colors.borderStrong }, mirror ? styles.alignEndRow : null]}
+        accessible
+        accessibilityLabel={`${whose}, ${EMPTY_SLOT}`}
+      >
+        <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.emptyText}>{EMPTY_SLOT}</Text>
+      </View>
+    );
+  }
 
   const tone = toneOf(half.weekGain);
   const toneColor = colors[tone];
@@ -100,7 +130,9 @@ function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null
     </View>
   );
   const a11y = rosterHalfLabel(whose, half);
-  const content = stacked ? [name, num] : mirror ? [num, name] : [name, num];
+  // Without figures (a withheld final) the half is the stock alone.
+  const figures = half.figures !== false;
+  const content = !figures ? [name, null] : stacked ? [name, num] : mirror ? [num, name] : [name, num];
   const layout = stacked ? styles.contentStacked : styles.content;
 
   if (!half.onPress) {
@@ -141,6 +173,21 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'stretch',
+  },
+  // A single column (a bye week) runs to the RIGHT screen edge too: the row is the slab.
+  halfSingle: {
+    marginRight: 0,
+  },
+  emptyHalf: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+  },
+  alignEndRow: {
+    alignItems: 'flex-end',
+  },
+  emptyText: {
+    fontWeight: '600',
   },
   half: {
     flex: 1,

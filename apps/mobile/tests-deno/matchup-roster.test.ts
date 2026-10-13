@@ -94,6 +94,12 @@ Deno.test('the order never reads a quote (source guard: no quote reaches the ord
  * `barsAt` (default: now). */
 function view(now: Date, quote: (s: string) => number | null, variant: 'unslotted' | 'category' | 'tiers' = 'unslotted',
   opts: { barsAt?: Date; bars?: typeof bars; myTrades?: import('../lib/home/liveWeekScore.ts').LiveTrade[] } = {}) {
+  return viewFull(now, quote, variant, opts).groups;
+}
+
+/** The whole view: the groups and the close the order uses (`orderedBy`). */
+function viewFull(now: Date, quote: (s: string) => number | null, variant: 'unslotted' | 'category' | 'tiers' = 'unslotted',
+  opts: { barsAt?: Date; bars?: typeof bars; myTrades?: import('../lib/home/liveWeekScore.ts').LiveTrade[]; bye?: boolean } = {}) {
   const side = (userId: string, rows: typeof ROBERTO_HOLDINGS, trades: import('../lib/home/liveWeekScore.ts').LiveTrade[] = []) => {
     const live = liveWeekScore(snaps(rows), trades, quote);
     return { userId, lineup: lineupRows(live.bySymbol, live.gain), snapshots: snaps(rows), trades };
@@ -102,7 +108,7 @@ function view(now: Date, quote: (s: string) => number | null, variant: 'unslotte
   const slots = fixtureSlots(variant, 'me', 'gia');
   return buildRosterView({
     me: side('me', ROBERTO_HOLDINGS, opts.myTrades),
-    opp: side('gia', GIANLUIGI_HOLDINGS),
+    opp: opts.bye ? null : side('gia', GIANLUIGI_HOLDINGS),
     activity: ledger.activity,
     names: ledger.symbol_names,
     slots: slots?.slots ?? [],
@@ -207,14 +213,15 @@ Deno.test('Monday before the first close: the draft order (by pick), every gain 
 
 Deno.test('a category league groups by slot in slot order, best first within each group', () => {
   const g = view(new Date('2026-09-24T17:37:00Z'), thuQuote, 'category');
-  assertEquals(g.map((x) => x.label), ['Tech ×3', 'Finance', 'Retail ×2', 'Flex ×3']);
-  const tech = g[0];
-  assertEquals(tech.rows.map((r) => r.left?.symbol), ['NVDA', 'CRM', 'AAPL'].sort((a, b) => {
+  assertEquals(g.map((x) => x.label), ['Tech', 'Retail ×2', 'Finance', 'Flex ×3']);
+  assertEquals(g[0].rows.map((r) => [r.left?.symbol ?? null, r.right?.symbol ?? null]), [['NVDA', null]], 'Gianluigi\'s Tech slot is open');
+  assertEquals(g[1].rows.map((r) => r.left?.symbol ?? null)[1], null, 'Roberto\'s second Retail slot is open');
+  assertEquals(g[1].rows.map((r) => r.right?.symbol).filter(Boolean).length, 2); // AMZN, NKE
+  const flex = g[3];
+  assertEquals(flex.rows.map((r) => r.left?.symbol), ['AAPL', 'CRM', 'TSLA'].sort((a, b) => {
     const h = (s: string) => ROBERTO_HOLDINGS.find((x) => x.symbol === s)!;
     return fixtureQty(h(b)) * (h(b).prev - h(b).mon) - fixtureQty(h(a)) * (h(a).prev - h(a).mon);
   }));
-  assert(tech.rows.every((r) => r.right === null), 'Gianluigi has no Tech: his halves stay empty');
-  assertEquals(g[2].rows.map((r) => r.right?.symbol).filter(Boolean).length, 2); // AMZN, NKE
 });
 
 Deno.test('a price-tier league groups the same way, under its bands', () => {
@@ -284,7 +291,7 @@ Deno.test('seqOf: picks by number, later buys after every pick in the order boug
   const ledger = fixtureLedger('bought', 'me', 'gia');
   const seq = seqOf('me', ledger.activity);
   assertEquals(seq.get('NVDA'), 2);
-  assert(seq.get('COST')! > seq.get('V')!, 'COST was bought: after the last pick');
+  assert(seq.get('MSFT')! > seq.get('V')!, 'MSFT was bought: after the last pick');
 });
 
 // ── Source guards ─────────────────────────────────────────────────────────────────
@@ -295,9 +302,9 @@ Deno.test('Matchup: the order reads the last CLOSE (never the live gain), and th
   assert(src.includes('barsAt: orderBarsAt(raw.now, orderAsOf, SEAM_ON),'), 'the fetch time, held to the last focus or refresh');
   assert(src.includes('useFocusEffect(useCallback(() => {\n    setOrderAsOf(new Date());'), 'a new order applies on arrival');
   assert(src.includes('setOrderAsOf(new Date());\n    await refresh();'), '…and on pull to refresh');
-  assert(src.includes('if (!groups) return <RosterRowsSkeleton />;'), 'no list that re-sorts once the ledger lands');
+  assert(src.includes('if (!view) return <RosterRowsSkeleton />;'), 'no list that re-sorts once the ledger lands');
   const view = SOURCES['lib/game/matchupRosterView.ts'];
-  assert(view.includes('const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });'));
+  assert(view.includes('const ordering = orderingClose({ closes, sides: opp ? [me, opp] : [me], bars, barsAt });'));
   assert(view.includes('closeGain: gains ? gains[sym] ?? null : null,'));
   assert(!/closeGain:[^\n]*cents/.test(view), 'the order never reads the live cents');
 });
