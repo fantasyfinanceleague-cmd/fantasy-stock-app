@@ -46,6 +46,8 @@ export interface RosterRowProps {
 
 /** A half is half a phone wide: the stock's name caps at 1.6× (the app's row ceiling). */
 const ROW_TEXT_MAX_SCALE = 1.6;
+/** The week percent's ceiling: the gain's own (score.md caps at 1.3×). */
+const PCT_MAX_SCALE = 1.3;
 
 /** The empty centre column (the 4pt scale). */
 const CENTRE_GAP = space[4];
@@ -88,10 +90,13 @@ function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null
     </View>
   );
   const num = (
-    <View style={[styles.num, stacked ? (mirror ? styles.alignEnd : null) : mirror ? null : styles.alignEnd]}>
+    // Stacked (large text): both numbers on the half's OUTER edge, the full width theirs.
+    // Side by side: the week keeps its size and the company truncates first.
+    <View style={stacked ? [styles.numStacked, mirror ? styles.alignEnd : styles.alignStart] : [styles.num, mirror ? null : styles.alignEnd]}>
       {/* A seven-figure week shrinks to fit its half, never under 11pt (17 × 0.7). */}
       <Text variant="score.md" color={toneColor} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={stacked && mirror ? styles.textEnd : null}>{formatMoney(half.weekGain, { sign: 'always' })}</Text>
-      <Text variant="caption" color={toneColor} style={styles.pct} numberOfLines={1} maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
+      {/* The percent caps at 1.3× — the gain (score.md, 1.3×) is never the smaller of the two. */}
+      <Text variant="caption" color={toneColor} style={styles.pct} numberOfLines={1} maxFontSizeMultiplier={PCT_MAX_SCALE}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
     </View>
   );
   const a11y = rosterHalfLabel(whose, half);
@@ -156,6 +161,12 @@ const styles = StyleSheet.create({
   num: {
     flexShrink: 0,
     maxWidth: '64%',
+  },
+  numStacked: {
+    alignSelf: 'stretch',
+  },
+  alignStart: {
+    alignItems: 'flex-start',
   },
   innerCornersLeft: {
     borderTopRightRadius: radius.row,

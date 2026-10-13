@@ -60,11 +60,16 @@ export function buildLine(points: LinePointIn[], domain: readonly [number, numbe
   const innerH = Math.max(0, box.height - box.padTop - box.padBottom);
   const [d0, d1] = domain;
   const span = d1 - d0;
-  const toX = (t: number) => box.padLeft + (span > 0 ? ((Math.min(Math.max(t, d0), d1) - d0) / span) * innerW : 0);
+  // A zero-length axis (a dated range whose start IS now — a stock bought today) puts its one
+  // point at now, the RIGHT end (Design Lead, W4 gate).
+  const toX = (t: number) => box.padLeft + (span > 0 ? ((Math.min(Math.max(t, d0), d1) - d0) / span) * innerW : innerW);
 
   const values = points.map((p) => p.value);
-  const min = Math.min(base, ...values);
-  const max = Math.max(base, ...values);
+  // One point: the scale is centred on the dashed base, so the dot sits above or below it by
+  // its own move (the base line never hugs an edge).
+  const half = points.length === 1 ? Math.abs(values[0] - base) : 0;
+  const min = points.length === 1 ? base - half : Math.min(base, ...values);
+  const max = points.length === 1 ? base + half : Math.max(base, ...values);
   const range = max - min;
   // A flat window (every value = base) draws on the vertical middle, not the floor.
   const toY = (v: number) => box.padTop + (range > 0 ? (1 - (v - min) / range) * innerH : innerH / 2);

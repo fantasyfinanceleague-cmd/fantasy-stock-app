@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { matchupSegmentFromParam } from '@/lib/game/draftComplete';
 import { View, StyleSheet } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
@@ -12,6 +12,10 @@ import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { GroupHead, PlayerCard, RosterRow, Scoreboard, type PlayerCardOwnership } from '@/components/sp/gn';
+import { LINE_MAX_SCALE } from '@/components/sp/gn/Scoreboard';
+import { Card } from '@/components/sp/Card';
+import { Avatar } from '@/components/sp/Avatar';
+import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 import { useRevealOnce, type RevealState } from '@/lib/game/useRevealOnce';
 import { useAllMatchups } from '@/lib/game/useAllMatchups';
 import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLineups';
@@ -32,7 +36,7 @@ import type { LineupRow } from '@/lib/game/lineupLedger';
 import type { HomeRawInputs } from '@/lib/home/useHomeLeague';
 import { toLiveSnapshots, toLiveTrades } from '@/lib/home/buildHomeViewModel';
 import { resolveWeekWindow } from '@/lib/time/marketWeek';
-import { cardSlotPill, closesBefore, lastWeekClose, weekSessions } from '@/lib/game/matchupRoster';
+import { cardSlotPill, closesBefore, lastWeekClose, orderBarsAt, weekSessions } from '@/lib/game/matchupRoster';
 import { buildRosterView, type RosterSideInput } from '@/lib/game/matchupRosterView';
 import { useRosterData, type RosterData } from '@/lib/game/useRosterData';
 import { openingOf, playerCardData } from '@/lib/game/playerCardModel';
@@ -78,11 +82,22 @@ export default function MatchupScreen() {
     : null;
   const finalLines = useFinalLineups(activeLeagueId, fv?.week ?? null, finalSides, finalSides !== null);
   const roster = useRosterData(activeLeagueId, user?.id ?? null, fv?.live.opp?.userId ?? null);
+  // The order may change only when you arrive or pull to refresh, never under a poll while
+  // you're looking (Design Lead, 2026-10-12, on Giorgio's "AFTER TRADING ENDS"): a newly
+  // settled close is admitted only if it settled before this moment (orderAsOf).
+  const [orderAsOf, setOrderAsOf] = useState(() => new Date());
+  useFocusEffect(useCallback(() => {
+    setOrderAsOf(new Date());
+  }, []));
+  const onRefresh = useCallback(async () => {
+    setOrderAsOf(new Date());
+    await refresh();
+  }, [refresh]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Matchup" showAvatar />
-      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[5] }}>
+      <BarsRefresh onRefresh={onRefresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[5] }}>
         {m.derived ? (
           <SegmentedControl
             options={[{ label: 'My matchup', value: 'mine' }, { label: 'All matchups', value: 'all' }]}
@@ -95,7 +110,7 @@ export default function MatchupScreen() {
         ) : (
           // S-4: keyed by league, so a league switch mounts a fresh scoreboard and roster
           // instead of rolling league A's into league B's (Home's H5, HomeLeagueTransition).
-          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} raw={m.raw} reveal={reveal} finalLines={finalLines} roster={roster} />
+          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} raw={m.raw} reveal={reveal} finalLines={finalLines} roster={roster} orderAsOf={orderAsOf} />
         )}
       </BarsRefresh>
     </View>
@@ -110,7 +125,11 @@ function AllMatchupsList({ state, myUserId }: { state: { status: string; rows: A
   }
   return (
     <View style={styles.stack}>
-      {state.rows.map((r, i) => (
+      {state.rows.map((r, i) => (!r.b ? (
+        // A bye has no opponent and no result: the team and the app's bye line, never a
+        // nameless opponent or a "leads by" (b: null — allMatchups' bye row).
+        <ByeGame key={`${r.a.userId}-${i}`} name={r.a.name} mine={r.a.userId === myUserId} />
+      ) : (
         // Your game shades your half (you're side a, allMatchups puts you first); every
         // other game is two plain halves — there's no "you" to shade.
         <Scoreboard
@@ -119,10 +138,22 @@ function AllMatchupsList({ state, myUserId }: { state: { status: string; rows: A
           mine={r.a.userId === myUserId}
           final={r.final}
           you={{ name: r.a.name, gain: r.a.gain }}
-          opponent={{ name: r.b?.name ?? '', gain: r.b?.gain ?? 0 }}
+          opponent={{ name: r.b.name, gain: r.b.gain }}
         />
-      ))}
+      )))}
     </View>
+  );
+}
+
+/** All matchups' bye: the team (yours shaded, as on its Scoreboard) and COPY.byeNoResult. */
+function ByeGame({ name, mine }: { name: string; mine: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <Card style={[styles.bye, mine ? { backgroundColor: colors.youTint } : null]} accessible accessibilityLabel={`${name}, ${COPY.byeNoResult}`}>
+      <Avatar name={name} size={32} tone={mine ? 'you' : 'opp'} ring={mine} />
+      <Text variant="callout" numberOfLines={1} style={[styles.byeName, mine ? styles.byeNameMine : null]}>{name}</Text>
+      <Text variant="caption" tone="secondary" numberOfLines={1}>{COPY.byeNoResult}</Text>
+    </Card>
   );
 }
 
@@ -136,9 +167,10 @@ interface BodyProps {
   reveal: RevealState;
   finalLines: FinalLineupsState;
   roster: RosterData;
+  orderAsOf: Date;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLines, roster }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLines, roster, orderAsOf }: BodyProps) {
   const { user } = useAuth();
   if (status === 'error') {
     return (
@@ -208,7 +240,8 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
         />
       ) : null}
       <Scoreboard you={{ name: youName, gain: mine }} opponent={{ name: live.opp?.name ?? '', gain: theirs }} final={isFinal} />
-      {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
+      {/* Capped like the leads-by line: the totals stay loudest at XL. */}
+      {note ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE}>{note}</Text> : null}
       {live.opp && raw ? (
         isFinal ? (
           finalLines.status === 'error' ? (
@@ -216,10 +249,10 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
           ) : finalLines.status !== 'ready' ? (
             <RosterRowsSkeleton />
           ) : finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows ? (
-            <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final seamResumesAt={null} />
+            <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final seamResumesAt={null} orderAsOf={orderAsOf} />
           ) : null
         ) : (
-          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} />
+          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} orderAsOf={orderAsOf} />
         )
       ) : null}
     </View>
@@ -227,8 +260,10 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
 }
 
 /** The roster and the player card it opens. */
-function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt }: {
+function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt, orderAsOf }: {
   derived: MatchupDerived;
+  /** The last focus or pull-to-refresh: no close that settled after it may reorder. */
+  orderAsOf: Date;
   /** Capture seam only: the Home fixture's next open (the shell fixture has no market row). */
   seamResumesAt: string | null;
   raw: HomeRawInputs;
@@ -282,13 +317,11 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt 
       slotOf: roster.slots.bySide,
       closes,
       bars: raw.bars,
-      // raw.now is stamped when the fetch (bars included) returns.
-      barsAt: raw.now,
-      rowPrice,
+      // raw.now is stamped when the fetch (bars included) returns; the order never runs ahead
+      // of the last focus or pull-to-refresh, so a poll can't reorder under your eyes.
+      barsAt: orderBarsAt(raw.now, orderAsOf, SEAM_ON),
     });
-    // rowPrice reads raw + close, both listed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, roster.ledger, roster.slots, sides, closes, raw, final]);
+  }, [ready, roster.ledger, roster.slots, sides, closes, raw, orderAsOf]);
 
   // The card's data for the stock it's showing (null: no opening event in the ledger).
   const card = useMemo(() => {
@@ -401,4 +434,7 @@ const styles = StyleSheet.create({
   // The board: rows 6pt apart (8 on the 4pt scale), separated by space, never a line.
   roster: { gap: space[3] },
   center: { textAlign: 'center' },
+  bye: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[5], paddingVertical: space[4] },
+  byeName: { flex: 1, minWidth: 0, fontWeight: '600' },
+  byeNameMine: { fontWeight: YOUR_NAME_WEIGHT },
 });

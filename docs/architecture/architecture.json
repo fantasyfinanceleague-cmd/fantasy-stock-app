@@ -2,15 +2,19 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "280dda7d1f45a7f68a5ae5d7cc8d857fde7f13c9",
-    "commitShort": "280dda7d",
+    "commit": "14ec6e0a14fc57bbae0c33572601e111e0a95d2e",
+    "commitShort": "14ec6e0a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/gn-w4-matchup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/PlayerCard.tsx"
+        "path": "apps/mobile/app/_layout.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/(tabs)/matchup.tsx"
       },
       {
         "code": "M",
@@ -22,23 +26,67 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/matchupFixture.ts"
+        "path": "apps/mobile/components/sp/logic/gameNight.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/largeText.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/lineChart.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/Text.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/matchupRoster.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/matchupRosterView.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/playerCardModel.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamCalls.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamTables.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/lib/home/useHomeLeague.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-night-primitives.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/matchup-roster.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/player-card-model.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T04:47:26Z",
-    "sourceHash": "sha256:9a51b1d4cfb208b8e0c379d1d3b3e91b4750523b46b49ebddd4f56535ec2488d",
+    "timestamp": "2026-10-13T05:26:24Z",
+    "sourceHash": "sha256:5e71592d77ba773491b00f2459544a2eeb25c1ba49a7404b8f8bc1fb2d1b8adc",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 25,
-    "ageDays": 1,
+    "ageHours": 25.6,
+    "ageDays": 1.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -16126,7 +16174,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:75"
+        "apps/mobile/lib/game/seamCalls.ts:79"
       ]
     },
     {
@@ -16139,7 +16187,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:69"
+        "apps/mobile/lib/game/seamCalls.ts:73"
       ]
     },
     {
@@ -16658,7 +16706,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:623"
+        "apps/mobile/lib/home/useHomeLeague.ts:626"
       ]
     },
     {
@@ -16670,7 +16718,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:606"
+        "apps/mobile/lib/home/useHomeLeague.ts:609"
       ]
     },
     {
@@ -16682,7 +16730,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:579"
+        "apps/mobile/lib/home/useHomeLeague.ts:582"
       ]
     },
     {
@@ -16953,7 +17001,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:80"
+        "apps/mobile/app/(tabs)/matchup.tsx:84"
       ],
       "via": [
         "useRosterData"
@@ -16971,7 +17019,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:80"
+        "apps/mobile/app/(tabs)/matchup.tsx:84"
       ],
       "via": [
         "useRosterData"
@@ -16989,7 +17037,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:80"
+        "apps/mobile/app/(tabs)/matchup.tsx:84"
       ],
       "via": [
         "useRosterData"
@@ -17007,7 +17055,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:80"
+        "apps/mobile/app/(tabs)/matchup.tsx:84"
       ],
       "via": [
         "useRosterData"
@@ -17025,7 +17073,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:80"
+        "apps/mobile/app/(tabs)/matchup.tsx:84"
       ],
       "via": [
         "useRosterData"
@@ -18680,7 +18728,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:606",
+            "apps/mobile/lib/home/useHomeLeague.ts:609",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -18743,7 +18791,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:623",
+            "apps/mobile/lib/home/useHomeLeague.ts:626",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19541,7 +19589,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 64,
+        "line": 68,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -19549,7 +19597,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 72,
+        "line": 76,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -19573,7 +19621,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 78,
+        "line": 82,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -19743,8 +19791,8 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:606 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:623 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:609 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:626 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
@@ -19773,7 +19821,7 @@
     ],
     "rpcs": [
       "apps/mobile/app/(tabs)/league.tsx:127 -> renew_league (via seamRpc)",
-      "apps/mobile/app/(tabs)/matchup.tsx:80 -> get_portfolio_ledger (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:84 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:39 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
@@ -19795,7 +19843,7 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:579 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:582 -> get_home_league",
       "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
@@ -19850,10 +19898,10 @@
       "supabase/functions/validate-and-record-pick/index.ts:125 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/matchup.tsx:80 -> categories.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:80 -> drafts.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:80 -> league_draft_slots.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:80 -> trades.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:84 -> categories.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:84 -> drafts.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:84 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:84 -> trades.select (via useRosterData)",
       "apps/mobile/app/create-league.tsx:188 -> leagues.insert (via seamInsertLeague)",
       "apps/mobile/app/create-league.tsx:212 -> league_members.insert (via seamInsertMember)",
       "apps/mobile/app/create-league.tsx:222 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
@@ -19884,8 +19932,8 @@
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
       "apps/mobile/lib/game/seamCalls.ts:47 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:69 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:75 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:73 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:79 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",

@@ -18,3 +18,13 @@ export function scaledBadge(base: number, fontScale: number, cap = 1.6): number 
   const s = Number.isFinite(fontScale) && fontScale > 1 ? Math.min(fontScale, cap) : 1;
   return Math.round(base * s);
 }
+
+/** The lineHeight to hand React Native so a CAPPED text's line box matches its glyphs. iOS
+ * scales `lineHeight` by the full Dynamic Type factor even when `maxFontSizeMultiplier` caps
+ * the font (found at the W4 gate: at XL the 13pt "Yours" pill rendered a ~42pt line box around
+ * ~21pt text). Pre-dividing gives `lineHeight × min(fontScale, cap)` on screen. Uncapped text,
+ * or text under its cap, keeps its lineHeight. */
+export function cappedLineHeight(lineHeight: number, fontScale: number, cap: number | undefined): number {
+  if (!cap || !(fontScale > cap)) return lineHeight;
+  return (lineHeight * cap) / fontScale;
+}

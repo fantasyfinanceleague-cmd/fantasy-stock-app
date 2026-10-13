@@ -166,7 +166,10 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const giaGain6 = cents(giaRows.reduce((s, h) => s + fixtureQty(h) * (h.fri - h.mon), 0));
   const week6Gains = !isScored
     ? { team1_gain: null, team2_gain: null }
-    : outcome === 'lost' ? { team1_gain: giaGain6, team2_gain: robGain6 }
+    // W4 (DL gate): a LOST week whose per-stock rows still add up — Roberto's week mirrored
+    // (each Friday close = 2 × Monday open − Friday close, the seam's lostClose), so his
+    // total is −robGain6 and Gianluigi (−$38.88) wins; never the two totals swapped.
+    : outcome === 'lost' ? { team1_gain: cents(-robGain6), team2_gain: giaGain6 }
     : outcome === 'tied' ? { team1_gain: robGain6, team2_gain: robGain6 }
     : { team1_gain: robGain6, team2_gain: giaGain6 };
   // Your and Gianluigi's records count week 6 once it is scored (their real game).

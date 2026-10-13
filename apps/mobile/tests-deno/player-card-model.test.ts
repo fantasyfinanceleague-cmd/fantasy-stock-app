@@ -166,7 +166,7 @@ const week = standardWeekSessions('2026-09-25T20:00:00Z');
 const weekBars = [{ date: '2026-09-21', close: 301 }, { date: '2026-09-22', close: 303 }, { date: '2026-09-23', close: 306.68 }, { date: '2026-09-24', close: 318 }];
 
 Deno.test('weekLine: Mon open at 0, each closed day at its end, now mid-Thursday; the days to come empty', () => {
-  const w = weekLine({ sessions: week, open: 300.2, bars: weekBars, price: 318.37, now: new Date('2026-09-24T17:37:00Z') });
+  const w = weekLine({ sessions: week, start: { t: 0, value: 300.2 }, bars: weekBars, price: 318.37, now: new Date('2026-09-24T17:37:00Z') });
   assertEquals(w.points.slice(0, 4), [{ t: 0, value: 300.2 }, { t: 1, value: 301 }, { t: 2, value: 303 }, { t: 3, value: 306.68 }]);
   const last = w.points[w.points.length - 1];
   assertEquals(last.value, 318.37);
@@ -175,13 +175,13 @@ Deno.test('weekLine: Mon open at 0, each closed day at its end, now mid-Thursday
 });
 
 Deno.test('weekLine: Monday before the open is the one point at the open (the 0/1-point state)', () => {
-  const w = weekLine({ sessions: week, open: 300.2, bars: [], price: 300.2, now: new Date('2026-09-21T12:00:00Z') });
+  const w = weekLine({ sessions: week, start: { t: 0, value: 300.2 }, bars: [], price: 300.2, now: new Date('2026-09-21T12:00:00Z') });
   assertEquals(w.points, [{ t: 0, value: 300.2 }]);
 });
 
 Deno.test('weekLine: a holiday leaves its own day\'s slot empty (slots by weekday, not by session count)', () => {
   const noTue = week.filter((s) => s.sessionDate !== '2026-09-22');
-  const w = weekLine({ sessions: noTue, open: 300, bars: weekBars, price: 310, now: new Date('2026-09-25T00:00:00Z') });
+  const w = weekLine({ sessions: noTue, start: { t: 0, value: 300 }, bars: weekBars, price: 310, now: new Date('2026-09-25T00:00:00Z') });
   assertEquals(w.points.map((p) => p.t), [0, 1, 3, 4]);
 });
 
@@ -262,8 +262,13 @@ Deno.test('XL: the card stacks its three figures and caps its small text; the sc
   assert(card.includes('const CARD_TEXT_MAX_SCALE = 1.6;'));
   const sb = strip(SOURCES['components/sp/gn/Scoreboard.tsx']);
   assert(sb.includes('maxFontSizeMultiplier={NAME_MAX_SCALE}'));
-  assert(sb.includes('stacked ? (mirror ? styles.whoStackedMirror : styles.whoStacked)'), 'the avatar sits over the name at large text');
+  assert(sb.includes('stacked ? (mirror ? styles.whoStackedMirror : styles.whoStacked)'), 'the avatar sits over the name when it won\'t fit beside it');
+  assert(sb.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE}'), 'one line, never "Gianluigi" / "B."');
+  assert(sb.includes('maxFontSizeMultiplier={LINE_MAX_SCALE}') && sb.includes('export const LINE_MAX_SCALE = 1.3;'), 'the leads-by line stays under the totals');
   const row = strip(SOURCES['components/sp/gn/RosterRow.tsx']);
-  assert((row.match(/maxFontSizeMultiplier=\{ROW_TEXT_MAX_SCALE\}/g) ?? []).length >= 3, 'ticker, company and percent capped');
+  assert((row.match(/maxFontSizeMultiplier=\{ROW_TEXT_MAX_SCALE\}/g) ?? []).length >= 2, 'ticker and company capped');
+  assert(row.includes('maxFontSizeMultiplier={PCT_MAX_SCALE}') && row.includes('const PCT_MAX_SCALE = 1.3;'), 'the percent never outgrows the gain');
+  assert(row.includes('stacked ? [styles.numStacked, mirror ? styles.alignEnd : styles.alignStart]'), 'stacked numbers on the outer edge, no 64% cap');
+  assert(SOURCES['app/(tabs)/matchup.tsx'].includes('maxFontSizeMultiplier={LINE_MAX_SCALE}>{note}'), 'the unpriced note capped too');
   assert(row.includes('minimumFontScale={0.7}') && 17 * 0.7 >= 11, 'a seven-figure week shrinks, never under 11pt');
 });

@@ -150,12 +150,23 @@ export function lastWeekClose(now: Date, week: readonly MarketCalendarSession[])
   return closesBefore(now, week)[0] ?? null;
 }
 
+/** Extended hours run 4 hours past the regular close (4:00 → 8:00 PM ET; 1:00 → 5:00 PM on an
+ * early close). Giorgio, 2026-10-12: a close counts for the order "AFTER TRADING ENDS". */
+export const EXTENDED_HOURS_MS = 4 * 60 * 60 * 1000;
+
+/** When a session's close may order the roster: once that day's extended hours are over,
+ * measured from the session's OWN close (so a 1:00 PM early close settles at 5:00 PM). */
+export function settlesAt(close: { at: Date }): Date {
+  return new Date(close.at.getTime() + EXTENDED_HOURS_MS);
+}
+
 /** One stock's price AT a close: that day's daily bar, and only from bars fetched after the
- * close. Never a quote (the quote is the latest IEX trade, which prints after 4:00 PM), and
- * never a bar fetched before the close (Alpaca's 1Day bars, requested with no `end`, include
- * today's IN-PROGRESS bar, whose "close" is a mid-session price). */
+ * close has SETTLED (`settlesAt`). Never a quote (the quote is the latest IEX trade, which
+ * prints after 4:00 PM), and never a bar fetched before the close settled (Alpaca's 1Day
+ * bars, requested with no `end`, include today's IN-PROGRESS bar, and IEX's extended-hours
+ * trades can still move it until 8:00 PM). */
 export function barCloseAt(bars: BarsBySymbol, barsAt: Date, close: { date: string; at: Date }): (symbol: string) => number | null {
-  const settled = barsAt.getTime() >= close.at.getTime();
+  const settled = barsAt.getTime() >= settlesAt(close).getTime();
   return (symbol: string) => {
     if (!settled) return null;
     const bar = (bars[symbol] ?? bars[symbol.toUpperCase()] ?? []).find((b) => b.date === close.date);
@@ -181,10 +192,19 @@ export function gainsAtClose(input: {
   return { bySymbol: r.bySymbol, complete: r.unpriced.length === 0 };
 }
 
+/** The "bars fetched at" the order may use: the fetch's own time, but never later than the
+ * last focus or pull-to-refresh (`orderAsOf`) — a close that settles while you're looking
+ * waits for your next arrival. The capture seam runs on a fixed fixture clock, so there the
+ * fixture's own time stands. */
+export function orderBarsAt(fetchedAt: Date, orderAsOf: Date, seam: boolean): Date {
+  if (seam) return fetchedAt;
+  return fetchedAt.getTime() <= orderAsOf.getTime() ? fetchedAt : orderAsOf;
+}
+
 /** The close that orders the roster, and each side's gains at it: the LATEST closed session
  * at which BOTH sides are completely priced from settled bars. A later close that isn't
- * settled yet (its bar not fetched since the close) leaves the previous close's order in
- * place; no close at all leaves the draft/slot order. Both rosters always read the SAME
+ * settled yet (extended hours not over when the bars were fetched) leaves the previous
+ * close's order in place; no close at all leaves the draft/slot order. Both rosters always read the SAME
  * close — never one side on Thursday's and the other on Wednesday's (CLAUDE.md: a set that
  * can be partially filled is checked per participant, never with "any row"). */
 export function orderingClose(input: {

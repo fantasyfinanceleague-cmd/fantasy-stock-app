@@ -53,7 +53,11 @@ export async function seamTable<T>(
   real: () => PromiseLike<{ data: T[] | null; error: unknown; count?: number | null }>,
 ): Promise<{ data: T[] | null; error: unknown; count?: number | null }> {
   // Week 6 closes in the Home fixtures that score it (EXPO_PUBLIC_HOME_FIXTURE=scored, …).
-  const rows = seamTableRows(SEAM_ON, name, roomVariant, { weekClosed: seamWeekClosed(process.env.EXPO_PUBLIC_HOME_FIXTURE) });
+  const rows = seamTableRows(SEAM_ON, name, roomVariant, {
+    weekClosed: seamWeekClosed(process.env.EXPO_PUBLIC_HOME_FIXTURE),
+    bye: process.env.EXPO_PUBLIC_HOME_FIXTURE === 'bye',
+    lost: process.env.EXPO_PUBLIC_HOME_FIXTURE === 'scored' && process.env.EXPO_PUBLIC_SCORED_OUTCOME === 'lost',
+  });
   if (rows) return { data: rows as T[], error: null, count: rows.length };
   return real();
 }

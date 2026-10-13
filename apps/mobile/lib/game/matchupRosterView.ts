@@ -10,7 +10,7 @@ import type { LiveSnapshot, LiveTrade } from '../home/liveWeekScore';
 import type { BarsBySymbol } from '../home/buildHomeViewModel';
 import type { LedgerActivityRow } from '../money/portfolioLedger';
 import { orderingClose, pairRows, rosterGroups, slotGroupLabel, type RosterEntry, type SlotRow } from './matchupRoster';
-import { stockWeek } from './playerCardModel';
+import { stockBasis, weekPctOf } from './playerCardModel';
 
 export interface RosterSideInput {
   userId: string;
@@ -66,10 +66,8 @@ export function buildRosterView(input: {
   bars: BarsBySymbol;
   /** When `bars` was fetched: a bar counts for a close only if fetched after it. */
   barsAt: Date;
-  /** The price a row's percent is measured at: live, or the week's close when final. */
-  rowPrice: (symbol: string) => number | null;
 }): RosterViewGroup[] {
-  const { me, opp, activity, names, slots, slotOf, closes, bars, barsAt, rowPrice } = input;
+  const { me, opp, activity, names, slots, slotOf, closes, bars, barsAt } = input;
   const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });
 
   const entries = (side: RosterSideInput, gains: Record<string, number> | null): RosterEntry[] => {
@@ -93,7 +91,8 @@ export function buildRosterView(input: {
       symbol: e.symbol,
       company: names[e.symbol] ?? '',
       weekGain: (centsBy.get(e.symbol) ?? 0) / 100,
-      weekPct: stockWeek(e.symbol, side.snapshots, side.trades, rowPrice(e.symbol)).pct,
+      // The row's own gain over the stock's week basis: agrees with the scored number.
+      weekPct: weekPctOf((centsBy.get(e.symbol) ?? 0) / 100, stockBasis(e.symbol, side.snapshots, side.trades)),
     };
   };
   const mineCell = cell(me, cents(me));

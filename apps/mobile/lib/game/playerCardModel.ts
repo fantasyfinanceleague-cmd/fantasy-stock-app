@@ -66,6 +66,23 @@ export function stockWeek(symbol: string, snapshots: readonly LiveSnapshot[], tr
   return { gain: r.bySymbol[sym] ?? 0, pct: r.pct };
 }
 
+/** This stock's week basis: what its lots cost at the week's start (a Monday open, or a mid-
+ * week entry price) — liveWeekScore's startValue over this one stock, independent of any
+ * live or closing price. A row's week percent is its own gain over this, so the percent always
+ * agrees with the number the row scores, live or final. */
+export function stockBasis(symbol: string, snapshots: readonly LiveSnapshot[], trades: readonly LiveTrade[]): number {
+  const sym = symbol.toUpperCase();
+  return liveWeekScore(
+    snapshots.filter((s) => s.symbol.toUpperCase() === sym),
+    trades.filter((t) => t.symbol.toUpperCase() === sym),
+    () => 0, // any non-null price: startValue counts every lot at its own entry
+  ).startValue;
+}
+
+export function weekPctOf(gain: number, basis: number): number {
+  return basis > 0 ? (gain / basis) * 100 : 0;
+}
+
 /** The last close strictly before today (ET): today's percent is measured from it. */
 export function prevCloseOf(bars: readonly { date: string; close: number }[], todayEt: string): number | null {
   const before = bars.filter((b) => b.date < todayEt);
@@ -101,22 +118,44 @@ export function seasonLine(input: {
   return { points, base: opening.price, axis: { kind: 'dated', start, end: todayEt < start ? start : todayEt } };
 }
 
-/** This week's line on the Mon…Fri axis: the week's opening price at t = 0, each closed
- * session's close at its day's end (t = 1…5), and, while a session runs, the live price at
- * the fraction of it elapsed. The days to come stay empty. */
+/** Where an instant falls on the Mon…Fri axis (Mon open = 0, each close = its day's end):
+ * inside a session, the fraction of it elapsed; before a session's open, that day's start;
+ * after its close, that day's end. Null outside the week's sessions. */
+export function weekT(at: Date, sessions: readonly MarketCalendarSession[]): number | null {
+  const t = at.getTime();
+  let after: number | null = null;
+  for (const s of [...sessions].sort((x, y) => (x.sessionDate < y.sessionDate ? -1 : 1))) {
+    const openIso = etWallClockToUtcIso(s.sessionDate, s.openEt);
+    const closeIso = etWallClockToUtcIso(s.sessionDate, s.closeEt);
+    if (!openIso || !closeIso) continue;
+    const [y, m, d] = s.sessionDate.split('-').map(Number);
+    const slot = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+    if (slot > 4) continue;
+    const o = new Date(openIso).getTime();
+    const c = new Date(closeIso).getTime();
+    if (t < o) return after ?? slot; // before this session: the end of the last one (or its start)
+    if (t < c) return slot + (t - o) / (c - o);
+    after = slot + 1;
+  }
+  return after;
+}
+
+/** This week's line on the Mon…Fri axis: the line starts where the position entered the
+ * week — Monday's open for a stock held over the weekend, or the BUY (its time and price) for
+ * one entered mid-week, like the scorer's entered_mid_week lots — then each closed session's
+ * close at its day's end (its bar), and, while a session runs, the live price at the fraction
+ * of it elapsed. The days to come stay empty. */
 export function weekLine(input: {
   /** The week's trading sessions, ascending (matchupRoster.weekSessions). */
   sessions: readonly MarketCalendarSession[];
-  /** The price the week starts from: Monday's open (the snapshot's week-start price), or
-   * the last close before the week for a stock entered mid-week. */
-  open: number;
+  /** Where the line starts: Monday's open at t = 0, or a mid-week buy at its own t. */
+  start: { t: number; value: number };
   bars: readonly { date: string; close: number }[];
   price: number | null;
   now: Date;
 }): { points: LinePointIn[]; base: number } {
-  const { sessions, open, bars, price, now } = input;
-  const points: LinePointIn[] = [{ t: 0, value: open }];
-  const today = etDateOf(now);
+  const { sessions, start, bars, price, now } = input;
+  const points: LinePointIn[] = [{ t: start.t, value: start.value }];
   for (const s of sessions) {
     const openIso = etWallClockToUtcIso(s.sessionDate, s.openEt);
     const closeIso = etWallClockToUtcIso(s.sessionDate, s.closeEt);
@@ -129,15 +168,15 @@ export function weekLine(input: {
     const c = new Date(closeIso).getTime();
     const t = now.getTime();
     if (t >= c) {
+      // A closed day's close: its bar (a missing bar leaves the day out, never a guess).
       const bar = bars.find((b) => b.date === s.sessionDate);
-      // A closed day's close: its bar, or on the close's own evening the quote (which IS it).
-      const v = bar ? bar.close : s.sessionDate === today ? price : null;
-      if (v != null) points.push({ t: slot + 1, value: v });
+      if (bar && slot + 1 > start.t) points.push({ t: slot + 1, value: bar.close });
     } else if (t > o && price != null) {
-      points.push({ t: slot + (t - o) / (c - o), value: price });
+      const tt = slot + (t - o) / (c - o);
+      if (tt > start.t) points.push({ t: tt, value: price });
     }
   }
-  return { points, base: open };
+  return { points, base: start.value };
 }
 
 /** Everything the card shows for one stock, or null when the ledger has no opening event
@@ -181,12 +220,19 @@ export function playerCardData(input: {
   if (!opening) return null;
   const todayEt = etDateOf(now) ?? '';
   const prev = prevCloseOf(bars, todayEt);
-  const week = stockWeek(symbol, snapshots, trades, price);
   const since = sinceFigures(price, opening);
   const sym = symbol.toUpperCase();
   const monday = snapshots.find((s) => s.symbol.toUpperCase() === sym && !s.enteredMidWeek);
   const firstDay = sessions[0]?.sessionDate ?? todayEt;
-  const weekOpen = monday ? monday.weekStartPrice : prevCloseOf(bars, firstDay) ?? opening.price;
+  // Held over the weekend: the line starts at Monday's open. Entered mid-week (no Monday lot):
+  // at the BUY — its time on the axis and its price — as the scorer counts that lot.
+  const buy = [...trades].reverse().find((t) => t.symbol.toUpperCase() === sym && t.action === 'buy');
+  const buyT = buy ? weekT(buy.createdAt, sessions) : null;
+  const weekStart = monday
+    ? { t: 0, value: monday.weekStartPrice }
+    : buy && buyT !== null
+      ? { t: buyT, value: buy.price }
+      : { t: 0, value: prevCloseOf(bars, firstDay) ?? opening.price };
   const season = seasonBars
     ? seasonLine({ opening, bars: seasonBars, todayEt, price })
     : { points: [], base: opening.price, axis: { kind: 'dated' as const, start: opening.dateIso, end: todayEt < opening.dateIso ? opening.dateIso : todayEt } };
@@ -196,12 +242,13 @@ export function playerCardData(input: {
     price,
     todayPct: prev ? ((price - prev) / prev) * 100 : 0,
     weekGain,
-    weekPct: week.pct,
+    // The row's own gain over the stock's week basis: the card says what the row scores.
+    weekPct: weekPctOf(weekGain, stockBasis(symbol, snapshots, trades)),
     sinceGain: since.gain,
     sincePct: since.pct,
     acquisition: opening.acquisition,
     season,
-    week: weekLine({ sessions, open: weekOpen, bars, price, now }),
+    week: weekLine({ sessions, start: weekStart, bars, price, now }),
     held: opening.quantity,
   };
 }

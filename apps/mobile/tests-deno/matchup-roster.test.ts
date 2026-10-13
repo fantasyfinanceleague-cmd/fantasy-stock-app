@@ -7,7 +7,7 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
-  barCloseAt, cardSlotPill, closesBefore, gainsAtClose, isSlotted, lastWeekClose, orderSide, orderingClose, pairRows, recordedSlots,
+  barCloseAt, cardSlotPill, closesBefore, gainsAtClose, isSlotted, lastWeekClose, orderBarsAt, orderSide, orderingClose, pairRows, recordedSlots, settlesAt,
   rosterGroups, slotGroupLabel,
   weekSessions, type RosterEntry, type SlotRow,
 } from '../lib/game/matchupRoster.ts';
@@ -110,7 +110,6 @@ function view(now: Date, quote: (s: string) => number | null, variant: 'unslotte
     closes: closesBefore(now, sessions),
     bars: opts.bars ?? bars,
     barsAt: opts.barsAt ?? now,
-    rowPrice: quote,
   });
 }
 const thuQuote = (s: string) => [...ROBERTO_HOLDINGS, ...GIANLUIGI_HOLDINGS].find((h) => h.symbol === s)?.thu ?? null;
@@ -293,7 +292,9 @@ Deno.test('seqOf: picks by number, later buys after every pick in the order boug
 Deno.test('Matchup: the order reads the last CLOSE (never the live gain), and the roster waits for its order', () => {
   const src = SOURCES['app/(tabs)/matchup.tsx'];
   assert(src.includes('const closes = useMemo(() => closesBefore(now, sessions), [now, sessions]);'));
-  assert(src.includes('barsAt: raw.now,'), 'a bar counts only if the fetch that brought it came after the close');
+  assert(src.includes('barsAt: orderBarsAt(raw.now, orderAsOf, SEAM_ON),'), 'the fetch time, held to the last focus or refresh');
+  assert(src.includes('useFocusEffect(useCallback(() => {\n    setOrderAsOf(new Date());'), 'a new order applies on arrival');
+  assert(src.includes('setOrderAsOf(new Date());\n    await refresh();'), '…and on pull to refresh');
   assert(src.includes('if (!groups) return <RosterRowsSkeleton />;'), 'no list that re-sorts once the ledger lands');
   const view = SOURCES['lib/game/matchupRosterView.ts'];
   assert(view.includes('const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });'));
@@ -315,4 +316,28 @@ Deno.test('Matchup: any stock on either side opens the player card; a half that 
   assert(src.includes("right={half('opp', r.right)}"));
   assert(src.includes('onPress: openable(side, c.symbol) ? () => open(side, c.symbol) : undefined'));
   assert(SOURCES['components/sp/gn/RosterRow.tsx'].includes('if (!half.onPress) {'), 'no onPress → a plain View');
+});
+
+// ── Giorgio, 2026-10-12: a close orders the rows "AFTER TRADING ENDS" ─────────────
+
+Deno.test('settle: a normal close counts only once extended hours end (4:00 PM close → 8:00 PM ET)', () => {
+  const close = THU_CLOSE; // Thu 4:00 PM ET
+  assertEquals(settlesAt(close).toISOString(), '2026-09-25T00:00:00.000Z'); // 8:00 PM EDT
+  assertEquals(barCloseAt(bars, new Date('2026-09-24T23:59:00Z'), close)('NVDA'), null); // 7:59 PM: not yet
+  assertEquals(barCloseAt(bars, new Date('2026-09-25T00:00:00Z'), close)('NVDA'), ROBERTO_HOLDINGS[0].thu);
+});
+
+Deno.test('settle: an EARLY close settles from its own close (1:00 PM → 5:00 PM ET)', () => {
+  const early = closesBefore(new Date('2026-11-28T00:00:00Z'), [{ sessionDate: '2026-11-27', openEt: '09:30:00', closeEt: '13:00:00' }])[0];
+  assertEquals(early.at.toISOString(), '2026-11-27T18:00:00.000Z'); // 1:00 PM EST
+  assertEquals(settlesAt(early).toISOString(), '2026-11-27T22:00:00.000Z'); // 5:00 PM EST
+  const b = { NVDA: [{ date: '2026-11-27', close: 180 }] };
+  assertEquals(barCloseAt(b, new Date('2026-11-27T21:59:00Z'), early)('NVDA'), null);
+  assertEquals(barCloseAt(b, new Date('2026-11-27T22:00:00Z'), early)('NVDA'), 180);
+});
+
+Deno.test('the order never moves under a poll: the fetch time is held to the last focus or refresh', () => {
+  const focus = new Date('2026-09-24T23:00:00Z');
+  assertEquals(orderBarsAt(new Date('2026-09-25T01:00:00Z'), focus, false), focus); // a 9 PM poll after a 7 PM focus
+  assertEquals(orderBarsAt(new Date('2026-09-24T22:00:00Z'), focus, false).toISOString(), '2026-09-24T22:00:00.000Z');
 });

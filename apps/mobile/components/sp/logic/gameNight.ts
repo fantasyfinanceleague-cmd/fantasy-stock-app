@@ -257,3 +257,31 @@ export function cardAction(p: PlayerCardOwnership & { marketOpen: boolean; opens
   // Saved = the same star filled, the label "Saved"; nothing else changes (no accent fill).
   return { label: actionLabel(a), onPress: p.save.onToggle, disabled: false, note: null, star: a.saved ? 'starFilled' : 'star', saved: a.saved };
 }
+
+// ── Scoreboard names (the W4 gate, 2026-10-12) ───────────────────────────────────
+
+/** A name never wraps ("Gianluigi" / "B." is never acceptable): one line, shrinking to this
+ * at most; past it the avatar stacks over the name and the name gets the half's width. */
+export const NAME_MIN_SCALE = 0.75;
+
+/** A conservative width for a bold Archivo name at `fontPt` (Archivo is wide: M/W ≈ 0.95em,
+ * other capitals ≈ 0.75em, lower case ≈ 0.6em, a space ≈ 0.28em, "." ≈ 0.3em). Over-estimating
+ * only stacks sooner. */
+export function estimateNameWidth(name: string, fontPt: number): number {
+  let em = 0;
+  for (const ch of name) {
+    if (ch === ' ') em += 0.28;
+    else if (ch === '.' || ch === ',' || ch === "'") em += 0.3;
+    else if (/[MWmw]/.test(ch)) em += 0.95;
+    else if (/[A-Z]/.test(ch)) em += 0.75;
+    else if (/[il]/.test(ch)) em += 0.3;
+    else em += 0.6;
+  }
+  return em * fontPt;
+}
+
+/** Beside the avatar, or stacked under it: beside while the name fits on one line at no
+ * less than NAME_MIN_SCALE of its size. */
+export function nameBesideAvatar(name: string, availablePt: number, fontPt: number): boolean {
+  return availablePt > 0 && estimateNameWidth(name, fontPt) * NAME_MIN_SCALE <= availablePt;
+}
