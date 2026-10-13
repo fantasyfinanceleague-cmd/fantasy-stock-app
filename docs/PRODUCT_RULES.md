@@ -221,6 +221,22 @@ building anything, and don't reopen a rule without him.
     = cyan; (12) the card's third figure = "Since the draft" ("Since Oct 2" for a later
     buy); (13) the Portfolio chart with range pills: yes; (14) the owner's avatar beside
     "Owned by": add; a weekly game log on the card: later.
+- **Matchup: four states the approved frames never drew** (2026-10-12/13, from the W4 Matchup
+  gate; board `#call-mx-order`, `#call-mx-empty`, `#call-mx-bye`, `#call-mx-withheld`).
+  Giorgio picked **B** on all four, one at a time from the board images, and accepted the three
+  new strings exactly as drawn:
+  - **The row order says what it is:** one small line between the scoreboard and the rows,
+    "Ordered by Wednesday's close", naming the last close whose trading has ended. It becomes
+    "Thursday's close" once that day's trading ends (the re-order timing, his "after trading
+    ends" ruling: PR #252). Rows still never re-order live.
+  - **An empty slot is marked:** a slot with no stock (sold, not yet replaced) keeps its row
+    and its half shows a dashed edge and "Empty"; your half keeps your shade inside it.
+  - **The bye week:** the scoreboard card with your half as usual (avatar, name, this week's
+    total), "Bye week" in the opponent's half, the shipped line "Bye week · no result" under
+    the card, then your stocks in one column, best week first. No other new words.
+  - **A final whose stock-by-stock figures can't be shown** (they don't reconcile to the posted
+    score): the scoreboard, then "Stock-by-stock results aren't available for this week.", then
+    both lineups as ticker and company only, no figures, in draft order, your side shaded.
 - **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
   to scrape anything and the more secure and locked down this can be the better." Chosen over
   keeping the public stock-symbol list readable (option B): the symbols table becomes
