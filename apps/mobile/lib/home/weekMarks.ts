@@ -272,6 +272,20 @@ export function rangeTabsPullUp(fontScale: number): number {
   return Math.round(16 - ((s - 1) / (RANGE_TAB_MAX_FONT_SCALE - 1)) * 2);
 }
 
+/**
+ * Game Night (W4): Home's tabs are RangePills "tabs", whose every option is a 44pt box
+ * (§9B) with 4pt above the label and the 2 + 2pt underline under it, the content centred
+ * in what's left. The box's empty strip under the underline would add to the 24pt block
+ * gap, so HomeSeason takes it back with a negative bottom margin; the gap stays measured
+ * from the underline, as before. Callout is 18pt tall, capped at 1.3x for the tabs.
+ */
+export const RANGE_PILL_TAB = { minHeight: MIN_HIT, padTop: 4, under: 2 + RANGE_TAB_UNDERLINE, labelLine: 18 } as const;
+export function rangeTabsSlackBelow(fontScale: number): number {
+  const s = Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE);
+  const content = RANGE_PILL_TAB.padTop + RANGE_PILL_TAB.labelLine * s + RANGE_PILL_TAB.under;
+  return Math.max(0, Math.round((RANGE_PILL_TAB.minHeight - content) / 2));
+}
+
 /** The axis marks show in the Season window only (the one with week ticks). */
 export function marksShownFor(range: RangeValue): boolean {
   return range === 'Season';

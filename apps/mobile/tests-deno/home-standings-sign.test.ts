@@ -8,9 +8,11 @@ import { formatMoney } from '../components/sp/logic/money.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
 Deno.test('the excerpt\'s gain column renders with sign="always"', () => {
+  // W4: the excerpt's rows are the Game Night ManagerRow, which formats the gain with sign: 'always'.
   const card = SOURCES['components/home/StandingsCard.tsx'];
-  assertEquals(card.includes('<Money value={r.pointsFor} size="callout" colorBySign sign="always" />'), true);
-  assertEquals(card.includes('<Money value={r.pointsFor} size="callout" colorBySign />'), false);
+  assertEquals(card.includes('seasonGain={r.pointsFor}'), true);
+  assertEquals(SOURCES['components/sp/gn/ManagerRow.tsx'].includes("const gainText = formatMoney(seasonGain, { sign: 'always' });"), true);
+  assertEquals(SOURCES['components/sp/gn/ManagerRow.tsx'].includes('color={colors[toneOf(seasonGain)]}'), true);
 });
 
 Deno.test('what sign="always" shows: "+" for a gain, the minus sign for a loss', () => {

@@ -32,19 +32,22 @@ export interface ManagerRowProps {
   record: string;
   seasonGain: number;
   onPress?: () => void;
+  /** Home's Standings excerpt (the board's StandingsExcerpt): no movement column ("movement
+   * arrows on League only", S-10), a 24pt avatar and a shorter tile. Same row otherwise. */
+  excerpt?: boolean;
 }
 
-export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record, seasonGain, onPress }: ManagerRowProps) {
+export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record, seasonGain, onPress, excerpt = false }: ManagerRowProps) {
   const { colors } = useTheme();
   const move = movement(delta);
   const gainText = formatMoney(seasonGain, { sign: 'always' });
-  const a11y = `${rank}, ${name}${youA11y(isYou)}, ${move.a11y}, ${record}, ${gainText} season gain`;
+  const a11y = `${rank}, ${name}${youA11y(isYou)}, ${excerpt ? '' : `${move.a11y}, `}${record}, ${gainText} season gain`;
 
   const body = (
     <>
       <Text variant="score.md" color={rank === 1 ? colors.text : colors.text2} style={styles.rank}>{rank}</Text>
-      <Move dir={move.dir} text={move.text} />
-      <Avatar name={name} uri={avatarUri} size={32} tone={isYou ? 'you' : 'neutral'} />
+      {excerpt ? null : <Move dir={move.dir} text={move.text} />}
+      <Avatar name={name} uri={avatarUri} size={excerpt ? 24 : 32} tone={isYou ? 'you' : 'neutral'} />
       <Text variant="body" numberOfLines={1} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
       <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
       <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
@@ -52,7 +55,7 @@ export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record
   );
 
   // Your row: the tint composited over the tile's surface (the PAIRS rows are scored that way).
-  const tile = [styles.tile, { backgroundColor: colors.surface }];
+  const tile = [styles.tile, excerpt ? styles.tileExcerpt : null, { backgroundColor: colors.surface }];
   const you = isYou ? [styles.youOverlay, { backgroundColor: colors.youTint, borderColor: colors.you }] : null;
   const inner = (
     <>
@@ -97,9 +100,15 @@ const styles = StyleSheet.create({
     gap: space[3],
     minHeight: 56,
     paddingVertical: space[4],
-    paddingHorizontal: 10,
+    // The 4pt scale (W4 Home): 12, not the board's 10.
+    paddingHorizontal: space[4],
     borderRadius: radius.row,
     overflow: 'hidden',
+  },
+  // Inside Home's card: 44pt tall (the §9B target), 8pt above and below the name.
+  tileExcerpt: {
+    minHeight: 44,
+    paddingVertical: space[3],
   },
   youOverlay: {
     ...StyleSheet.absoluteFillObject,

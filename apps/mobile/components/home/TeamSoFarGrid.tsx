@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { PixelRatio, StyleSheet, View } from 'react-native';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -12,6 +12,10 @@ import { YOUR_TEAM_SO_FAR, roundSlotLabel, teamSoFarCaption } from '@/lib/home/h
 // UX rule 4). A slot per round, filled with the symbol once drafted, "Rd N"
 // while still empty. The room passes its own title and caption (the board's
 // "Your roster · 1 of 6 · $2,000 per slot").
+//
+// Game Night (§9C, W4): a drafted slot is YOUR fill (`you`, its own `onYou` ink: rule 4,
+// "every fill has its own ink"); an empty one is a `sunken` cell (the empty draft cells'
+// token) with its round in `text2`. No outlines: separation by surface, not rules.
 
 export interface TeamSoFarGridProps {
   /** The header; Home's "Your team so far" by default (the room: "Your roster"). */
@@ -38,13 +42,13 @@ export function TeamSoFarGrid({ title, caption, symbols, numRounds }: TeamSoFarG
       <View style={styles.slotGrid}>
         {slots.map((symbol, i) =>
           symbol ? (
-            <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { backgroundColor: colors.youText, borderColor: colors.youText }]}>
-              <Text variant="callout" numberOfLines={1} style={{ color: colors.surface, fontWeight: '700' }}>
+            <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { backgroundColor: colors.you }]}>
+              <Text variant="callout" numberOfLines={1} style={{ color: colors.onYou, fontWeight: '700' }}>
                 {symbol}
               </Text>
             </View>
           ) : (
-            <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { borderColor: colors.border }]}>
+            <View key={i} style={[styles.slot, twoAcross && styles.slotWide, { backgroundColor: colors.sunken }]}>
               <Text variant="callout" tone="secondary" numberOfLines={1}>
                 {roundSlotLabel(i + 1)}
               </Text>
@@ -60,7 +64,7 @@ const styles = StyleSheet.create({
   card: {
     padding: space[6],
     gap: space[3],
-    borderRadius: 14,
+    borderRadius: radius.lg,
   },
   header: {
     flexDirection: 'row',
@@ -84,8 +88,7 @@ const styles = StyleSheet.create({
     width: '31%',
     minHeight: 44,
     paddingVertical: space[2],
-    borderRadius: 10,
-    borderWidth: 1.5,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space[1],

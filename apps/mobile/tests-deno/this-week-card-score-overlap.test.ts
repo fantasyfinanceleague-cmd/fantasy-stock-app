@@ -21,7 +21,8 @@ Deno.test('wiring: the opponent\'s score cell hugs its own (right) edge, not the
   assertEquals(thisWeekCardSrc.includes('scoreCellRight'), true);
   assertEquals(/scoreCellRight:\s*\{[^}]*alignItems:\s*'flex-end'/.test(thisWeekCardSrc), true);
   // Applied to BOTH the real scores and the loading skeleton, so the
-  // skeleton doesn't jump sides once real data lands.
-  const rightCellUses = (thisWeekCardSrc.match(/styles\.scoreCell, styles\.scoreCellRight/g) ?? []).length;
-  assertEquals(rightCellUses >= 2, true);
+  // skeleton doesn't jump sides once real data lands. W4: one right-hand cell holds either.
+  assertEquals(thisWeekCardSrc.includes("<View style={[styles.scoreCell, styles.scoreCellRight]}>\n            {scoring ? <Skeleton width=\"70%\" height={28} /> : <ScoreDigits text={oppText}"), true);
+  // And each half is the 50/50 flex item that can't grow past its share (minWidth: 0).
+  assertEquals(/half:\s*\{\s*flex: 1,\s*minWidth: 0,/.test(thisWeekCardSrc), true);
 });

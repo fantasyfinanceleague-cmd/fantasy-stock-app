@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, View } from 'react-native';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Button } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
@@ -10,7 +10,8 @@ import { Text } from '@/components/sp/Text';
 // that replace the this-week card: before the season (5), a bye (9), and
 // the playoff bye / eliminated variants of state 10. Each is one or two
 // lines of copy, no score, no tug — the board's own minimalism for these
-// states.
+// states. Game Night (§9C, W4): the rimmed card; the one action, when there is one, is a
+// secondary button (Home's only primary is elsewhere, or none).
 
 export interface PhaseMessageCardProps {
   lines: string[];
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
   card: {
     padding: space[6],
     gap: space[2],
-    borderRadius: 14,
+    borderRadius: radius.lg,
     alignItems: 'flex-start',
   },
   actionRow: {

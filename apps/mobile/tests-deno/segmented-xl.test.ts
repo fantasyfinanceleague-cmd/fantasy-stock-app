@@ -29,8 +29,10 @@ Deno.test('every segmented control in the app is the one sp SegmentedControl (so
 });
 
 Deno.test("Home's text range tabs carry the segmented labels' cap (1.3x)", () => {
+  // W4: Home's tabs are the Game Night RangePills (capped there, the test below); Home's
+  // own layout math uses the same cap.
   const tabs = SOURCES['components/home/HomeSeason.tsx'];
-  assert(tabs.includes('maxFontSizeMultiplier={RANGE_TAB_MAX_FONT_SCALE}'));
+  assert(tabs.includes('<RangePills options={RANGE_OPTIONS}'));
   assert(SOURCES['lib/home/weekMarks.ts'].includes('export const RANGE_TAB_MAX_FONT_SCALE = 1.3;'));
 });
 

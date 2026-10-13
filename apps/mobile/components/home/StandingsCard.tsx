@@ -4,15 +4,14 @@ import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { Money } from '@/components/sp/Money';
+import { ManagerRow } from '@/components/sp/gn';
 import { useMotion } from '@/components/sp/motion';
 import { STANDINGS_CARD_TITLE, standingsThroughWeekCaption } from '@/lib/home/homeCopy';
-import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
 import { STANDINGS_HREF } from '@/lib/home/calmHome';
 
 // Stockpile — <StandingsCard> (Phase 3b-2, board "Home"). Top 3 plus the
@@ -25,7 +24,11 @@ import { STANDINGS_HREF } from '@/lib/home/calmHome';
 //
 // A calm Home (2026-10-12): the whole card opens League on Standings (a chevron after
 // "Through Week N"); League reads `segment`, so it lands there even if it was left on
-// Schedule. The rows are unchanged.
+// Schedule.
+//
+// Game Night (§9C, W4; the board's StandingsExcerpt): the rimmed card; the rows are the
+// one manager row (ManagerRow, its Home excerpt: no movement column — movement is League's
+// alone, S-10 — and a 24pt avatar), divided by space, never by rules.
 
 export interface StandingRow {
   userId: string;
@@ -77,7 +80,7 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
           <Ionicons name="chevron-forward" size={16} color={colors.text2} />
         </View>
       </View>
-      <View>
+      <View style={styles.rows}>
         {displayed.map((r, i) => {
           const entering = reduced || skipEntrance
             ? undefined
@@ -87,26 +90,10 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
                 .stiffness(spring.snappy.stiffness)
                 .reduceMotion(ReduceMotion.System);
           return (
-            <Animated.View
-              key={r.userId}
-              entering={entering}
-              style={[styles.row, { backgroundColor: r.isYou ? colors.youTint : 'transparent' }]}
-              accessible
-              accessibilityLabel={`${r.rank}, ${r.displayName}${youA11y(r.isYou)}, ${record(r)}`}
-            >
-              <Text variant="callout" tone="secondary" style={styles.rankCol}>
-                {r.rank}
-              </Text>
-              <Text variant="callout" style={[styles.nameCol, yourNameStyle(r.isYou)]} numberOfLines={1}>
-                {r.displayName}
-              </Text>
-              <Text variant="callout" tone="secondary" style={styles.recordCol}>
-                {record(r)}
-              </Text>
-              <View style={styles.gainCol}>
-                {/* U-50: season gains carry their sign, like the hero and League's table. */}
-                <Money value={r.pointsFor} size="callout" colorBySign sign="always" />
-              </View>
+            <Animated.View key={r.userId} entering={entering}>
+              {/* S-10 / §9C ManagerRow: your row on `youTint` with the 1.5pt `you` ring, your
+                  name bold, no "(you)"; season gains carry their sign (U-50), by sign colour. */}
+              <ManagerRow excerpt rank={r.rank} name={r.displayName} isYou={r.isYou} record={record(r)} seasonGain={r.pointsFor} />
             </Animated.View>
           );
         })}
@@ -117,16 +104,21 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
 }
 
 const styles = StyleSheet.create({
+  // The board's excerpt: the rows run nearly to the card's edge (8), the header inset
+  // to line up with the rows' rank column (8 + 8 = 16, the card's own 16).
   card: {
-    padding: space[5],
+    paddingTop: space[5],
+    paddingHorizontal: space[3],
+    paddingBottom: space[3],
     gap: space[3],
-    borderRadius: 14,
+    borderRadius: radius.lg,
   },
   // At large text the caption and chevron drop to their own line rather than push the
   // chevron off the card or break the caption mid-word (capture pass, XL/XXXL).
   header: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingHorizontal: space[3],
     justifyContent: 'space-between',
     alignItems: 'center',
     columnGap: space[3],
@@ -141,25 +133,8 @@ const styles = StyleSheet.create({
   headerCaption: {
     flexShrink: 1,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[3],
-    paddingVertical: space[3],
-  },
-  rankCol: {
-    width: 20,
-    fontVariant: ['tabular-nums'],
-  },
-  nameCol: {
-    flex: 1,
-    fontWeight: '700',
-  },
-  recordCol: {
-    fontVariant: ['tabular-nums'],
-  },
-  gainCol: {
-    minWidth: 78,
-    alignItems: 'flex-end',
+  // The rows sit 2pt apart (space, never a rule line, §9C rule 2).
+  rows: {
+    gap: space[1],
   },
 });

@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  // The 4pt scale (W3 gate, carried to W4): 16 between the text tabs, not the board's 18.
   rowTabs: {
     gap: space[5],
   },

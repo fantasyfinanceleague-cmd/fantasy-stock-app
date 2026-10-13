@@ -5,7 +5,8 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
+import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
@@ -13,6 +14,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
 import { leaderOf, type Leader } from '@/components/sp/logic/tug';
+import { chipLook } from '@/components/sp/logic/gameNight';
 import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
@@ -21,24 +23,24 @@ import { scoreTone } from '@/lib/home/scoreTone';
 import { THIS_WEEK_TAG, YOU_LABEL, vsOpponentLabel, leadLabel, LIVE_CHIP, thisWeekAccessibilityLabel, SCORING_MESSAGE, sideUnpricedCaption } from '@/lib/home/homeCopy';
 import { THIS_WEEK_HREF, OPENS_MATCHUP_HINT } from '@/lib/home/calmHome';
 
-// Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). A
-// `<Card variant="scoreboard">` — every "game surface" now looks like this
-// (§9A). Reuses <ScoreDigits>/<TugBar> (already game-only-motion-correct:
-// `lively` on a lead change, reduced-motion-safe) rather than re-deriving
-// either. Distinct from <Scoreboard> (components/sp/game/Scoreboard.tsx,
-// used by the design gallery only so far): this card's header is the
-// board's own "This week" tag + a live/final chip, not Scoreboard's
-// "WEEK N · LEAGUE" band — the two components solve the same motion
-// problem with different chrome, by design, for their own screens.
+// Stockpile — <ThisWeekCard> (Phase 3b-2, board "Home", key screen 1). Reuses
+// <ScoreDigits>/<TugBar> (already game-only-motion-correct: `lively` on a lead change,
+// reduced-motion-safe) rather than re-deriving either. Distinct from Matchup's Game Night
+// <Scoreboard> (components/sp/gn): this card's header is the board's own "This week" tag
+// + a live/final chip, and it opens Matchup; the two share the your-half shading.
 //
 // H3: a quote refresh rolls both scores (ScoreDigits) and moves the tug
 // (TugBar's own useLeadChangeSpring `lively`); a leader change crossfades
 // the lead line (via a simple key-based remount + Card's own layout) and
 // this component fades a one-shot accent wash on that same change.
 //
-// A calm Home (2026-10-12): the scores are score.md (28pt) in every state, so team
-// value stays the ONE standout number; the chip reads "Live"; a chevron follows it and
-// the whole card opens Matchup, in every state it shows.
+// A calm Home (2026-10-12): the chip reads "Live"; a chevron follows it and the whole card
+// opens Matchup, in every state it shows.
+//
+// Game Night (§9C, W4; the board's ThisWeek): the rimmed card; the scores at 28pt
+// (`score.lg`, ExtraBold), so team value (`hero`, 46) stays the ONE standout number; the
+// avatars (yours ringed in `you`, theirs the slate `opp`) beside "You" and "vs {name}";
+// the 6pt tug; YOUR half shaded `youTint` (shading B), never the leader's.
 
 export interface ThisWeekCardProps {
   week: number;
@@ -76,10 +78,12 @@ export interface ThisWeekCardProps {
    * live recompute). Adds the win/loss result line and swaps the footer
    * to "Week N+1 starts…" instead of the tug's lead line. */
   resultLine?: string;
+  /** Your display name, for your avatar's initials (the card itself says "You"). */
+  youName?: string;
 }
 
 export function ThisWeekCard({
-  week, isLive, you, opponent, opponentName, rightLabel, leadSuffix, liveChipLabel, tag, scoring = false, preSeason = false, scoringMessage, resultLine,
+  week, isLive, you, opponent, opponentName, rightLabel, leadSuffix, liveChipLabel, tag, scoring = false, preSeason = false, scoringMessage, resultLine, youName = YOU_LABEL,
 }: ThisWeekCardProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
@@ -121,6 +125,12 @@ export function ThisWeekCard({
   }, [leader, scoring, preSeason, reduced]);
   const washStyle = useAnimatedStyle(() => ({ opacity: washOpacity.value }));
 
+  // The chip (the board's .dr-chip): Live is the accent chip with its breathing dot; every
+  // other state (closed, scoring, scored, pre-season) the `inset` chip in `text`. A tag:
+  // uppercase in JS (Text), never a text-transform style.
+  const chip = chipLook(isLive ? 'live' : 'default', colors);
+  const scoreColor = (gain: number, side: 'you' | 'opp') => (preSeason || scoreTone(gain, side) === 'zero' ? colors.zero : colors.text);
+
   return (
     <PressableScale
       onPress={() => router.push(THIS_WEEK_HREF)}
@@ -128,16 +138,16 @@ export function ThisWeekCard({
       accessibilityLabel={a11yLabel}
       accessibilityHint={OPENS_MATCHUP_HINT}
     >
-    <Card variant="scoreboard" style={styles.card}>
+    <Card style={styles.card}>
       <Animated.View style={[styles.wash, { backgroundColor: colors.accentWash }, washStyle]} pointerEvents="none" />
-      <View style={styles.header}>
+      <View style={[styles.header, styles.padded]}>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {tag ?? THIS_WEEK_TAG}
         </Text>
         <View style={styles.headerRight}>
-          <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+          <View style={[styles.chip, { backgroundColor: chip.fill }]}>
             {isLive ? <LiveDot size={7} /> : null}
-            <Text variant="tag" style={{ color: isLive ? colors.liveText : colors.text2 }}>
+            <Text variant="tag" style={{ color: chip.ink }}>
               {liveChipLabel ?? LIVE_CHIP}
             </Text>
           </View>
@@ -145,80 +155,92 @@ export function ThisWeekCard({
         </View>
       </View>
 
-      <View style={styles.namesRow}>
-        <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
-          {YOU_LABEL}
-        </Text>
-        {/* XXXL (XL check, 2026-10-05): a long opponent name used to run into
-            "You". The minimum gap and wrap keep them apart; at default size
-            the two labels stay at opposite edges, as before. */}
-        <Text variant="callout" tone="secondary" style={styles.oppName}>
-          {vsOpponentLabel(opponentName)}
-        </Text>
+      {/* Shading B (Giorgio, 2026-10-12: "when it's you versus someone, it shades it so that
+          it's clear. Not whoever's winning"): YOUR half sits on `youTint`, win or lose, the
+          same grammar as Matchup's scoreboard; who leads is said by the totals and the lead
+          line. The opponent is the right half, marked by position, not colour. */}
+      <View style={styles.halves}>
+        <View testID="this-week-you" style={[styles.half, styles.halfYou, { backgroundColor: colors.youTint }]}>
+          <View style={styles.who}>
+            <Avatar name={youName} size={AVATAR} tone="you" ring />
+            <Text variant="callout" numberOfLines={1} style={styles.youName}>
+              {YOU_LABEL}
+            </Text>
+          </View>
+          <View style={styles.scoreCell}>
+            {scoring ? <Skeleton width="70%" height={28} /> : <ScoreDigits text={youText} variant="score.lg" color={scoreColor(you.gain, 'you')} />}
+          </View>
+        </View>
+        <View style={[styles.half, styles.halfOpp]}>
+          {/* XXXL (XL check, 2026-10-05): a long opponent name wraps rather than running into
+              your half; the avatar keeps the ringed avatar's footprint so the scores align. */}
+          <View style={[styles.who, styles.whoMirror]}>
+            <View style={styles.ringFootprint}>
+              <Avatar name={opponentName} size={AVATAR} tone="opp" />
+            </View>
+            <Text variant="callout" tone="secondary" numberOfLines={2} style={styles.oppName}>
+              {vsOpponentLabel(opponentName)}
+            </Text>
+          </View>
+          <View style={[styles.scoreCell, styles.scoreCellRight]}>
+            {scoring ? <Skeleton width="70%" height={28} /> : <ScoreDigits text={oppText} variant="score.lg" color={scoreColor(opponent.gain, 'opp')} />}
+          </View>
+        </View>
       </View>
 
-      {scoring ? (
-        <View style={styles.scoresRow}>
-          <View style={styles.scoreCell}>
-            <Skeleton width="70%" height={28} />
-          </View>
-          <View style={[styles.scoreCell, styles.scoreCellRight]}>
-            <Skeleton width="70%" height={28} />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.scoresRow}>
-          <View style={styles.scoreCell}>
-            <ScoreDigits text={youText} variant="score.md" color={preSeason || scoreTone(you.gain, 'you') === 'zero' ? colors.zero : colors.youText} />
-          </View>
-          <View style={[styles.scoreCell, styles.scoreCellRight]}>
-            <ScoreDigits text={oppText} variant="score.md" color={preSeason || scoreTone(opponent.gain, 'opp') === 'zero' ? colors.zero : colors.oppText} />
-          </View>
-        </View>
-      )}
+      <View style={[styles.body, styles.padded]}>
+        {!scoring && !preSeason ? <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} height={TUG_HEIGHT} /> : null}
 
-      {!scoring && !preSeason ? <TugBar you={you.gain} opponent={opponent.gain} opponentName={opponentName} /> : null}
-
-      {scoring || preSeason ? (
-        <Text variant="caption" tone="secondary">
-          {scoringMessage ?? SCORING_MESSAGE}
-        </Text>
-      ) : (
-        <View style={styles.footerRow}>
-          <Text variant="caption" style={styles.footerLeft}>
-            {resultLine ?? (
-              <>
-                {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
-                {leadSuffix ? ` ${leadSuffix}` : null}
-              </>
-            )}
+        {scoring || preSeason ? (
+          <Text variant="caption" tone="secondary">
+            {scoringMessage ?? SCORING_MESSAGE}
           </Text>
-          <Text variant="caption" tone="secondary" style={styles.footerRight}>
-            {rightLabel}
-          </Text>
-        </View>
-      )}
+        ) : (
+          <View style={styles.footerRow}>
+            <Text variant="caption" style={styles.footerLeft}>
+              {resultLine ?? (
+                <>
+                  {leadLabel(ahead)} <Text variant="caption" style={styles.leadAmount}>{formatMoney(gap)}</Text>
+                  {leadSuffix ? ` ${leadSuffix}` : null}
+                </>
+              )}
+            </Text>
+            <Text variant="caption" tone="secondary" style={styles.footerRight}>
+              {rightLabel}
+            </Text>
+          </View>
+        )}
 
-      {youCaption ? (
-        <Text variant="caption" tone="secondary">
-          {youCaption}
-        </Text>
-      ) : null}
-      {oppCaption ? (
-        <Text variant="caption" tone="secondary">
-          {oppCaption}
-        </Text>
-      ) : null}
+        {youCaption ? (
+          <Text variant="caption" tone="secondary">
+            {youCaption}
+          </Text>
+        ) : null}
+        {oppCaption ? (
+          <Text variant="caption" tone="secondary">
+            {oppCaption}
+          </Text>
+        ) : null}
+      </View>
     </Card>
     </PressableScale>
   );
 }
 
+// The board's ThisWeek: 24pt avatars, a 6pt tug.
+const AVATAR = 24;
+const TUG_HEIGHT = 6;
+
 const styles = StyleSheet.create({
+  // §9C Card: `surface` + the 1pt rim, radius 14. The halves run edge to edge, so the
+  // padding is per row (`padded`), 16 as on the board.
   card: {
-    padding: space[5],
-    gap: space[3],
-    borderRadius: 14,
+    paddingVertical: space[5],
+    gap: space[4],
+    borderRadius: radius.lg,
+  },
+  padded: {
+    paddingHorizontal: space[5],
   },
   header: {
     flexDirection: 'row',
@@ -234,39 +256,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-    paddingHorizontal: space[3],
+    minHeight: 24,
+    paddingHorizontal: space[4],
     paddingVertical: space[2],
-    borderRadius: 999,
+    borderRadius: radius.pill,
   },
-  namesRow: {
+  halves: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: space[2],
+  },
+  // `minWidth: 0` is load-bearing (2026-10-07, the X-1 follow-up): without it, a flex
+  // item's minimum width defaults to its CONTENT's intrinsic size, not 0 -- so at a wide
+  // enough value (seen: both sides' gains overlapping at $1M+), `flex: 1` never actually
+  // constrained either half, and ScoreDigits' own `adjustsFontSizeToFit` safety net never
+  // got a real width to shrink against. With this, the 50/50 split is real and the two
+  // sides can never overlap.
+  half: {
+    flex: 1,
+    minWidth: 0,
+    gap: space[3],
+    paddingVertical: space[4],
+  },
+  // Your half's tint runs to the card's left edge (the card clips it to its radius).
+  halfYou: {
+    alignItems: 'flex-start',
+    paddingLeft: space[5],
+    paddingRight: space[4],
+  },
+  halfOpp: {
+    alignItems: 'flex-end',
+    paddingLeft: space[4],
+    paddingRight: space[5],
+  },
+  who: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    maxWidth: '100%',
+  },
+  whoMirror: {
+    flexDirection: 'row-reverse',
+  },
+  ringFootprint: {
+    padding: AVATAR_RING + AVATAR_RING_GAP,
+  },
+  youName: {
+    fontWeight: '700',
+    flexShrink: 1,
   },
   oppName: {
     flexShrink: 1,
     textAlign: 'right',
   },
-  scoresRow: {
-    flexDirection: 'row',
-    gap: space[5],
-  },
-  // `minWidth: 0` is load-bearing (2026-10-07, the X-1 follow-up): without
-  // it, a flex item's minimum width defaults to its CONTENT's intrinsic
-  // size, not 0 -- so at a wide enough value (seen: both sides' gains
-  // overlapping at $1M+), `flex: 1` never actually constrained either
-  // cell, and ScoreDigits' own `adjustsFontSizeToFit` safety net never
-  // got a real width to shrink against (it only sees what Yoga gives it).
-  // With this, the 50/50 split is real and the two sides can never overlap.
   scoreCell: {
-    flex: 1,
+    alignSelf: 'stretch',
     minWidth: 0,
   },
-  // The opponent's score hugs its own (right) edge rather than growing
-  // from the shared middle, mirroring "You" on the left.
+  // The opponent's score hugs its own (right) edge, mirroring yours on the left.
   scoreCellRight: {
     alignItems: 'flex-end',
+  },
+  body: {
+    gap: space[3],
   },
   footerRow: {
     flexDirection: 'row',

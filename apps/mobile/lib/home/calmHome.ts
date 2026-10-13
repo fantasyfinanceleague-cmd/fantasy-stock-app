@@ -6,9 +6,11 @@
  * touch (24pt between blocks); one primary action per screen.
  */
 
-/** The season chart's height on Home (includes the axis-mark row). Never compressed to
- * win back the 17e's fold (the spec's ruling), nor is the 24pt block gap (index.tsx). */
-export const HOME_CHART_HEIGHT = 124;
+/** The season chart's PLOT height on Home (Game Night, W4): the W/L marks and the two
+ * end dates add their rows under it, so the whole chart is about 142pt, the board's
+ * Line(h 142). Never compressed to win back the 17e's fold (the spec's ruling), nor is
+ * the 24pt block gap (index.tsx). */
+export const HOME_CHART_HEIGHT = 108;
 
 // ── Tap through ────────────────────────────────────────────────────────────
 /** This week opens Matchup, in every state the card shows. */

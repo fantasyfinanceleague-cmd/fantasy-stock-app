@@ -1,24 +1,20 @@
-/* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 
-import { type } from '@/constants/tokens';
-import { Text } from '@/components/sp/Text';
-import { useTheme } from '@/components/sp/ThemeProvider';
+import { space } from '@/constants/tokens';
+import { RangePills } from '@/components/sp/gn';
 import { SeasonChart } from '@/components/home/SeasonChart';
 import { windowSeries, type SeasonGainSeriesResult, type SeasonWindow } from '@/lib/home/seasonGainSeries';
 import { HOME_CHART_HEIGHT } from '@/lib/home/calmHome';
-import {
-  RANGE_TABS, RANGE_TAB_MAX_FONT_SCALE, RANGE_TAB_UNDERLINE, MIN_HIT, marksShownFor, rangeTabHitSlop, rangeTabLook,
-  regularMarkResults, seasonChartA11yLabel, chartLiveEnd, rangeTabsPullUp,
-} from '@/lib/home/weekMarks';
+import { RANGE_TABS, marksShownFor, regularMarkResults, seasonChartA11yLabel, chartLiveEnd, rangeTabsPullUp, rangeTabsSlackBelow } from '@/lib/home/weekMarks';
 
-// Stockpile — <HomeSeason> (a calm Home, decided A, 2026-10-12). The old Season
-// card's contents, now part of the hero block with no card, title or caption (the
-// hero's line already says "season gain"): the chart (124pt, W/L marks on its axis in
-// the Season window) and the range as text tabs under it, right-aligned. The chart
-// still plots the SCORED season, week by week (buildSeasonGainSeries, windowSeries);
-// this component only renders what it's given.
+// Stockpile — <HomeSeason> (a calm Home, decided A, 2026-10-12; Game Night, W4). The old
+// Season card's contents, part of the hero block with no card, title or caption (the
+// hero's line already says "season gain"): the season line edge to edge (its W/L marks
+// and two end dates under it, components/home/SeasonChart) and the range as Game Night
+// text tabs (RangePills "tabs": the selected one in `text` with a 2pt `accent`
+// underline), right-aligned under it. The chart plots the SCORED season, week by week
+// (buildSeasonGainSeries, windowSeries); this component only renders what it's given.
 
 export interface HomeSeasonProps {
   series: SeasonGainSeriesResult;
@@ -35,8 +31,9 @@ export interface HomeSeasonProps {
   skipEntrance?: boolean;
 }
 
+const RANGE_OPTIONS = RANGE_TABS.map((t) => t.value);
+
 export function HomeSeason({ series, weekResults, currentWeek, marketOpen, isPlayoff, currentScored, skipEntrance = false }: HomeSeasonProps) {
-  const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const [window, setWindow] = useState<SeasonWindow>('Season');
 
@@ -46,10 +43,6 @@ export function HomeSeason({ series, weekResults, currentWeek, marketOpen, isPla
   const chartWeeks = series.weekStartIdx.map((i) => series.points[i]?.week).filter((w): w is number => typeof w === 'number');
   const results = regularMarkResults({ chartWeeks, weeklyResults: weekResults, currentWeek, isLive: live, currentScored });
   const seasonEnd = series.points.length ? series.points[series.points.length - 1].gain : 0;
-
-  // The tab's content: callout (capped at 1.3x) + the underline and its air.
-  const tabContent = type.callout.lineHeight * Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE) + RANGE_TAB_UNDERLINE * 2;
-  const hitSlop = rangeTabHitSlop(tabContent);
 
   return (
     <>
@@ -62,55 +55,17 @@ export function HomeSeason({ series, weekResults, currentWeek, marketOpen, isPla
         skipEntrance={skipEntrance}
         drawKey={window}
         height={HOME_CHART_HEIGHT}
+        // Edge to edge (§9C Chart): the line runs past the 20pt gutter; marks and dates keep to it.
+        bleed={space[6]}
       />
-      {/* F1 (Design Lead gate): the labels sit 8pt under the marks (rangeTabsPullUp); the row
-          draws after the chart, so its pulled-up box overlaps only the chart's empty strip. */}
-      <View style={[styles.tabs, { marginTop: -rangeTabsPullUp(fontScale) }]} accessibilityRole="tablist">
-        {RANGE_TABS.map((t) => {
-          const selected = t.value === window;
-          const look = rangeTabLook(selected);
-          return (
-            <Pressable
-              key={t.value}
-              onPress={() => setWindow(t.value)}
-              hitSlop={hitSlop}
-              style={styles.tab}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-            >
-              {/* The underline is the label's own width (the inner view hugs the text). */}
-              <View>
-                <Text
-                  variant="callout"
-                  maxFontSizeMultiplier={RANGE_TAB_MAX_FONT_SCALE}
-                  style={{ fontWeight: look.fontWeight, color: colors[look.color] }}
-                >
-                  {t.label}
-                </Text>
-                <View style={[styles.underline, { backgroundColor: look.underline ? colors.text : 'transparent' }]} />
-              </View>
-            </Pressable>
-          );
-        })}
+      {/* F1 (Design Lead gate): the tab labels sit 8pt under the date labels, glyph to glyph
+          (rangeTabsPullUp); the row draws after the chart, so its pulled-up box overlaps only
+          the date row's empty strip, and every tab keeps its 44pt target. The box's strip
+          under the underline is taken back (rangeTabsSlackBelow), so the 24pt block gap is
+          measured from the underline. */}
+      <View style={{ marginTop: -rangeTabsPullUp(fontScale), marginBottom: -rangeTabsSlackBelow(fontScale) }}>
+        <RangePills options={RANGE_OPTIONS} value={window} onChange={setWindow} variant="tabs" />
       </View>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  // Each tab is at least MIN_HIT wide on its own (no shared hit areas); the short labels
-  // sit centred in theirs, so the labels read about 18-24pt apart. The vertical hit area
-  // reaches MIN_HIT through hitSlop, so the row stays the text's own height.
-  tab: {
-    minWidth: MIN_HIT,
-    alignItems: 'center',
-    paddingTop: RANGE_TAB_UNDERLINE,
-  },
-  underline: {
-    height: RANGE_TAB_UNDERLINE,
-  },
-});
