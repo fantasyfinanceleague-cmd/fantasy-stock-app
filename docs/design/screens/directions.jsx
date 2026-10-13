@@ -1554,7 +1554,7 @@
       />
     );
   }
-  window.KSDirections = () => <CallShareLocked />; // waiting on Giorgio: Share while locked (2026-10-13)
+  window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
   window.KSShareLockedArchived = (decided, note) => () => <CallShareLocked archived decided={decided} decidedNote={note} />;
   window.KSDraftAutoArchived = () => <CallAuto archived />;
   window.KSMxCalls = {
