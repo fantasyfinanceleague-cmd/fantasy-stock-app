@@ -224,7 +224,8 @@ Deno.test('League settings: the real row, the sheets, a member view, the Commiss
 Deno.test('reachable: the League tab shows League settings to members with the flag on, pre-draft and in season (source guard)', () => {
   const tab = SOURCES['app/(tabs)/league.tsx'];
   assertEquals(tab.includes('showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id, LEAVE_LEAGUE_ON)'), true);
-  assertEquals(tab.includes('{LEAVE_LEAGUE_ON && activeLeagueId && showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id, true) ? ('), true);
+  // W4: the in-season row waits for the standings read, as it did inside the old `ready` block.
+  assertEquals(tab.includes('{ready && LEAVE_LEAGUE_ON && activeLeagueId && showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id, true) ? ('), true);
   // The draft room's commissioner check keeps its commissioner-only meaning.
   assertEquals(tab.includes('isCommissioner={showsLeagueSettingsRow(activeLeague?.commissioner_id, user?.id)}'), true);
 });
@@ -263,8 +264,11 @@ Deno.test('a member\'s League settings: ONLY Invite code (with Share), the Commi
   const member = s.slice(start, s.indexOf('if (!league || !isCommissioner) {', start));
   assertEquals(start > 0, true);
   // What it has.
-  assertEquals(member.includes('>Invite code</Text>'), true);
-  assertEquals(member.includes('<Button label="Share"'), true);
+  // W4 DL gate: the invite code and Share are ONE row (InviteRow), shared with the commissioner.
+  assertEquals(member.includes('<InviteRow code={code} window={membershipWindow} />'), true);
+  const row = s.slice(s.indexOf('function InviteRow('));
+  assertEquals(row.includes('>Invite code</Text>'), true);
+  assertEquals(row.includes('<Button label="Share"'), true);
   assertEquals(member.includes('<SettingRow label={COMMISSIONER_ROW} value={commissionerName} />'), true);
   assertEquals(member.includes('{leaveBlock}'), true);
   // No commissioner controls, not even disabled ones.

@@ -115,12 +115,12 @@ export interface PinGeometry {
   viewBottom: number;
 }
 
-/** UX rule 7: while the standings card is on screen and YOUR row is below the
- * fold (not fully visible above the bottom of the scroll view), a copy of it is
- * pinned at the bottom. Once your row scrolls into view, or the card leaves
- * the screen, the copy goes. */
+/** UX rule 7: while the standings card is on screen and YOUR row is entirely below
+ * the fold, a copy of it is pinned at the bottom. As soon as ANY of your row is
+ * visible, the copy goes, so the two never show at once (W4 DL gate: at XL your real
+ * row showed under its pinned copy). The card leaving the screen also unpins. */
 export function shouldPinYourRow(g: PinGeometry): boolean {
   const cardOnScreen = g.cardTop < g.viewBottom && g.cardBottom > g.viewTop;
-  const rowBelowFold = g.rowBottom > g.viewBottom;
+  const rowBelowFold = g.rowTop >= g.viewBottom;
   return cardOnScreen && rowBelowFold;
 }

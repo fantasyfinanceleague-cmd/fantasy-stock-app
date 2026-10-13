@@ -277,6 +277,10 @@ building anything, and don't reopen a rule without him.
 - **Regular-season byes = no result**: neither a win nor a loss, and not counted in games
   played. No explanation of byes, just a short notice when members/weeks produce uneven
   byes.
+- **League's two load failures** (2026-10-13, approved by Giorgio as written, relayed by the
+  Orchestrator during the W4 League build): History reads "Your league's history didn't
+  load." and Playoffs reads "The bracket didn't load.", each beside the existing "Try
+  again". (Before, a failed read left the segment blank.)
 
 ## Home and Portfolio
 
@@ -518,6 +522,12 @@ building anything, and don't reopen a rule without him.
     with 1 less" or "invite someone new to replace".
 - **The leave sheets keep "Stay" as a button** (2026-10-06, Giorgio overruled the Design
   Lead's G-3): "I want stay as a button." "Leave league" stays the red button.
+- **Share hides while teams are locked** (2026-10-13; Giorgio picked B (board #call-share-locked),
+  relayed by the Orchestrator during the W4 League gate): the invite row's Share is hidden from an
+  hour before the draft until the season ends, for members and the commissioner alike; the invite
+  code itself stays visible. Share is shown before the draft (a renewed season too), when a code
+  can be used; hidden while locked and after the season, until a renewal (a completed season
+  refuses a join: preview-league's 'season_completed'). No new copy.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens

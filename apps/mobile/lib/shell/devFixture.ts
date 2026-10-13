@@ -83,6 +83,12 @@ export const FIXTURE_EMAIL = 'roberto@example.com';
  * checked at large text sizes. Read only under __DEV__; unset = the normal
  * fixture value. Fixture data only -- never a real account. */
 export const FIXTURE_EMAIL_OVERRIDE: string | null = __DEV__ ? (process.env.EXPO_PUBLIC_SHELL_EMAIL || null) : null;
+/** Captures only (W4 League, headless): open this fixture league first (e.g. 'fx-summer'),
+ * instead of the one stored from the last run, so no tap on the league pill is needed. */
+export const FIXTURE_ACTIVE_LEAGUE: string | null = __DEV__ ? (process.env.EXPO_PUBLIC_SHELL_ACTIVE_LEAGUE || null) : null;
+/** The League capture fixture's playoffs in progress (EXPO_PUBLIC_LEAGUE_FIXTURE=playoffs_live,
+ * leagueFixture.ts): Stock Scudetto is in its playoffs. */
+export const FIXTURE_PLAYOFFS_LIVE: boolean = __DEV__ ? process.env.EXPO_PUBLIC_LEAGUE_FIXTURE === 'playoffs_live' : false;
 export const FIXTURE_LEAGUE_NAME_OVERRIDE: string | null = __DEV__ ? (process.env.EXPO_PUBLIC_SHELL_LEAGUE_NAME || null) : null;
 
 export function fixtureUsername(fixture: ShellFixture): string | null {
@@ -191,7 +197,7 @@ export function fixtureLeagues(fixture: ShellFixture, renewalCaller: RenewalCall
   };
   const base = { marketOpen: true, ties: 0, isChampion: false, seasonLabel: '' };
   const sheet: SheetLeague[] = [
-    { ...base, ...facts('fx-scudetto'), id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto', seasonPhase: 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
+    { ...base, ...facts('fx-scudetto'), id: 'fx-scudetto', name: FIXTURE_LEAGUE_NAME_OVERRIDE ?? 'Stock Scudetto', seasonPhase: FIXTURE_PLAYOFFS_LIVE ? 'playoffs' : 'regular', rank: 2, rankCount: 6, wins: 4, losses: 1, membersJoined: 6, capacity: 6 },
     { ...base, ...facts('fx-friday'), id: 'fx-friday', name: 'Friday Night Stocks', seasonPhase: 'regular', rank: 3, rankCount: 8, wins: 1, losses: 0, membersJoined: 8, capacity: 8 },
     { ...base, ...facts('fx-seriea'), id: 'fx-seriea', name: 'Serie A Traders', seasonPhase: 'pre_draft', rank: null, rankCount: null, wins: 0, losses: 0, membersJoined: 6, capacity: 8 },
     { ...base, ...facts('fx-summer'), id: 'fx-summer', name: 'Summer Cup', seasonPhase: 'completed', rank: 1, rankCount: 8, wins: 10, losses: 4, membersJoined: 8, capacity: 8, isChampion: true },

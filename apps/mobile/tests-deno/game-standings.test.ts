@@ -70,8 +70,11 @@ Deno.test('no pin: your row is visible, even at the very bottom', () => {
   assertEquals(shouldPinYourRow({ ...view, cardTop: 300, cardBottom: 1400, rowTop: 660, rowBottom: 700 }), false);
 });
 
-Deno.test('pin: your row only partly visible at the fold counts as below it', () => {
-  assertEquals(shouldPinYourRow({ ...view, cardTop: 300, cardBottom: 1400, rowTop: 680, rowBottom: 720 }), true);
+Deno.test('no pin: ANY of your row visible at the fold unpins (W4 DL gate: never the row and its copy at once)', () => {
+  assertEquals(shouldPinYourRow({ ...view, cardTop: 300, cardBottom: 1400, rowTop: 680, rowBottom: 720 }), false);
+  assertEquals(shouldPinYourRow({ ...view, cardTop: 300, cardBottom: 1400, rowTop: 699, rowBottom: 739 }), false);
+  // Entirely below: pinned.
+  assertEquals(shouldPinYourRow({ ...view, cardTop: 300, cardBottom: 1400, rowTop: 700, rowBottom: 740 }), true);
 });
 
 Deno.test('no pin: the card is off screen (scrolled past, or not reached yet)', () => {
@@ -85,15 +88,20 @@ Deno.test('no pin: your row is above the view (scrolled past it): it is not "bel
 
 import { SOURCES } from './sourceManifest.generated.ts';
 
-Deno.test('the pinned copy is the SAME row component, and the table reads the move with moveA11y (source guards)', () => {
+Deno.test('the pinned copy is the SAME row component on the SAME layout, and the move reads "up"/"down" (source guards)', () => {
   const table = SOURCES['components/game/StandingsTable.tsx'];
-  assertEquals(table.includes('<StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} />'), true);
-  assertEquals(table.includes('const move = moveA11y(r.move);'), true);
-  assertEquals(table.includes('`, up ${Math.abs(r.move)}`'), false); // the old "up" for a down move
+  assertEquals(table.includes('<StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} layout={layout} nothingScored={nothingScored} />'), true);
+  // W4: the row is the Game Night ManagerRow, which reads the move as movement() says it
+  // ("up 2" / "down 3"), never the old "up" for a down move.
+  assertEquals(table.includes('delta={showMove ? r.move : null}'), true);
+  assertEquals(SOURCES['components/sp/gn/ManagerRow.tsx'].includes("${showMove && known ? `${move.a11y}, ` : ''}"), true);
+  assertEquals(table.includes('`, up ${Math.abs(r.move)}`'), false);
   assertEquals(table.includes('shouldPinYourRow({'), true);
   const screen = SOURCES['app/(tabs)/league.tsx'];
   // The pinned copy shows the same medals and move column as the table (GS-4's final standings drop the move).
-  assertEquals(screen.includes("<StandingsRowView r={pinnedRow} seasonComplete={standings.kind === 'final' || (standings.kind === 'regular' && standings.medals)} showMove={standings.kind !== 'final'} />"), true);
+  assertEquals(screen.includes("<PinnedRow row={pinnedRow} rows={standings.rows} seasonComplete={standings.kind === 'final' || (standings.kind === 'regular' && standings.medals)} showMove={standings.kind !== 'final'} />"), true);
+  assertEquals(screen.includes('const layout = useStandingsLayout(rows, showMove, seasonComplete);'), true);
+  assertEquals(screen.includes('<StandingsRowView r={row} seasonComplete={seasonComplete} showMove={showMove} layout={layout} />'), true);
   assertEquals(screen.includes('onPinChange={setPinnedRow}'), true);
 });
 

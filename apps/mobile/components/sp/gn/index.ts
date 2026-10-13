@@ -21,3 +21,5 @@ export { Chart } from './Chart';
 export type { ChartProps, UnderRow } from './Chart';
 export { PlayerCard, PlayerCardBody } from './PlayerCard';
 export type { PlayerCardProps, PlayerCardOwnership, PlayerCardOwnerInfo } from './PlayerCard';
+export { SegmentTabs } from './SegmentTabs';
+export type { SegmentTabsProps } from './SegmentTabs';

@@ -2,62 +2,30 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "f3b9af2a896a5e7dc070fd8a23bdaa28f3889b16",
-    "commitShort": "f3b9af2a",
+    "commit": "47abe4371aeebd7970d74eebb0caecf589196e38",
+    "commitShort": "47abe437",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/autopick-never-stalls",
+    "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/draftRoom.ts"
+        "path": "apps/mobile/components/game/LeagueRenewal.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/money/buyRowLine.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/money-buy-row-line.test.ts"
-      },
-      {
-        "code": "MM",
-        "path": "supabase/functions/_shared/auto-pick.test.ts"
-      },
-      {
-        "code": "MM",
-        "path": "supabase/functions/_shared/auto-pick.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-write.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/draft-write.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/_shared/pick-gate.ts"
-      },
-      {
-        "code": "D",
-        "path": "supabase/migrations/20261122000001_draft_auto_closest.sql"
+        "path": "apps/mobile/tests-deno/league-game-night.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T22:42:36Z",
-    "sourceHash": "sha256:82921ce357a90555ca8d300932b5f5dd242765677fd2c29665e848c7849fd50d",
+    "timestamp": "2026-10-13T23:12:50Z",
+    "sourceHash": "sha256:0edd848200010f50017d28b4a4ffc5a1431493ae25e63956f78f48d0413d6840",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 42.9,
+    "ageHours": 43.4,
     "ageDays": 1.8,
     "staleAfterDays": 14,
     "stale": false,
@@ -16252,7 +16220,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:81"
+        "apps/mobile/lib/game/seamCalls.ts:83"
       ]
     },
     {
@@ -16265,7 +16233,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:75"
+        "apps/mobile/lib/game/seamCalls.ts:77"
       ]
     },
     {
@@ -16353,7 +16321,7 @@
         "playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useBracket.ts:31"
+        "apps/mobile/lib/game/useBracket.ts:33"
       ]
     },
     {
@@ -16548,7 +16516,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_league_history')",
       "callSites": [
-        "apps/mobile/lib/game/useLeagueHistory.ts:22"
+        "apps/mobile/lib/game/useLeagueHistory.ts:26"
       ],
       "via": [
         "seamRpc"
@@ -16563,7 +16531,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/game/useLeagueStandings.ts:37"
+        "apps/mobile/lib/game/useLeagueStandings.ts:49"
       ],
       "via": [
         "seamRpc"
@@ -16578,7 +16546,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('league_standings_ranked')",
       "callSites": [
-        "apps/mobile/lib/game/useLeagueStandings.ts:50"
+        "apps/mobile/lib/game/useLeagueStandings.ts:64"
       ],
       "via": [
         "seamRpc"
@@ -16700,7 +16668,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_season_matchups')",
       "callSites": [
-        "apps/mobile/lib/game/useSeasonPlayoffs.ts:29"
+        "apps/mobile/lib/game/useSeasonPlayoffs.ts:30"
       ],
       "via": [
         "seamRpc"
@@ -16932,7 +16900,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:127"
+        "apps/mobile/app/(tabs)/league.tsx:142"
       ],
       "via": [
         "seamRpc"
@@ -19750,7 +19718,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 70,
+        "line": 72,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -19758,7 +19726,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 78,
+        "line": 80,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -19782,7 +19750,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 84,
+        "line": 86,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -19993,7 +19961,7 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:127 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/league.tsx:142 -> renew_league (via seamRpc)",
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:38 -> set_draft_queue (via seamRpc)",
@@ -20008,12 +19976,12 @@
       "apps/mobile/lib/game/useDraftRoom.ts:47 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/game/useDraftRoom.ts:49 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/game/useDraftStatus.ts:63 -> get_draft_clock (via seamRpc)",
-      "apps/mobile/lib/game/useLeagueHistory.ts:22 -> get_league_history (via seamRpc)",
-      "apps/mobile/lib/game/useLeagueStandings.ts:37 -> get_home_league (via seamRpc)",
-      "apps/mobile/lib/game/useLeagueStandings.ts:50 -> league_standings_ranked (via seamRpc)",
+      "apps/mobile/lib/game/useLeagueHistory.ts:26 -> get_league_history (via seamRpc)",
+      "apps/mobile/lib/game/useLeagueStandings.ts:49 -> get_home_league (via seamRpc)",
+      "apps/mobile/lib/game/useLeagueStandings.ts:64 -> league_standings_ranked (via seamRpc)",
       "apps/mobile/lib/game/useLeaveLeague.ts:29 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/game/useRenewalRoster.ts:49 -> get_renewal_roster (via seamRpc)",
-      "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
+      "apps/mobile/lib/game/useSeasonPlayoffs.ts:30 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
       "apps/mobile/lib/home/useHomeLeague.ts:627 -> get_home_league",
@@ -20107,12 +20075,12 @@
       "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
       "apps/mobile/lib/game/seamCalls.ts:49 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:75 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:81 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:77 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:83 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
-      "apps/mobile/lib/game/useBracket.ts:31 -> matchups.select",
+      "apps/mobile/lib/game/useBracket.ts:33 -> matchups.select",
       "apps/mobile/lib/game/useDraftAutoStart.ts:101 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:149 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftQueue.ts:22 -> draft_queue.select",

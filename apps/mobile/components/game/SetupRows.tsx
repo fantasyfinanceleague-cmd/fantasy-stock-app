@@ -10,7 +10,8 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 
 // 3c-2 — the row vocabulary of the board's setup frames (DraftSettingsScreen,
 // RibReview: a card of `ks-rows`, each a callout-weight key, a muted value and
-// a chevron when it opens something). Nothing here truncates: titles, values
+// a chevron when it opens something). Game Night (W4): the card is the §9C Card (surface
+// + rim), its rows divided by space, never by a line. Nothing here truncates: titles, values
 // and help lines wrap at every Dynamic Type size (§9B). Every pressable row is
 // at least 44 pt tall.
 
@@ -23,16 +24,16 @@ export function SetupCard({ style, children, ...rest }: ViewProps) {
   );
 }
 
-/** The hairline between rows inside a SetupCard. */
+/** Between rows inside a SetupCard: SPACE, never a line (Game Night §9C rule 2, "separation
+ * by surface, never by rules"; W4 League). The name stays so every caller keeps its rhythm. */
 export function RowDivider() {
-  const { colors } = useTheme();
-  return <View style={[styles.divider, { backgroundColor: colors.line }]} />;
+  return <View style={styles.divider} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
 }
 
 /** A section's bold key, the board's `ks-callout` at weight 600. */
-export function RowKey({ children }: { children: string }) {
+export function RowKey({ children, maxScale }: { children: string; maxScale?: number }) {
   return (
-    <Text variant="callout" style={styles.key}>
+    <Text variant="callout" maxFontSizeMultiplier={maxScale} style={styles.key}>
       {children}
     </Text>
   );
@@ -48,14 +49,17 @@ export interface SettingRowProps {
   disabled?: boolean;
   /** Overrides the VoiceOver label (default: label, value). */
   accessibilityLabel?: string;
+  /** A Dynamic Type cap for the row's text, where the row sits on a screen whose figures
+   * are capped (League: 1.5×, the gains' 19.5pt). Unset: the text scales freely (forms). */
+  maxScale?: number;
 }
 
 /** Key, value, optional sub-line, and a chevron when it opens something. */
-export function SettingRow({ label, value, sub, valueColor, onPress, disabled = false, accessibilityLabel }: SettingRowProps) {
+export function SettingRow({ label, value, sub, valueColor, onPress, disabled = false, accessibilityLabel, maxScale }: SettingRowProps) {
   const body = (
     <View style={[styles.settingRow, disabled && styles.dim]}>
       <View style={styles.grow}>
-        <RowKey>{label}</RowKey>
+        <RowKey maxScale={maxScale}>{label}</RowKey>
         {sub ? (
           <Text variant="caption" tone="secondary">
             {sub}
@@ -195,7 +199,7 @@ const styles = StyleSheet.create({
     paddingVertical: space[2],
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
+    height: space[2],
   },
   key: {
     fontFamily: typeFontFamily.semiBold,

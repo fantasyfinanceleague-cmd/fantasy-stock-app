@@ -7,6 +7,8 @@
  * can edit settings" screen. A missing user or commissioner id never matches
  * (unlike a bare `a === b`, where undefined === undefined).
  */
+import type { LeaveWindow } from './leaveLeague';
+
 export function showsLeagueSettingsRow(
   commissionerId: string | null | undefined,
   userId: string | null | undefined,
@@ -22,3 +24,18 @@ export function showsLeagueSettingsRow(
  * with the lock icon. Deliberately distinct from the Leave row's line ("Teams
  * are locked in from an hour before the draft until the season ends."). */
 export const SETTINGS_LOCKED = 'Settings are locked once the draft starts.';
+
+/** The invite row's Share pill, for the commissioner and the member alike: the ONE place the
+ * condition lives. Giorgio, 2026-10-13 (B, board #call-share-locked): Share "comes back at
+ * renewal and before the draft, when a code can be used", so it shows ONLY before the draft (a
+ * renewed season's too). Hidden while teams are locked (an hour before the draft until the
+ * season ends) AND after the season: preview-league refuses a completed season
+ * ('season_completed'), so a code shared then can't be used. The code itself always shows. */
+export function inviteShareShown(window: LeaveWindow): boolean {
+  return window === 'before_draft';
+}
+
+/** What Share sends (unchanged from the member's row). */
+export function inviteShareMessage(code: string): string {
+  return `Join my league with code ${code}`;
+}

@@ -32,10 +32,11 @@ Deno.test('every Run it back entry point is behind the switch (Home and League)'
   const league = SOURCES['app/(tabs)/league.tsx'];
   assert(league.includes('const RUN_IT_BACK_ON = runItBackEnabled(process.env.EXPO_PUBLIC_RUN_IT_BACK);'));
   assert(league.includes('leagueScreenFor({ phase, isRenewal: RUN_IT_BACK_ON && !!activeLeague.previous_league_id })'));
-  assert(league.includes('{RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase,'));
+  // W4: both renewal mounts also wait for the standings read (`ready`); the switch still gates them.
+  assert(league.includes('{ready && RUN_IT_BACK_ON && phase && showRunItBackStrip({ phase,'));
   assert(league.includes('if (RUN_IT_BACK_ON && preDraft && activeLeagueId && activeLeague?.previous_league_id) {'));
   // Board frame 1 / GS-14: the member's ask on a finished league's League tab.
-  assert(league.includes('{RUN_IT_BACK_ON && phase && activeLeague?.successor_league_id && showsLeagueRenewalAsk({ phase, isCommissioner, hasSuccessor: true }) ? ('));
+  assert(league.includes('{ready && RUN_IT_BACK_ON && phase && activeLeague?.successor_league_id && showsLeagueRenewalAsk({ phase, isCommissioner, hasSuccessor: true }) ? ('));
   // Each component is mounted only from those gated spots.
   for (const name of ['<RunItBackCard', '<HomeRenewalAsk', '<RenewalCountsCard', '<RenewedPreDraft', '<LeagueRenewal ']) {
     const mounts = Object.entries(SOURCES).filter(([p, src]) => !p.startsWith('tests-deno') && src.includes(name)).map(([p]) => p);

@@ -25,7 +25,7 @@ import {
 import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import {
-  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates,
+  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates, type LeaveWindow,
   transferUnknownLine,
 } from '@/lib/game/leaveLeague';
 import { useLeaveLeague } from '@/lib/game/useLeaveLeague';
@@ -34,7 +34,7 @@ import { LeaveLeagueRow, LeaveLeagueSheet, TransferCommissionerSheet } from '@/c
 import { DEFAULT_PICK_SECONDS, PICK_SECONDS_OPTIONS, pickClockLocked, pickSecondsCaption } from '@/lib/game/createLeagueSetup';
 import { leagueNameError, stepWithin } from '@/lib/game/createLeagueSteps';
 import { PRICE_TIERS_NEED_A_SLOT, rosterSlotsCaption } from '@/lib/game/slotBuilderCopy';
-import { SETTINGS_LOCKED } from '@/lib/game/leagueSettingsEntry';
+import { SETTINGS_LOCKED, inviteShareMessage, inviteShareShown } from '@/lib/game/leagueSettingsEntry';
 import { draftDateTimeLabel } from '@/lib/home/draftCountdown';
 import { draftDateForSave, updatedOneRow } from '@/lib/game/draftDateSave';
 import { DATE_LOCKED_AFTER_ROOM, draftTimeLocked, draftTimeRefusal } from '@/lib/game/autoStart';
@@ -293,13 +293,7 @@ export default function LeagueSettingsScreen() {
     return (
       <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
         <SetupCard>
-          <View style={styles.inviteRow}>
-            <View style={styles.grow}>
-              <Text variant="callout" style={styles.key}>Invite code</Text>
-              <Text variant="callout" color={colors.accent} style={styles.bold}>{code}</Text>
-            </View>
-            <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: `Join my league with code ${code}` })} />
-          </View>
+          <InviteRow code={code} window={membershipWindow} />
           <RowDivider />
           <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
         </SetupCard>
@@ -519,7 +513,8 @@ export default function LeagueSettingsScreen() {
             </>
           ) : null}
           <RowDivider />
-          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          {/* The member's row and Share pill, under the one show condition (inviteShareShown). */}
+          <InviteRow code={league.invite_code} window={membershipWindow} />
           {leaveOn ? (
             <>
               <RowDivider />
@@ -554,6 +549,24 @@ export default function LeagueSettingsScreen() {
         onClose={() => setShowDatePicker(false)}
       />
     </SetupScaffold>
+  );
+}
+
+/** The invite code and its Share pill: ONE row for the commissioner and the member alike (W4
+ * DL gate). Whether Share shows is decided in one place (inviteShareShown), so a ruling on
+ * hiding it while the league is locked changes both views at once. */
+function InviteRow({ code, window }: { code: string; window: LeaveWindow }) {
+  return (
+    <View style={styles.inviteRow}>
+      <View style={styles.grow}>
+        <Text variant="callout" style={styles.key}>Invite code</Text>
+        {/* §9C: the accent means live / your turn / selected; the code is plain text. */}
+        <Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>
+      </View>
+      {inviteShareShown(window) ? (
+        <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: inviteShareMessage(code) })} />
+      ) : null}
+    </View>
   );
 }
 

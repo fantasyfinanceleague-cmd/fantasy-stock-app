@@ -9,6 +9,7 @@ import { supabase } from '../supabase';
 import { seamTable } from './seamCalls';
 import { buildBracket, type Bracket, type BracketRow, type BracketStanding } from './bracket';
 import { checkRowsComplete } from './readGuard';
+import { LEAGUE_FIXTURE_VARIANT } from './devSeam';
 
 export interface BracketState {
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -17,7 +18,8 @@ export interface BracketState {
   rows: BracketRow[];
 }
 
-export function useBracket(leagueId: string | null, teams: number | null, standings: BracketStanding[], enabled: boolean): BracketState {
+/** `reloadKey`: bump it to read again (Playoffs' Try again). */
+export function useBracket(leagueId: string | null, teams: number | null, standings: BracketStanding[], enabled: boolean, reloadKey = 0): BracketState {
   const [state, setState] = useState<BracketState>({ status: 'idle', bracket: null, rows: [] });
   const standingsKey = standings.map((s) => `${s.user_id}:${s.rank}:${s.display_name}`).join('|');
 
@@ -32,6 +34,7 @@ export function useBracket(leagueId: string | null, teams: number | null, standi
           .select('playoff_round_number, bracket_position, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id', { count: 'exact' })
           .eq('league_id', leagueId)
           .eq('is_playoff', true));
+        if (LEAGUE_FIXTURE_VARIANT === 'bracket_error') throw new Error('fixture: bracket read failed');
         if (res.error) throw res.error;
         const rows = (res.data ?? []) as BracketRow[];
         // Read-cap guard: a partial bracket must not be drawn.
@@ -50,7 +53,7 @@ export function useBracket(leagueId: string | null, teams: number | null, standi
     };
     // standings are keyed by standingsKey so an equal new array does not refetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leagueId, teams, enabled, standingsKey]);
+  }, [leagueId, teams, enabled, standingsKey, reloadKey]);
 
   return state;
 }
