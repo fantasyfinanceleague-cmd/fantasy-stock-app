@@ -1003,12 +1003,26 @@ sector tiles.
   - **Accessibility:** the chart's label names the range ("from Mon to Thu", "from Sep 29 to
     Oct 9") before the values.
 
-- **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`): header (ticker, company, and the
-  pills "Yours" / "Owned by …" and the slot pill in slotted leagues); the key-figures strip on
-  `inset` (Price, Week gain, Since the draft — label open with Giorgio —, Your/Their position);
-  the season line with the acquisition marker (a `surface` disc with a 2pt `text` ring + its
-  label); "How you got it"; this week's line; one full-width action for the state (Sell /
-  Save, outlined in `borderStrong`); the Alpaca credit.
+- **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`), in this order (Giorgio's review,
+  2026-10-12, on ESPN's player card):
+  1. **Header** (he liked it as drawn): ticker, company, the pill "Yours" or "Owned by …",
+     and the slot pill in slotted leagues.
+  2. **Key figures, THREE** ("a little cluttered. Maybe we just go with three"), on `inset`:
+     **Price** · **Week gain** · **Since the draft** (or "Since {date}" for a stock bought or
+     claimed later; the label "Season gain" vs "Since the draft" is still his call). No
+     position figure.
+  3. **Season line** with its X axis of dates (start → now). **No acquisition marker or
+     "Drafted" label** ("A player can see from this pop-up card if they were drafted or picked
+     up on waivers"): the "How you got it" block says it.
+  4. **This week's line** with its Mon…Fri axis.
+  5. **The one action for the state:** your own stock → **Sell** while the market is open
+     (disabled with "Market's closed. Opens Mon 9:30 ET." beside it while closed), and **never
+     Save** ("there probably shouldn't be a save option if you already have the stock");
+     a stock you don't own → **Save** / Saved.
+  6. **"How you got it" at the BOTTOM** ("How they got it" on theirs), like ESPN's Latest
+     transaction: "Drafted 2nd overall · Sep 29 · $290.10" / "Claimed off waivers · Oct 7 ·
+     $187.20" / "Bought · Oct 2 · $214.80".
+  7. The Alpaca credit.
 - **Tab bar**: `tabbar`, active in `accent`, inactive `text2`.
 
 ### Motion (Game Night's notes on top of §4)
