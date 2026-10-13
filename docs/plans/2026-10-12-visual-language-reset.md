@@ -79,7 +79,7 @@ All 2026-10-12, in the Planner session; recorded verbatim in `docs/PRODUCT_RULES
 
 ## Open questions
 
-None blocking the board work. Two for Giorgio when he picks a direction (the row order is decided):
+None. (All three settled on 2026-10-12.)
 
 0. ~~Matchup roster row order~~ **DECIDED (Giorgio, 2026-10-12):** by week gain, best first on
    each side. In SLOTTED leagues (category slots and price tiers alike) the roster is grouped by
@@ -88,12 +88,15 @@ None blocking the board work. Two for Giorgio when he picks a direction (the row
    recomputed once at each market close and holds through the next day; never live. Verbatim
    in `PRODUCT_RULES.md`. The W1 Matchup frames show both a slotted (grouped) and an unslotted
    (flat) roster.
-1. **Release target.** 1.2.0 is out. The reset lands as **1.3** unless Giorgio wants a 1.2.x
-   with Home + Matchup only. Recommendation: 1.3, every screen, so the app never mixes two
-   languages (the "no screen mixes themes" rule applied to skins).
-2. **Supersession.** `DESIGN_DIRECTION.md` §1 (Direction B "Game Day"), §9 (tokens) and §9A
-   (two themes) are superseded by the chosen direction's token spec. The motion language
-   (§4), Reduce Motion (§5) and the native craft floor (§9B) stay. Confirm when choosing.
+1. ~~Release target~~ **DECIDED (Giorgio, 2026-10-12): 1.3** ("let's do the 1.3"): every
+   screen, both themes, one cut; the app never mixes two visual languages.
+2. ~~Supersession~~ **DECIDED (Giorgio, 2026-10-12): yes.** `DESIGN_DIRECTION.md` §1 (Direction
+   B "Game Day"), §9 (tokens) and §9A (two themes) are superseded by Game Night's token spec
+   v3 (§9C); the motion language (§4), Reduce Motion (§5) and the native craft floor (§9B)
+   stay. The Design Lead marks the superseded sections as such in the same PR as §9C.
+3. ~~Sleek leftovers~~ **DONE (Giorgio, 2026-10-12: "let's clean that up")**: the API key
+   file, the installed Sleek skill and the trial screenshots were deleted from the Mac.
+   The free sleek.design account itself is Giorgio's to close if he wants.
 
 ## Scope
 
@@ -242,8 +245,7 @@ Sent to the Orchestrator for the Design Lead on 2026-10-12. Read `REFERENCES.md`
 - **Two themes, one effort.** Designing both at once roughly doubles the frames and the
   captures per gate; the trade is deliberate (Giorgio's ruling) and removes the risk of a
   Light user ever seeing a half-skinned app. Gates reject a branch that captures one theme.
-- **The Sleek key.** `~/.sleek_api_key` and `~/.agents/skills/sleek-design-mobile-apps`
-  remain on Giorgio's machine; harmless, free tier; removable on request.
+- **Sleek.** Removed from the Mac on 2026-10-12 (key, skill, trial screenshots).
 
 ## Done means
 
