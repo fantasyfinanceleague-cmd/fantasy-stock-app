@@ -818,8 +818,10 @@ values; the studied DNA in [`design.md`](design.md); the audit in
    page's text. (The Light pass found three leaks of page text onto fills.)
 5. **Game numbers heavy, money numbers regular.** Scores and the team value at 800; the
    Portfolio value at 500 (Robinhood).
-6. **A line stops at now.** No axis, no grid, no fill; the end dot carries the live state; a
-   0-point or 1-point line is a designed short state, never a blank frame.
+6. **A line stops at now, over a labelled X axis.** No grid, no fill, no Y axis; **every chart
+   has a labelled X axis** (dates or weekdays; Giorgio, 2026-10-12, binding); the end dot
+   carries the live state; a 0-point or 1-point line is a designed short state, never a blank
+   frame.
 
 ### Colour, both themes (62 keys)
 
@@ -974,6 +976,33 @@ sector tiles.
   past the gutter to the screen's edge), a dashed zero/base line in `borderStrong`, the end dot
   in `live` with a 9pt `liveGlow` halo; it stops at the last real point. W/L marks under the
   axis on Home (calm-Home spec).
+- **The X axis (every chart, Giorgio 2026-10-12: "a real X axis with dates"; this-week
+  charts "Mon…Fri"):**
+  - **Labels only:** `caption` (12/16 Medium), `text2`, tabular; no axis line, no tick marks, no
+    grid. A 6pt gap between the plot's lowest point and the labels.
+  - **What the axis spans:**
+    - **A week** (1W on a stock, This week on the player card): the whole trading week, Mon
+      open → Fri close, labels **Mon · Tue · Wed · Thu · Fri** under each day's slot, even
+      when it is Thursday: the line stops at now and the days still to come stay empty (the
+      Robinhood 1D pattern: the length of the line says how far the week has run).
+    - **Dated ranges** (the season, 1M, 3M, 1Y; the player card's Season): from the range's
+      start to **now**, no future slots (the B′ ruling stands: a slot with no point reads as
+      missing data). 3 to 5 date labels, evenly spaced in time, the first at the start and
+      the last at now: "Sep 29 · Oct 6 · Oct 13" (`MMM d`); 1Y uses months ("Oct · Jan · Apr ·
+      Jul").
+  - **Edges:** the first label is left-aligned to its point and the last right-aligned to its
+    point, so neither leaves the plot; labels never overlap (drop interior labels first;
+    test with the longest month names at XL).
+  - **Home's season chart** (the approved calm-Home chart): the W/L marks stay; the axis adds
+    **two** date labels under them, the first week's start date under the first mark (left)
+    and today's date at the live end (right), so marks and labels never collide at 124pt. A
+    Design Lead reading of "every chart", to confirm with Giorgio.
+  - **The 0- and 1-point states** draw the full axis (a week chart on Monday morning shows Mon
+    … Fri with a dot at Monday's open).
+  - **Scrub:** the scrub label names the point's date or day ("Wed · +$41.26").
+  - **Accessibility:** the chart's label names the range ("from Mon to Thu", "from Sep 29 to
+    Oct 9") before the values.
+
 - **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`): header (ticker, company, and the
   pills "Yours" / "Owned by …" and the slot pill in slotted leagues); the key-figures strip on
   `inset` (Price, Week gain, Since the draft — label open with Giorgio —, Your/Their position);
