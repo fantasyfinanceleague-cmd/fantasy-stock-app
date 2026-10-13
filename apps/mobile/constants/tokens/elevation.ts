@@ -1,14 +1,14 @@
-// Stockpile — elevation tokens (§9A, "One design, two themes", 2026-09-29).
-// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9A / themes.css's
-// `--c-shadow` and `--c-sheet-shadow` (see color.ts's `shadow`/`sheetShadow`
-// for the verbatim CSS strings this hand-translates to RN's native shadow
-// props — RN can't consume a CSS box-shadow shorthand directly).
+// Stockpile — elevation tokens, v3 "Game Night" (§9C, 2026-10-12).
+// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9C, rule 1: "Depth from
+// lightness steps of one hue (272°), never shadow on Dark … Light: a
+// navy-tinted off-white page, white cards with the `rim` as their edge; the
+// only shadow is the sheet's."
 //
-// Supersedes the old money/game split (flat game surfaces, shadowed money
-// cards): elevation is now keyed by THEME, not by surface kind. Light keeps
-// a soft shadow on cards; Dark has none at all (`--c-shadow: none` —
-// depth there comes from `surface`/`inset`/`sunken` value steps instead, not
-// a shadow that would just read as a smudge on a dark background).
+// So a card is the same in both themes: no shadow, a 1pt `rim` edge (RN draws
+// a border inside the box, which is exactly the board's `inset 0 0 0 1px`).
+// Depth in Dark comes from `bg` → `surface` → `inset` alone. The sheet keeps
+// its shadow in Light only (color.ts's `sheetShadow` is the CSS reference
+// string this hand-translates); in Dark it has none.
 
 import { Platform, ViewStyle } from 'react-native';
 import type { ThemeMode } from './color';
@@ -19,48 +19,15 @@ export interface ElevationStyle extends ViewStyle {
   borderColor?: string;
 }
 
+/** The 1pt card rim (§9C "Shape and space"). */
+export const RIM_WIDTH = 1;
+
 function cardFor(theme: ThemeMode): ElevationStyle {
-  const c = color[theme];
-  if (theme === 'dark') {
-    // `--c-shadow: none` — no shadow, no border; depth comes from the
-    // surface/inset/sunken value steps alone.
-    return {};
-  }
-  return Platform.select<ElevationStyle>({
-    ios: {
-      borderWidth: 1,
-      borderColor: c.border,
-      shadowColor: '#000',
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 2 },
-    },
-    android: {
-      borderWidth: 1,
-      borderColor: c.border,
-      elevation: 2,
-    },
-    default: { borderWidth: 1, borderColor: c.border },
-  }) as ElevationStyle;
+  return { borderWidth: RIM_WIDTH, borderColor: color[theme].rim };
 }
 
 function sheetFor(theme: ThemeMode): ElevationStyle {
-  if (theme === 'dark') {
-    // Sheets slide up from the bottom, so Dark's shadow casts UPWARD
-    // (`--c-sheet-shadow: 0 -8px 32px rgba(0,0,0,.45)`) — Android's single
-    // `elevation` number can't express a directional cast, so it falls back
-    // to a slightly stronger flat elevation there.
-    return Platform.select<ElevationStyle>({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.45,
-        shadowRadius: 32,
-        shadowOffset: { width: 0, height: -8 },
-      },
-      android: { elevation: 12 },
-      default: {},
-    }) as ElevationStyle;
-  }
+  if (theme === 'dark') return {};
   return Platform.select<ElevationStyle>({
     ios: {
       shadowColor: '#000',

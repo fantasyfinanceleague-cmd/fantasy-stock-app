@@ -1,5 +1,5 @@
 // Stockpile — the contrast check tables (§9A, "One design, two themes",
-// 2026-09-29). SOURCE OF TRUTH: docs/design/screens/board.jsx's `TOKEN_ROWS`
+// 2026-09-29; values re-scored for v3 "Game Night", §9C, 2026-10-12). SOURCE OF TRUTH: docs/design/screens/board.jsx's `TOKEN_ROWS`
 // and `PAIRS` (design/key-screens-2026-09-29 branch, synced as of commit
 // 0bd741f — "contrast PAIRS +3 (live dot on inset, neutral avatar initials,
 // '?' fallback)"), copied verbatim — this is the SAME table the
@@ -52,9 +52,10 @@ export const TOKEN_ROWS: readonly TokenRow[] = [
 export type ContrastPair = [fg: TokenKey, bg: TokenKey, over: TokenKey | null, min: number, where: string];
 
 export const PAIRS: readonly ContrastPair[] = [
-  ['onAccent', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
+  // §9C: `onAccent` split — fills that take white in BOTH themes (you, loss-fill) read `onYou`.
+  ['onYou', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
   ['onOpp', 'opp', null, 4.5, 'Opponent avatar initials'],
-  ['onAccent', 'lossFill', null, 4.5, 'Sell button label'],
+  ['onYou', 'lossFill', null, 4.5, 'Sell button label'],
   ['primaryFg', 'primaryBg', null, 4.5, 'Primary button label'],
   ['inverseFg', 'inverseBg', null, 4.5, 'FINAL chip, selected toggle'],
   ['secondaryFg', 'secondaryBg', 'surface', 4.5, 'Secondary button label'],
@@ -87,7 +88,7 @@ export const PAIRS: readonly ContrastPair[] = [
   ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
   ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
   ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
-  ['onAccent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
+  ['onYou', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
   ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   // Medals: the rank numeral on each disc (text, 4.5)...
   ['onMedal', 'medalGold', null, 4.5, 'Medal rank numeral on the gold disc'],
@@ -101,4 +102,44 @@ export const PAIRS: readonly ContrastPair[] = [
   // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
   ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
   ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
+
+  // ── Game Night (§9C, 2026-10-12): the new pairs. §9C names them by group (the lit slab, the
+  // leader's wash, the clock cell, the sector pills and lines, the money page, the "Yours"
+  // pill, the accent fill, your ring) — these are those groups, row by row, as the W3
+  // primitives render them. The board's PAIRS must carry the same rows.
+  // The lit slab (RosterRow: the half that wins the row).
+  ['text', 'lit', null, 4.5, 'Roster: ticker on the lit slab'],
+  ['text2', 'lit', null, 4.5, 'Roster: company and week % on the lit slab'],
+  ['gain', 'lit', null, 4.5, 'Roster: week gain on the lit slab'],
+  ['loss', 'lit', null, 4.5, 'Roster: week loss on the lit slab (both halves down)'],
+  // The leader's half of the Scoreboard.
+  ['text', 'leadWash', 'surface', 4.5, "Scoreboard: name and total on the leader's wash"],
+  // The draft's on-the-clock cell.
+  ['onClockCell', 'clockCell', null, 4.5, 'Draft: the clock in the on-the-clock cell'],
+  ['clockCellLive', 'clockCell', null, 4.5, 'Draft: the pick number (and its ring) in the on-the-clock cell'],
+  // Sector pills (text on the fill)...
+  ['onTile', 'tileTech', null, 4.5, 'Sector pill: Tech'],
+  ['onTile', 'tileComm', null, 4.5, 'Sector pill: Comm'],
+  ['onTile', 'tileCons', null, 4.5, 'Sector pill: Cons'],
+  ['onTile', 'tileFin', null, 4.5, 'Sector pill: Fin'],
+  ['onTile', 'tileHealth', null, 4.5, 'Sector pill: Hlth'],
+  // ...and the draft tile's 3pt sector line on the tile's surface (graphic).
+  ['tileTech', 'surface', null, 3, 'Draft tile: the Tech line (graphic)'],
+  ['tileComm', 'surface', null, 3, 'Draft tile: the Comm line (graphic)'],
+  ['tileCons', 'surface', null, 3, 'Draft tile: the Cons line (graphic)'],
+  ['tileFin', 'surface', null, 3, 'Draft tile: the Fin line (graphic)'],
+  ['tileHealth', 'surface', null, 3, 'Draft tile: the Hlth line (graphic)'],
+  // The money page (Portfolio, the stock sheet's screen).
+  ['text', 'moneyBg', null, 4.5, 'Money page: the value and rows'],
+  ['text2', 'moneyBg', null, 4.5, 'Money page: captions'],
+  ['gain', 'moneyBg', null, 4.5, 'Money page: gain'],
+  ['loss', 'moneyBg', null, 4.5, 'Money page: loss'],
+  // The "Yours" pill on the player card (the sheet's surface).
+  ['youText', 'youTint', 'surface', 4.5, 'Player card: the "Yours" pill'],
+  // The accent fill (the primary pill, the money range pills).
+  ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
+  // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
+  ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
+  // Chip (§9C: accentTint + liveText). On the page background in the header, so over `bg`.
+  ['liveText', 'accentTint', 'bg', 4.5, 'LIVE chip on the page background'],
 ];

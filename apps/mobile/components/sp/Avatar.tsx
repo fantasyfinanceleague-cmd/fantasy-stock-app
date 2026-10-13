@@ -9,7 +9,7 @@ import { avatarInitials, initialFontSize } from '@/components/sp/logic/avatar';
 // the Home header avatar button (Profile leaves the tab bar per
 // DESIGN_DIRECTION §3 decision 4) and anywhere a member/opponent needs a
 // face — a photo when we have a URI, otherwise their initial on a
-// "you"-coloured circle (colors.you / colors.onAccent — the PAIRS list's own
+// "you"-coloured circle (colors.you / colors.onYou — the PAIRS list's own
 // "Avatar initials" pair, board.jsx-verified 4.5:1 in both themes).
 
 export interface AvatarProps {
@@ -51,7 +51,7 @@ export function Avatar({ uri, name, size = DEFAULT_SIZE }: AvatarProps) {
     >
       <Text
         variant="callout"
-        color={isUnknown ? colors.text2 : colors.onAccent}
+        color={isUnknown ? colors.text2 : colors.onYou}
         allowFontScaling={false}
         style={{ fontSize: initialFontSize(size), lineHeight: initialFontSize(size) }}
       >

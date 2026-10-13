@@ -1,0 +1,505 @@
+{
+ "version": "v3 · Game Night",
+ "date": "2026-10-12",
+ "source": "docs/design/DESIGN_DIRECTION.md §9C",
+ "oklch": {
+  "bg": {
+   "dark": "oklch(15.5% 0.045 272)",
+   "light": "oklch(97% 0.01 272)"
+  },
+  "surface": {
+   "dark": "oklch(20% 0.055 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "inset": {
+   "dark": "oklch(25% 0.06 272)",
+   "light": "oklch(94% 0.015 272)"
+  },
+  "sunken": {
+   "dark": "oklch(12% 0.035 272)",
+   "light": "oklch(93.5% 0.015 272)"
+  },
+  "line": {
+   "dark": "oklch(30% 0.06 270)",
+   "light": "oklch(89% 0.022 270)"
+  },
+  "border": {
+   "dark": "oklch(30% 0.06 270)",
+   "light": "oklch(89% 0.022 270)"
+  },
+  "borderStrong": {
+   "dark": "oklch(52% 0.06 265)",
+   "light": "oklch(58% 0.03 268)"
+  },
+  "text": {
+   "dark": "oklch(97% 0.008 270)",
+   "light": "oklch(20% 0.05 272)"
+  },
+  "text2": {
+   "dark": "oklch(73% 0.045 262)",
+   "light": "oklch(47% 0.04 265)"
+  },
+  "text3": {
+   "dark": "oklch(52% 0.04 265)",
+   "light": "oklch(70% 0.03 268)"
+  },
+  "accent": {
+   "dark": "oklch(87% 0.14 205)",
+   "light": "oklch(50% 0.11 220)"
+  },
+  "accentTint": {
+   "dark": "oklch(87% 0.14 205 / 0.16)",
+   "light": "oklch(50% 0.11 220 / 0.12)"
+  },
+  "accentWash": {
+   "dark": "oklch(87% 0.14 205 / 0.06)",
+   "light": "oklch(50% 0.11 220 / 0.05)"
+  },
+  "onAccent": {
+   "dark": "oklch(17% 0.05 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "onYou": {
+   "dark": "oklch(99% 0.004 258)",
+   "light": "oklch(99% 0.004 258)"
+  },
+  "you": {
+   "dark": "oklch(54% 0.2 258)",
+   "light": "oklch(53% 0.2 258)"
+  },
+  "youText": {
+   "dark": "oklch(78% 0.12 256)",
+   "light": "oklch(47% 0.19 258)"
+  },
+  "youTint": {
+   "dark": "oklch(54% 0.2 258 / 0.22)",
+   "light": "oklch(53% 0.2 258 / 0.1)"
+  },
+  "opp": {
+   "dark": "oklch(64% 0.04 262)",
+   "light": "oklch(60% 0.03 266)"
+  },
+  "oppText": {
+   "dark": "oklch(73% 0.045 262)",
+   "light": "oklch(47% 0.04 265)"
+  },
+  "onOpp": {
+   "dark": "oklch(17% 0.05 272)",
+   "light": "oklch(15% 0.04 272)"
+  },
+  "live": {
+   "dark": "oklch(87% 0.14 205)",
+   "light": "oklch(50% 0.11 220)"
+  },
+  "liveText": {
+   "dark": "oklch(87% 0.14 205)",
+   "light": "oklch(47% 0.11 220)"
+  },
+  "liveGlow": {
+   "dark": "oklch(87% 0.14 205 / 0.35)",
+   "light": "oklch(50% 0.11 220 / 0.3)"
+  },
+  "onLive": {
+   "dark": "oklch(17% 0.05 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "gain": {
+   "dark": "oklch(85% 0.16 168)",
+   "light": "oklch(46% 0.12 165)"
+  },
+  "loss": {
+   "dark": "oklch(71% 0.17 10)",
+   "light": "oklch(53% 0.19 15)"
+  },
+  "zero": {
+   "dark": "oklch(73% 0.045 262)",
+   "light": "oklch(47% 0.04 265)"
+  },
+  "gainTint": {
+   "dark": "oklch(85% 0.16 168 / 0.12)",
+   "light": "oklch(46% 0.12 165 / 0.1)"
+  },
+  "lossTint": {
+   "dark": "oklch(71% 0.17 10 / 0.14)",
+   "light": "oklch(53% 0.19 15 / 0.1)"
+  },
+  "danger": {
+   "dark": "oklch(74% 0.15 30)",
+   "light": "oklch(50% 0.19 27)"
+  },
+  "lossFill": {
+   "dark": "oklch(53% 0.19 18)",
+   "light": "oklch(52% 0.19 18)"
+  },
+  "warnTint": {
+   "dark": "oklch(83% 0.15 85 / 0.1)",
+   "light": "oklch(93% 0.07 90)"
+  },
+  "warnLine": {
+   "dark": "oklch(83% 0.15 85 / 0.35)",
+   "light": "oklch(86% 0.1 85)"
+  },
+  "warnText": {
+   "dark": "oklch(85% 0.15 85)",
+   "light": "oklch(45% 0.1 70)"
+  },
+  "medalGold": {
+   "dark": "oklch(79% 0.15 80)",
+   "light": "oklch(60% 0.13 75)"
+  },
+  "medalSilver": {
+   "dark": "oklch(82% 0.02 250)",
+   "light": "oklch(62% 0.025 255)"
+  },
+  "medalBronze": {
+   "dark": "oklch(72% 0.12 55)",
+   "light": "oklch(62% 0.13 50)"
+  },
+  "onMedal": {
+   "dark": "oklch(17% 0.05 272)",
+   "light": "oklch(17% 0.03 80)"
+  },
+  "primaryBg": {
+   "dark": "oklch(87% 0.14 205)",
+   "light": "oklch(50% 0.11 220)"
+  },
+  "primaryFg": {
+   "dark": "oklch(17% 0.05 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "secondaryBg": {
+   "dark": "oklch(20% 0.055 272 / 0)",
+   "light": "oklch(99.6% 0.003 272 / 0)"
+  },
+  "secondaryFg": {
+   "dark": "oklch(97% 0.008 270)",
+   "light": "oklch(20% 0.05 272)"
+  },
+  "secondaryBorder": {
+   "dark": "oklch(52% 0.06 265)",
+   "light": "oklch(58% 0.03 268)"
+  },
+  "inverseBg": {
+   "dark": "oklch(97% 0.008 270)",
+   "light": "oklch(20% 0.05 272)"
+  },
+  "inverseFg": {
+   "dark": "oklch(15.5% 0.045 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "track": {
+   "dark": "oklch(30% 0.06 270)",
+   "light": "oklch(89% 0.022 270)"
+  },
+  "scrim": {
+   "dark": "oklch(10% 0.03 272 / 0.55)",
+   "light": "oklch(20% 0.05 272 / 0.38)"
+  },
+  "tabbar": {
+   "dark": "oklch(13% 0.04 272 / 0.94)",
+   "light": "oklch(99.6% 0.003 272 / 0.94)"
+  },
+  "rim": {
+   "dark": "oklch(32% 0.065 268)",
+   "light": "oklch(89% 0.022 270)"
+  },
+  "lit": {
+   "dark": "oklch(28% 0.075 240)",
+   "light": "oklch(93.5% 0.035 238)"
+  },
+  "leadWash": {
+   "dark": "oklch(85% 0.16 168 / 0.12)",
+   "light": "oklch(46% 0.12 165 / 0.09)"
+  },
+  "moneyBg": {
+   "dark": "oklch(10% 0.02 272)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "clockCell": {
+   "dark": "oklch(9% 0.03 272)",
+   "light": "oklch(22% 0.05 272)"
+  },
+  "onClockCell": {
+   "dark": "oklch(97% 0.008 270)",
+   "light": "oklch(99.6% 0.003 272)"
+  },
+  "clockCellLive": {
+   "dark": "oklch(87% 0.14 205)",
+   "light": "oklch(87% 0.14 205)"
+  },
+  "onTile": {
+   "dark": "oklch(18% 0.05 272)",
+   "light": "oklch(20% 0.05 272)"
+  },
+  "tileTech": {
+   "dark": "oklch(81% 0.085 266)",
+   "light": "oklch(66% 0.12 262)"
+  },
+  "tileComm": {
+   "dark": "oklch(76% 0.12 295)",
+   "light": "oklch(62% 0.15 300)"
+  },
+  "tileCons": {
+   "dark": "oklch(84% 0.095 62)",
+   "light": "oklch(66% 0.13 56)"
+  },
+  "tileFin": {
+   "dark": "oklch(83% 0.13 180)",
+   "light": "oklch(64% 0.11 178)"
+  },
+  "tileHealth": {
+   "dark": "oklch(72% 0.13 350)",
+   "light": "oklch(62% 0.16 355)"
+  }
+ },
+ "hex": {
+  "bg": {
+   "dark": "#060A1F",
+   "light": "#F3F5FC"
+  },
+  "surface": {
+   "dark": "#0E132F",
+   "light": "#FDFEFF"
+  },
+  "inset": {
+   "dark": "#181F3E",
+   "light": "#E7EBF6"
+  },
+  "sunken": {
+   "dark": "#030513",
+   "light": "#E6E9F4"
+  },
+  "line": {
+   "dark": "#222C4C",
+   "light": "#D5DAEA"
+  },
+  "border": {
+   "dark": "#222C4C",
+   "light": "#D5DAEA"
+  },
+  "borderStrong": {
+   "dark": "#58698C",
+   "light": "#737A8D"
+  },
+  "text": {
+   "dark": "#F3F5FB",
+   "light": "#0E142C"
+  },
+  "text2": {
+   "dark": "#98A8C5",
+   "light": "#505B72"
+  },
+  "text3": {
+   "dark": "#5E6981",
+   "light": "#969EB2"
+  },
+  "accent": {
+   "dark": "#35EEFF",
+   "light": "#00708E"
+  },
+  "accentTint": {
+   "dark": "rgba(53, 238, 255, 0.16)",
+   "light": "rgba(0, 112, 142, 0.12)"
+  },
+  "accentWash": {
+   "dark": "rgba(53, 238, 255, 0.06)",
+   "light": "rgba(0, 112, 142, 0.05)"
+  },
+  "onAccent": {
+   "dark": "#080D25",
+   "light": "#FDFEFF"
+  },
+  "onYou": {
+   "dark": "#FAFCFE",
+   "light": "#FAFCFE"
+  },
+  "you": {
+   "dark": "#0067DF",
+   "light": "#0064DC"
+  },
+  "youText": {
+   "dark": "#83BAFF",
+   "light": "#0053C2"
+  },
+  "youTint": {
+   "dark": "rgba(0, 103, 223, 0.22)",
+   "light": "rgba(0, 100, 220, 0.1)"
+  },
+  "opp": {
+   "dark": "#7F8DA5",
+   "light": "#788093"
+  },
+  "oppText": {
+   "dark": "#98A8C5",
+   "light": "#505B72"
+  },
+  "onOpp": {
+   "dark": "#080D25",
+   "light": "#06091C"
+  },
+  "live": {
+   "dark": "#35EEFF",
+   "light": "#00708E"
+  },
+  "liveText": {
+   "dark": "#35EEFF",
+   "light": "#006885"
+  },
+  "liveGlow": {
+   "dark": "rgba(53, 238, 255, 0.35)",
+   "light": "rgba(0, 112, 142, 0.3)"
+  },
+  "onLive": {
+   "dark": "#080D25",
+   "light": "#FDFEFF"
+  },
+  "gain": {
+   "dark": "#39EEBA",
+   "light": "#006C47"
+  },
+  "loss": {
+   "dark": "#F76D89",
+   "light": "#C02447"
+  },
+  "zero": {
+   "dark": "#98A8C5",
+   "light": "#505B72"
+  },
+  "gainTint": {
+   "dark": "rgba(57, 238, 186, 0.12)",
+   "light": "rgba(0, 108, 71, 0.1)"
+  },
+  "lossTint": {
+   "dark": "rgba(247, 109, 137, 0.14)",
+   "light": "rgba(192, 36, 71, 0.1)"
+  },
+  "danger": {
+   "dark": "#FB8371",
+   "light": "#B7191C"
+  },
+  "lossFill": {
+   "dark": "#C12440",
+   "light": "#BD1F3D"
+  },
+  "warnTint": {
+   "dark": "rgba(244, 191, 63, 0.1)",
+   "light": "#FAE7B3"
+  },
+  "warnLine": {
+   "dark": "rgba(244, 191, 63, 0.35)",
+   "light": "#EFCC83"
+  },
+  "warnText": {
+   "dark": "#FAC547",
+   "light": "#784900"
+  },
+  "medalGold": {
+   "dark": "#ECAE30",
+   "light": "#AD7300"
+  },
+  "medalSilver": {
+   "dark": "#BBC5D1",
+   "light": "#7C8795"
+  },
+  "medalBronze": {
+   "dark": "#DE8F57",
+   "light": "#C36C36"
+  },
+  "onMedal": {
+   "dark": "#080D25",
+   "light": "#160E02"
+  },
+  "primaryBg": {
+   "dark": "#35EEFF",
+   "light": "#00708E"
+  },
+  "primaryFg": {
+   "dark": "#080D25",
+   "light": "#FDFEFF"
+  },
+  "secondaryBg": {
+   "dark": "rgba(14, 19, 47, 0.0)",
+   "light": "rgba(253, 254, 255, 0.0)"
+  },
+  "secondaryFg": {
+   "dark": "#F3F5FB",
+   "light": "#0E142C"
+  },
+  "secondaryBorder": {
+   "dark": "#58698C",
+   "light": "#737A8D"
+  },
+  "inverseBg": {
+   "dark": "#F3F5FB",
+   "light": "#0E142C"
+  },
+  "inverseFg": {
+   "dark": "#060A1F",
+   "light": "#FDFEFF"
+  },
+  "track": {
+   "dark": "#222C4C",
+   "light": "#D5DAEA"
+  },
+  "scrim": {
+   "dark": "rgba(2, 3, 12, 0.55)",
+   "light": "rgba(14, 20, 44, 0.38)"
+  },
+  "tabbar": {
+   "dark": "rgba(4, 6, 23, 0.94)",
+   "light": "rgba(253, 254, 255, 0.94)"
+  },
+  "rim": {
+   "dark": "#253154",
+   "light": "#D5DAEA"
+  },
+  "lit": {
+   "dark": "#002C4A",
+   "light": "#D5EEFF"
+  },
+  "leadWash": {
+   "dark": "rgba(57, 238, 186, 0.12)",
+   "light": "rgba(0, 108, 71, 0.09)"
+  },
+  "moneyBg": {
+   "dark": "#020309",
+   "light": "#FDFEFF"
+  },
+  "clockCell": {
+   "dark": "#01020A",
+   "light": "#131832"
+  },
+  "onClockCell": {
+   "dark": "#F3F5FB",
+   "light": "#FDFEFF"
+  },
+  "clockCellLive": {
+   "dark": "#35EEFF",
+   "light": "#35EEFF"
+  },
+  "onTile": {
+   "dark": "#0A0F27",
+   "light": "#0E142C"
+  },
+  "tileTech": {
+   "dark": "#A7C0F9",
+   "light": "#6991DC"
+  },
+  "tileComm": {
+   "dark": "#B7A1F5",
+   "light": "#956ED2"
+  },
+  "tileCons": {
+   "dark": "#F8BD8A",
+   "light": "#CE7B3A"
+  },
+  "tileFin": {
+   "dark": "#4DE3CA",
+   "light": "#23A28C"
+  },
+  "tileHealth": {
+   "dark": "#E181B0",
+   "light": "#CD568B"
+  }
+ }
+}

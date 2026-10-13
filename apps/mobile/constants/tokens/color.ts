@@ -1,32 +1,43 @@
-// Stockpile — theme colour tokens (§9A, "One design, two themes", 2026-09-29).
-// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9A and
-// docs/design/screens/themes.css (`--c-*`, on the design/key-screens-2026-09-29
-// branch at the time of writing). Values here are copied verbatim from that
-// file — do not hand-tune a value here without updating themes.css first.
+// Stockpile — theme colour tokens, v3 "Game Night" (§9C, 2026-10-12).
+// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9C and
+// docs/design/tokens-v3-game-night.json (OKLCH source + the hex column this
+// file ports; translucent roles are rgba()). Values are copied verbatim from
+// the JSON's `hex` block — do not hand-tune a value here without updating the
+// spec first. §9C supersedes the §9A VALUES; §9A's RULES stand (one design,
+// two complete themes, no screen mixes them, colour never the only code).
 //
-// Supersedes the old money/game surface axis (§9). Every `*.onGame` leaf,
-// `surface.money.*` and `surface.game.*` is gone: a screen is entirely Light
-// or entirely Dark, never both, so a component only ever needs ONE colour
-// value per name at a time — the active theme's — not a surface-conditional
-// pair. Read the active theme via `useTheme()` (components/sp/ThemeProvider),
+// Changes in MEANING from §9A (decisions already taken — don't "restore" them):
+//   - `onAccent` is the ink ON accent fills: dark navy in Dark, white in
+//     Light. Fills that take white in BOTH themes (`you`, `lossFill`) read
+//     the new `onYou`.
+//   - `opp` is a mid slate, not orange: Game Night marks the opponent by
+//     POSITION (the right-hand side), not colour; `onOpp` is dark ink.
+//   - `primaryBg` is the accent (a cyan / deep-teal pill).
+//   - `live` / `liveText` / `onLive` are the accent, not gold.
+//     YOUR-TURN COLOUR IS OPEN WITH GIORGIO (cyan vs gold). If he keeps gold,
+//     revert exactly these three keys, both themes, to the §9A gold values —
+//     nothing else changes:
+//       light: live '#C07E00', liveText '#8A5B00', onLive '#0D1B2E'
+//       dark:  live '#FFC53D', liveText '#FFC53D', onLive '#0D1B2E'
+//     (`liveGlow` follows `live`: §9A had rgba(192,126,0,0.35) Light /
+//     rgba(255,197,61,0.45) Dark.)
+//   - `bg` is for game screens; money screens use `moneyBg`.
+//
+// Elevation (§9C rule 1): depth comes from lightness steps of one hue
+// (272°), never a shadow on Dark; in Light the only shadow is the sheet's.
+// So `shadow` is 'none' in both themes and Dark's `sheetShadow` is 'none' —
+// `elevation.ts` renders the native equivalents.
+//
+// Read the active theme via `useTheme()` (components/sp/ThemeProvider),
 // never by importing `color.light`/`color.dark` directly in a component.
 //
-// Naming: each key is the camelCase form of themes.css's `--c-<kebab-name>`
-// (e.g. `--c-text-2` -> `text2`, `--c-on-accent` -> `onAccent`,
-// `--c-border-strong` -> `borderStrong`) — mechanical and 1:1 with the single
-// source of truth, so a parity test can walk both without a translation
-// table. `text2`/`text3` read oddly next to `text.secondary`/`text.disabled`
-// in the old shape, but a nested shape here would invent structure themes.css
-// doesn't have, which is exactly the kind of thing that drifts silently.
+// Naming: each key is the camelCase form of the board's `--c-<kebab-name>`
+// (e.g. `--c-text-2` -> `text2`); the v3 additions mirror the board's
+// `--d-*` names the same way (`--d-lead-wash` -> `leadWash`).
 //
-// themes.css also defines `kbd-bg`, `kbd-key`, `kbd-key-2`, `chrome` and
-// `chrome-dot` — deliberately NOT ported here. Those five exist only to
-// render the design-review board's own illustrative iOS-keyboard and
-// browser-chrome mockups (docs/design/screens/screens.css's `.ks-kbd*` /
-// `.ks-web__bar*` rules); no real app screen or component ever needs a fake
-// keyboard or browser bar. If `sp-theme-parity.test.ts` or a future audit
-// against themes.css looks short by 5 keys, this is why — don't "fix" it by
-// adding them.
+// The board also defines `kbd-bg`, `kbd-key`, `kbd-key-2`, `chrome` and
+// `chrome-dot` — deliberately NOT ported here: they only render the board's
+// own illustrative keyboard / browser-chrome mockups.
 
 export interface ThemeColors {
   bg: string;
@@ -53,7 +64,7 @@ export interface ThemeColors {
   live: string;
   liveText: string;
   liveGlow: string;
-  /** Text on a `live` gold fill (the your-turn flash). Navy in both themes (Design Lead, 2026-10-06). */
+  /** Ink on the `live` fill (the your-turn flash): dark in Dark, white in Light (§9C). */
   onLive: string;
   gain: string;
   loss: string;
@@ -80,121 +91,172 @@ export interface ThemeColors {
   inverseBg: string;
   inverseFg: string;
   track: string;
-  /** CSS box-shadow shorthand, verbatim from themes.css — for reference/
-   * parity only. RN can't consume this string directly; the native shadow
+  /** CSS box-shadow shorthand — for reference/parity only. RN can't consume this string directly; the native shadow
    * config each theme actually renders lives in `elevation.ts`. */
   shadow: string;
   sheetShadow: string;
   scrim: string;
   tabbar: string;
+  /** Ink on `you` and `lossFill` fills: white in BOTH themes (§9C, split from onAccent). NEW v3. */
+  onYou: string;
+  /** Card rim: a 1pt inset edge on every card, both themes (§9C rule 1). NEW v3. */
+  rim: string;
+  /** Matchup roster: the slab under the half that wins the row (§9C RosterRow). NEW v3. */
+  lit: string;
+  /** Scoreboard: the leader's half (§9C Scoreboard). NEW v3. */
+  leadWash: string;
+  /** Money screens' page (Portfolio, the stock sheet): near-black in Dark, the white surface in Light. NEW v3. */
+  moneyBg: string;
+  /** Draft: the on-the-clock cell's fill. NEW v3. */
+  clockCell: string;
+  /** The on-the-clock cell's clock. NEW v3. */
+  onClockCell: string;
+  /** The on-the-clock cell's pick number (cyan in both themes: the cell is dark in both). NEW v3. */
+  clockCellLive: string;
+  /** Ink on a sector pill (a filled `tile*`). NEW v3. */
+  onTile: string;
+  /** Sector colours: the draft tile's 3pt bottom line and the sector pill (§9C DraftTile). NEW v3. */
+  tileTech: string;
+  tileComm: string;
+  tileCons: string;
+  tileFin: string;
+  tileHealth: string;
 }
 
 const light: ThemeColors = {
-  bg: '#F3F5F8',
-  surface: '#FFFFFF',
-  inset: '#F0F3F7',
-  sunken: '#EBEFF4',
-  line: '#E3E8EF',
-  border: '#DDE3EA',
-  borderStrong: '#76828F',
-  text: '#0D1B2E',
-  text2: '#5B6678',
-  text3: '#8A94A3',
-  accent: '#2860F0',
-  accentTint: '#E8EEFF',
-  accentWash: 'rgba(40, 96, 240, 0.06)',
-  onAccent: '#FFFFFF',
-  you: '#2860F0',
-  youText: '#2860F0',
-  youTint: 'rgba(40, 96, 240, 0.08)',
-  opp: '#E8541F',
-  oppText: '#B93C0E',
-  onOpp: '#0D1B2E',
-  live: '#C07E00',
-  liveText: '#8A5B00',
-  liveGlow: 'rgba(192, 126, 0, 0.35)',
-  onLive: '#0D1B2E',
-  gain: '#12803F',
-  loss: '#C8303A',
-  zero: '#5B6678',
-  gainTint: '#EDF7F0',
-  lossTint: '#FCE8E9',
-  danger: '#B42318',
-  lossFill: '#C8303A',
-  warnTint: '#FFF6DE',
-  medalGold: '#B07A00',
-  medalSilver: '#7C8898',
-  medalBronze: '#C27036',
-  onMedal: '#1A1407',
-  warnLine: '#F5D48A',
-  warnText: '#7A4B00',
-  primaryBg: '#0D1B2E',
-  primaryFg: '#FFFFFF',
-  secondaryBg: '#FFFFFF',
-  secondaryFg: '#0D1B2E',
-  secondaryBorder: '#76828F',
-  inverseBg: '#0D1B2E',
-  inverseFg: '#FFFFFF',
-  track: '#E3E8EF',
-  shadow: '0 2px 8px rgba(13, 27, 46, 0.05)',
+  bg: '#F3F5FC',
+  surface: '#FDFEFF',
+  inset: '#E7EBF6',
+  sunken: '#E6E9F4',
+  line: '#D5DAEA',
+  border: '#D5DAEA',
+  borderStrong: '#737A8D',
+  text: '#0E142C',
+  text2: '#505B72',
+  text3: '#969EB2',
+  accent: '#00708E',
+  accentTint: 'rgba(0, 112, 142, 0.12)',
+  accentWash: 'rgba(0, 112, 142, 0.05)',
+  onAccent: '#FDFEFF',
+  you: '#0064DC',
+  youText: '#0053C2',
+  youTint: 'rgba(0, 100, 220, 0.1)',
+  opp: '#788093',
+  oppText: '#505B72',
+  onOpp: '#06091C',
+  live: '#00708E',
+  liveText: '#006885',
+  liveGlow: 'rgba(0, 112, 142, 0.3)',
+  onLive: '#FDFEFF',
+  gain: '#006C47',
+  loss: '#C02447',
+  zero: '#505B72',
+  gainTint: 'rgba(0, 108, 71, 0.1)',
+  lossTint: 'rgba(192, 36, 71, 0.1)',
+  danger: '#B7191C',
+  lossFill: '#BD1F3D',
+  warnTint: '#FAE7B3',
+  medalGold: '#AD7300',
+  medalSilver: '#7C8795',
+  medalBronze: '#C36C36',
+  onMedal: '#160E02',
+  warnLine: '#EFCC83',
+  warnText: '#784900',
+  primaryBg: '#00708E',
+  primaryFg: '#FDFEFF',
+  secondaryBg: 'rgba(253, 254, 255, 0.0)',
+  secondaryFg: '#0E142C',
+  secondaryBorder: '#737A8D',
+  inverseBg: '#0E142C',
+  inverseFg: '#FDFEFF',
+  track: '#D5DAEA',
+  shadow: 'none',
   sheetShadow: '0 8px 24px rgba(13, 27, 46, 0.12)',
-  scrim: 'rgba(13, 27, 46, 0.38)',
-  tabbar: 'rgba(255, 255, 255, 0.92)',
+  scrim: 'rgba(14, 20, 44, 0.38)',
+  tabbar: 'rgba(253, 254, 255, 0.94)',
+  // NEW in v3 (§9C).
+  onYou: '#FAFCFE',
+  rim: '#D5DAEA',
+  lit: '#D5EEFF',
+  leadWash: 'rgba(0, 108, 71, 0.09)',
+  moneyBg: '#FDFEFF',
+  clockCell: '#131832',
+  onClockCell: '#FDFEFF',
+  clockCellLive: '#35EEFF',
+  onTile: '#0E142C',
+  tileTech: '#6991DC',
+  tileComm: '#956ED2',
+  tileCons: '#CE7B3A',
+  tileFin: '#23A28C',
+  tileHealth: '#CD568B',
 };
 
 const dark: ThemeColors = {
-  bg: '#0D1B2E',
-  surface: '#16263D',
-  inset: '#1E3250',
-  sunken: '#0A1524',
-  line: '#263A58',
-  border: '#263A58',
-  borderStrong: '#8DA0BD',
-  text: '#F3F6FA',
-  text2: '#9AAAC4',
-  text3: '#6B7D99',
-  accent: '#7FA6FF',
-  accentTint: 'rgba(127, 166, 255, 0.16)',
-  accentWash: 'rgba(127, 166, 255, 0.07)',
-  onAccent: '#FFFFFF',
-  you: '#3366FF',
-  youText: '#8AB0FF',
-  youTint: 'rgba(51, 102, 255, 0.18)',
-  opp: '#FF6A3D',
-  oppText: '#FF8F66',
-  onOpp: '#0D1B2E',
-  live: '#FFC53D',
-  liveText: '#FFC53D',
-  liveGlow: 'rgba(255, 197, 61, 0.45)',
-  onLive: '#0D1B2E',
-  gain: '#4ADE8B',
-  loss: '#FF7A7A',
-  zero: '#9AAAC4',
-  gainTint: 'rgba(74, 222, 139, 0.14)',
-  lossTint: 'rgba(255, 122, 122, 0.14)',
-  danger: '#FF8A80',
-  lossFill: '#D93A44',
-  warnTint: 'rgba(255, 197, 61, 0.1)',
-  medalGold: '#E8AF2E',
-  medalSilver: '#B9C3CF',
-  medalBronze: '#DC8A55',
-  onMedal: '#0D1B2E',
-  warnLine: 'rgba(255, 197, 61, 0.35)',
-  warnText: '#FFC53D',
-  primaryBg: '#FFFFFF',
-  primaryFg: '#0D1B2E',
-  secondaryBg: 'transparent',
-  secondaryFg: '#F3F6FA',
-  secondaryBorder: '#8DA0BD',
-  inverseBg: '#F3F6FA',
-  inverseFg: '#0D1B2E',
-  track: '#263A58',
+  bg: '#060A1F',
+  surface: '#0E132F',
+  inset: '#181F3E',
+  sunken: '#030513',
+  line: '#222C4C',
+  border: '#222C4C',
+  borderStrong: '#58698C',
+  text: '#F3F5FB',
+  text2: '#98A8C5',
+  text3: '#5E6981',
+  accent: '#35EEFF',
+  accentTint: 'rgba(53, 238, 255, 0.16)',
+  accentWash: 'rgba(53, 238, 255, 0.06)',
+  onAccent: '#080D25',
+  you: '#0067DF',
+  youText: '#83BAFF',
+  youTint: 'rgba(0, 103, 223, 0.22)',
+  opp: '#7F8DA5',
+  oppText: '#98A8C5',
+  onOpp: '#080D25',
+  live: '#35EEFF',
+  liveText: '#35EEFF',
+  liveGlow: 'rgba(53, 238, 255, 0.35)',
+  onLive: '#080D25',
+  gain: '#39EEBA',
+  loss: '#F76D89',
+  zero: '#98A8C5',
+  gainTint: 'rgba(57, 238, 186, 0.12)',
+  lossTint: 'rgba(247, 109, 137, 0.14)',
+  danger: '#FB8371',
+  lossFill: '#C12440',
+  warnTint: 'rgba(244, 191, 63, 0.1)',
+  medalGold: '#ECAE30',
+  medalSilver: '#BBC5D1',
+  medalBronze: '#DE8F57',
+  onMedal: '#080D25',
+  warnLine: 'rgba(244, 191, 63, 0.35)',
+  warnText: '#FAC547',
+  primaryBg: '#35EEFF',
+  primaryFg: '#080D25',
+  secondaryBg: 'rgba(14, 19, 47, 0.0)',
+  secondaryFg: '#F3F5FB',
+  secondaryBorder: '#58698C',
+  inverseBg: '#F3F5FB',
+  inverseFg: '#060A1F',
+  track: '#222C4C',
   shadow: 'none',
-  // Sheets slide up from the bottom, so Dark's sheet shadow casts UPWARD
-  // (negative y-offset) — not a typo, verbatim from themes.css.
-  sheetShadow: '0 -8px 32px rgba(0, 0, 0, 0.45)',
-  scrim: 'rgba(0, 0, 0, 0.55)',
-  tabbar: 'rgba(13, 27, 46, 0.92)',
+  sheetShadow: 'none',
+  scrim: 'rgba(2, 3, 12, 0.55)',
+  tabbar: 'rgba(4, 6, 23, 0.94)',
+  // NEW in v3 (§9C).
+  onYou: '#FAFCFE',
+  rim: '#253154',
+  lit: '#002C4A',
+  leadWash: 'rgba(57, 238, 186, 0.12)',
+  moneyBg: '#020309',
+  clockCell: '#01020A',
+  onClockCell: '#F3F5FB',
+  clockCellLive: '#35EEFF',
+  onTile: '#0A0F27',
+  tileTech: '#A7C0F9',
+  tileComm: '#B7A1F5',
+  tileCons: '#F8BD8A',
+  tileFin: '#4DE3CA',
+  tileHealth: '#E181B0',
 };
 
 export const color = { light, dark };

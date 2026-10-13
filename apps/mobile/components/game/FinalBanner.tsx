@@ -38,7 +38,7 @@ export function FinalBanner({ model, play }: FinalBannerProps) {
 
   const won = model.outcome === 'won';
   const fill = won ? colors.you : colors.sunken;
-  const ink = won ? colors.onAccent : colors.text;
+  const ink = won ? colors.onYou : colors.text;
 
   return (
     <Animated.View

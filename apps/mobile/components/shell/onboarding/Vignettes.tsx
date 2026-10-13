@@ -95,7 +95,7 @@ export function VersusVignette({ active }: VignetteProps) {
   return (
     <View style={styles.versus}>
       <View style={styles.versusRow}>
-        <Badge initials={VERSUS.you.initials} fill={colors.you} ink={colors.onAccent} label={VERSUS.you.name} />
+        <Badge initials={VERSUS.you.initials} fill={colors.you} ink={colors.onYou} label={VERSUS.you.name} />
         <Text variant="score.lg" accessibilityElementsHidden importantForAccessibility="no">
           VS
         </Text>
