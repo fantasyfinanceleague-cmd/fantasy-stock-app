@@ -118,6 +118,32 @@ with the reason beside it**. A silent no-op is a P1.
 - **Reference notes from Giorgio's own screenshots** (`~/fantasy-stock-design-review/
   references/espn-player-card-{1,2,3}.webp`): the owner's avatar is now drawn (approved); the
   week-by-week game log is "later" (not in this build); the gate does not flag its absence.
+- **Carried from the W3 gate (2026-10-12): fixed before this gate is sent, each one checked.**
+  - **The owner's disc shows ONE initial** (§9C Type: a disc under 24pt). Capture a wide pair
+    ("Marco W." → "M") and "Gianluigi B." → "G" in both themes; a test in `sp-avatar.test.ts`.
+  - **The card matches the board** (`directions.jsx`, the `PlayerCard` frame), three details:
+    1. **"How you got it" sits in an `inset` panel** (radius 14, padding 12 / 14), its title as
+       a `tag`-size label in `text2` (normal width, not the Expanded face), the line under it
+       at 15/700, tabular. Not a headline over body text.
+    2. **Save carries the drawn star** (18pt, outline) before the label. **Saved:** the same
+       star filled, the label "Saved"; nothing else changes (no accent fill).
+    3. **The Season title row carries its caption** on the right: "{entry price} → {price
+       now}" ("$290.10 → $318.37") in `caption`, `text2`, tabular, on the title's baseline.
+  - **No action can render without its handler.** Type `PlayerCardProps` so `onSell` is
+    required for your own stock and `onToggleSave` for theirs (a discriminated union on
+    `owner`); a disabled button only ever appears with its reason beside it. Every screen's X
+    closes the sheet (the gallery's no-op X doesn't count, but no screen may copy it).
+  - **RosterRow's VoiceOver label says whose half it is**: "Yours, NVDA …" / "Gianluigi B.,
+    NKE …".
+  - **The 4pt scale:** PlayerCard gap 14 → 16, Scoreboard padding 14 → 16, GroupHead 10 → 12
+    and 5 → 4, RangePills tab gap 18 → 16 (measured glyph to glyph in the captures).
+- **Not seen at W3, so first seen here** (the W3 captures were the gallery, inline):
+  the card **as a sheet** (rising over `scrim`, Reduce Motion fades it; record both); **Sell
+  enabled**, and the tap through it to the sell flow; **Save → Saved** and back; a
+  **"Bought"** acquisition; a **price-tier slot pill** ("$100–$200") in the header; a stock
+  **bought today** (the dated 0- and 1-point season line with its full axis); **VoiceOver**
+  reading the three figures, the owner and the action; **XL** on the card (the figure labels
+  wrap or hold at ≥ 11pt; "SINCE THE DRAFT" is the longest).
 
 ### Draft room + lobby
 - **States:** on the clock (with the flash recorded in both themes), someone else's turn,
