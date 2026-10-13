@@ -39,6 +39,7 @@ export function Text({
   numberOfLines,
   maxFontSizeMultiplier,
   animatedStyle,
+  children,
   ...rest
 }: TextProps) {
   const { colors } = useTheme();
@@ -57,6 +58,12 @@ export function Text({
   }
 
   const resolvedNumberOfLines = numberOfLines ?? (NEVER_WRAP.has(variant) ? 1 : undefined);
+
+  // An uppercase variant (`tag`) uppercases plain-string children here rather than through
+  // textTransform: iOS measures the SOURCE case, so the wider capitals clipped the last glyph
+  // ("FINAL" → "FINA") once §9C widened the tag's tracking. Other children keep textTransform.
+  const upperInJs = typeStyle.textTransform === 'uppercase' && typeof children === 'string';
+  const content = upperInJs ? (children as string).toUpperCase() : children;
   const resolvedMaxFontSizeMultiplier = maxFontSizeMultiplier ?? typeStyle.maxScale;
 
   // A caller's fontWeight picks the matching Archivo face (iOS ignores fontWeight on a
@@ -71,7 +78,7 @@ export function Text({
       lineHeight: typeStyle.lineHeight,
       color: resolvedColor,
       letterSpacing: typeStyle.letterSpacing,
-      textTransform: typeStyle.textTransform,
+      textTransform: upperInJs ? undefined : typeStyle.textTransform,
     },
     typeStyle.tabularNums ? styles.tabularNums : null,
     style,
@@ -85,7 +92,9 @@ export function Text({
         numberOfLines={resolvedNumberOfLines}
         maxFontSizeMultiplier={resolvedMaxFontSizeMultiplier}
         {...rest}
-      />
+      >
+        {content}
+      </Animated.Text>
     );
   }
   return (
@@ -94,7 +103,9 @@ export function Text({
       numberOfLines={resolvedNumberOfLines}
       maxFontSizeMultiplier={resolvedMaxFontSizeMultiplier}
       {...rest}
-    />
+    >
+      {content}
+    </RNText>
   );
 }
 

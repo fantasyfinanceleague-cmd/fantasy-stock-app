@@ -69,12 +69,13 @@ export function PhaseChip({ phase, label, onPageBackground = false }: PhaseChipP
           fontSize: tagStyle.fontSize,
           lineHeight: tagStyle.lineHeight,
           letterSpacing: tagStyle.letterSpacing,
-          // A custom `label` is sentence case (Design Lead ruling, final).
-          textTransform: phaseChipUppercase(label) ? tagStyle.textTransform : undefined,
           color: textColor,
         }}
       >
-        {meta.label}
+        {/* A custom `label` is sentence case (Design Lead ruling, final). Uppercased in JS, not
+            with textTransform: iOS measures the source case, so the wider capitals clipped
+            ("FINAL" rendered "FINA" once §9C widened the tag's tracking). */}
+        {phaseChipUppercase(label) ? meta.label.toUpperCase() : meta.label}
       </RNText>
     </View>
   );

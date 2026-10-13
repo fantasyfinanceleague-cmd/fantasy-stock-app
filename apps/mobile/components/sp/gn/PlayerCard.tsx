@@ -173,7 +173,7 @@ function Figure({ label, value, sub, valueColor, subColor }: { label: string; va
   return (
     <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}, ${sub}`}>
       {/* The board's figure label: uppercase at NORMAL width (not the Expanded tag face). */}
-      <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.figureLabel}>{label}</Text>
+      <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.figureLabel}>{label.toUpperCase()}</Text>
       <Text variant="score.md" color={valueColor} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
       <Text variant="caption" color={subColor} style={styles.figureSub} numberOfLines={1}>{sub}</Text>
     </View>
@@ -241,9 +241,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[1],
   },
+  // Uppercased in JS, not textTransform (iOS measures the source case and clips the capitals).
   figureLabel: {
     fontWeight: '800',
-    textTransform: 'uppercase',
     letterSpacing: 0.48,
   },
   figureSub: {

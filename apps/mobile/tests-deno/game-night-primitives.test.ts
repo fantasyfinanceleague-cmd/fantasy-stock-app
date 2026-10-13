@@ -219,3 +219,15 @@ Deno.test('Chart: one 2.5pt line coloured by the window, a dashed borderStrong b
   assert(/variant="caption"\s+tone="secondary"/.test(src), 'axis labels: caption, text2');
   assert(!/width: l\.width \}/.test(src), 'a label is never clipped to its estimated width');
 });
+
+// ── Uppercase without clipping ───────────────────────────────────────────────────
+
+Deno.test('uppercase tags are uppercased in JS, not textTransform (iOS measured "Final" and clipped "FINAL" to "FINA")', () => {
+  const text = strip(SOURCES['components/sp/Text.tsx']);
+  assert(text.includes("const upperInJs = typeStyle.textTransform === 'uppercase' && typeof children === 'string';"));
+  assert(text.includes('textTransform: upperInJs ? undefined : typeStyle.textTransform,'));
+  const chip = strip(SOURCES['components/sp/PhaseChip.tsx']);
+  assert(!/textTransform/.test(chip), 'PhaseChip draws its own capitals');
+  assert(chip.includes('meta.label.toUpperCase()'));
+  assert(!/textTransform/.test(strip(SOURCES['components/sp/gn/PlayerCard.tsx'])));
+});
