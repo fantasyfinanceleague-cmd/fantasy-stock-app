@@ -198,6 +198,16 @@ Phase 3: **app first**.
 
 ## 4. Open items (ordered by launch impact)
 
+> **Releasing while 1.3 (Game Night) is built (2026-10-12):** `main` carries the 1.3 reskin
+> from W3 onward, and its tokens change EVERY screen. **Never `eas update` from `main` until
+> 1.3 ships.** A 1.2.0 hotfix goes out over the air ONLY from `release/1.2.x` (cut at
+> `c37cb9b5`, whose app code equals the last 1.2.0 OTA, `af63dee4`): fix on a branch off
+> `release/1.2.x`, PR into it, then in the deploy checkout
+> `git fetch origin && git checkout --detach origin/release/1.2.x`, and run the usual
+> `EXPO_PUBLIC_SUPABASE_URL=… EXPO_PUBLIC_RUN_IT_BACK=1 eas update --channel production
+> --environment production --platform ios`. Port the same fix to `main` separately. Never
+> `db push` from `release/1.2.x`: database changes ship from `main` only.
+
 > **2026-10-12: every 1.2.0 server change is live and verified. Next, in order:**
 > 1. **The 1.2.0 build** (Giorgio): `eas build --platform ios --profile production` from the deploy checkout's `apps/mobile` (main, version 1.2.0, `EXPO_PUBLIC_RUN_IT_BACK=1` in production, #212) → `eas submit --platform ios --latest` → TestFlight.
 > 2. **Device walkthrough:** `docs/testing/WALKTHROUGH_1.2.0.md` (25 items, #209), including Run it back end to end, the your-turn buzz + chime on any tab (#213), and the first-pick push (#214).
