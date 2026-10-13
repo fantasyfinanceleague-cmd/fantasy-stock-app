@@ -25,6 +25,13 @@ export function parseDraftStartFixture(raw: string | null | undefined): { state:
 const SOFIA_LEFT = { code: 'roster_reconfirm_required', departed: [{ name: 'Sofia F.' }], membersBefore: 8, members: 7, choice: 'pending' };
 const PLAYOFF_8_OF_7 = { code: 'playoff_teams_exceeds_members', playoffTeams: 8, members: 7 };
 
+/** The 'scheduled' fixture's draft time ("2d 06h 40m" from now). Shared with Home's
+ * pre-draft fixture, whose order line is this minus an hour (finalize = draft − 1h), so the
+ * two fixtures never name two different draft days (W4 gate, 2026-10-13). */
+export function scheduledFixtureStartMs(nowMs: number): number {
+  return nowMs + 2 * 24 * HOUR + 6 * HOUR + 40 * MIN + 30_000;
+}
+
 export function draftStartStatusFixture(state: StartState, member: boolean, nowMs: number): Record<string, unknown> {
   // server_now: the DB clock the status was judged at (feat/draft-auto-start 3f0eb8d).
   const base = { ok: true, is_commissioner: !member, bots_allowed: false, bots_needed: 0, member_count: 7, min_members: 4, postponed: null, server_now: iso(nowMs) };
@@ -33,7 +40,7 @@ export function draftStartStatusFixture(state: StartState, member: boolean, nowM
     case 'no_date':
       return { ...base, can_start: false, start_state: 'no_date', starts_at: null, blockers: [{ code: 'no_draft_date' }] };
     case 'scheduled': {
-      const t = nowMs + 2 * 24 * HOUR + 6 * HOUR + 40 * MIN + 30_000; // "2d 06h 40m"
+      const t = scheduledFixtureStartMs(nowMs); // "2d 06h 40m"
       return { ...base, can_start: false, start_state: 'scheduled', starts_at: iso(t), blockers: [notReached(t)] };
     }
     case 'at_risk': {

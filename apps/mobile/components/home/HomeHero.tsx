@@ -12,6 +12,7 @@ import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/m
 import { RollingMoney } from '@/components/home/RollingMoney';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroUnpricedCaption } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
+import { heroMetaLine } from '@/lib/home/calmHome';
 
 // Stockpile — <HomeHero> (Phase 3b-2, D1 Concept A; Game Night, W4). The big number is
 // team VALUE; the line under it is the scored season gain plus today's
@@ -128,12 +129,12 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
             fits one line and lays out exactly as before. */}
         <Text variant="caption" tone="secondary" style={[styles.metaNum, styles.metaRight]}>
           {rank != null
-            ? `${ordinal(rank)} of ${totalPlayers} · ${record}${weekOrRound ? ` · ${weekOrRound}` : ''}`
+            ? heroMetaLine([`${ordinal(rank)} of ${totalPlayers}`, record, weekOrRound])
             // Pre-season (rank null, board: "Week 1 of 14 · 0–0"): the
             // week/round leads, since there's no record worth leading
             // with yet -- the one case where this order differs from
             // every other state's "record · week" (Design Lead, B3).
-            : `${weekOrRound ?? ''}${weekOrRound && record ? ' · ' : ''}${record}`}
+            : heroMetaLine([weekOrRound, record])}
         </Text>
       </View>
 

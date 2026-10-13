@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { radius, space } from '@/constants/tokens';
+import { clearOf } from '@/constants/tokens/color';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { ListRow } from '@/components/sp/ListRow';
@@ -162,8 +163,9 @@ export function SeasonCompleteCard({
         {/* The champion's gold wash fades out by the card's middle. */}
         {/* Game Night (W4): gold is `medalGold` now (§9C: "Medal disc, gold, season complete
             only") — W3 made `live` the cyan accent, so the old live-gold wash would have read
-            as "live", not "champion". The wash is the gold at a low opacity. */}
-        {isChampion ? <LinearGradient colors={[colors.medalGold, 'transparent']} locations={[0, 0.5]} style={[styles.wash, styles.goldWash]} pointerEvents="none" /> : null}
+            as "live", not "champion". The wash is the gold at a low opacity, fading to the
+            same gold at alpha 0 (never the transparent keyword, which is black at 0: a grey fade). */}
+        {isChampion ? <LinearGradient colors={[colors.medalGold, clearOf(colors.medalGold)]} locations={[0, 0.5]} style={[styles.wash, styles.goldWash]} pointerEvents="none" /> : null}
         <View style={styles.medallionBlock}>
         {/* The medallion draws its own disc (§9B): a 30 pt glyph in a 60 pt disc, scaled with Dynamic Type. */}
         <Animated.View style={trophyStyle}>

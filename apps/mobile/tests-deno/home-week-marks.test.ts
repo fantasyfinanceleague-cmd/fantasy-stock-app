@@ -8,18 +8,19 @@ import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   weekMarks, regularWeekSlots, layoutWeekMarks, marksCollide, regularMarkResults, resultFromGains, seasonChartA11yLabel,
   rangeTabLook, rangeTabHitSlop, marksShownFor, chartLiveEnd, glyphWidth, pipFor, RANGE_TABS, MIN_HIT, BYE_MIN_SLOT, MARK_MAX_FONT_SCALE,
-  PIP_SIZE, PIP_RING_STROKE, rangeTabsPullUp, TAB_TEXT_UNDER_MARKS, rangeTabsSlackBelow, RANGE_PILL_TAB,
+  PIP_SIZE, PIP_RING_STROKE, rangeTabsPullUp, TAB_TEXT_UNDER_MARKS, rangeTabsSlackBelow, RANGE_PILL_TAB, NO_PULL_GAP_1X, NO_PULL_GAP_CAP, noPullGap, RANGE_TAB_MAX_FONT_SCALE,
   type WeekMarkInput,
 } from '../lib/home/weekMarks.ts';
 import { buildSeasonGainSeries, type SeasonWeekInput } from '../lib/home/seasonGainSeries.ts';
 import { buildChartGeometry } from '../lib/chart/chartGeometry.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
-// W4 capture pass (both phones, the README's F1 row): the dates' lowest pixel (a descender)
-// -> the tabs' highest pixel, row-wise, in points, with the tabs NOT pulled up; standard text
-// and XL (accessibility-extra-large, fontScale 2.35).
+// W4 gate capture pass (both phones, the README's F1 row): the dates' lowest pixel (a
+// descender) -> the tabs' highest pixel, row-wise, in points, with the tabs NOT pulled up;
+// Large text, and XL (accessibility-extra-large), where every row above the tabs is at its
+// 1.3x cap. (XL measured 5.0pt with the 23pt pull then in place: 5.0 + 23 = 28.0.)
 const MEASURED_NO_PULL_1X = 28.7;
-const MEASURED_NO_PULL_XL = 30.3;
+const MEASURED_NO_PULL_CAP = 28.0;
 
 /** A built season of `n` scored weeks (plus an optional live week), laid out on a `width` chart the way SeasonChart does. */
 function season(n: number, width: number, opts: { liveDays?: number } = {}) {
@@ -286,15 +287,23 @@ Deno.test('range tabs: every hit area is at least 44 × 44, and neighbours never
 
 Deno.test('F1: the tab labels sit 8pt (±2) under the date labels; the 24pt block gap sits under the tabs', () => {
   assertEquals(TAB_TEXT_UNDER_MARKS, 8);
-  // W4 (Game Night): the two end dates now sit under the marks, and the tabs under the dates.
-  // Measured from device pixels on the W4 captures (README, docs/design/captures/gn-w4-home):
-  // date glyph bottom -> tab glyph top with no pull-up, at standard text and at the 1.3x cap.
-  const before = [[1, MEASURED_NO_PULL_1X], [2.35, MEASURED_NO_PULL_XL]] as const;
-  assertEquals([rangeTabsPullUp(1), rangeTabsPullUp(2.35)], [21, 22]);
-  for (const [scale, gap] of before) {
+  // The constants are the README's F1 measurements (the dates' lowest pixel -> the tabs'
+  // highest, no pull), at Large and at XL.
+  assertEquals([NO_PULL_GAP_1X, NO_PULL_GAP_CAP], [MEASURED_NO_PULL_1X, MEASURED_NO_PULL_CAP]);
+  assertEquals([noPullGap(1), noPullGap(1.3)], [MEASURED_NO_PULL_1X, MEASURED_NO_PULL_CAP]);
+  // The flat part is derived: every row above the tabs caps at the same 1.3x, so nothing
+  // above them changes size past it.
+  const chart = SOURCES['components/sp/gn/Chart.tsx'];
+  assert(chart.includes('export const AXIS_MAX_SCALE = 1.3;'));
+  assertEquals([MARK_MAX_FONT_SCALE, RANGE_TAB_MAX_FONT_SCALE], [1.3, 1.3]);
+  assert(SOURCES['components/sp/gn/RangePills.tsx'].includes('const LABEL_MAX_SCALE = 1.3;'));
+  for (const [scale, gap] of [[1, MEASURED_NO_PULL_1X], [1.3, MEASURED_NO_PULL_CAP], [2.35, MEASURED_NO_PULL_CAP]] as const) {
     const after = gap - rangeTabsPullUp(scale);
     assert(Math.abs(after - TAB_TEXT_UNDER_MARKS) <= 2, `${scale}x: ${after}pt`);
   }
+  // Every row above the tabs caps at 1.3x (marks, dates, tabs), so the pull is flat above it.
+  assertEquals(rangeTabsPullUp(1.3), rangeTabsPullUp(2.35));
+  assertEquals(rangeTabsPullUp(3.12), rangeTabsPullUp(1.3));
   // Wiring: the row is pulled up by exactly that, and draws after the chart (on top of its strip).
   const block = SOURCES['components/home/HomeSeason.tsx'];
   assert(block.includes('<View style={{ marginTop: -rangeTabsPullUp(fontScale), marginBottom: -rangeTabsSlackBelow(fontScale) }}>'));

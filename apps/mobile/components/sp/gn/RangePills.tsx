@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 import { radius, space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { rangeLook, type RangeVariant } from '@/components/sp/logic/gameNight';
+import { rangeLook, rangeTabWidth, type RangeVariant } from '@/components/sp/logic/gameNight';
 
 // Stockpile — <RangePills>, Game Night (§9C "RangePills"): the chart's range picker.
 //   - `tabs` (Home): text tabs, the selected one in `text` with a 2pt `accent` underline;
@@ -28,6 +28,10 @@ const LABEL_MAX_SCALE = 1.3;
 
 export function RangePills<R extends string>({ options, value, onChange, variant, align = variant === 'tabs' ? 'end' : 'start' }: RangePillsProps<R>) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  // `tabs`: every box the same width (the widest label + 16, at least 44), the label centred,
+  // so the labels sit evenly apart; the boxes touch, so no shared hit areas (no hitSlop).
+  const tabWidth = variant === 'tabs' ? rangeTabWidth(options, fontScale) : undefined;
   return (
     <View accessibilityRole="tablist" style={[styles.row, variant === 'tabs' ? styles.rowTabs : styles.rowPills, { justifyContent: align === 'end' ? 'flex-end' : 'flex-start' }]}>
       {options.map((option) => {
@@ -38,18 +42,23 @@ export function RangePills<R extends string>({ options, value, onChange, variant
             key={option}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
-            hitSlop={8}
+            hitSlop={variant === 'tabs' ? undefined : 8}
             onPress={() => {
               if (selected) return;
               Haptics.selectionAsync().catch(() => {});
               onChange(option);
             }}
-            style={[styles.option, variant === 'pills' ? styles.pill : styles.tab, look.fill ? { backgroundColor: look.fill } : null]}
+            style={[styles.option, variant === 'pills' ? styles.pill : [styles.tab, { width: tabWidth }], look.fill ? { backgroundColor: look.fill } : null]}
           >
-            <Text variant="callout" color={look.ink} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={selected ? styles.selected : styles.idle}>{option}</Text>
             {variant === 'tabs' ? (
-              <View style={[styles.underline, { backgroundColor: look.underline ?? 'transparent' }]} />
-            ) : null}
+              // The underline spans the LABEL, not the box: this view hugs the text.
+              <View testID="range-tab-label">
+                <Text variant="callout" color={look.ink} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={selected ? styles.selected : styles.idle}>{option}</Text>
+                <View style={[styles.underline, { backgroundColor: look.underline ?? 'transparent' }]} />
+              </View>
+            ) : (
+              <Text variant="callout" color={look.ink} maxFontSizeMultiplier={LABEL_MAX_SCALE} style={selected ? styles.selected : styles.idle}>{option}</Text>
+            )}
           </Pressable>
         );
       })}
@@ -62,9 +71,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  // The 4pt scale (W3 gate, carried to W4): 16 between the text tabs, not the board's 18.
+  // Equal boxes that touch: the space between labels is each box's own 16 (W4 gate).
   rowTabs: {
-    gap: space[5],
+    gap: 0,
   },
   rowPills: {
     gap: 6,
@@ -78,6 +87,7 @@ const styles = StyleSheet.create({
   tab: {
     minWidth: 44,
     paddingTop: space[2],
+    alignItems: 'center',
   },
   pill: {
     minWidth: 44,

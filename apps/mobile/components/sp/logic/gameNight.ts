@@ -9,6 +9,7 @@ import type { ThemeColors } from '../../../constants/tokens/color';
 import { formatMoney, formatPercent } from './money';
 import { ordinal } from '../../../lib/home/ordinal';
 import { COPY as MONEY_COPY } from '../../../lib/money/moneyCopy';
+import { estimateLabelWidth } from './chartAxis';
 
 // ── Scoreboard (Matchup) ─────────────────────────────────────────────────────────
 
@@ -150,6 +151,13 @@ export function movement(delta: number | null | undefined): Movement {
 /** §9C: your row's ring. */
 export const YOU_RING = 1.5;
 
+/** Home's Standings excerpt stacks (name over the numbers) from this Dynamic Type scale up:
+ * at XL (2.35) a one-line row left the name a single letter (W4 gate capture). */
+export const EXCERPT_STACK_SCALE = 1.5;
+export function excerptStacks(fontScale: number): boolean {
+  return fontScale >= EXCERPT_STACK_SCALE;
+}
+
 // ── RangePills ───────────────────────────────────────────────────────────────────
 
 export type RangeVariant = 'tabs' | 'pills';
@@ -165,6 +173,27 @@ export interface RangeLook {
 export function rangeLook(variant: RangeVariant, selected: boolean, c: ThemeColors): RangeLook {
   if (variant === 'pills') return selected ? { fill: c.accent, ink: c.onAccent, underline: null } : { fill: null, ink: c.text2, underline: null };
   return selected ? { fill: null, ink: c.text, underline: c.accent } : { fill: null, ink: c.text2, underline: null };
+}
+
+/** The `tabs` variant's labels: callout 13pt, up to ExtraBold when selected, capped at 1.3x. */
+export const TAB_LABEL_SIZE = 13;
+export const TAB_LABEL_MAX_SCALE = 1.3;
+/** Each tab's box: the widest label + 16, never under 44 (Design Lead, W4 gate,
+ * 2026-10-13: equal boxes, labels centred, so the labels sit evenly apart). */
+export const TAB_LABEL_PAD = 16;
+export const TAB_MIN = 44;
+
+/** A label's width at the tab face: the axis estimate (12pt Medium) scaled to 13pt, plus
+ * 8% for the selected ExtraBold. Over-estimating only widens every box alike. */
+export function tabLabelWidth(label: string, fontScale = 1): number {
+  const s = Math.min(Math.max(fontScale, 1), TAB_LABEL_MAX_SCALE);
+  return Math.ceil(estimateLabelWidth(label, s) * (TAB_LABEL_SIZE / 12) * 1.08);
+}
+
+/** One width for every tab in the row. */
+export function rangeTabWidth(labels: readonly string[], fontScale = 1): number {
+  const widest = Math.max(0, ...labels.map((l) => tabLabelWidth(l, fontScale)));
+  return Math.max(TAB_MIN, widest + TAB_LABEL_PAD);
 }
 
 // ── Chip ─────────────────────────────────────────────────────────────────────────

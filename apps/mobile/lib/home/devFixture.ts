@@ -63,13 +63,18 @@ export type HomeFixture =
   /** W4 gate stress fixture (§9B, 2026-10-12): xl_million's ≥ $1,000,000 numbers with you
    * BEHIND this week (the two rosters swapped), 20-character names, and standings with
    * million-dollar gains and losses where your row sits 5th (outside the top 3). */
-  | 'stress';
+  | 'stress'
+  /** W4 gate (2026-10-13): Week 1, live, Monday 11:00 AM ET, before the season's first close —
+   * the season line's shortest state (one point: today). */
+  | 'week1_monday'
+  /** The same week on Tuesday 11:00 AM ET, after one close (Monday's): two points. */
+  | 'week1_tuesday';
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
   'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'complete_runner_up', 'bye',
   'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip', 'xl_large_numbers', 'xl_million',
-  'monday_preclose', 'stress',
+  'monday_preclose', 'stress', 'week1_monday', 'week1_tuesday',
 ];
 
 /** True for either drafting-family fixture — the states 6/7 group in

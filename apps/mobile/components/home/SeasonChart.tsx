@@ -7,7 +7,7 @@ import { Text } from '@/components/sp/Text';
 import { Chart, type UnderRow } from '@/components/sp/gn';
 import { formatMoney } from '@/components/sp/logic/money';
 import { dayOffset, type AxisSpec } from '@/components/sp/logic/chartAxis';
-import type { SeasonGainPoint } from '@/lib/home/seasonGainSeries';
+import { mergeSameDay, type SeasonGainPoint } from '@/lib/home/seasonGainSeries';
 import { weekMarks, MARK_MAX_FONT_SCALE, LIVE_MARK_SIZE, PIP_SIZE, PIP_RING_STROKE, type WeekMark, type WeekMarkInput, type WeekMarkTone } from '@/lib/home/weekMarks';
 
 // Stockpile — <SeasonChart>, Home's season line on the Game Night <Chart> (§9C "Chart",
@@ -64,12 +64,14 @@ export function seasonAxis(points: SeasonGainPoint[], today: string): AxisSpec {
 }
 
 export function SeasonChart({
-  points, live = false, weekStartIdx, skipEntrance = false, drawKey = 'season', height, bleed = 0, markResults, accessibilityLabel,
+  points: rawPoints, live = false, weekStartIdx: rawWeekStartIdx, skipEntrance = false, drawKey = 'season', height, bleed = 0, markResults, accessibilityLabel,
 }: SeasonChartProps) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const showMarks = !!markResults && markResults.length > 0;
   const [scrubbedWeek, setScrubbedWeek] = useState<number | null>(null);
+  // One point per day on the dated axis (Week 1's open and its Monday share a day).
+  const { points, weekStartIdx } = mergeSameDay(rawPoints, rawWeekStartIdx);
 
   const axis = seasonAxis(points, new Date().toISOString().slice(0, 10));
   const start = axis.kind === 'dated' ? axis.start : '';
@@ -113,7 +115,10 @@ export function SeasonChart({
       onScrubIndex={(i) => setScrubbedWeek(i != null ? points[i]?.week ?? null : null)}
       formatValue={(v) => formatMoney(v, { sign: 'always' })}
       accessibilityLabel={accessibilityLabel}
-      under={showMarks ? marksRow : undefined}
+      // The marks row is there in every window (empty outside Season), so the dates and the
+      // tabs never move when the window changes (W4 gate: the tabs jumped ~19pt on a tap).
+      under={showMarks ? marksRow : () => <View style={{ height: marksRowHeight(fontScale) }} />}
+      underHeight={marksRowHeight(fontScale)}
       underPlacement="beforeAxis"
     />
   );

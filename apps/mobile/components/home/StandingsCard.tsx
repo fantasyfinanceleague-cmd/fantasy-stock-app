@@ -72,7 +72,8 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
     <PressableScale onPress={() => router.push(STANDINGS_HREF)} accessibilityRole="button">
     <Card style={styles.card}>
       <View style={styles.header}>
-        <Text variant="headline">{STANDINGS_CARD_TITLE}</Text>
+        {/* The board's excerpt title: 17/800 (headline is 17/600). */}
+        <Text variant="headline" style={styles.title}>{STANDINGS_CARD_TITLE}</Text>
         <View style={styles.headerRight}>
           <Text variant="caption" tone="secondary" style={styles.headerCaption}>
             {standingsThroughWeekCaption(throughWeek)}
@@ -118,11 +119,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: space[3],
+    // The title's left edge on the rows' rank glyphs: the card's 8 + ManagerRow's 12.
+    paddingHorizontal: space[4],
     justifyContent: 'space-between',
     alignItems: 'center',
     columnGap: space[3],
     rowGap: space[1],
+  },
+  title: {
+    fontWeight: '800',
   },
   headerRight: {
     flexDirection: 'row',

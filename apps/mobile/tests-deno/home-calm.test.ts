@@ -159,7 +159,9 @@ Deno.test('the season-over card has no filled button: "See the final standings" 
   assert(card.includes('discPt={60}'));
   assert(card.includes("locations={[0, 0.5]}"));
   assert(card.includes("tone={isChampion ? 'onMedal' : 'surface'} discTone={isChampion ? 'medalGold' : 'text2'}"));
-  assert(card.includes('colors={[colors.medalGold, \'transparent\']}'));
+  // The fade ends on the SAME gold at alpha 0 (W4 gate: 'transparent' faded through grey).
+  assert(card.includes('colors={[colors.medalGold, clearOf(colors.medalGold)]}'));
+  assert(!code(card).includes("'transparent'"));
   assert(!code(card).includes('liveGlow'));
 });
 

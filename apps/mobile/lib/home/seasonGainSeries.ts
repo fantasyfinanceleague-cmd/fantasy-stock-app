@@ -208,10 +208,32 @@ export function windowSeries(
   // '1M'
   const WINDOW_DAYS = 30;
   if (result.points.length === 0) return [];
-  const lastDate = result.points[result.points.length - 1].date;
-  const cutoff = new Date(`${lastDate}T00:00:00Z`).getTime() - WINDOW_DAYS * 86_400_000;
-  const slice = result.points.filter((p) => new Date(`${p.date}T00:00:00Z`).getTime() >= cutoff);
+  // Calendar days: a past week's point carries a full timestamp (its weekEnd), a live day a
+  // bare date, so both are cut to 'YYYY-MM-DD' first. Appending 'T00:00:00Z' to a full
+  // timestamp parsed to NaN and dropped EVERY past week from 1M (found in the W4 capture).
+  const dayMs = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).getTime();
+  const cutoff = dayMs(result.points[result.points.length - 1].date) - WINDOW_DAYS * 86_400_000;
+  const slice = result.points.filter((p) => dayMs(p.date) >= cutoff);
   if (slice.length === 0) return slice;
   const base = slice[0].gain;
   return slice.map((p) => ({ ...p, gain: cents(p.gain - base) }));
+}
+
+/**
+ * One point per calendar day, for a chart on a DATED axis (Home's season line, W4): the
+ * Week-1-open anchor and that Monday's first point share a day, so on a day axis they'd
+ * stack into a vertical sliver at the left edge. The day keeps its LATEST value (the live
+ * point that the hero also shows). `weekStartIdx` is remapped so each week still starts at
+ * its own first kept point (a week whose first point merged starts at the point that
+ * replaced it). On Week 1's Monday before the first close this leaves ONE point: the
+ * designed 1-point state (the dot alone over the full axis, §9C).
+ */
+export function mergeSameDay(points: SeasonGainPoint[], weekStartIdx: number[]): { points: SeasonGainPoint[]; weekStartIdx: number[] } {
+  const day = (p: SeasonGainPoint) => p.date.slice(0, 10);
+  const kept: number[] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (i === points.length - 1 || day(points[i]) !== day(points[i + 1])) kept.push(i);
+  }
+  const newIndex = (i: number) => kept.filter((k) => k < i).length;
+  return { points: kept.map((i) => points[i]), weekStartIdx: weekStartIdx.map(newIndex) };
 }

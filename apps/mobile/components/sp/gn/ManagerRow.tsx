@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { radius, space } from '@/constants/tokens';
@@ -8,7 +8,7 @@ import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { movement, toneOf, YOU_RING } from '@/components/sp/logic/gameNight';
+import { excerptStacks, movement, toneOf, YOU_RING } from '@/components/sp/logic/gameNight';
 import { yourNameStyle, youA11y } from '@/lib/game/managerRow';
 
 // Stockpile — <ManagerRow>, Game Night (§9C; Giorgio, 2026-10-12, on Standings: "the game
@@ -20,6 +20,7 @@ import { yourNameStyle, youA11y } from '@/lib/game/managerRow';
 // Movement as a drawn chevron + number, in gain/loss. Season gain at 15/20, by sign.
 
 export const MANAGER_ROW_GAP = 6;
+
 
 export interface ManagerRowProps {
   rank: number;
@@ -39,6 +40,8 @@ export interface ManagerRowProps {
 
 export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record, seasonGain, onPress, excerpt = false }: ManagerRowProps) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  const stacked = excerpt && excerptStacks(fontScale);
   const move = movement(delta);
   const gainText = formatMoney(seasonGain, { sign: 'always' });
   const a11y = `${rank}, ${name}${youA11y(isYou)}, ${excerpt ? '' : `${move.a11y}, `}${record}, ${gainText} season gain`;
@@ -48,9 +51,23 @@ export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record
       <Text variant="score.md" color={rank === 1 ? colors.text : colors.text2} style={styles.rank}>{rank}</Text>
       {excerpt ? null : <Move dir={move.dir} text={move.text} />}
       <Avatar name={name} uri={avatarUri} size={excerpt ? 24 : 32} tone={isYou ? 'you' : 'neutral'} />
-      <Text variant="body" numberOfLines={1} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
-      <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
-      <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+      {stacked ? (
+        // Home's excerpt at large text (W4 gate): the name takes its own line(s) and the
+        // record and gain sit under it, so the name never shrinks to a letter.
+        <View style={styles.stack}>
+          <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>
+          <View style={styles.stackNumbers}>
+            <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
+            <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+          </View>
+        </View>
+      ) : (
+        <>
+          <Text variant="body" numberOfLines={1} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
+          <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
+          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+        </>
+      )}
     </>
   );
 
@@ -114,6 +131,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     borderRadius: radius.row,
     borderWidth: YOU_RING,
+  },
+  stack: {
+    flex: 1,
+    minWidth: 0,
+    gap: space[1],
+  },
+  stackNumbers: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: space[3],
   },
   rank: {
     width: 22,

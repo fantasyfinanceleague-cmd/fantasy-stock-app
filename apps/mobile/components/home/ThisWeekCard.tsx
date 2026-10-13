@@ -270,11 +270,14 @@ const styles = StyleSheet.create({
   // constrained either half, and ScoreDigits' own `adjustsFontSizeToFit` safety net never
   // got a real width to shrink against. With this, the 50/50 split is real and the two
   // sides can never overlap.
+  // The halves stretch to the taller one, and each score sits at its half's bottom, so the
+  // two scores share one baseline even when a long opponent name wraps (W4 gate, stress).
   half: {
     flex: 1,
     minWidth: 0,
     gap: space[3],
     paddingVertical: space[4],
+    justifyContent: 'space-between',
   },
   // Your half's tint runs to the card's left edge (the card clips it to its radius).
   halfYou: {

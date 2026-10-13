@@ -101,3 +101,16 @@ export function preDraftBlocks(f: PreDraftFlags): PreDraftBlock[] {
 export function preDraftChipShown(postponed: boolean): boolean {
   return postponed;
 }
+
+// ── The hero's meta line ───────────────────────────────────────────────────
+const NBSP = ' ';
+/** "2nd of 6 · 4–1 · Week 6 of 14", wrapping only BETWEEN segments at large text: each
+ * segment's own spaces are non-breaking ("Week 6 of 14" stays together) and each " · "
+ * keeps its dot with the segment before it (Design Lead, W4 gate P3, 2026-10-13). Empty
+ * segments drop out with their separator. */
+export function heroMetaLine(segments: (string | null | undefined)[]): string {
+  return segments
+    .filter((s): s is string => !!s)
+    .map((s) => s.replace(/ /g, NBSP))
+    .join(`${NBSP}· `);
+}

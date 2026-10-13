@@ -157,6 +157,8 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const oppSnapshots = giaRows.map((h) => ({ symbol: h.symbol, quantity: qty(h), week_start_price: h.mon, entered_mid_week: false, created_at: FIXTURE_WEEK6_START }));
 
   const isPreSeason = fixture === 'pre_season';
+  // W4 gate: Week 1 live (the season line's shortest states), on week 6's calendar dates.
+  const isWeek1 = fixture === 'week1_monday' || fixture === 'week1_tuesday';
   const isBye = fixture === 'bye';
   const isPlayoffLive = fixture === 'playoff_live';
   const isPlayoffBye = fixture === 'playoff_bye';
@@ -198,7 +200,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const w6 = { won: outcome === 'won' ? 1 : 0, lost: outcome === 'lost' || outcome === 'withheld' ? 1 : 0, tied: outcome === 'tied' ? 1 : 0 };
 
   const week6 = {
-    week_number: 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
+    week_number: isWeek1 ? 1 : 6, week_start: FIXTURE_WEEK6_START, week_end: FIXTURE_WEEK6_END,
     is_playoff: false,
     team1_user_id: FIXTURE_USER_ID,
     team2_user_id: isBye ? null : 'gianluigi',
@@ -281,6 +283,8 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
 
   const matchups = isPreSeason
     ? [preSeasonWeek1]
+    : isWeek1
+      ? [week6]
     // Every OTHER state below reached the playoffs at all, which requires
     // a real, fully-scored regular season to have happened first -- the
     // Standings' real win/loss record and the Season chart's history are
@@ -317,7 +321,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const data: GetHomeLeagueResult = {
     my_ledger: { drafts: myDrafts, trades: matchupExtras.trades },
     current_week: {
-      week_number: isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : 6,
+      week_number: isPlayoffState ? playoffCurrentWeek : isPreSeason || isWeek1 ? 1 : 6,
       // W4: on a bye you still hold your stocks (Matchup lists them under the bye scoreboard).
       my_snapshots: isPreSeason || isEliminated || isMissedPlayoffs || isPlayoffBye ? [] : mySnapshots,
       my_trades: matchupExtras.trades,
@@ -325,7 +329,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
       opponent_trades: [],
     },
     matchups,
-    standings: isStress ? STRESS_STANDINGS : isXL ? XL_STANDINGS : isPreSeason
+    standings: isStress ? STRESS_STANDINGS : isXL ? XL_STANDINGS : isPreSeason || isWeek1
       ? [
           { user_id: FIXTURE_USER_ID, rank: 1, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Roberto B.', is_bot: false },
           { user_id: 'paolo', rank: 2, wins: 0, losses: 0, ties: 0, points_for: 0, display_name: 'Paolo M.', is_bot: false },
@@ -394,7 +398,7 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
   const draftStatus = fixture === 'pre_draft' || fixture === 'pre_draft_waiting' ? 'not_started'
     : isDraftingFixture(fixture) ? 'in_progress' : 'completed';
   const seasonStatus = fixture === 'complete' || fixture === 'complete_runner_up' ? 'completed' : isPlayoffState ? 'playoffs' : 'active';
-  const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason ? 1 : draftStatus === 'completed' ? 6 : 1;
+  const currentWeek = isPlayoffState ? playoffCurrentWeek : isPreSeason || isWeek1 ? 1 : draftStatus === 'completed' ? 6 : 1;
   // The real Monday 9:30 AM ET open (matches preSeasonWeek1.week_start
   // above) -- never a far-future placeholder, so preSeasonStartsLabel
   // reads a real, near date like the board's, not "2099".
@@ -453,7 +457,11 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
             ? new Date('2026-07-30T14:00:00.000Z') // Thursday, a few days before leagueStartDate
             : fixture === 'monday_preclose'
               ? new Date('2026-09-21T14:30:00.000Z') // Monday 10:30 AM ET, before the week's first close
-              : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
+              : fixture === 'week1_monday'
+                ? new Date('2026-09-21T15:00:00.000Z') // Monday 11:00 AM ET, before the first close
+                : fixture === 'week1_tuesday'
+                  ? new Date('2026-09-22T15:00:00.000Z') // Tuesday 11:00 AM ET, after Monday's close
+                  : new Date('2026-09-24T17:37:00.000Z'); // Thursday 1:37 PM ET, the board's live moment
 
   // leader_flip: a call-counter alternates whose price is higher, to
   // exercise H3's leader-change wash under the live poll. Module-scoped
@@ -538,6 +546,13 @@ export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | 
     // Tuesday `now`, giving a real, nonzero today (the same total as the
     // week's live gain so far -- correct for the week's second day).
     if (isPlayoffLive) bars[h.symbol].push({ date: '2026-12-14', close: h.mon });
+    // Week 1 (the fixture convention, as live_open's Thursday: today's own partial bar is the
+    // last entry). Monday: today's bar only, no close behind it. Tuesday: Monday's close
+    // (part of the way to Thursday's), then today's.
+    // The prior Friday's close leads, as in the live fetch (bars start 6 days before Monday),
+    // so Monday's "today" has a previous close (else every holding reads "at cost").
+    if (fixture === 'week1_monday') bars[h.symbol] = [{ date: '2026-09-18', close: h.mon }, { date: '2026-09-21', close: h.thu }];
+    if (fixture === 'week1_tuesday') bars[h.symbol] = [{ date: '2026-09-18', close: h.mon }, { date: '2026-09-21', close: h.prev }, { date: '2026-09-22', close: h.thu }];
   }
   for (const h of giaRows) {
     // Same ascending-date fix as robRows above, for consistency
