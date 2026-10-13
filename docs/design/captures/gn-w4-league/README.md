@@ -49,7 +49,7 @@ tapping in the simulator.
 | `history-final` | 17e-l-dark, 17e-l-light | History on the finished Summer Cup |
 | `history-final-bottom` | 17e-l-dark, 17e-l-light | The same, scrolled to the end (all six rows) |
 | `playoffs-final` | 17e-l-dark, 17e-l-light, 17e-xl-dark | Playoffs, finished (GS-6): ONE heading per round; the byes are rows of the Wild card with "Advances to the Semifinals"; your side shaded; the winner bold, the loser in text2 |
-| `playoffs-final-bottom-champion` | 17e-l-dark, 17e-l-light, 17e-xl-dark | Scrolled to the end (GS-7): under the Final, the trophy and "Roberto B. · Champion", tinted because it's you |
+| `playoffs-final-bottom-champion` | 17e-l-dark, 17e-l-light, 17e-xl-dark | Scrolled to the end (GS-7): under the Final, the trophy and "Roberto B. · Champion" as ManagerRow's your-row tile (surface + tint + the 1.5pt ring; DL: "the ring, yes"). Game cards tightened toward the board's ≈64pt |
 | `playoffs-live` | 17e-l-dark, 17e-l-light | Playoffs in progress (`playoffs_live`): the Wild card scored, the Semifinals unscored, no champion row |
 | `loading` | 17e-l-dark, 17e-l-light | The standings read in flight (`loading`): the tiles' skeleton under the tabs |
 | `error` | 17e-l-dark, 17e-l-light | The standings read failed (`error`): "Couldn't load the standings · Pull down to try again." (the pull now re-reads) |
@@ -61,9 +61,11 @@ tapping in the simulator.
 | `renewal-review-gs13` | 17e-l-dark, 17e-l-light | Season 2 review (GS-13): "Teams" sub-line under the label, full width |
 | `renewal-ask-on-season1` | 17e-l-dark, 17e-l-light | The member's ask on the finished Season 1 (P3): I'm out / I'm in as two equal-width buttons |
 | `renewal-member-list` | 17e-l-dark, 17e-l-light | Season 2, a member who's in: "You're running back · Change", the list, the member line |
-| `settings-commissioner` | 17e-l-dark, 17e-l-light | League settings, commissioner, mid-season: locked, with the reason; rows divided by space |
-| `settings-commissioner-bottom` | 17e-l-dark, 17e-l-light | Scrolled to the end: League info (the invite code in plain text, not the accent), the Commissioner row (no chevron mid-season), Leave league disabled with its reason |
-| `settings-member` | 17e-l-dark, 17e-l-light | League settings, a member mid-season: invite code + Share (pill), Commissioner, Leave league disabled with its reason |
+| `settings-commissioner-top` | 17e-l-dark, 17e-l-light | League settings, commissioner, mid-season: locked, with the reason; rows divided by space |
+| `settings-commissioner-locked-no-share` | 17e-l-dark, 17e-l-light | Commissioner, teams LOCKED (mid-season), scrolled to League info: the invite code in plain text, **no Share** (Giorgio, B, #call-share-locked); the Commissioner row without a chevron; Leave league disabled with its reason |
+| `settings-commissioner-open-share-season2` | 17e-l-dark, 17e-l-light | Commissioner, teams OPEN (the renewed Season 2, before its draft): the same InviteRow **with Share**; Commissioner → (transfer allowed) |
+| `settings-member-locked-no-share` | 17e-l-dark, 17e-l-light | A member, LOCKED (mid-season): the code, no Share; Leave league disabled with its reason |
+| `settings-member-open-share` | 17e-l-dark, 17e-l-light | A member, OPEN (Serie A before its draft order is set): the code with Share; Leave league enabled with its window |
 | `create-league-shared-rows` | 17e-l-dark, 17e-l-light | Create league (gate 6's screen, NOT edited): the shared SetupRows now divide by space (RowDivider is space) |
 | `create-league-shared-rows-bottom` | 17e-l-dark, 17e-l-light | The same, scrolled to the end |
 
@@ -89,9 +91,11 @@ tapping in the simulator.
   **The open P3 holds on League:** a stacked row's name, record and tag are capped at the
   gain's fitted size (`stackedRowTextCap`, ≤ 1.3×), so no figure or line outgrows the row's
   gain at XL; League has no shrink-to-fit number (the list stacks first).
-- **Accent by area** (`app_accent_area.py`, every frame): see `accent-area.txt`. The only
-  accent-filled controls on League are the screen's one primary (Run it back; I'm in on the
-  ask; Hand over in its sheet). Frames over 5% are listed there with the primary measured apart.
+- **Accent by area** (`app_accent_area.py`, every frame): see `accent-area.txt`. Two frames read
+  5.16%, `settings-commissioner-open-share-season2-*`: ALL of it is the screen's one primary
+  ("Save changes", the full-width pill), measured apart (rest 0.00%), so they pass §5 as
+  amended. Every other frame is ≤ 4.86% WITH its primary (Run it back) in it; ≤ 0.61% where
+  there is no primary.
 
 ### §5 mechanical checks
 
@@ -135,10 +139,10 @@ tapping in the simulator.
 | I'm in / I'm out | the member's ask (League and the Change sheet) | answers (respond_to_renewal); the current answer closes the sheet | `renewal-ask-on-season1-*`, `rec-change-answer-sheet-light` |
 | Change, × | "You're running back" | opens / closes the ask sheet | `rec-change-answer-sheet-*` |
 | Leave league / Stay | member settings, after the season | opens the leave sheet / closes it | `rec-leave-sheet-stay-*` |
-| Leave league (disabled) | commissioner; mid-season member | not tappable, reason beside it ("Make someone else commissioner first.", "Teams are locked in…") | `settings-commissioner-bottom-*`, `settings-member-*` |
+| Leave league (disabled) | commissioner; mid-season member | not tappable, reason beside it ("Make someone else commissioner first.", "Teams are locked in…") | `settings-commissioner-locked-no-share-*`, `settings-member-locked-no-share-*` |
 | Commissioner row | commissioner, after the season | opens the transfer sheet (chevron); mid-season it has no chevron and isn't pressable | `rec-transfer-sheet-*` |
 | A candidate / Hand over / Cancel | transfer sheet | picks / hands over (disabled until a pick) / closes | `rec-transfer-sheet-*` |
-| Share | member settings | the iOS share sheet ("Join my league with code …") | `rec-leave-sheet-stay-light` |
+| Share | settings, commissioner AND member, only while teams aren't locked (Giorgio, B) | the iOS share sheet ("Join my league with code …"); hidden while locked (one condition, `inviteShareShown`) | `rec-leave-sheet-stay-light`, `settings-*-open-share-*` |
 | Try again | History / Playoffs failed | re-reads (reloadKey) | `history-failed-*`, `playoffs-failed-*`; a test pins the handler |
 | Create a league / Join with a code | no leagues | routes to /create-league and /join-league | `no-leagues-*`; a test pins both |
 | Standings, schedule, bracket and pinned rows | — | not tappable, and drawn with no press affordance (no chevron) | — |
@@ -158,14 +162,28 @@ Home's excerpt; the same tab look as Home's range tabs). No score under 3.
   leagues schedule every week, so this shows only in the fixture.
 - minor (P3): "History" repeats as a title under the History tab (kept from 1.2.0).
 
+## The W4 DL gate pass (BLOCK on 89274804), what changed in the captures
+
+- **P1 (Run it back flashed "No leagues yet"):** re-recorded in both themes, checked at 10 fps:
+  Season 1 → the tiles' skeleton → Season 2's roster → the nudge sheet, never the empty state
+  (`rec-run-it-back-and-nudge-{light,dark}-frames.png` are the 10 fps sheets).
+- **P1 XL caps:** `final-standings-17e-xl-light`, `playoffs-final-17e-xl-dark`, `history-17e-xl-*`.
+- **P2 pinned row:** pinned only while your row is entirely out of view, on an opaque `bg` band
+  to the tab bar: `standings-12-stress-*-xl-*` (your partly visible row is NOT doubled any more),
+  `standings-16-you-last-*`, `standings-16-mid-scroll-pinned-*`, `rec-pinned-row-scroll-*`.
+- **P2 champion tile, GS-13, the P3s:** every still was re-shot on this build (the gain column
+  now matches its head, so every standings frame moved). The other tap-through sheets
+  (`rec-league-tap-through-*`, `rec-change-answer-sheet-*`, `rec-leave-sheet-stay-*`,
+  `rec-transfer-sheet-*`) are from the previous build: their flows didn't change.
+
 ## Not captured, and why
 
 - **VoiceOver**: can't be driven from here; the row labels are pinned by tests
   (ManagerRow's label reads medal, rank, name, "you", tag, movement, record, gain).
 - **The pre-draft lobby's own components** (DraftLobby, QueueEditor, DraftCountdownCard,
   AutoStartBlockers) belong to the Draft worker (Orchestrator, 2026-10-13). `lobby-wrapper`
-  shows them as merged in #259, inside League's frame on the 16pt gap: 23.3pt measured from the
-  countdown card's edge to the "DRAFT ORDER" caps (16 + the tag's leading).
+  shows them as merged in #259, inside League's frame on the 16pt block gap (16.0pt, the Design
+  Lead's measurement at the W4 gate, block edge to block edge).
 - Removing or nudging for real, handing over and leaving: each would write. The fixture
   answers them, so the recordings stop at the sheet (Stay / Cancel), except the nudge, whose
   fixture write is harmless.

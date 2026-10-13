@@ -374,3 +374,7 @@ Deno.test("Share hides while teams are locked (Giorgio, 2026-10-13, B, #call-sha
   assert(row.indexOf('>Invite code</Text>') < row.indexOf('{inviteShareShown(window) ? ('));
   assert(row.includes('<Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>'));
 });
+
+Deno.test("Season 2's roster loading shows the skeleton, never an empty body (right after Run it back)", () => {
+  assert(SOURCES['components/game/LeagueRenewal.tsx'].includes("if (st.status === 'loading' || st.status === 'idle') return <TilesSkeleton rows={4} />;"));
+});

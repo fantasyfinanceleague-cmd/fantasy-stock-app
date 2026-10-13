@@ -2,78 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a730b307a840a3ed771ad7982c4d84ba434d81aa",
-    "commitShort": "a730b307",
+    "commit": "47abe4371aeebd7970d74eebb0caecf589196e38",
+    "commitShort": "47abe437",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/league-settings.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/BracketView.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/HistoryList.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalReview.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/StandingsTable.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/gn/ManagerRow.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/leagueSettingsEntry.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/leagueView.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/standings.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/final-standings-screens.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-card-padding.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-leave-league.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-standings.test.ts"
+        "path": "apps/mobile/components/game/LeagueRenewal.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/league-game-night.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/manager-row.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T23:12:47Z",
+    "timestamp": "2026-10-13T23:12:50Z",
     "sourceHash": "sha256:0edd848200010f50017d28b4a4ffc5a1431493ae25e63956f78f48d0413d6840",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

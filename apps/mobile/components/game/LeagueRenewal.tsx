@@ -12,6 +12,7 @@ import { season1Order as orderFromHistory } from '@/lib/game/history';
 import { RenewalRoster } from './RenewalRoster';
 import { RenewalAsk } from './RenewalAsk';
 import { RenewalReview } from './RenewalReview';
+import { TilesSkeleton } from '@/components/league/LeagueStates';
 
 export interface LeagueRenewalProps {
   /** The renewed (successor) league: a new season that has not drafted yet. */
@@ -35,7 +36,9 @@ export function LeagueRenewal({ successorId, leagueId, createdAt, now, onChanged
   const st = useRenewalRoster(successorId, RENEWAL_FIXTURE_CALLER, retry);
   // The Season 1 order is the frozen rank of the lineage's first finished season (R5).
   const history = useLeagueHistory(successorId, true);
-  if (st.status === 'loading' || st.status === 'idle') return null;
+  // UX rule 9: the shape while the roster loads, never an empty body (seen for a frame right
+  // after Run it back lands on Season 2; W4 DL gate pass).
+  if (st.status === 'loading' || st.status === 'idle') return <TilesSkeleton rows={4} />;
   if (st.status === 'error' || !st.roster) {
     return (
       <View style={styles.stack}>
