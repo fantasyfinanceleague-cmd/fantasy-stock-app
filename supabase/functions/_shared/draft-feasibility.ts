@@ -26,16 +26,27 @@
  *   Exact multi-manager budget feasibility is generalized assignment (NP-hard).
  *   For type j with B_j = demand of types sharing a stock with j (league-wide),
  *   a manager's i-th open j-instance is charged E_j[B_j - o_j + i - 1] (E_j =
- *   the type's stocks, cheapest first; capped at its most expensive), inflated
- *   by RESERVE_INFLATE so drift between the cached and live price cannot make
- *   the last slot unaffordable. Taking a stock can only lower everyone else's
- *   reserve, so only the PICKER needs checking at pick time.
+ *   the type's stocks, cheapest first; capped at its most expensive), at the
+ *   price itself: NO CUSHION (Giorgio, 2026-10-13: "safety cushion? when did i
+ *   ever say there should be a safety cushion?"; the old RESERVE_INFLATE 1.10 is
+ *   gone). Taking a stock can only lower everyone else's reserve, so only the
+ *   PICKER needs checking at pick time.
+ *
+ * BUDGET — never stuck (Giorgio, 2026-10-13)
+ *   shortfall = max(0, spent + cost + reserve - budget). A pick is legal when it
+ *   does not make the picker's shortfall worse: shortfall_post <= shortfall_pre.
+ *   With no shortfall before (the normal case) that is exactly "the pick leaves
+ *   enough for the remaining slots at current prices". With prices drifted up so
+ *   the roster is already short, the draft degrades instead of freezing, like the
+ *   slot side. Never over budget: validatePick's hard spent + cost <= budget runs
+ *   first, always. Infinity (a type with no stock in the pool): an infinite
+ *   shortfall before accepts any pick the slot check passes; a finite shortfall
+ *   that becomes infinite is refused.
  *
  * MARGINS (one place each)
  *   ROBUST_MARGIN     membership: a stock counts toward a bracket only if its
  *                     cached price is >= 10% inside a floor / <= 10% inside a
  *                     ceiling (cached last_price is up to ~2 trading days old).
- *   RESERVE_INFLATE   1.10 on reserve prices (same 10%).
  *   DEMAND_HEADROOM   setup + start only: each type must have ceil(1.1 x need)
  *                     robust stocks, covering pool shrinkage the model does not
  *                     see (halts, undraftable flips at the daily recompute).
@@ -46,7 +57,6 @@ import { type PickRow, SKIP_SYMBOL, type Slot } from './draft-validation.ts';
 
 export const FLEX_TYPE_ID = '__flex__';
 export const ROBUST_MARGIN = 0.1;
-export const RESERVE_INFLATE = 1.1;
 const EPS = 1e-9;
 const INF = 1e15;
 
@@ -285,7 +295,7 @@ export function reserveFor(open: number[], demand: number[], types: Slot[], grou
     E.sort((a, b) => a - b);
     for (let i = 1; i <= o; i++) {
       const idx = Math.max(Math.min(B - o + i - 1, E.length - 1), 0);
-      total += E[idx] * RESERVE_INFLATE;
+      total += E[idx];
     }
   }
   return total;
@@ -321,6 +331,19 @@ export function applyPick(
 
 export type PickFeasibilityRefusal = 'would_strand_slot' | 'budget_reserve';
 
+/** max(0, spent + cost + reserve - budget). Infinity when the reserve is (no
+ * stock can fill an open instance); never NaN for finite spent/cost/budget. */
+export function budgetShortfall(spent: number, cost: number, reserve: number, budget: number): number {
+  if (reserve === Infinity) return Infinity;
+  return Math.max(0, spent + cost + reserve - budget);
+}
+
+/** The picker's shortfall BEFORE this pick: every open instance in the reserve. */
+export function preShortfall(state: FeasibilityState, open: number[], spent: number): number {
+  if (state.budget == null) return 0;
+  return budgetShortfall(spent, 0, reserveFor(open, state.demand, state.types, state.groups), state.budget);
+}
+
 /**
  * Is taking one instance of type `ordinal` with this stock legal for the
  * league's feasibility? Never-worsen first (slots), then the picker's reserve.
@@ -338,8 +361,10 @@ export function evaluateFeasiblePick(
     /** deficit(state.demand, state.groups), when the caller has it (the auto-pick
      * walk evaluates thousands of candidates against one state). */
     preDeficit?: number;
+    /** preShortfall(state, open, spent), when the caller has it. */
+    preShortfall?: number;
   },
-): { ok: true } | { ok: false; reason: PickFeasibilityRefusal } {
+): { ok: true } | { ok: false; reason: PickFeasibilityRefusal; budgetExcess?: number } {
   const pre = a.preDeficit ?? deficit(state.demand, state.groups);
   const post = applyPick(state, a.ordinal, a.cachedPrice, a.eligibility);
   if (deficit(post.demand, post.groups) > pre) return { ok: false, reason: 'would_strand_slot' };
@@ -347,7 +372,10 @@ export function evaluateFeasiblePick(
     const postOpen = a.open.slice();
     postOpen[a.ordinal] = Math.max((postOpen[a.ordinal] ?? 0) - 1, 0);
     const reserve = reserveFor(postOpen, post.demand, state.types, post.groups);
-    if (a.spent + a.cost + reserve > state.budget + EPS) return { ok: false, reason: 'budget_reserve' };
+    const pre = a.preShortfall ?? preShortfall(state, a.open, a.spent);
+    const postShort = budgetShortfall(a.spent, a.cost, reserve, state.budget);
+    // Never worsen (Infinity-safe: Infinity <= Infinity holds, finite < Infinity).
+    if (!(postShort <= pre + EPS)) return { ok: false, reason: 'budget_reserve', budgetExcess: postShort - pre };
   }
   return { ok: true };
 }

@@ -16,8 +16,18 @@
  * if any other drafts insert, or any `as GatedPick` cast, appears.
  *
  * NO SKIP (2026-10-05): nothing writes a SKIP row any more. When the search
- * finds no legal stock the turn STALLS: recordStall writes an alert row in
- * draft_stalls and pushes the commissioner, and the turn stays open.
+ * finds no legal stock the turn STALLS: recordStall writes a draft_stalls row (the
+ * operator's signal, with the log) and the turn stays open. No commissioner push
+ * (Giorgio, 2026-10-13: "The commissioner can't do anything about it anyway").
+ *
+ * A BOUNDED search (2026-10-13, review H1): a search stopped by a limit, not an
+ * outage and not a proof, writes draft_stalls reason 'search_bounded'
+ * (noteBounded), so it is cooled like a stall (recentStall + the sweep cron's
+ * throttle), its attempts climbing, and reports 'stalled' from BOUNDED_STALL_AFTER
+ * in a row. Before, it retried every tick with no record at all. Every live
+ * price the auto-pick sees is written back in one batch with its time
+ * (public.record_live_prices, 20261122000000), so the next search starts where
+ * this one stopped.
  *
  * RACE BACKSTOP: every insert here names an explicit pick_number and relies
  * on the drafts (league_id, pick_number) unique index. A lost race surfaces as
@@ -30,13 +40,14 @@
  * recorded pick that leaves the draft open, it pushes the NEXT picker
  * (notifyNextPicker). A push failure is logged and never fails the pick.
  */
-import { fetchFillPrice } from './alpaca-price.ts';
+import { fetchFillPrice, fetchSnapshotPrices } from './alpaca-price.ts';
+import { fetchPricesBisecting } from './price-bisect.ts';
 import { fetchEligibleCategoryIdsBatch } from './category-eligibility.ts';
 import { buildFinalizeArgs, planSeason, readFinalizeResult } from './schedule.ts';
 import type { BotSymbolCandidate } from './bot-pick.ts';
 import type { GatedPick } from './pick-gate.ts';
 import { getTargetToken, sendExpoPush } from './push.ts';
-import { draftTurnMessage } from './push-copy.ts';
+import { draftOutageMessage, draftTurnMessage } from './push-copy.ts';
 import {
   demandVector,
   type FeasibilityState,
@@ -48,6 +59,7 @@ import {
   type AutoPickPorts,
   BEST_AVAILABLE_STRATEGY,
   type BestAvailableStrategy,
+  boundedReportsStalled,
   chooseAutoPick,
   type DraftClock,
   OUTAGE_ESCALATE_MS,
@@ -55,6 +67,7 @@ import {
   parseDraftClockRow,
   PRICE_COOLDOWN_MS,
   type PickSource,
+  stallCooldownVerdict,
 } from './auto-pick.ts';
 import {
   checkStoredOrder,
@@ -316,8 +329,8 @@ export async function loadFeasibility(
 
 /**
  * A turn with no legal stock STALLS (2026-10-05, no SKIP). Records it once in
- * draft_stalls (the in-app record; a repeat only refreshes attempts and
- * last_seen_at) and pushes the commissioner on the FIRST stall. Logged loudly.
+ * draft_stalls (the operator's record; a repeat only refreshes attempts and
+ * last_seen_at). Logged loudly. No commissioner push (Giorgio, 2026-10-13).
  * Never throws: a failed record must not turn a stall into a 500, and the turn
  * stays open either way.
  */
@@ -339,63 +352,34 @@ export async function recordStall(
   });
   if (error) {
     if ((error as { code?: string }).code !== '23505') {
-      // No record means no dedupe, so alert anyway: a stall must never be silent.
-      console.error('[draft-stall] record failed', leagueId, pickNumber, JSON.stringify(error));
-      await pushStallToCommissioner(admin, ctx, pickNumber);
+      // No record: the stall is still loud in the logs (the operator's signal).
+      console.error('[draft-stall] record failed', leagueId, pickNumber, why, attempts, JSON.stringify(error));
       return;
     }
-    // Read the prior reason first: an escalated outage overwritten by a legality
-    // stall is a NEW claim the commissioner has not been told (review finding 6).
-    const prior = await admin
-      .from('draft_stalls').select('reason').eq('league_id', leagueId).eq('pick_number', pickNumber).maybeSingle();
-    const wasOutage = prior.data?.reason === 'vendor_outage';
     const { error: updErr } = await admin
       .from('draft_stalls')
       .update({ attempts, reason: why, last_seen_at: new Date().toISOString() })
       .eq('league_id', leagueId)
       .eq('pick_number', pickNumber);
     if (updErr) console.error('[draft-stall] refresh failed', leagueId, pickNumber, JSON.stringify(updErr));
-    if (wasOutage && !updErr) await pushStallToCommissioner(admin, ctx, pickNumber, 'nothing_legal');
+    console.error('[draft-stall] still', leagueId, pickNumber, why, attempts);
     return;
   }
   console.error('[draft-stall]', leagueId, pickNumber, why, attempts);
-  await pushStallToCommissioner(admin, ctx, pickNumber);
 }
 
-/** Copy is placeholder pending the Design Lead (CLAUDE.md: no user-facing copy
- * invented here). Commissioner only. Each kind says ONLY what was established:
- * 'nothing_legal' = the pool was walked and nothing is legal; 'vendor_outage' =
- * prices are unavailable right now, the turn stays open. Returns whether the push
- * was sent (the caller decides whether the escalation is marked done). */
-async function pushStallToCommissioner(
-  admin: Admin,
-  ctx: DraftContext,
-  pickNumber: number,
-  kind: 'nothing_legal' | 'vendor_outage' = 'nothing_legal',
-): Promise<boolean> {
+/** The commissioner's ONE draft push: the vendor outage (copy in push-copy.ts,
+ * the shipped string). Returns whether it was sent (noteOutage marks the
+ * escalation done only then). */
+async function pushOutageToCommissioner(admin: Admin, ctx: DraftContext, pickNumber: number): Promise<boolean> {
   const leagueId = String(ctx.league.id);
   const commissionerId = String(ctx.league.commissioner_id ?? '');
   if (!commissionerId) return false;
   const target = await getTargetToken(admin, commissionerId);
   if (!target.token || !target.enabled) return false;
-  const copy = kind === 'vendor_outage'
-    ? {
-      title: 'Auto-pick is waiting on prices',
-      body: `Live prices are unavailable for pick ${pickNumber}. The turn stays open and retries.`,
-      type: 'draft_outage',
-    }
-    : {
-      title: 'Auto-pick needs you',
-      body: `No legal stock fits pick ${pickNumber}. Pick manually to keep the draft moving.`,
-      type: 'draft_stall',
-    };
-  const sent = await sendExpoPush(target.token, {
-    title: copy.title,
-    body: copy.body,
-    data: { type: copy.type, league_id: leagueId, pick_number: pickNumber },
-  });
+  const sent = await sendExpoPush(target.token, draftOutageMessage(leagueId, pickNumber));
   if (!sent.sent) {
-    console.error('[draft-stall] push not sent', leagueId, pickNumber, kind, sent.reason);
+    console.error('[outage] push not sent', leagueId, pickNumber, sent.reason);
     return false;
   }
   return true;
@@ -454,7 +438,7 @@ export async function noteOutage(admin: Admin, ctx: DraftContext, pickNumber: nu
     console.error('[outage] escalation record failed', leagueId, pickNumber, JSON.stringify(st.error));
     return;
   }
-  const sent = await pushStallToCommissioner(admin, ctx, pickNumber, 'vendor_outage');
+  const sent = await pushOutageToCommissioner(admin, ctx, pickNumber);
   if (!sent) return;
   const { error: markErr } = await admin
     .from('draft_turn_outages').update({ escalated_at: nowIso }).eq('league_id', leagueId).eq('pick_number', pickNumber);
@@ -464,22 +448,66 @@ export async function noteOutage(admin: Admin, ctx: DraftContext, pickNumber: nu
 
 /** Stall retry cooldown (review finding: a looping bot_pick must not re-run the
  * full search, and its Alpaca calls, every request). A stall recorded less than
- * STALL_COOLDOWN_MS ago short-circuits to 'stalled'. Read errors fail CLOSED. */
+ * STALL_COOLDOWN_MS ago short-circuits (auto-pick.ts stallCooldownVerdict): a
+ * legality stall, or an escalated bounded search, answers 'stalled'; a bounded
+ * search not yet escalated answers 'retry' (price_unavailable), never a stall.
+ * The sweep cron's own throttle (draft_autopick_sweep) mirrors this window for
+ * every reason but vendor_outage. Read errors fail CLOSED. */
 export const STALL_COOLDOWN_MS = 60_000;
-export async function recentStall(admin: Admin, leagueId: string, pickNumber: number): Promise<{ recent: boolean; error: boolean }> {
+export async function recentStall(
+  admin: Admin,
+  leagueId: string,
+  pickNumber: number,
+): Promise<{ recent: boolean; error: boolean; verdict: 'search' | 'stalled' | 'retry' }> {
   const { data, error } = await admin
     .from('draft_stalls')
-    .select('last_seen_at, reason')
+    .select('last_seen_at, reason, attempts')
     .eq('league_id', leagueId)
     .eq('pick_number', pickNumber)
     .maybeSingle();
   if (error) {
     console.error('[draft-stall] cooldown read failed', leagueId, pickNumber, JSON.stringify(error));
-    return { recent: false, error: true };
+    return { recent: false, error: true, verdict: 'search' };
   }
   // A vendor_outage row is not a legality stall: it must never short-circuit the search.
-  if (!data?.last_seen_at || data.reason === 'vendor_outage') return { recent: false, error: false };
-  return { recent: Date.now() - Date.parse(String(data.last_seen_at)) < STALL_COOLDOWN_MS, error: false };
+  if (!data?.last_seen_at || data.reason === 'vendor_outage') return { recent: false, error: false, verdict: 'search' };
+  const verdict = stallCooldownVerdict(
+    { reason: String(data.reason), attempts: Number(data.attempts) || 0, lastSeenMs: Date.parse(String(data.last_seen_at)) },
+    Date.now(),
+    STALL_COOLDOWN_MS,
+  );
+  return { recent: verdict !== 'search', error: false, verdict };
+}
+
+/**
+ * A search that ended on a BOUND (the live-call / screen / walk / wall-clock
+ * limit), not an outage and not a proof that nothing is legal (review H1,
+ * 2026-10-13). Without a record such a turn retried every 10 s tick forever,
+ * invisible. Now every bounded call bumps draft_stalls reason 'search_bounded'
+ * ATOMICALLY (public.note_draft_bounded, 20261122000002; review L2): attempts =
+ * consecutive bounded searches, last_seen_at = now. That row is the OPERATOR's
+ * signal (with the '[draft-bounded]' log): there is no commissioner push
+ * (Giorgio, 2026-10-13: "The commissioner can't do anything about it anyway").
+ * The cron and recentStall hold it for STALL_COOLDOWN_MS; from
+ * BOUNDED_STALL_AFTER on the turn reports 'stalled'. A pick clears the row
+ * (insertGatedPick). Never throws. Returns whether the turn now reports 'stalled'.
+ */
+export async function noteBounded(admin: Admin, ctx: DraftContext, pickNumber: number, pickerId: string): Promise<boolean> {
+  const leagueId = String(ctx.league.id);
+  try {
+    const { data, error } = await admin.rpc('note_draft_bounded', { p_league_id: leagueId, p_pick_number: pickNumber, p_picker_id: pickerId });
+    if (error) {
+      console.error('[draft-bounded] record failed', leagueId, pickNumber, JSON.stringify(error));
+      return false;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    const attempts = Number(row?.attempts) || 0;
+    console.error('[draft-bounded]', leagueId, pickNumber, 'attempts', attempts);
+    return boundedReportsStalled(attempts);
+  } catch (e) {
+    console.error('[draft-bounded] failed', leagueId, pickNumber, String(e));
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -778,20 +806,77 @@ export function supabaseAutoPickPorts(admin: Admin, leagueId: string, deps: Auto
       const { error } = await admin.from('auto_pick_price_failures').delete().eq('league_id', leagueId).eq('symbol', symbol);
       if (error) console.error('auto-pick: price-failure clear failed', symbol, JSON.stringify(error));
     },
-    async recordLivePrice(symbol, price) {
-      // Best effort: a failed cache write must not fail the pick. It only means
-      // the symbol is judged again next call (one more live call), never wrongly.
-      const { error } = await admin.from('symbols').update({ last_price: price }).eq('symbol', symbol);
-      if (error) console.error('auto-pick: last_price write-back failed', symbol, JSON.stringify(error));
+    async recordLivePrices(prices) {
+      // ONE batched write (public.record_live_prices, 20261122000000): last_price
+      // and last_price_at. Best effort: a failed cache write must not fail the
+      // pick. It only means the symbols are judged again next call, never wrongly.
+      if (prices.size === 0) return;
+      const entries = [...prices.entries()];
+      const { error } = await admin.rpc('record_live_prices', {
+        p_symbols: entries.map(([k]) => k.toUpperCase()),
+        p_prices: entries.map(([, v]) => v),
+      });
+      if (error) console.error('auto-pick: record_live_prices failed', leagueId, entries.length, JSON.stringify(error));
+    },
+    async priceAges(symbols) {
+      // symbols.last_price_at (20261122000000), read in chunks (a PostgREST in()
+      // list rides the URL). Fails SOFT to "unknown = stale": that costs screen
+      // requests, never a pick, and it keeps the walk working if the column is
+      // missing (functions deployed before the migration).
+      const out = new Map<string, number>();
+      const wanted = [...new Set(symbols.map((x) => x.toUpperCase()))];
+      for (let i = 0; i < wanted.length; i += 200) {
+        const { data, error } = await admin.from('symbols').select('symbol, last_price_at').in('symbol', wanted.slice(i, i + 200));
+        if (error) {
+          console.error('auto-pick: price age read failed, treating as stale', leagueId, JSON.stringify(error));
+          return out;
+        }
+        // deno-lint-ignore no-explicit-any
+        for (const r of (data ?? []) as any[]) {
+          const at = r.last_price_at == null ? NaN : Date.parse(String(r.last_price_at));
+          if (Number.isFinite(at)) out.set(String(r.symbol).toUpperCase(), at);
+        }
+      }
+      return out;
     },
     feasibilityPool: (types, exclude, draftableOnly, depth) => poolGroups(admin, types, exclude, draftableOnly, depth),
+    async screenPrices(symbols, maxRequests) {
+      // A 400 is one symbol Alpaca does not list: bisect so it costs only itself.
+      // Anything else (401/403/429/5xx, network) is the vendor being unavailable:
+      // stop at once and return nothing, so every candidate falls back to the fill
+      // path and an outage is judged exactly as it was before the screen existed.
+      let requests = 0;
+      const fetchFn = async (chunk: string[]) => {
+        requests++;
+        const r = await fetchSnapshotPrices(chunk, deps.alpacaKey, deps.alpacaSecret);
+        if (r.ok) return { ok: true, prices: r.prices };
+        if (r.status === 400) return { ok: false, status: 400 };
+        throw new Error(`screen_unavailable_${r.status}`);
+      };
+      try {
+        const res = await fetchPricesBisecting(symbols.map((x) => x.toUpperCase()), fetchFn, maxRequests);
+        return { prices: res.prices, requests: res.requestCount };
+      } catch (e) {
+        // Vendor detail is logged, never returned (it would leak app-key state).
+        console.error('auto-pick: screen unavailable, using fill prices', leagueId, String(e));
+        return { prices: new Map<string, number>(), requests, unavailable: true };
+      }
+    },
     async livePrice(symbol) {
-      const fill = await fetchFillPrice(symbol, deps.alpacaKey, deps.alpacaSecret);
+      // A network error or timeout is the vendor being unavailable: an outage
+      // (retry_later, cooled, escalated), never an 'unhandled' 500.
+      let fill: Awaited<ReturnType<typeof fetchFillPrice>>;
+      try {
+        fill = await fetchFillPrice(symbol, deps.alpacaKey, deps.alpacaSecret);
+      } catch (e) {
+        console.error('auto-pick: no_price (request failed)', leagueId, symbol, String(e));
+        return { price: null, source: null };
+      }
       if (fill.price == null) {
         // Vendor detail is logged, never returned (it would leak app-key state).
         console.error('auto-pick: no_price', leagueId, symbol, JSON.stringify(fill.error));
       }
-      return { price: fill.price, source: fill.source ?? null };
+      return { price: fill.price, source: fill.source || null };
     },
   };
 }
@@ -813,7 +898,8 @@ export async function autoPickTurn(
   if (turn) {
     const cool = await recentStall(admin, String(ctx.league.id), turn.pickNumber);
     if (cool.error) return { ok: false, reason: 'unhandled' };
-    if (cool.recent) return { ok: false, reason: 'stalled' };
+    if (cool.verdict === 'stalled') return { ok: false, reason: 'stalled' };
+    if (cool.verdict === 'retry') return { ok: false, reason: 'price_unavailable' };
   }
   let choice;
   try {
@@ -842,16 +928,19 @@ export async function autoPickTurn(
       return { ok: false, reason: 'pick_conflict' };
     case 'retry_later': {
       console.error('auto-pick: nothing priceable, turn left open', ctx.league.id, choice.attempts, choice.outage);
+      const turn = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds);
       if (choice.outage) {
-        const turn = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds);
         // Never throws into the pick path: the turn stays open either way.
         try {
           if (turn) await noteOutage(admin, ctx, turn.pickNumber, turn.pickerId);
         } catch (e) {
           console.error('[outage] note failed', ctx.league.id, String(e));
         }
+        return { ok: false, reason: 'price_unavailable' };
       }
-      return { ok: false, reason: 'price_unavailable' };
+      // A BOUND, not an outage (review H1): recorded, cooled, escalated after N.
+      const escalated = turn ? await noteBounded(admin, ctx, turn.pickNumber, turn.pickerId) : false;
+      return { ok: false, reason: escalated ? 'stalled' : 'price_unavailable' };
     }
     case 'stalled': {
       const pickNumber = currentTurn(ctx.picks.length, ctx.order, ctx.numRounds)?.pickNumber ?? ctx.picks.length + 1;

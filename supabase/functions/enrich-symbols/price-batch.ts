@@ -33,6 +33,12 @@
  *      share.
  */
 
+import {
+  type BisectResult,
+  fetchPricesBisecting as sharedFetchPricesBisecting,
+  type FetchPricesFn,
+} from '../_shared/price-bisect.ts';
+
 // KEEP IN SYNC with the identical regex in the backfill UPDATE in
 // supabase/migrations/20260928000000_symbols_price_unsupported_column.sql —
 // both must classify a symbol identically, or the migration's one-time seed
@@ -62,29 +68,7 @@ export function partitionForAlpaca(symbols: string[]): PartitionResult {
   return { eligible, unsupported };
 }
 
-export interface BatchFetchResult {
-  ok: boolean;
-  /** Present when ok. May omit symbols Alpaca had no trade/bar/quote data
-   * for — that is a benign "no data" miss, not a request-level failure. */
-  prices?: Map<string, number>;
-  status?: number;
-}
-
-export type FetchPricesFn = (symbols: string[]) => Promise<BatchFetchResult>;
-
-export interface BisectResult {
-  prices: Map<string, number>;
-  /** Genuine price_error symbols — the REQUEST for this symbol failed
-   * (isolated down to a single-symbol 400, or unresolved when the request
-   * cap was hit). Distinct from a symbol simply absent from `prices` because
-   * Alpaca returned 200 with no data for it. */
-  failed: string[];
-  requestCount: number;
-  /** True if MAX_ALPACA_REQUESTS was exhausted before every symbol was
-   * isolated — remaining unresolved symbols land in `failed` without being
-   * bisected further. */
-  capHit: boolean;
-}
+export type { BatchFetchResult, BisectResult, FetchPricesFn } from '../_shared/price-bisect.ts';
 
 // One stray bad symbol costs ~13 requests to isolate in a 50-symbol chunk
 // (1 initial full-batch request + 6 halving levels x 2 requests/level, since
@@ -96,51 +80,17 @@ export interface BisectResult {
 export const MAX_ALPACA_REQUESTS = 30;
 
 /**
- * Fetch prices for `symbols` (already filtered by partitionForAlpaca — this
- * function assumes every symbol is Alpaca-format-eligible), bisecting on a
- * 400 so one bad symbol costs only itself. `fetchFn` is injected so this is
- * testable with a fake that simulates per-symbol 400s — no real network.
+ * Fetch prices for `symbols` (already filtered by partitionForAlpaca), bisecting
+ * on a 400 so one bad symbol costs only itself, at most `maxRequests` requests
+ * (default MAX_ALPACA_REQUESTS). The implementation is shared with the draft
+ * auto-pick's screen: ../_shared/price-bisect.ts.
  */
-export async function fetchPricesBisecting(
+export function fetchPricesBisecting(
   symbols: string[],
   fetchFn: FetchPricesFn,
   maxRequests: number = MAX_ALPACA_REQUESTS,
 ): Promise<BisectResult> {
-  const prices = new Map<string, number>();
-  const failed: string[] = [];
-  const budget = { used: 0 };
-  let capHit = false;
-
-  async function bisect(chunk: string[]): Promise<void> {
-    if (chunk.length === 0) return;
-    if (budget.used >= maxRequests) {
-      capHit = true;
-      failed.push(...chunk);
-      return;
-    }
-    budget.used++;
-    const res = await fetchFn(chunk);
-    if (res.ok) {
-      for (const s of chunk) {
-        const p = res.prices?.get(s);
-        if (p !== undefined) prices.set(s, p);
-        // else: requested ok, Alpaca had no data for this one symbol —
-        // benign "no data" miss, not a failure. Caller's existing fallback
-        // (keep the prior stored last_price) applies; not added to `failed`.
-      }
-      return;
-    }
-    if (chunk.length === 1) {
-      failed.push(chunk[0]);
-      return;
-    }
-    const mid = Math.ceil(chunk.length / 2);
-    await bisect(chunk.slice(0, mid));
-    await bisect(chunk.slice(mid));
-  }
-
-  await bisect(symbols);
-  return { prices, failed, requestCount: budget.used, capHit };
+  return sharedFetchPricesBisecting(symbols, fetchFn, maxRequests);
 }
 
 export type PriceStatus = 'complete' | 'partial' | 'failed' | 'none_attempted';

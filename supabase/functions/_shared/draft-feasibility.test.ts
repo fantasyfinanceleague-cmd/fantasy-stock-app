@@ -24,6 +24,9 @@ import {
   robustFits,
   signatureOf,
   type FeasibilityState,
+  budgetShortfall,
+  evaluateFeasiblePick,
+  preShortfall,
 } from './draft-feasibility.ts';
 import { type PickRow, type Slot, type TradeRow, currentTurn, leagueOwnedSymbols } from './draft-validation.ts';
 import { type PickFeasibility, gatePick } from './pick-gate.ts';
@@ -188,40 +191,119 @@ const cashLeague = (budget: number, numRounds: number, slots: Slot[]) => ({
   slots,
 });
 
-Deno.test('budget reserve: the $700 pick is refused because the last slot (+10% reserve) would be unaffordable; the $50 pick is accepted', () => {
+Deno.test('budget reserve, NO CUSHION (2026-10-13): $700 + the cheapest B stock ($50) = $750 exactly is legal; $700.01 is refused', () => {
   // One manager, two slots: A accepts $1-$1000, B accepts $5-$100.
-  // Pool: X=$700 (A only), Y=$50 (A and B), Z=$60 (A and B). Budget $750.
+  // Pool: X (A only), Y=$50 (A and B), Z=$60 (A and B). Budget $750.
   // Taking X leaves B needing a stock; the reserve prices B at its cheapest
-  // qualifying stock x1.1 (= $55) so 700 + 55 > 750 is refused. Y leaves B
-  // with Z (x1.1 = $66) and 50 + 66 <= 750, so Y is legal.
+  // qualifying stock AT ITS PRICE (Giorgio: "safety cushion? when did i ever say
+  // there should be a safety cushion?"), so 700 + 50 = 750 fits exactly. A cent
+  // more does not, and nothing was short before, so never-worsen does not admit it.
+  // Mutation: re-adding the 1.1 inflate in reserveFor refuses the $700 pick.
   const slots = [slot('A', 0, 1, 1, 1000), slot('B', 1, 1, 5, 100)];
-  const stocks = [stock('X', 700), stock('Y', 50), stock('Z', 60)];
   const rules = cashLeague(750, 2, slots);
   const order = ['me'];
   const picks: PickRow[] = [];
-  const groups = buildPoolGroups(slots, stocks, { exclude: [], draftableOnly: true, depth: 10 });
-  const state: FeasibilityState = { types: slots, demand: demandVector(slots, order, picks, 2), groups, budget: 750 };
   const base = { rules, slots, order, picks, trades: [] as TradeRow[], pickerId: 'me', eligibleCategories: new Set<string>(), isDraftable: true };
-  const feas = (cached: number): PickFeasibility => ({ state, open: openInstances(slots, picks, 'me', 2), cachedPrice: cached, eligibility: new Set() });
-
-  const x = gatePick('L', { ...base, symbol: 'X', price: 700 }, feas(700));
-  assertEquals(x.ok, false);
-  if (!x.ok) assertEquals(x.reason, 'budget_reserve');
-
-  const y = gatePick('L', { ...base, symbol: 'Y', price: 50 }, feas(50));
-  assertEquals(y.ok, true);
-  if (y.ok) assertEquals(y.pick.slotId, 'A'); // first slot that strands nobody: Z still fills B
+  const gateX = (px: number) => {
+    const stocks = [stock('X', px), stock('Y', 50), stock('Z', 60)];
+    const groups = buildPoolGroups(slots, stocks, { exclude: [], draftableOnly: true, depth: 10 });
+    const state: FeasibilityState = { types: slots, demand: demandVector(slots, order, picks, 2), groups, budget: 750 };
+    const feas: PickFeasibility = { state, open: openInstances(slots, picks, 'me', 2), cachedPrice: px, eligibility: new Set() };
+    return gatePick('L', { ...base, symbol: 'X', price: px }, feas);
+  };
+  const exact = gateX(700);
+  assertEquals(exact.ok, true);
+  if (exact.ok) assertEquals(exact.pick.slotId, 'A');
+  const over = gateX(700.01);
+  assertEquals(over.ok, false);
+  if (!over.ok) {
+    assertEquals(over.reason, 'budget_reserve');
+    assert(Math.abs((over.budgetExcess ?? 0) - 0.01) < 1e-6, `excess ${over.budgetExcess}`);
+  }
 });
 
-Deno.test('start: the same league is refused up front when the reserve already exceeds the budget', () => {
+Deno.test('start: the same league is refused up front when the reserve exceeds the budget (exact, no cushion)', () => {
   const slots = [slot('A', 0, 1, 1, 1000), slot('B', 1, 1, 5, 100)];
   // Two extra $500-$520 A-only stocks clear the 10% demand headroom (1 -> 2 per slot).
   const stocks = [stock('X', 700), stock('Y', 50), stock('Z', 60), stock('P1', 500), stock('P2', 520)];
   const groups = buildPoolGroups(slots, stocks, { exclude: [], draftableOnly: true, depth: 10 });
   assertEquals(checkStartFeasibility({ types: slots, managers: 1, numRounds: 2, budget: 750, groups }).ok, true);
-  const tight = checkStartFeasibility({ types: slots, managers: 1, numRounds: 2, budget: 120, groups });
+  // The reserve is $60 + $60 = $120 (the worst-case second-cheapest per slot):
+  // a $120 budget covers it exactly; a cent less does not.
+  assertEquals(checkStartFeasibility({ types: slots, managers: 1, numRounds: 2, budget: 120, groups }).ok, true);
+  const tight = checkStartFeasibility({ types: slots, managers: 1, numRounds: 2, budget: 119.99, groups });
   assertEquals(tight.ok, false);
   if (!tight.ok) assertEquals(tight.reason, 'budget_infeasible');
+});
+
+// ---------------------------------------------------------------------------
+// Budget never-worsen (Giorgio, 2026-10-13: "no cushion, never stuck")
+// ---------------------------------------------------------------------------
+
+Deno.test('budgetShortfall: max(0, spent + cost + reserve - budget); Infinity when the reserve is; never NaN', () => {
+  assertEquals(budgetShortfall(900, 50, 40, 1000), 0);
+  assertEquals(budgetShortfall(900, 50, 60, 1000), 10);
+  assertEquals(budgetShortfall(900, 50, Infinity, 1000), Infinity);
+  assert(!Number.isNaN(budgetShortfall(900, 0, Infinity, 1000)));
+});
+
+/** One flex type, one manager with `open` turns left and `left` dollars. */
+function flexBudget(prices: number[], open: number, left: number) {
+  const types = [slot('F', 0, open, null, null)];
+  const groups = buildPoolGroups(types, prices.map((p, i) => stock(`P${i}`, p)), { exclude: [], draftableOnly: true, depth: 50 });
+  const state: FeasibilityState = { types, demand: [open], groups, budget: 1000 };
+  return { state, spent: 1000 - left, open: [open] };
+}
+
+Deno.test('never-worsen: prices drifted so the roster is already short -> a pick that does not grow the shortfall is legal (never stuck)', () => {
+  // $57.20 left for 2 turns; every stock now costs $30: $942.80 spent + $30 + $30 = $1,002.80, $2.80 short.
+  const f = flexBudget(Array(6).fill(30), 2, 57.2);
+  const pre = preShortfall(f.state, f.open, f.spent);
+  assert(Math.abs(pre - 2.8) < 1e-9, `pre ${pre}`);
+  const ok = evaluateFeasiblePick(f.state, { ordinal: 0, cachedPrice: 30, eligibility: new Set(), cost: 30, spent: f.spent, open: f.open });
+  assertEquals(ok, { ok: true });
+  // A dearer stock WOULD grow it: refused, with the excess reported.
+  const worse = evaluateFeasiblePick(f.state, { ordinal: 0, cachedPrice: 31, eligibility: new Set(), cost: 31, spent: f.spent, open: f.open });
+  assertEquals(worse.ok, false);
+  if (!worse.ok) {
+    assertEquals(worse.reason, 'budget_reserve');
+    assert(Math.abs((worse.budgetExcess ?? 0) - 1) < 1e-9, `excess ${worse.budgetExcess}`);
+  }
+});
+
+Deno.test('never-worsen: with NO shortfall before it is exactly the old rule (minus the cushion)', () => {
+  const f = flexBudget(Array(6).fill(28.6), 2, 57.2); // 28.60 + 28.60 = 57.20: exactly enough
+  assertEquals(preShortfall(f.state, f.open, f.spent), 0);
+  assertEquals(evaluateFeasiblePick(f.state, { ordinal: 0, cachedPrice: 28.6, eligibility: new Set(), cost: 28.6, spent: f.spent, open: f.open }), { ok: true });
+  const over = evaluateFeasiblePick(f.state, { ordinal: 0, cachedPrice: 28.6, eligibility: new Set(), cost: 28.61, spent: f.spent, open: f.open });
+  assertEquals(over.ok, false); // a cent over leaves the last turn unaffordable
+});
+
+Deno.test('never-worsen, Infinity: an infinite shortfall before admits any pick the slot check passes', () => {
+  // Types A and B; the pool has NO B stock, so the reserve (and the shortfall) is infinite.
+  const types = [slot('A', 0, 1, 1, 100), slot('B', 1, 1, 500, 600)];
+  const groups = buildPoolGroups(types, [stock('X', 50), stock('Y', 60)], { exclude: [], draftableOnly: true, depth: 10 });
+  const state: FeasibilityState = { types, demand: [1, 1], groups, budget: 1000 };
+  assertEquals(preShortfall(state, [1, 1], 900), Infinity);
+  assertEquals(evaluateFeasiblePick(state, { ordinal: 0, cachedPrice: 50, eligibility: new Set(), cost: 50, spent: 900, open: [1, 1] }), { ok: true });
+});
+
+Deno.test('never-worsen, Infinity: a finite shortfall that would become infinite is refused, with no NaN', () => {
+  // A hand-built state whose only B-capable group lists no price (the depth cut it):
+  // filling A leaves B with an infinite reserve, from a finite one before.
+  const types = [slot('A', 0, 1, 1, 100), slot('B', 1, 1, 1, 100)];
+  const state: FeasibilityState = {
+    types,
+    demand: [1, 1],
+    groups: [{ ordinals: [0, 1], n: 1, prices: [40] }, { ordinals: [0], n: 3, prices: [10, 11, 12] }],
+    budget: 1000,
+  };
+  const pre = preShortfall(state, [1, 1], 900);
+  assert(Number.isFinite(pre), `pre ${pre}`);
+  // Taking the one A+B stock into A: B's only group empties -> reserve Infinity.
+  const r = evaluateFeasiblePick(state, { ordinal: 0, cachedPrice: 40, eligibility: new Set(), cost: 40, spent: 900, open: [1, 1], preDeficit: 1 });
+  assertEquals(r.ok, false);
+  if (!r.ok) assert(r.reason === 'would_strand_slot' || (r.reason === 'budget_reserve' && r.budgetExcess === Infinity), JSON.stringify(r));
 });
 
 // ---------------------------------------------------------------------------

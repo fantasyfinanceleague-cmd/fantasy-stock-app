@@ -56,7 +56,10 @@ export type GateRefusal = PickRefusal | PickFeasibilityRefusal;
 
 export type GateResult =
   | { ok: true; pick: GatedPick }
-  | { ok: false; reason: GateRefusal };
+  /** budgetExcess (budget_reserve only): how far the cheapest-to-fix slot missed
+   * the budget rule, in dollars of cost. The auto-pick screens a reserve refusal
+   * only when a live price move could close it. */
+  | { ok: false; reason: GateRefusal; budgetExcess?: number };
 
 /** The feasibility context for ONE pick, read fresh by the caller from the same
  * pool the search used. */
@@ -71,6 +74,8 @@ export interface PickFeasibility {
   eligibility: Set<string>;
   /** Optional: deficit(state.demand, state.groups), precomputed by the caller. */
   preDeficit?: number;
+  /** Optional: draft-feasibility preShortfall(state, open, spent), precomputed. */
+  preShortfall?: number;
 }
 
 /**
@@ -93,6 +98,7 @@ export function gatePick(leagueId: string, inputs: PickInputs, feas: PickFeasibi
   let firstRefusal: PickRefusal | null = null;
   let sawStrand = false;
   let sawBudget = false;
+  let budgetExcess = Infinity;
   for (const slot of candidates) {
     const d = validatePick(slot ? { ...inputs, slots: [slot] } : inputs);
     if (!d.legal) {
@@ -111,9 +117,13 @@ export function gatePick(leagueId: string, inputs: PickInputs, feas: PickFeasibi
       spent,
       open: feas.open,
       preDeficit: feas.preDeficit,
+      preShortfall: feas.preShortfall,
     });
     if (!ev.ok) {
-      if (ev.reason === 'budget_reserve') sawBudget = true;
+      if (ev.reason === 'budget_reserve') {
+        sawBudget = true;
+        budgetExcess = Math.min(budgetExcess, ev.budgetExcess ?? Infinity);
+      }
       else sawStrand = true;
       continue;
     }
@@ -130,7 +140,7 @@ export function gatePick(leagueId: string, inputs: PickInputs, feas: PickFeasibi
     return { ok: true, pick };
   }
 
-  if (sawBudget) return { ok: false, reason: 'budget_reserve' };
+  if (sawBudget) return { ok: false, reason: 'budget_reserve', budgetExcess };
   if (sawStrand) return { ok: false, reason: 'would_strand_slot' };
   return { ok: false, reason: firstRefusal ?? 'no_eligible_slot' };
 }
