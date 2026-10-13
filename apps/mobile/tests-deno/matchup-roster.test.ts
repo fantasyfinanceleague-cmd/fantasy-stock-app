@@ -7,7 +7,8 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
-  cardSlotPill, gainsAtClose, isSlotted, lastWeekClose, orderSide, pairRows, recordedSlots, rosterGroups, slotGroupLabel,
+  barCloseAt, cardSlotPill, closesBefore, gainsAtClose, isSlotted, lastWeekClose, orderSide, orderingClose, pairRows, recordedSlots,
+  rosterGroups, slotGroupLabel,
   weekSessions, type RosterEntry, type SlotRow,
 } from '../lib/game/matchupRoster.ts';
 import { buildRosterView, seqOf } from '../lib/game/matchupRosterView.ts';
@@ -62,46 +63,53 @@ Deno.test('weekSessions: the week\'s own sessions from its window', () => {
   assertEquals(weekSessions(null, '2026-09-25T20:00:00Z', sessions), []);
 });
 
-Deno.test('gainsAtClose: priced at the close (the bar), not the live quote; trades after the close don\'t count', () => {
-  const close = { date: '2026-09-23', at: new Date('2026-09-23T20:00:00Z') };
-  const live = () => 99999; // a wild live quote must change nothing
-  const g = gainsAtClose({ snapshots: snaps(ROBERTO_HOLDINGS), trades: [], close, bars, todayEt: '2026-09-24', quote: live });
+const WED_CLOSE = { date: '2026-09-23', at: new Date('2026-09-23T20:00:00Z') };
+const THU_CLOSE = { date: '2026-09-24', at: new Date('2026-09-24T20:00:00Z') };
+const THU_1337 = new Date('2026-09-24T17:37:00Z');
+const THU_8PM = new Date('2026-09-25T00:00:00Z');
+
+Deno.test('gainsAtClose: priced at the close\'s settled bar; trades after the close don\'t count', () => {
+  const g = gainsAtClose({ snapshots: snaps(ROBERTO_HOLDINGS), trades: [], close: WED_CLOSE, bars, barsAt: THU_1337 });
   const nvda = ROBERTO_HOLDINGS[0];
-  assertEquals(Math.round(g.NVDA * 100), Math.round(fixtureQty(nvda) * (nvda.prev - nvda.mon) * 100));
-  const after = gainsAtClose({
-    snapshots: [], trades: [{ symbol: 'ZZZ', action: 'buy', quantity: 1, price: 10, createdAt: new Date('2026-09-24T15:00:00Z') }],
-    close, bars, todayEt: '2026-09-24', quote: live,
-  });
-  assertEquals(after.ZZZ, undefined, 'a buy after the close has no held number');
+  assertEquals(Math.round(g.bySymbol.NVDA * 100), Math.round(fixtureQty(nvda) * (nvda.prev - nvda.mon) * 100));
+  assertEquals(g.complete, true);
 });
 
-Deno.test('gainsAtClose: on the close\'s own evening, before the bar lands, the quote IS the close', () => {
-  const close = { date: '2026-09-24', at: new Date('2026-09-24T20:00:00Z') };
-  const g = gainsAtClose({ snapshots: snaps(ROBERTO_HOLDINGS.slice(0, 1)), trades: [], close, bars: {}, todayEt: '2026-09-24', quote: () => 320 });
-  assert(g.NVDA > 0);
-  const stale = gainsAtClose({ snapshots: snaps(ROBERTO_HOLDINGS.slice(0, 1)), trades: [], close, bars: {}, todayEt: '2026-09-25', quote: () => 320 });
-  assertEquals(stale.NVDA, undefined, 'a quote the day after is not that close');
+Deno.test('barCloseAt: no bar fetched before its close counts (Alpaca\'s 1Day bar for today is in progress)', () => {
+  const at = barCloseAt(bars, THU_1337, THU_CLOSE); // fetched mid-Thursday: the Thursday bar is a mid-session price
+  assertEquals(at('NVDA'), null);
+  assertEquals(barCloseAt(bars, THU_8PM, THU_CLOSE)('NVDA'), ROBERTO_HOLDINGS[0].thu); // fetched after the close: settled
+  assertEquals(barCloseAt(bars, THU_8PM, { date: '2026-09-22', at: new Date('2026-09-22T20:00:00Z') })('NVDA'), null); // no bar that day
 });
 
-/** The roster for the board's week at `now`, priced live by `quote`. */
-function view(now: Date, quote: (s: string) => number | null, variant: 'unslotted' | 'category' | 'tiers' = 'unslotted') {
-  const side = (userId: string, rows: typeof ROBERTO_HOLDINGS) => {
-    const live = liveWeekScore(snaps(rows), [], quote);
-    return { userId, lineup: lineupRows(live.bySymbol, live.gain), snapshots: snaps(rows), trades: [] };
+Deno.test('the order never reads a quote (source guard: no quote reaches the ordering path)', () => {
+  const roster = SOURCES['lib/game/matchupRoster.ts'];
+  const path = roster.slice(roster.indexOf('export function barCloseAt('), roster.indexOf('// ── Slot heads'));
+  assert(!/quote/i.test(path.replace(/\/\*\*[\s\S]*?\*\//g, '')), 'barCloseAt / gainsAtClose / orderingClose take no quote');
+  const view = SOURCES['lib/game/matchupRosterView.ts'];
+  assert(!/\bquote\b/.test(view.replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')), 'buildRosterView takes no quote');
+});
+
+/** The roster for the board's week at `now`, priced live by `quote`; the bars as fetched at
+ * `barsAt` (default: now). */
+function view(now: Date, quote: (s: string) => number | null, variant: 'unslotted' | 'category' | 'tiers' = 'unslotted',
+  opts: { barsAt?: Date; bars?: typeof bars; myTrades?: import('../lib/home/liveWeekScore.ts').LiveTrade[] } = {}) {
+  const side = (userId: string, rows: typeof ROBERTO_HOLDINGS, trades: import('../lib/home/liveWeekScore.ts').LiveTrade[] = []) => {
+    const live = liveWeekScore(snaps(rows), trades, quote);
+    return { userId, lineup: lineupRows(live.bySymbol, live.gain), snapshots: snaps(rows), trades };
   };
   const ledger = fixtureLedger('unslotted', 'me', 'gia');
   const slots = fixtureSlots(variant, 'me', 'gia');
   return buildRosterView({
-    me: side('me', ROBERTO_HOLDINGS),
+    me: side('me', ROBERTO_HOLDINGS, opts.myTrades),
     opp: side('gia', GIANLUIGI_HOLDINGS),
     activity: ledger.activity,
     names: ledger.symbol_names,
     slots: slots?.slots ?? [],
     slotOf: slots?.bySide ?? {},
-    close: lastWeekClose(now, sessions),
-    bars,
-    todayEt: '2026-09-24',
-    quote,
+    closes: closesBefore(now, sessions),
+    bars: opts.bars ?? bars,
+    barsAt: opts.barsAt ?? now,
     rowPrice: quote,
   });
 }
@@ -137,6 +145,56 @@ Deno.test('after Thursday\'s close the order re-reads Thursday\'s closes', () =>
   const atThu = (rows: typeof ROBERTO_HOLDINGS) =>
     [...rows].sort((a, b) => fixtureQty(b) * (b.thu - b.mon) - fixtureQty(a) * (a.thu - a.mon)).map((h) => h.symbol);
   assertEquals(left(g), atThu(ROBERTO_HOLDINGS));
+});
+
+const atClose = (rows: typeof ROBERTO_HOLDINGS, k: 'prev' | 'thu') =>
+  [...rows].sort((a, b) => fixtureQty(b) * (b[k] - b.mon) - fixtureQty(a) * (a[k] - a.mon)).map((h) => h.symbol);
+
+Deno.test('the fixture\'s Wednesday and Thursday orders differ (so the cases below can tell them apart)', () => {
+  assert(JSON.stringify(atClose(GIANLUIGI_HOLDINGS, 'prev')) !== JSON.stringify(atClose(GIANLUIGI_HOLDINGS, 'thu')));
+});
+
+Deno.test('F1: a buy AFTER the close is not in the held order (it would lead the rows if counted)', () => {
+  // Roberto buys 100 TSLA at $100 on Thursday — after Wednesday's close. Counted at Wednesday's
+  // close it would be +$14,966 and lead his rows; it must not move them.
+  const buy = { symbol: 'TSLA', action: 'buy' as const, quantity: 100, price: 100, createdAt: new Date('2026-09-24T15:00:00Z') };
+  const g = view(THU_1337, thuQuote, 'unslotted', { myTrades: [buy] });
+  assertEquals(left(g), atClose(ROBERTO_HOLDINGS, 'prev'));
+  const direct = gainsAtClose({ snapshots: snaps(ROBERTO_HOLDINGS), trades: [buy], close: WED_CLOSE, bars, barsAt: THU_1337 });
+  const tsla = ROBERTO_HOLDINGS.find((h) => h.symbol === 'TSLA')!;
+  assertEquals(Math.round(direct.bySymbol.TSLA * 100), Math.round(fixtureQty(tsla) * (tsla.prev - tsla.mon) * 100));
+});
+
+Deno.test('F2a: on the close\'s evening, before its bar lands, a polled quote can\'t re-sort — the previous close holds', () => {
+  const noThuBar = Object.fromEntries(Object.entries(bars).map(([k, v]) => [k, v.filter((b) => b.date !== '2026-09-24')]));
+  // An after-hours IEX print that would flip both rosters if it reached the order.
+  const wild = (s: string) => (s === 'TSLA' || s === 'BA' ? 9999 : thuQuote(s));
+  const g = view(THU_8PM, wild, 'unslotted', { bars: noThuBar });
+  assertEquals(left(g), atClose(ROBERTO_HOLDINGS, 'prev'));
+  assertEquals(right(g), atClose(GIANLUIGI_HOLDINGS, 'prev'));
+});
+
+Deno.test('F2b: bars fetched BEFORE the close (today\'s in-progress bar) never order the rows after it', () => {
+  // The fetch ran at 1:37 PM and carries a Thursday bar; at 8 PM, with no refetch, the order
+  // stays on Wednesday's close rather than a mid-session "close".
+  const g = view(THU_8PM, thuQuote, 'unslotted', { barsAt: THU_1337 });
+  assertEquals(right(g), atClose(GIANLUIGI_HOLDINGS, 'prev'));
+  // Refetched after the close, Thursday's settled bar orders them.
+  assertEquals(right(view(THU_8PM, thuQuote)), atClose(GIANLUIGI_HOLDINGS, 'thu'));
+});
+
+Deno.test('F2: one close for BOTH rosters — a stock missing its settled bar holds both sides on the previous close', () => {
+  const kiBar = Object.fromEntries(Object.entries(bars).map(([k, v]) => [k, k === 'KO' ? v.filter((b) => b.date !== '2026-09-24') : v]));
+  const o = orderingClose({
+    closes: closesBefore(THU_8PM, sessions),
+    sides: [{ snapshots: snaps(ROBERTO_HOLDINGS), trades: [] }, { snapshots: snaps(GIANLUIGI_HOLDINGS), trades: [] }],
+    bars: kiBar,
+    barsAt: THU_8PM,
+  });
+  assertEquals(o?.close.date, '2026-09-23', 'Gianluigi\'s KO has no Thursday bar: neither side reads Thursday');
+  const g = view(THU_8PM, thuQuote, 'unslotted', { bars: kiBar });
+  assertEquals(left(g), atClose(ROBERTO_HOLDINGS, 'prev'));
+  assertEquals(right(g), atClose(GIANLUIGI_HOLDINGS, 'prev'));
 });
 
 Deno.test('Monday before the first close: the draft order (by pick), every gain $0.00', () => {
@@ -234,10 +292,12 @@ Deno.test('seqOf: picks by number, later buys after every pick in the order boug
 
 Deno.test('Matchup: the order reads the last CLOSE (never the live gain), and the roster waits for its order', () => {
   const src = SOURCES['app/(tabs)/matchup.tsx'];
-  assert(src.includes('const close = useMemo(() => lastWeekClose(now, sessions), [now, sessions]);'));
+  assert(src.includes('const closes = useMemo(() => closesBefore(now, sessions), [now, sessions]);'));
+  assert(src.includes('barsAt: raw.now,'), 'a bar counts only if the fetch that brought it came after the close');
   assert(src.includes('if (!groups) return <RosterRowsSkeleton />;'), 'no list that re-sorts once the ledger lands');
   const view = SOURCES['lib/game/matchupRosterView.ts'];
-  assert(view.includes('closeGain: close ? gains[sym] ?? null : null,'));
+  assert(view.includes('const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });'));
+  assert(view.includes('closeGain: gains ? gains[sym] ?? null : null,'));
   assert(!/closeGain:[^\n]*cents/.test(view), 'the order never reads the live cents');
 });
 

@@ -32,7 +32,7 @@ import type { LineupRow } from '@/lib/game/lineupLedger';
 import type { HomeRawInputs } from '@/lib/home/useHomeLeague';
 import { toLiveSnapshots, toLiveTrades } from '@/lib/home/buildHomeViewModel';
 import { resolveWeekWindow } from '@/lib/time/marketWeek';
-import { cardSlotPill, etDateOf, lastWeekClose, weekSessions } from '@/lib/game/matchupRoster';
+import { cardSlotPill, closesBefore, lastWeekClose, weekSessions } from '@/lib/game/matchupRoster';
 import { buildRosterView, type RosterSideInput } from '@/lib/game/matchupRosterView';
 import { useRosterData, type RosterData } from '@/lib/game/useRosterData';
 import { openingOf, playerCardData } from '@/lib/game/playerCardModel';
@@ -256,13 +256,15 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt 
   }, [me, opp.userId, myRows, theirRows, cw]);
 
   const now = raw.now;
-  const todayEt = etDateOf(now) ?? '';
   const sessions = useMemo(() => {
     const win = derived.weekEnd ? resolveWeekWindow(derived.weekEnd, raw.marketCalendar) : null;
     return win ? weekSessions(win.weekStart, win.weekEnd, raw.marketCalendar) : [];
   }, [derived.weekEnd, raw.marketCalendar]);
-  // The order's clock: the week's last CLOSE (null before Monday's close — the draft/slot
-  // order). A final week reads Friday's, the close it was scored at.
+  // The order's clock: the week's closes so far, latest first. The roster orders by the
+  // latest one SETTLED in the fetched bars (matchupRoster.orderingClose) — never a quote,
+  // never a bar fetched before its close. A final week reads Friday's.
+  const closes = useMemo(() => closesBefore(now, sessions), [now, sessions]);
+  // The final rows' percent is measured at the week's last close.
   const close = useMemo(() => lastWeekClose(now, sessions), [now, sessions]);
   // A row's percent: live, or at the week's close once final.
   const closeOn = close?.date ?? '';
@@ -278,15 +280,15 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt 
       names: roster.ledger.symbol_names,
       slots: roster.slots.slots,
       slotOf: roster.slots.bySide,
-      close,
+      closes,
       bars: raw.bars,
-      todayEt,
-      quote: raw.quote,
+      // raw.now is stamped when the fetch (bars included) returns.
+      barsAt: raw.now,
       rowPrice,
     });
     // rowPrice reads raw + close, both listed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, roster.ledger, roster.slots, sides, close, raw, todayEt, final]);
+  }, [ready, roster.ledger, roster.slots, sides, closes, raw, final]);
 
   // The card's data for the stock it's showing (null: no opening event in the ledger).
   const card = useMemo(() => {

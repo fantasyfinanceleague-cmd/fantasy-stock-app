@@ -11,8 +11,10 @@
  *  - "it'll reorder it to show like who's been doing the best. So it doesn't update like
  *    live per se, but updates at the end of the day." So the ORDER reads the week gain AT
  *    THE LAST MARKET CLOSE (a held number), never the live one: a live quote moves the
- *    figures on the rows, never the rows. Before the week's first close every gain is
- *    $0.00, so the order is the draft/slot order.
+ *    figures on the rows, never the rows. The close is read from settled daily bars only
+ *    (`orderingClose`): no quote, no bar fetched before its close, one close for both
+ *    sides — until a close is settled the previous one's order holds. Before the week's
+ *    first settled close the order is the draft/slot order.
  *
  * Where a slot comes from: the server's own record (drafts.slot_id / trades.slot_id, the
  * event that opened the held position: the last BUY, else the draft pick, as
@@ -129,41 +131,73 @@ export function weekSessions(weekStartIso: string | null, weekEndIso: string | n
   return sessions.filter((s) => s.sessionDate >= from && s.sessionDate <= to).sort((a, b) => (a.sessionDate < b.sessionDate ? -1 : 1));
 }
 
-/** The week's last session that has CLOSED by `now`: the date and the instant. Null before
- * the week's first close (or with no calendar coverage — then the draft/slot order holds;
- * never a guessed close). */
-export function lastWeekClose(now: Date, week: readonly MarketCalendarSession[]): { date: string; at: Date } | null {
-  let best: { date: string; at: Date } | null = null;
+/** The week's sessions that have CLOSED by `now`, latest first. Empty before the week's
+ * first close (or with no calendar coverage — then the draft/slot order holds; never a
+ * guessed close). */
+export function closesBefore(now: Date, week: readonly MarketCalendarSession[]): { date: string; at: Date }[] {
+  const out: { date: string; at: Date }[] = [];
   for (const s of week) {
     const iso = etWallClockToUtcIso(s.sessionDate, s.closeEt);
     if (!iso) continue;
     const at = new Date(iso);
-    if (at.getTime() <= now.getTime() && (!best || at > best.at)) best = { date: s.sessionDate, at };
+    if (at.getTime() <= now.getTime()) out.push({ date: s.sessionDate, at });
   }
-  return best;
+  return out.sort((x, y) => y.at.getTime() - x.at.getTime());
+}
+
+/** The week's last closed session, or null before the first close. */
+export function lastWeekClose(now: Date, week: readonly MarketCalendarSession[]): { date: string; at: Date } | null {
+  return closesBefore(now, week)[0] ?? null;
+}
+
+/** One stock's price AT a close: that day's daily bar, and only from bars fetched after the
+ * close. Never a quote (the quote is the latest IEX trade, which prints after 4:00 PM), and
+ * never a bar fetched before the close (Alpaca's 1Day bars, requested with no `end`, include
+ * today's IN-PROGRESS bar, whose "close" is a mid-session price). */
+export function barCloseAt(bars: BarsBySymbol, barsAt: Date, close: { date: string; at: Date }): (symbol: string) => number | null {
+  const settled = barsAt.getTime() >= close.at.getTime();
+  return (symbol: string) => {
+    if (!settled) return null;
+    const bar = (bars[symbol] ?? bars[symbol.toUpperCase()] ?? []).find((b) => b.date === close.date);
+    return bar ? bar.close : null;
+  };
 }
 
 /** Each stock's week gain at a close: the server's own accounting (liveWeekScore), the
- * trades up to that close, each stock priced at its close that day. A stock with no bar
- * for the day (and, on the close's own evening, no quote) has no held number. */
+ * trades up to that close only, each stock priced at its settled close bar
+ * (`barCloseAt`). `complete` is false when any position held at that close has no
+ * settled bar — that close can't order this side. */
 export function gainsAtClose(input: {
   snapshots: readonly LiveSnapshot[];
   trades: readonly LiveTrade[];
   close: { date: string; at: Date };
   bars: BarsBySymbol;
-  /** Today's ET date and the quote: after today's close a quote IS today's close, so the
-   * reorder doesn't wait for the bar to land. */
-  todayEt: string;
-  quote: (symbol: string) => number | null;
-}): Record<string, number> {
-  const { snapshots, trades, close, bars, todayEt, quote } = input;
-  const at = (symbol: string): number | null => {
-    const bar = (bars[symbol] ?? bars[symbol.toUpperCase()] ?? []).find((b) => b.date === close.date);
-    if (bar) return bar.close;
-    return close.date === todayEt ? quote(symbol) : null;
-  };
+  /** When the bars were fetched (raw.now: the fetch's own clock). */
+  barsAt: Date;
+}): { bySymbol: Record<string, number>; complete: boolean } {
+  const { snapshots, trades, close, bars, barsAt } = input;
   const held = trades.filter((t) => t.createdAt.getTime() <= close.at.getTime());
-  return liveWeekScore([...snapshots], held, at).bySymbol;
+  const r = liveWeekScore([...snapshots], held, barCloseAt(bars, barsAt, close));
+  return { bySymbol: r.bySymbol, complete: r.unpriced.length === 0 };
+}
+
+/** The close that orders the roster, and each side's gains at it: the LATEST closed session
+ * at which BOTH sides are completely priced from settled bars. A later close that isn't
+ * settled yet (its bar not fetched since the close) leaves the previous close's order in
+ * place; no close at all leaves the draft/slot order. Both rosters always read the SAME
+ * close — never one side on Thursday's and the other on Wednesday's (CLAUDE.md: a set that
+ * can be partially filled is checked per participant, never with "any row"). */
+export function orderingClose(input: {
+  closes: readonly { date: string; at: Date }[];
+  sides: readonly { snapshots: readonly LiveSnapshot[]; trades: readonly LiveTrade[] }[];
+  bars: BarsBySymbol;
+  barsAt: Date;
+}): { close: { date: string; at: Date }; gains: Record<string, number>[] } | null {
+  for (const close of input.closes) {
+    const per = input.sides.map((s) => gainsAtClose({ snapshots: s.snapshots, trades: s.trades, close, bars: input.bars, barsAt: input.barsAt }));
+    if (per.every((p) => p.complete)) return { close, gains: per.map((p) => p.bySymbol) };
+  }
+  return null;
 }
 
 // ── Slot heads ───────────────────────────────────────────────────────────────────

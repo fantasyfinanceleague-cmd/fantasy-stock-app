@@ -9,7 +9,7 @@ import type { LineupRow } from './lineupLedger';
 import type { LiveSnapshot, LiveTrade } from '../home/liveWeekScore';
 import type { BarsBySymbol } from '../home/buildHomeViewModel';
 import type { LedgerActivityRow } from '../money/portfolioLedger';
-import { gainsAtClose, pairRows, rosterGroups, slotGroupLabel, type RosterEntry, type SlotRow } from './matchupRoster';
+import { orderingClose, pairRows, rosterGroups, slotGroupLabel, type RosterEntry, type SlotRow } from './matchupRoster';
 import { stockWeek } from './playerCardModel';
 
 export interface RosterSideInput {
@@ -51,8 +51,8 @@ export function seqOf(userId: string, activity: readonly LedgerActivityRow[] | n
   return out;
 }
 
-/** Before the week's first close (`close` null) the draft/slot order; after it, best first
- * by the gain at that close. */
+/** Best first by the gain at the latest SETTLED close (`orderingClose`: settled bars only,
+ * one close for both sides); before one exists, the draft/slot order. */
 export function buildRosterView(input: {
   me: RosterSideInput;
   opp: RosterSideInput;
@@ -61,17 +61,18 @@ export function buildRosterView(input: {
   /** The league's slots (empty = unslotted) and each user's recorded slot per symbol. */
   slots: readonly SlotRow[];
   slotOf: Readonly<Record<string, Readonly<Record<string, string | null>>>>;
-  close: { date: string; at: Date } | null;
+  /** The week's closed sessions, latest first (matchupRoster.closesBefore). */
+  closes: readonly { date: string; at: Date }[];
   bars: BarsBySymbol;
-  todayEt: string;
-  quote: (symbol: string) => number | null;
+  /** When `bars` was fetched: a bar counts for a close only if fetched after it. */
+  barsAt: Date;
   /** The price a row's percent is measured at: live, or the week's close when final. */
   rowPrice: (symbol: string) => number | null;
 }): RosterViewGroup[] {
-  const { me, opp, activity, names, slots, slotOf, close, bars, todayEt, quote, rowPrice } = input;
+  const { me, opp, activity, names, slots, slotOf, closes, bars, barsAt, rowPrice } = input;
+  const ordering = orderingClose({ closes, sides: [me, opp], bars, barsAt });
 
-  const entries = (side: RosterSideInput): RosterEntry[] => {
-    const gains = close ? gainsAtClose({ snapshots: side.snapshots, trades: side.trades, close, bars, todayEt, quote }) : {};
+  const entries = (side: RosterSideInput, gains: Record<string, number> | null): RosterEntry[] => {
     const seqs = seqOf(side.userId, activity);
     return side.lineup.map((row, i) => {
       const sym = row.symbol.toUpperCase();
@@ -79,7 +80,7 @@ export function buildRosterView(input: {
         symbol: sym,
         // No ledger yet: the lineup's own order stands in for the draft order.
         seq: seqs.get(sym) ?? 1e15 + i,
-        closeGain: close ? gains[sym] ?? null : null,
+        closeGain: gains ? gains[sym] ?? null : null,
         slotId: slotOf[side.userId]?.[sym] ?? null,
       };
     });
@@ -100,10 +101,10 @@ export function buildRosterView(input: {
 
   const slotById = new Map(slots.map((s) => [s.id, s]));
   const groups = rosterGroups({
-    mine: entries(me),
-    theirs: entries(opp),
+    mine: entries(me, ordering?.gains[0] ?? null),
+    theirs: entries(opp, ordering?.gains[1] ?? null),
     slots: slots.map((s) => ({ id: s.id, index: s.slot_index, label: slotGroupLabel(s) })),
-    hasClose: close !== null,
+    hasClose: ordering !== null,
   });
   return groups.map((g) => ({
     label: g.slot ? slotGroupLabel(slotById.get(g.slot.id)!) : null,
