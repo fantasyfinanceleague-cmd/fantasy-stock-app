@@ -8445,45 +8445,50 @@ window.KS_REFS = {
   // THE PLAYER CARD (Giorgio, 2026-10-12): tapping ANY stock, yours or theirs, on Portfolio
   // or Matchup, opens it, on the ESPN player-card model.
   // ═════════════════════════════════════════════════════════════════════
-  // SAMPLE: each stock's Friday closes for weeks 1–5. data.js has the draft price and Week 6's
-  // Monday open, Wednesday close and Thursday price; those are real.
+  // SAMPLE (captioned on the board): each stock's Friday closes for weeks 1–5 and a midday +
+  // close for Mon–Wed of this week. data.js has the draft price, Monday's open, Wednesday's
+  // close and Thursday's price; those are real. Sample calendar: drafted Tue Sep 29, weekly
+  // Friday closes Oct 2 … Oct 30, this week Mon Nov 2 → now (Thu Nov 5, 1:37 PM ET).
   const SEASON_CLOSES = { NVDA: [292.4, 296.8, 288.9, 295.6, 299.1], NKE: [81.9, 80.4, 78.8, 79.9, 79.3] };
-  /** A price line on a trading-day axis; `marks` = [{ i, text }] markers (where it was acquired). */
-  function CardLine({ pts, days, base, h = 128, marks = [], label }) {
-    const w = 402, padT = 22, padB = 10;
+  const WEEK_MID = { NVDA: { mon: [302.6, 303.9], tue: [299.8, 301.4], wed: 304.1, thu: 312.5 }, NKE: { mon: [80.3, 80.1], tue: [79.2, 78.9], wed: 79.4, thu: 80.6 } };
+  /** A price line over a labelled X axis (§9C): `span` is the axis length in trading days, so a
+   * week can run Mon→Fri while the line stops at now; `axis` = [{ d, text, align }]. */
+  function CardLine({ pts, days, span, base, h = 128, axis = [], label }) {
+    const w = 402, padT = 10, padB = 26;
     const min = Math.min(base, ...pts), max = Math.max(base, ...pts);
-    const span = days[days.length - 1] || 1;
-    const X = (i) => 2 + (days[i] / span) * (w - 24);
+    const X = (d) => 14 + (d / span) * (w - 28); // inside the sheet, so the end dot never clips
     const Y = (v) => padT + (1 - (v - min) / (max - min || 1)) * (h - padT - padB);
-    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${X(days[i]).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
     const last = pts.length - 1;
     const c = pts[last] >= base ? 'var(--c-gain)' : 'var(--c-loss)';
     return (
       <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={label} style={{ display: 'block', marginInline: -G, overflow: 'visible' }}>
         <line x1="0" x2={w} y1={Y(base)} y2={Y(base)} stroke="var(--c-border-strong)" strokeDasharray="3 5" opacity=".8" />
         <path d={path} fill="none" stroke={c} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {marks.map((m) => (
-          <g key={m.i}>
-            <circle cx={X(m.i)} cy={Y(pts[m.i])} r="6" fill="var(--c-surface)" stroke="var(--c-text)" strokeWidth="2" />
-            <text x={X(m.i) + 10} y={Y(pts[m.i]) - 9} fontSize="11" fontWeight="800" fill="var(--c-text)">{m.text}</text>
-          </g>
+        <circle cx={X(days[last])} cy={Y(pts[last])} r="9" fill="var(--c-live)" opacity=".22" />
+        <circle cx={X(days[last])} cy={Y(pts[last])} r="4.5" fill="var(--c-live)" />
+        {axis.map((a) => (
+          <text key={a.text} x={a.align === 'start' ? G : a.align === 'end' ? w - G : X(a.d)} y={h - 6} textAnchor={a.align === 'start' ? 'start' : a.align === 'end' ? 'end' : 'middle'} fontSize="12" fontWeight="500" fill="var(--c-text-2)" style={{ fontVariantNumeric: 'tabular-nums' }}>{a.text}</text>
         ))}
-        <circle cx={X(last)} cy={Y(pts[last])} r="9" fill="var(--c-live)" opacity=".22" />
-        <circle cx={X(last)} cy={Y(pts[last])} r="4.5" fill="var(--c-live)" />
       </svg>
     );
   }
+  const WEEK_AXIS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((t, i) => ({ d: i + 0.5, text: t }));
+  const SEASON_AXIS = [{ d: 0, text: 'Sep 29', align: 'start' }, { d: 8, text: 'Oct 9' }, { d: 18, text: 'Oct 23' }, { d: 26.63, text: 'Nov 5', align: 'end' }];
   function PlayerCard({ who }) {
     const you = who === 'you';
     const t = you ? 'NVDA' : 'NKE';
     const r = (you ? K.MATCHUP.live.you.rows : K.MATCHUP.live.opp.rows).find((x) => x.t === t);
+    const m = WEEK_MID[t];
     const weekPct = ((r.thu - r.mon) / r.mon) * 100;
     const season = [r.draft, ...SEASON_CLOSES[t], r.mon, r.prev, r.thu];
-    const seasonDays = [0, 5, 10, 15, 20, 25, 25.2, 27, 28.6];
+    const seasonDays = [0, 3, 8, 13, 18, 23, 23.02, 26, 26.63];
+    const week = [r.mon, m.mon[0], m.mon[1], m.tue[0], m.tue[1], m.wed, r.prev, m.thu, r.thu];
+    const weekDays = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.25, 3.63];
     const fig = (lbl, v, sub, cls) => (
       <span>
         <span className="dr-tag dr-muted" style={{ fontStretch: '100%', letterSpacing: '.04em' }}>{lbl}</span>
-        <b className={`dr-num ${cls || ''}`} style={{ fontSize: 17, lineHeight: '22px', fontWeight: 800 }}>{v}</b>
+        <b className={`dr-num ${cls || ''}`} style={{ fontSize: 18, lineHeight: '24px', fontWeight: 800 }}>{v}</b>
         <span className={`dr-cap dr-num ${sub[1] || ''}`} style={{ fontWeight: 700 }}>{sub[0]}</span>
       </span>
     );
@@ -8503,33 +8508,32 @@ window.KS_REFS = {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {you ? <span className="dr-pill dr-pill--you">Yours</span> : <span className="dr-pill">Owned by Gianluigi B.</span>}
           </div>
-          <div className="dr-strip4">
+          <div className="dr-strip4" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             {fig('Price', $(r.thu), [`${pct(r.todayPct)} today`, tone(r.todayPct)])}
             {fig('Week gain', $s(r.weekGain), [pct(weekPct), tone(weekPct)], tone(r.weekGain))}
             {fig('Since the draft', $s(r.gain), [pct((r.gain / r.cost) * 100), tone(r.gain)], tone(r.gain))}
-            {fig(you ? 'Your position' : 'Their position', $(r.value), [`${r.qty.toFixed(2)} sh`])}
           </div>
-          <div style={{ display: 'grid', gap: 4 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 15, fontWeight: 800 }}>Season</span>
-              <span className="dr-cap">Drafted {$(r.draft)} · now {$(r.thu)}</span>
+              <span className="dr-cap dr-num">{$(r.draft)} → {$(r.thu)}</span>
             </div>
-            <CardLine pts={season} days={seasonDays} base={r.draft} marks={[{ i: 0, text: 'Drafted' }]} label={`${t} this season, from the draft at ${$(r.draft)} to ${$(r.thu)} now`} />
+            <CardLine pts={season} days={seasonDays} span={26.63} base={r.draft} h={132} axis={SEASON_AXIS} label={`${t} from Sep 29 to Nov 5: ${$(r.draft)} to ${$(r.thu)}`} />
           </div>
-          <div style={{ display: 'grid', gap: 3 }}>
-            <span style={{ fontSize: 15, fontWeight: 800 }}>{you ? 'How you got it' : 'How they got it'}</span>
-            <span className="dr-call dr-num" style={{ fontSize: 15 }}>Drafted {K.ordinal(r.pick)} overall · Sep 29 · {$(r.draft)}</span>
-          </div>
-          <div style={{ display: 'grid', gap: 4 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 15, fontWeight: 800 }}>This week</span>
               <span className={`dr-call dr-num ${tone(r.weekGain)}`} style={{ fontWeight: 800 }}>{$s(r.weekGain)} · {pct(weekPct)}</span>
             </div>
-            <CardLine pts={[r.mon, r.prev, r.thu]} days={[0, 2, 3.6]} base={r.mon} h={70} label={`${t} this week, from Monday's open at ${$(r.mon)} to ${$(r.thu)} now`} />
+            <CardLine pts={week} days={weekDays} span={5} base={r.mon} h={104} axis={WEEK_AXIS} label={`${t} this week, from Monday's open at ${$(r.mon)} to ${$(r.thu)} now, Thursday`} />
           </div>
           {you
             ? <span className="dr-btn dr-btn--line" style={{ width: '100%' }}>Sell</span>
             : <span className="dr-btn dr-btn--line" style={{ width: '100%', gap: 8 }}><Icon d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" size={18} width={2} />Save</span>}
+          <div style={{ display: 'grid', gap: 4, padding: '12px 14px', borderRadius: 14, background: 'var(--c-inset)' }}>
+            <span className="dr-tag dr-muted" style={{ fontStretch: '100%', letterSpacing: '.04em' }}>{you ? 'How you got it' : 'How they got it'}</span>
+            <span className="dr-call dr-num" style={{ fontSize: 15, fontWeight: 700 }}>Drafted {K.ordinal(r.pick)} overall · Sep 29 · {$(r.draft)}</span>
+          </div>
           <span className="dr-cap" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       </>
@@ -8564,10 +8568,10 @@ window.KS_REFS = {
         <ul className="b-inv__notes">
           <li><b>What changed from the A you picked:</b> the draft tiles carry their sector as a line at the bottom (Broadcast's treatment, in Game Night's surfaces); the Portfolio rows lose their small lines; the Matchup keeps the shaded side for whoever leads the row and the "leads by" line; the centre column stays empty.</li>
           <li><b>Your question:</b> was the small line on each Portfolio row the whole season? No: it was this week only (Monday's open, Wednesday's close, now). It is gone now; the player card carries the season line instead, with a marker where the stock was acquired.</li>
-          <li><b>The player card</b> opens from any stock, yours or theirs, on Portfolio or Matchup: the header (ticker, company, "Yours" or "Owned by …", and the slot pill in leagues that have slots, so not in Stock Scudetto), the four key figures, the season line with where it was acquired, how it was got, this week's line, and the one action for the state (Sell for yours while the market is open; Save for theirs).</li>
+          <li><b>The player card, redrawn after your review (2026-10-12):</b> three key figures (Price · Week gain · Since the draft; no position: "a little cluttered. Maybe we just go with three"); the season line with a date axis and no "Drafted" marker; this week's line on a Mon…Fri axis (the days still to come stay empty); the one action (Sell on yours, never Save: "there probably shouldn't be a save option if you already have the stock"; Save on theirs); "How you got it" at the bottom, like ESPN's Latest transaction. The top card is as you liked it.</li>
           <li><b>A label clash for you:</b> your list says "season gain" in the key figures. Your rule from 2026-10-05 keeps "season gain" for a manager's regular-season total and says Portfolio's gain is "since the draft", never one for the other. Drawn as "Since the draft"; a stock bought or claimed later would read "Since Oct 2"<NEW />. Say if you want "Season gain" there anyway.</li>
-          <li><b>New copy</b><NEW />: "Yours", "How they got it", "Their position" (your words: "How you got it", "Drafted 2nd overall · Sep 29 · $290.10"). Everything else is the app's own ("Owned by …", "Your position", "Week gain", "Sell", "Save").</li>
-          <li><b>SAMPLE:</b> each stock's Friday closes for weeks 1–5 on the season line. The draft price and Week 6's prices are data.js's.</li>
+          <li><b>New copy</b><NEW />: "Yours", "How they got it" (your words: "How you got it", "Drafted 2nd overall · Sep 29 · $290.10"). Everything else is the app's own ("Owned by …", "Your position", "Week gain", "Sell", "Save").</li>
+          <li><b>SAMPLE:</b> each stock's Friday closes for weeks 1–5, a midday and a close for Mon–Wed of this week, and the calendar (drafted Sep 29, now Thu Nov 5). The draft price, Monday's open, Wednesday's close and Thursday's price are data.js's.</li>
         </ul>
         <div className="dr-pairs">
           {A('Player card · opened from Matchup (their stock: Gianluigi B.\'s NKE)', 'Tap any row on either side. The header says whose it is; the action is Save, since another manager owns it.', (t) => <MatchupFrame d="a" t={t} overlay={<PlayerCard who="opp" />} />, ['pc', 'ESPN: the big name, the stat strip, the action.'], ['s5', 'E*TRADE: the key figures, right-aligned and tabular.'])}
