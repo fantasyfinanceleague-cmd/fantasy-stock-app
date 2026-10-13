@@ -32,7 +32,8 @@ Deno.test('Scoreboard: totals in score.xl, YOUR half always shaded (never the le
   assert(src.includes('variant="score.xl"'));
   assert(src.includes('mirror ? null : { backgroundColor: colors.youTint }'));
   assert(!/leadWash|model\.leader ===/.test(src), 'no leader shading');
-  assert(src.includes("ring={side === 'you'}"));
+  assert(src.includes('tone="you" ring'));
+  assert(src.includes('padding: AVATAR_RING + AVATAR_RING_GAP'), 'the opponent keeps the ring footprint so totals align');
   assert(!/TugBar|Chyron|LiveDot|SeasonChart|Chart\b/.test(src), 'the Matchup header carries nothing else');
 });
 
@@ -214,5 +215,7 @@ Deno.test('Chart: one 2.5pt line coloured by the window, a dashed borderStrong b
   assert(src.includes('fill={colors.liveGlow}') && src.includes('const HALO_R = 9;'));
   assert(!/areaPath|ClipPath|fillOpacity|LinearGradient/.test(src), 'no fill');
   assert(src.includes('layoutAxis('), 'the X axis');
-  assert(src.includes('variant="caption" tone="secondary"'), 'axis labels: caption, text2');
+  assert(src.includes('const drawn = progress >= 1 || geometry.length === 0;'), 'a 0/1-point line shows its dot without a draw-in');
+  assert(/variant="caption"\s+tone="secondary"/.test(src), 'axis labels: caption, text2');
+  assert(!/width: l\.width \}/.test(src), 'a label is never clipped to its estimated width');
 });

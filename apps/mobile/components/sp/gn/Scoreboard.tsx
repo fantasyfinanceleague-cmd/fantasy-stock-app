@@ -2,7 +2,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
-import { Avatar } from '@/components/sp/Avatar';
+import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -60,7 +60,14 @@ function Half({ side, team }: { side: 'you' | 'opp'; team: ScoreSide & { avatarU
       ]}
     >
       <View style={[styles.who, mirror ? styles.whoMirror : null]}>
-        <Avatar name={team.name} uri={team.avatarUri} size={AVATAR} tone={side === 'you' ? 'you' : 'opp'} ring={side === 'you'} />
+        {side === 'you' ? (
+          <Avatar name={team.name} uri={team.avatarUri} size={AVATAR} tone="you" ring />
+        ) : (
+          // The same footprint as your ringed avatar, so both totals sit on one line.
+          <View style={styles.ringFootprint}>
+            <Avatar name={team.name} uri={team.avatarUri} size={AVATAR} tone="opp" />
+          </View>
+        )}
         <Text variant="headline" numberOfLines={1} style={[styles.name, side === 'you' ? { fontWeight: YOUR_NAME_WEIGHT } : null]}>
           {team.name}
         </Text>
@@ -108,6 +115,9 @@ const styles = StyleSheet.create({
   },
   name: {
     flexShrink: 1,
+  },
+  ringFootprint: {
+    padding: AVATAR_RING + AVATAR_RING_GAP,
   },
   right: {
     textAlign: 'right',

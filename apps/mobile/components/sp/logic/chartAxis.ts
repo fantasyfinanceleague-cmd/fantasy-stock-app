@@ -44,11 +44,19 @@ export const AXIS_GAP = 6;
 export const AXIS_FONT_SIZE = 12;
 export const AXIS_LINE_HEIGHT = 16;
 
-/** A conservative width estimate for an Archivo Medium caption (tabular figures ≈ 0.6em;
- * letters a little wider; a space ≈ 0.3em). Over-estimating only drops a label sooner. */
+/** A conservative width estimate for an Archivo Medium caption, by glyph class (Archivo is
+ * wide: M and W ≈ 0.95em, other capitals ≈ 0.75em, figures ≈ 0.65em, lower case ≈ 0.62em,
+ * a space ≈ 0.3em). It decides which labels fit; over-estimating only drops one sooner.
+ * The Chart positions labels by their aligned edge, so the estimate never clips the text. */
 export function estimateLabelWidth(text: string, fontScale = 1): number {
   let em = 0;
-  for (const ch of text) em += ch === ' ' ? 0.3 : 0.64;
+  for (const ch of text) {
+    if (ch === ' ') em += 0.3;
+    else if (/[MWmw&]/.test(ch)) em += 0.95;
+    else if (/[A-Z]/.test(ch)) em += 0.75;
+    else if (/[0-9]/.test(ch)) em += 0.65;
+    else em += 0.62;
+  }
   return Math.ceil(em * AXIS_FONT_SIZE * fontScale);
 }
 

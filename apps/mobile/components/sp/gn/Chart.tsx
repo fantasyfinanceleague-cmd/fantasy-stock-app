@@ -64,6 +64,8 @@ const HALO_R = 9;
 const PAD = { top: HALO_R + 3, bottom: HALO_R, left: 2, right: HALO_R + 3 };
 // The scrub label sits beside the scrubbed point, flipping side past the middle.
 const SCRUB_HALF = 40;
+// A centred label's box is widened this much on each side, so a wide glyph never truncates it.
+const LABEL_SLACK = 12;
 
 export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under }: ChartProps) {
   const { colors } = useTheme();
@@ -78,7 +80,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
   const lineColor = colors[tone];
 
   const progress = useDrawIn({ key: drawKey, lineLength: geometry.length, reduced, durationMs: duration.feature });
-  const path = progress >= 1 ? geometry.path : partialLinePath(geometry.points, progress, geometry.length);
+  const path = progress >= 1 || geometry.length === 0 ? geometry.path : partialLinePath(geometry.points, progress, geometry.length);
 
   const { scrubIndex, pan, setScrubIndex } = useChartScrub(width > 0 ? geometry : null, reduced);
   const scrubbed = scrubIndex != null ? points[scrubIndex] : null;
@@ -92,8 +94,12 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
   const last = points.length ? points[points.length - 1] : null;
   const range = axisRangeLabel(axis, last?.t);
   const summary = `${accessibilityLabel}, ${range}${last ? `, ${formatValue(last.value)}` : ''}`;
-  const end = geometry.end;
-  const endVisible = end && progress >= 1 && !scrubPx;
+  // The line runs edge to edge, but the end dot keeps its whole halo on screen (a Monday-
+  // morning dot sits at the very first x).
+  const end = geometry.end ? { x: Math.min(Math.max(geometry.end.x, HALO_R + 1), width - HALO_R - 1), y: geometry.end.y } : null;
+  // A 0/1-point line has no length to draw in (useDrawIn waits for one), so its dot shows at once.
+  const drawn = progress >= 1 || geometry.length === 0;
+  const endVisible = end && drawn && !scrubPx;
 
   function step(dir: 1 | -1) {
     if (!points.length) return;
@@ -152,7 +158,20 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
       )}
       <View style={[styles.axis, { height: AXIS_LINE_HEIGHT * fontScale + 2 }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         {labels.map((l) => (
-          <Text key={`${l.text}@${l.x}`} variant="caption" tone="secondary" numberOfLines={1} style={[styles.label, { left: l.left + bleed, width: l.width }, l.align === 'right' ? styles.right : l.align === 'center' ? styles.center : null]}>
+          // Anchored by the aligned edge, never given the estimated width, so a glyph wider
+          // than the estimate can't truncate the label (the estimate only decides which fit).
+          <Text
+            key={`${l.text}@${l.x}`}
+            variant="caption"
+            tone="secondary"
+            numberOfLines={1}
+            style={[
+              styles.label,
+              l.align === 'left' ? { left: l.left + bleed }
+                : l.align === 'right' ? { right: width - (l.left + l.width + bleed), textAlign: 'right' }
+                  : { left: l.left + bleed - LABEL_SLACK, width: l.width + 2 * LABEL_SLACK, textAlign: 'center' },
+            ]}
+          >
             {l.text}
           </Text>
         ))}
@@ -182,12 +201,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     fontVariant: ['tabular-nums'],
-  },
-  right: {
-    textAlign: 'right',
-  },
-  center: {
-    textAlign: 'center',
   },
 });
 
