@@ -18,7 +18,7 @@ export type { ButtonStatus } from '@/components/sp/logic/buttonStatus';
 // per colour, since there's no more game surface to invert for. `primary`
 // is `primaryBg`/`primaryFg` (navy-on-white in Light, white-on-navy in
 // Dark — this IS the old on-game inversion, just keyed by theme instead of
-// by a caller-chosen surface kind). `destructive` uses `lossFill`/`onAccent`
+// by a caller-chosen surface kind). `destructive` uses `lossFill`/`onYou`
 // (the PAIRS list's own "Sell button label" pair, board.jsx-verified 4.5:1
 // in both themes).
 //
@@ -88,7 +88,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
       break;
     case 'destructive':
       backgroundColor = colors.lossFill;
-      textColor = colors.onAccent;
+      textColor = colors.onYou;
       break;
     case 'secondary':
       backgroundColor = colors.secondaryBg === 'transparent' ? undefined : colors.secondaryBg;

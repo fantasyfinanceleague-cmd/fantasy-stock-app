@@ -10,7 +10,7 @@ import { formatMoney, MoneySign } from '@/components/sp/logic/money';
 // currency, zero is neutral (never green/red). All of that lives in
 // components/sp/logic/money.ts; this component is presentation only.
 
-export type MoneySize = 'score.xl' | 'score.lg' | 'score.md' | 'display' | 'title' | 'headline' | 'body' | 'callout' | 'caption';
+export type MoneySize = 'hero' | 'money' | 'score.xl' | 'score.lg' | 'score.md' | 'display' | 'title' | 'headline' | 'body' | 'callout' | 'caption';
 
 export interface MoneyProps {
   value: number;

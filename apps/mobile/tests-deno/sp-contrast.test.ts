@@ -55,18 +55,22 @@ Deno.test('contrast: text3 is measured (both themes) even though unscored', () =
   }
 });
 
-// ── on-live (Design Lead, 2026-10-06, board #your-turn): one navy in both themes ──
+// ── on-live (§9C, 2026-10-12): the accent's own ink — dark in Dark, white in Light ──
+// (§9A had one navy in both themes on a gold `live`; §9C makes `live` the accent, so its
+// ink follows `onAccent`. If Giorgio keeps gold, see color.ts's three-key revert.)
 
 import { pairRatio as ratioOf } from '../components/sp/logic/contrast.ts';
 
-Deno.test('on-live is #0D1B2E in both themes, and clears the spec\'s ratios on live gold', () => {
-  assertEquals(color.light.onLive, '#0D1B2E');
-  assertEquals(color.dark.onLive, '#0D1B2E');
-  // The spec quotes 5.1:1 (Light) and 11.0:1 (Dark); allow rounding.
+Deno.test('on-live follows the accent: #080D25 in Dark, #FDFEFF in Light, and clears 4.5 on live', () => {
+  assertEquals(color.dark.onLive, '#080D25');
+  assertEquals(color.light.onLive, '#FDFEFF');
+  assertEquals(color.dark.onLive, color.dark.onAccent);
+  assertEquals(color.light.onLive, color.light.onAccent);
+  // Measured from the §9C hex: Light 5.61:1, Dark 13.54:1.
   const light = ratioOf(color.light, 'onLive', 'live', null);
   const dark = ratioOf(color.dark, 'onLive', 'live', null);
-  assertEquals(Math.abs(light - 5.1) < 0.1, true, `light ${light.toFixed(2)}`);
-  assertEquals(Math.abs(dark - 11.0) < 0.2, true, `dark ${dark.toFixed(2)}`);
+  assertEquals(Math.abs(light - 5.61) < 0.05, true, `light ${light.toFixed(2)}`);
+  assertEquals(Math.abs(dark - 13.54) < 0.05, true, `dark ${dark.toFixed(2)}`);
 });
 
 // ── The your-turn card's two pairs (UX audit re-gate 3c-2, B-1: §9A, a component
@@ -78,9 +82,9 @@ Deno.test('B-1: the your-turn pairs are in PAIRS and clear the measured ratios',
   const has = (fg: string, bg: string, over: string | null) => PAIRS.some(([f, b, o]) => f === fg && b === bg && o === over);
   assertEquals(has('onLive', 'live', null), true); // the flash: navy text on the live gold fill
   assertEquals(has('liveText', 'warnTint', 'surface'), true); // at rest: "You're on the clock" on the warn tint
-  // Design Lead: onLive on live 5.1:1 / 11.0:1 (above); liveText on warnTint over surface, Light 5.4:1.
+  // §9C values: liveText on warnTint over surface, Light 5.17:1, Dark 10.77:1.
   const restLight = ratioOf(color.light, 'liveText', 'warnTint', 'surface');
   const restDark = ratioOf(color.dark, 'liveText', 'warnTint', 'surface');
-  assertEquals(Math.abs(restLight - 5.4) < 0.1, true, `light ${restLight.toFixed(2)}`);
-  assertEquals(restDark >= 4.5, true, `dark ${restDark.toFixed(2)}`); // 7.8:1 today
+  assertEquals(Math.abs(restLight - 5.17) < 0.05, true, `light ${restLight.toFixed(2)}`);
+  assertEquals(restDark >= 4.5, true, `dark ${restDark.toFixed(2)}`); // 10.77:1 today
 });

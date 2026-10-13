@@ -1,5 +1,5 @@
 // Stockpile — the contrast check tables (§9A, "One design, two themes",
-// 2026-09-29). SOURCE OF TRUTH: docs/design/screens/board.jsx's `TOKEN_ROWS`
+// 2026-09-29; values re-scored for v3 "Game Night", §9C, 2026-10-12). SOURCE OF TRUTH: docs/design/screens/board.jsx's `TOKEN_ROWS`
 // and `PAIRS` (design/key-screens-2026-09-29 branch, synced as of commit
 // 0bd741f — "contrast PAIRS +3 (live dot on inset, neutral avatar initials,
 // '?' fallback)"), copied verbatim — this is the SAME table the
@@ -52,9 +52,10 @@ export const TOKEN_ROWS: readonly TokenRow[] = [
 export type ContrastPair = [fg: TokenKey, bg: TokenKey, over: TokenKey | null, min: number, where: string];
 
 export const PAIRS: readonly ContrastPair[] = [
-  ['onAccent', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
+  // §9C: `onAccent` split — fills that take white in BOTH themes (you, loss-fill) read `onYou`.
+  ['onYou', 'you', null, 4.5, 'Avatar initials, winner banner, filled roster slots'],
   ['onOpp', 'opp', null, 4.5, 'Opponent avatar initials'],
-  ['onAccent', 'lossFill', null, 4.5, 'Sell button label'],
+  ['onYou', 'lossFill', null, 4.5, 'Sell button label'],
   ['primaryFg', 'primaryBg', null, 4.5, 'Primary button label'],
   ['inverseFg', 'inverseBg', null, 4.5, 'FINAL chip, selected toggle'],
   ['secondaryFg', 'secondaryBg', 'surface', 4.5, 'Secondary button label'],
@@ -87,7 +88,7 @@ export const PAIRS: readonly ContrastPair[] = [
   ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
   ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
   ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],
-  ['onAccent', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
+  ['onYou', 'you', null, 3, 'Chevrons on the drawn draft track (graphic)'],
   ['surface', 'live', null, 3, 'Trophy icon on the champion badge (graphic)'],
   // Medals: the rank numeral on each disc (text, 4.5)...
   ['onMedal', 'medalGold', null, 4.5, 'Medal rank numeral on the gold disc'],
@@ -101,4 +102,79 @@ export const PAIRS: readonly ContrastPair[] = [
   // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
   ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
   ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
+
+  // ── Game Night, §9C v3.1 (2026-10-12): the 50 new scored pairs. §9C names them by group
+  // (your side on the card surface and on the page, the clock cell, the money page, the
+  // "Yours" pill, the accent fill, your ring, the owner's avatar disc, the 11 category pills
+  // and the 11 category lines on the tile and on an inset); these are those groups row by
+  // row. Your text on your card-surface half is the existing "Your standings row" row. The
+  // board's PAIRS must carry the same rows, in this order.
+  // Your side, shaded in your colour, win or lose (shading B): on the card surface (your
+  // Scoreboard half, your Standings row)...
+  ['text2', 'youTint', 'surface', 4.5, 'Your side on a card: secondary text (your Scoreboard half, your Standings record)'],
+  ['gain', 'youTint', 'surface', 4.5, 'Your side on a card: gain (your Standings season gain, movement up)'],
+  ['loss', 'youTint', 'surface', 4.5, 'Your side on a card: loss (your Standings season gain, movement down)'],
+  // ...and on the page (your roster column, its slab off the screen edge).
+  ['text', 'youTint', 'bg', 4.5, 'Your roster column: your ticker'],
+  ['text2', 'youTint', 'bg', 4.5, 'Your roster column: company and week %'],
+  ['gain', 'youTint', 'bg', 4.5, 'Your roster column: week gain'],
+  ['loss', 'youTint', 'bg', 4.5, 'Your roster column: week loss'],
+  // The draft's on-the-clock cell.
+  ['onClockCell', 'clockCell', null, 4.5, 'Draft: the clock in the on-the-clock cell'],
+  ['clockCellLive', 'clockCell', null, 4.5, 'Draft: the pick number (and its ring) in the on-the-clock cell'],
+  // The money page (Portfolio, the stock sheet's screen).
+  ['text', 'moneyBg', null, 4.5, 'Money page: the value and rows'],
+  ['text2', 'moneyBg', null, 4.5, 'Money page: captions'],
+  ['gain', 'moneyBg', null, 4.5, 'Money page: gain'],
+  ['loss', 'moneyBg', null, 4.5, 'Money page: loss'],
+  // The "Yours" pill on the player card (the sheet's surface).
+  ['youText', 'youTint', 'surface', 4.5, 'Player card: the "Yours" pill'],
+  // The accent fill (the money range pills, the Draft button).
+  ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
+  // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
+  // ...and, right after it, the owner's avatar disc on the player card's "Owned by" pill.
+  ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
+  ['opp', 'inset', null, 3, 'Owner avatar disc in the "Owned by" pill (graphic)'],
+  // The 11 category pills (text on the fill)...
+  ['onCat', 'catTech', null, 4.5, 'Category pill: Tech'],
+  ['onCat', 'catFinance', null, 4.5, 'Category pill: Finance'],
+  ['onCat', 'catHealth', null, 4.5, 'Category pill: Health'],
+  ['onCat', 'catEnergy', null, 4.5, 'Category pill: Energy'],
+  ['onCat', 'catTransport', null, 4.5, 'Category pill: Autos'],
+  ['onCat', 'catRetail', null, 4.5, 'Category pill: Retail'],
+  ['onCat', 'catFood', null, 4.5, 'Category pill: Food'],
+  ['onCat', 'catMedia', null, 4.5, 'Category pill: Media'],
+  ['onCat', 'catIndustrials', null, 4.5, 'Category pill: Industry'],
+  ['onCat', 'catRealEstate', null, 4.5, 'Category pill: Property'],
+  ['onCat', 'catMisc', null, 4.5, 'Category pill: Misc'],
+  // ...the 11 category lines on the draft tile's surface (graphic)...
+  ['catTech', 'surface', null, 3, 'Draft tile: the TEC line (graphic)'],
+  ['catFinance', 'surface', null, 3, 'Draft tile: the FIN line (graphic)'],
+  ['catHealth', 'surface', null, 3, 'Draft tile: the HLT line (graphic)'],
+  ['catEnergy', 'surface', null, 3, 'Draft tile: the NRG line (graphic)'],
+  ['catTransport', 'surface', null, 3, 'Draft tile: the AUT line (graphic)'],
+  ['catRetail', 'surface', null, 3, 'Draft tile: the RTL line (graphic)'],
+  ['catFood', 'surface', null, 3, 'Draft tile: the F&B line (graphic)'],
+  ['catMedia', 'surface', null, 3, 'Draft tile: the MED line (graphic)'],
+  ['catIndustrials', 'surface', null, 3, 'Draft tile: the IND line (graphic)'],
+  ['catRealEstate', 'surface', null, 3, 'Draft tile: the PRP line (graphic)'],
+  ['catMisc', 'surface', null, 3, 'Draft tile: the MSC line (graphic)'],
+  // ...and on an inset (graphic).
+  ['catTech', 'inset', null, 3, 'The Tech line on an inset (graphic)'],
+  ['catFinance', 'inset', null, 3, 'The Finance line on an inset (graphic)'],
+  ['catHealth', 'inset', null, 3, 'The Health line on an inset (graphic)'],
+  ['catEnergy', 'inset', null, 3, 'The Energy line on an inset (graphic)'],
+  ['catTransport', 'inset', null, 3, 'The Autos line on an inset (graphic)'],
+  ['catRetail', 'inset', null, 3, 'The Retail line on an inset (graphic)'],
+  ['catFood', 'inset', null, 3, 'The Food line on an inset (graphic)'],
+  ['catMedia', 'inset', null, 3, 'The Media line on an inset (graphic)'],
+  ['catIndustrials', 'inset', null, 3, 'The Industry line on an inset (graphic)'],
+  ['catRealEstate', 'inset', null, 3, 'The Property line on an inset (graphic)'],
+  ['catMisc', 'inset', null, 3, 'The Misc line on an inset (graphic)'],
+
+  // W3's own, beyond §9C's 50 — the Chip renders text and a dot on its tint (§9C "Chip":
+  // accentTint + liveText, the dot drawn), on the page (the header) and on cards / sheets.
+  ['liveText', 'accentTint', 'bg', 4.5, 'LIVE chip on the page background'],
+  ['liveText', 'accentTint', 'surface', 4.5, 'LIVE chip on a card or sheet'],
+  ['live', 'accentTint', 'bg', 3, 'Live dot inside the LIVE chip (graphic)'],
 ];

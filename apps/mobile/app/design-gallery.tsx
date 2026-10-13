@@ -23,6 +23,12 @@ import { LiveDot } from '@/components/sp/game/LiveDot';
 import { Scoreboard } from '@/components/sp/game/Scoreboard';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme, ThemePreference } from '@/components/sp/ThemeProvider';
+import {
+  CategoryPill, Chart, DraftTile, GroupHead, MANAGER_ROW_GAP, ManagerRow, PlayerCard, PlayerCardBody, RangePills, RosterRow,
+  Scoreboard as GnScoreboard, type PlayerCardProps, type RosterHalf,
+} from '@/components/sp/gn';
+import { CATEGORIES, type Category } from '@/components/sp/logic/gameNight';
+import { formatMoney } from '@/components/sp/logic/money';
 
 // Stockpile — dev-only design gallery (§9A, "One design, two themes",
 // 2026-09-29). SOURCE OF TRUTH: the Phase 2 brief, build item 7: "renders
@@ -100,6 +106,8 @@ export default function DesignGalleryScreen() {
           </Text>
         </Section>
   
+        <GameNightGallery />
+
         <Section title="Reduce Motion">
           <Text variant="body">{`useMotion().reduced = ${reduced ? 'true' : 'false'}`}</Text>
         </Section>
@@ -308,6 +316,193 @@ export default function DesignGalleryScreen() {
   );
 }
 
+// ── Game Night (§9C, W3): every rebuilt primitive, in its states. Sample data from the board
+// (docs/design/screens/data.js: Stock Scudetto, week 6, Roberto B. vs Gianluigi B.). ──────
+
+const ROSTER: [RosterHalf | null, RosterHalf | null][] = [
+  [{ ticker: 'NVDA', company: 'NVIDIA', weekGain: 62.4, weekPct: 6.05 }, { ticker: 'NKE', company: 'Nike', weekGain: 21.38, weekPct: 2.14 }],
+  [{ ticker: 'AAPL', company: 'Apple', weekGain: 31.07, weekPct: 3.08 }, { ticker: 'JPM', company: 'JPMorgan', weekGain: 5.84, weekPct: 0.58 }],
+  [{ ticker: 'CRM', company: 'Salesforce', weekGain: 12.5, weekPct: 1.25 }, { ticker: 'DIS', company: 'Disney', weekGain: 15.85, weekPct: 1.58 }],
+  [{ ticker: 'TSLA', company: 'Tesla', weekGain: -14.03, weekPct: -1.41 }, { ticker: 'AMZN', company: 'Amazon', weekGain: -7.14, weekPct: -0.71 }],
+  [{ ticker: 'COST', company: 'Costco', weekGain: 0, weekPct: 0 }, null],
+];
+const STANDINGS = [
+  { rank: 1, delta: 1, name: 'Gianluigi B.', record: '5–1', seasonGain: 512.4 },
+  { rank: 2, delta: -1, name: 'Roberto B.', record: '4–2', seasonGain: 343.59, isYou: true },
+  { rank: 3, delta: 0, name: 'Paolo M.', record: '3–3', seasonGain: 101.2 },
+  { rank: 4, delta: 2, name: 'Andrea P.', record: '3–3', seasonGain: 0 },
+  { rank: 5, delta: -1, name: 'Fabio C.', record: '2–4', seasonGain: -88.75 },
+  { rank: 6, delta: -1, name: 'Marco R.', record: '1–5', seasonGain: -240.1 },
+];
+const BOARD: [string, Category][] = [
+  ['MSFT', 'tech'], ['NVDA', 'tech'], ['META', 'media'], ['UNH', 'health'], ['AMZN', 'retail'], ['XOM', 'energy'],
+  ['JPM', 'finance'], ['TSLA', 'transport'], ['NKE', 'retail'], ['KO', 'food'], ['CAT', 'industrials'],
+];
+// Your week's gain, Mon open → Thu now: closes Mon–Wed, then today (a steady build, no last-minute pop).
+const WEEK_THU = [{ t: 0, value: 0 }, { t: 1, value: 96.4 }, { t: 2, value: 151.2 }, { t: 3, value: 228.3 }, { t: 3.6, value: 343.59 }];
+// NVDA from the draft (Sep 29) to Thursday (Oct 8), in days since the draft.
+const SEASON = [[0, 290.1], [1, 292.4], [2, 296.8], [3, 288.9], [4, 295.6], [6, 299.1], [8, 306.68], [9, 318.37]].map(([t, value]) => ({ t, value }));
+const SEASON_AXIS = { kind: 'dated' as const, start: '2026-09-29', end: '2026-10-08' };
+const ranges = ['Season', '1M', '1W'] as const;
+const stockRanges = ['1W', '1M', '3M', '1Y'] as const;
+
+const CARD_YOURS: PlayerCardProps = {
+  visible: true, onClose: () => {}, ticker: 'NVDA', company: 'NVIDIA', owner: 'you', price: 318.37, todayPct: 3.81,
+  // 3.434 sh: week (318.37 − 300.20) × qty = +$62.40; since the draft (318.37 − 290.10) × qty = +$97.09.
+  weekGain: 62.4, weekPct: 6.05, sinceGain: 97.09, sincePct: 9.74, acquisition: { kind: 'drafted', pick: 2, date: 'Sep 29', price: 290.1 },
+  season: { points: SEASON, base: 290.1, axis: SEASON_AXIS },
+  // Mon open, the Mon–Wed closes (Wed = Oct 7's 306.68), Thu now (+3.81% today).
+  week: { points: [{ t: 0, value: 300.2 }, { t: 1, value: 302.9 }, { t: 2, value: 304.1 }, { t: 3, value: 306.68 }, { t: 3.6, value: 318.37 }], base: 300.2 },
+  marketOpen: false, opens: 'Mon 9:30 ET',
+};
+const CARD_THEIRS: PlayerCardProps = {
+  // Claimed Mon Oct 5 at the open ($79.60), 12.58 sh: since the claim = this week = +$21.38 (+2.14%);
+  // today from Wednesday's $80.40 close, +1.12%. The price, the lines and the figures all rise.
+  ...CARD_YOURS, ticker: 'NKE', company: 'Nike', owner: { name: 'Gianluigi B.' }, category: 'retail', price: 81.3, todayPct: 1.12,
+  weekGain: 21.38, weekPct: 2.14, sinceGain: 21.38, sincePct: 2.14, acquisition: { kind: 'claimed', date: 'Oct 5', price: 79.6 },
+  season: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }, { t: 2, value: 80.4 }, { t: 3, value: 81.3 }], base: 79.6, axis: { kind: 'dated', start: '2026-10-05', end: '2026-10-08' } },
+  week: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }, { t: 2, value: 79.95 }, { t: 3, value: 80.4 }, { t: 3.6, value: 81.3 }], base: 79.6 },
+  marketOpen: true,
+};
+
+function GameNightGallery() {
+  const { colors } = useTheme();
+  const [range, setRange] = useState<(typeof ranges)[number]>('Season');
+  const [stockRange, setStockRange] = useState<(typeof stockRanges)[number]>('1W');
+  const [saved, setSaved] = useState(false);
+  const [card, setCard] = useState<'yours' | 'theirs' | null>(null);
+  const money = (v: number) => formatMoney(v, { sign: 'always' });
+
+  return (
+    <>
+      <Section title="GN · Type (§9C)">
+        <Card style={styles.card}>
+          <Text variant="hero">$12,343.59</Text>
+          <Text variant="money">$12,343.59</Text>
+          <Text variant="score.xl">+$343.59</Text>
+          <Text variant="score.lg">+$343.59</Text>
+          <Text variant="score.md">+$62.40</Text>
+          <Text variant="score.sm">+$512.40</Text>
+          <Text variant="ticker.card">NVDA</Text>
+          <Text variant="ticker">NVDA</Text>
+          <Text variant="ticker.tile">NVDA</Text>
+          <Text variant="tag">Tech ×3</Text>
+        </Card>
+      </Section>
+
+      <Section title="GN · Card + Chip + Avatar">
+        <Card style={styles.card}>
+          <Text variant="headline">Card: surface + 1pt rim, no shadow</Text>
+          <View style={[styles.row, styles.wrap]}>
+            <PhaseChip phase="live_open" label="Live" />
+            <PhaseChip phase="week_final" label="Final" />
+            <PhaseChip phase="pre_draft" />
+          </View>
+          <View style={[styles.row, styles.wrap]}>
+            <Avatar name="Roberto B." size={44} ring />
+            <Avatar name="Gianluigi B." size={44} tone="opp" />
+            <Avatar name="Paolo M." size={32} tone="neutral" />
+          </View>
+        </Card>
+        <View style={[styles.row, styles.wrap]}>
+          <PhaseChip phase="live_open" label="Live" onPageBackground />
+          <PhaseChip phase="week_final" label="Final" onPageBackground />
+        </View>
+      </Section>
+
+      <Section title="GN · Scoreboard">
+        <GnScoreboard you={{ name: 'Roberto B.', gain: 343.59 }} opponent={{ name: 'Gianluigi B.', gain: 121.26 }} />
+        <GnScoreboard you={{ name: 'Roberto B.', gain: -48.2 }} opponent={{ name: 'Gianluigi B.', gain: 210.05 }} final />
+        <GnScoreboard you={{ name: 'Roberto B.', gain: 0 }} opponent={{ name: 'Gianluigi B.', gain: 0 }} />
+      </Section>
+
+      <Section title="GN · RosterRow: your side shaded (unslotted) + GroupHead (slotted)">
+        <View style={{ gap: 6 }}>
+          {ROSTER.map(([a, b], i) => (
+            <RosterRow key={i} left={a} right={b} />
+          ))}
+        </View>
+        <View style={{ gap: 6 }}>
+          <GroupHead label="Tech ×2" />
+          <RosterRow left={ROSTER[0][0]} right={ROSTER[2][1]} />
+          <RosterRow left={ROSTER[1][0]} right={ROSTER[1][1]} />
+          <GroupHead label="Flex" />
+          <RosterRow left={ROSTER[3][0]} right={ROSTER[3][1]} />
+        </View>
+      </Section>
+
+      <Section title="GN · CategoryPill (the 11 categories)">
+        <View style={[styles.row, styles.wrap]}>
+          {(Object.keys(CATEGORIES) as Category[]).map((k) => <CategoryPill key={k} category={k} />)}
+        </View>
+      </Section>
+
+      <Section title="GN · DraftTile (category line + code, on the clock, empty)">
+        {[0, 1, 2].map((row) => (
+          <View key={row} style={styles.boardRow}>
+            {[0, 1, 2, 3, 4, 5].map((col) => {
+              const pick = row * 6 + col + 1;
+              const tile =
+                pick === 11 ? <DraftTile pick={pick} state="onClock" clock="0:42" />
+                  : pick > 11 ? <DraftTile pick={pick} state="empty" />
+                    : <DraftTile pick={pick} state="picked" ticker={BOARD[pick - 1][0]} category={BOARD[pick - 1][1]} />;
+              return <View key={col} style={styles.boardCell}>{tile}</View>;
+            })}
+          </View>
+        ))}
+      </Section>
+
+      <Section title="GN · ManagerRow (Standings)">
+        <View style={{ gap: MANAGER_ROW_GAP }}>
+          {STANDINGS.map((r) => <ManagerRow key={r.rank} {...r} />)}
+        </View>
+      </Section>
+
+      <Section title="GN · RangePills">
+        <RangePills variant="tabs" options={ranges} value={range} onChange={setRange} />
+        <View style={[styles.moneyStrip, { backgroundColor: colors.moneyBg }]}>
+          <RangePills variant="pills" options={stockRanges} value={stockRange} onChange={setStockRange} />
+        </View>
+      </Section>
+
+      <Section title="GN · Chart (X axis; a line stops at now)">
+        <Text variant="caption" tone="secondary">Week, Thursday, live</Text>
+        <Chart points={WEEK_THU} base={0} axis={{ kind: 'week' }} bleed={space[6]} live drawKey="g-week" formatValue={money} accessibilityLabel="This week" />
+        <Text variant="caption" tone="secondary">Season to now (dated), market closed</Text>
+        <Chart points={CARD_YOURS.season.points} base={290.1} axis={SEASON_AXIS} bleed={space[6]} drawKey="g-season" formatValue={(v) => formatMoney(v)} accessibilityLabel="NVDA this season" />
+        <Text variant="caption" tone="secondary">Home: the W/L marks, then the two end dates (start, today) under them</Text>
+        <Chart points={[{ t: 0, value: 0 }, { t: 7, value: 120 }, { t: 14, value: 80 }, { t: 21, value: 210 }, { t: 28, value: 300 }, { t: 35, value: 280 }, { t: 37, value: 343.59 }]} base={0} axis={{ kind: 'dated', start: '2026-09-01', end: '2026-10-08', maxLabels: 2 }} bleed={space[6]} drawKey="g-home" formatValue={money} accessibilityLabel="Season gain"
+          underPlacement="beforeAxis"
+          under={<View style={styles.marks}>{['W', 'W', 'L', 'W', 'L', 'W'].map((r, i) => <Text key={i} variant="callout" color={r === 'W' ? colors.gain : colors.loss} style={styles.mark}>{r}</Text>)}</View>} />
+        <Text variant="caption" tone="secondary">Down window (loss)</Text>
+        <Chart points={[{ t: 0, value: 0 }, { t: 1, value: -12 }, { t: 2, value: -48.2 }]} base={0} axis={{ kind: 'week' }} bleed={space[6]} height={80} drawKey="g-loss" formatValue={money} accessibilityLabel="This week" />
+        <Text variant="caption" tone="secondary">1Y, months</Text>
+        <Chart points={[{ t: 0, value: 100 }, { t: 120, value: 130 }, { t: 250, value: 118 }, { t: 365, value: 160 }]} base={100} axis={{ kind: 'dated', start: '2025-10-08', end: '2026-10-08', months: true }} bleed={space[6]} height={80} drawKey="g-1y" formatValue={(v) => formatMoney(v)} accessibilityLabel="1Y" />
+        <Text variant="caption" tone="secondary">Monday morning: one point</Text>
+        <Chart points={[{ t: 0, value: 0 }]} base={0} axis={{ kind: 'week' }} bleed={space[6]} height={60} drawKey="g-one" formatValue={money} accessibilityLabel="This week" />
+        <Text variant="caption" tone="secondary">No points yet</Text>
+        <Chart points={[]} base={0} axis={{ kind: 'week' }} bleed={space[6]} height={60} drawKey="g-none" formatValue={money} accessibilityLabel="This week" />
+      </Section>
+
+      <Section title="GN · PlayerCard (yours, market closed)">
+        <View style={[styles.cardHost, { backgroundColor: colors.surface }]}>
+          <PlayerCardBody {...CARD_YOURS} />
+        </View>
+      </Section>
+      <Section title="GN · PlayerCard (theirs, slotted, open)">
+        <View style={[styles.cardHost, { backgroundColor: colors.surface }]}>
+          <PlayerCardBody {...CARD_THEIRS} saved={saved} onToggleSave={() => setSaved((v) => !v)} />
+        </View>
+        <View style={styles.row}>
+          <Button label="Open yours" variant="secondary" onPress={() => setCard('yours')} />
+          <Button label="Open theirs" variant="secondary" onPress={() => setCard('theirs')} />
+        </View>
+        <PlayerCard {...(card === 'theirs' ? CARD_THEIRS : CARD_YOURS)} visible={card !== null} onClose={() => setCard(null)} saved={saved} onToggleSave={() => setSaved((v) => !v)} />
+      </Section>
+    </>
+  );
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
@@ -352,6 +547,31 @@ const styles = StyleSheet.create({
   sheetContent: {
     padding: space[6],
     gap: space[3],
+  },
+  boardRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  boardCell: {
+    flex: 1,
+    minWidth: 0,
+  },
+  marks: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  mark: {
+    fontWeight: '800',
+  },
+  moneyStrip: {
+    borderRadius: radius.lg,
+    paddingHorizontal: space[4],
+  },
+  cardHost: {
+    marginHorizontal: -space[6],
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingTop: space[5],
   },
   leadChangeButton: {
     marginTop: space[4],

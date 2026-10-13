@@ -11,8 +11,8 @@
  * (display > title) doesn't by itself guarantee the ON-SCREEN ordering once
  * each variant's `maxScale` ceiling is applied. This pins the fix: with the
  * caps chosen (score 1.2; display/title/headline sharing 1.6; tag 1.4;
- * body/callout/caption uncapped), score >= display >= title >= headline
- * must hold at every fontScale, not just fontScale 1.
+ * body/callout/caption uncapped), display >= title >= headline must hold at
+ * every fontScale, not just fontScale 1 (§9C: score.xl >= display at the base size).
  */
 import { assertEquals } from 'jsr:@std/assert';
 import { effectiveFontSize, type as typeTokens } from '../constants/tokens/type.ts';
@@ -40,18 +40,62 @@ Deno.test('effectiveFontSize: at fontScale 1, every variant reads as its raw bas
   }
 });
 
+// THE TYPE-RAMP INVARIANT, in one place (§9C, Design Lead ruling 2026-10-12): each screen's
+// standout stays the loudest text on its own screen at every Dynamic Type size.
+//   at 1× only:        score.xl ≥ display (they never share a screen; caps 1.2 vs 1.6)
+//   at every fontScale: display ≥ title ≥ headline, hero ≥ display, money ≥ display
+// `score.md` is a row size now and is not in the ramp. No value changes.
+Deno.test('type ramp ordering at the base size: score.xl >= display >= title >= headline', () => {
+  const [xl, display, title, headline] = (['score.xl', 'display', 'title', 'headline'] as const).map((v) => effectiveFontSize(v, 1));
+  assertEquals(xl >= display, true, `score.xl (${xl}) should be >= display (${display})`);
+  assertEquals(display >= title, true);
+  assertEquals(title >= headline, true);
+});
+
 for (const fontScale of FONT_SCALES) {
-  Deno.test(`type ramp ordering holds at fontScale ${fontScale}: score >= display >= title >= headline`, () => {
-    const score = effectiveFontSize('score.xl', fontScale);
+  Deno.test(`type ramp ordering holds at fontScale ${fontScale}: hero, money >= display >= title >= headline`, () => {
     const display = effectiveFontSize('display', fontScale);
     const title = effectiveFontSize('title', fontScale);
     const headline = effectiveFontSize('headline', fontScale);
+    const hero = effectiveFontSize('hero', fontScale);
+    const money = effectiveFontSize('money', fontScale);
 
-    assertEquals(score >= display, true, `score.xl (${score}) should be >= display (${display})`);
+    assertEquals(hero >= display, true, `hero (${hero}) should be >= display (${display})`);
+    assertEquals(money >= display, true, `money (${money}) should be >= display (${display})`);
     assertEquals(display >= title, true, `display (${display}) should be >= title (${title})`);
     assertEquals(title >= headline, true, `title (${title}) should be >= headline (${headline})`);
   });
 }
+
+Deno.test('§9C: score.md is a row size (17/22), below title — it left the ramp', () => {
+  assertEquals(typeTokens['score.md'].fontSize, 17);
+  assertEquals(typeTokens['score.md'].lineHeight, 22);
+  assertEquals(typeTokens['score.md'].fontSize < typeTokens.title.fontSize, true);
+});
+
+Deno.test('§9C: the condensed Black cut leaves the app\'s numbers (no variant uses it)', () => {
+  for (const [variant, style] of Object.entries(typeTokens)) {
+    assertEquals(style.fontFamily === 'Archivo-Condensed-Black', false, `${variant} still uses the condensed Black cut`);
+  }
+});
+
+Deno.test('§9C rule 5: game numbers heavy (800), money numbers regular (500)', () => {
+  for (const v of ['hero', 'score.xl', 'score.lg', 'score.md', 'ticker'] as const) {
+    assertEquals(typeTokens[v].fontFamily, 'Archivo-ExtraBold', v);
+  }
+  assertEquals(typeTokens.money.fontFamily, 'Archivo-Medium');
+  assertEquals([typeTokens.hero.fontSize, typeTokens.hero.lineHeight], [46, 48]);
+  assertEquals([typeTokens.money.fontSize, typeTokens.money.lineHeight], [44, 46]);
+  assertEquals([typeTokens['score.xl'].fontSize, typeTokens['score.xl'].lineHeight], [32, 36]);
+  assertEquals([typeTokens['score.lg'].fontSize, typeTokens['score.lg'].lineHeight], [28, 30]);
+  assertEquals([typeTokens.ticker.fontSize, typeTokens.ticker.lineHeight], [16, 20]);
+});
+
+Deno.test('§9B 11pt floor: no variant is below 11pt', () => {
+  for (const [variant, style] of Object.entries(typeTokens)) {
+    assertEquals(style.fontSize >= 11, true, `${variant} is ${style.fontSize}pt`);
+  }
+});
 
 Deno.test('type ramp ordering: the specific regression case ("Portfolio" vs "Screen title") no longer inverts', () => {
   // Before the fix: display capped at 1.4, title uncapped -> at a high

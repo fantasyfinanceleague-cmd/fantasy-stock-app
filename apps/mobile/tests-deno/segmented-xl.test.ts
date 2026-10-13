@@ -22,6 +22,8 @@ Deno.test('every segmented control in the app is the one sp SegmentedControl (so
     // A calm Home (2026-10-12): Home's range is text tabs by the spec, not a segmented
     // control; they carry the same 1.3x cap themselves (pinned below).
     if (path === 'components/home/HomeSeason.tsx') continue;
+    // Game Night (§9C): RangePills is the range primitive (tabs or pills); same cap, pinned below.
+    if (path === 'components/sp/gn/RangePills.tsx') continue;
     assert(!src.includes('accessibilityRole="tablist"'), `${path} rolls its own segmented control`);
   }
 });
@@ -30,4 +32,10 @@ Deno.test("Home's text range tabs carry the segmented labels' cap (1.3x)", () =>
   const tabs = SOURCES['components/home/HomeSeason.tsx'];
   assert(tabs.includes('maxFontSizeMultiplier={RANGE_TAB_MAX_FONT_SCALE}'));
   assert(SOURCES['lib/home/weekMarks.ts'].includes('export const RANGE_TAB_MAX_FONT_SCALE = 1.3;'));
+});
+
+Deno.test("Game Night RangePills carry the segmented labels' cap (1.3x)", () => {
+  const pills = SOURCES['components/sp/gn/RangePills.tsx'];
+  assert(pills.includes('const LABEL_MAX_SCALE = 1.3;'));
+  assert(pills.includes('maxFontSizeMultiplier={LABEL_MAX_SCALE}'));
 });

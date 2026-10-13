@@ -37,10 +37,10 @@ Deno.test('a playoff game or an unknown record shows the letter only, never a gu
   assertEquals(buildFinalBanner({ ...base, me: 1, opp: 5, record: null }).recordText, 'L');
 });
 
-Deno.test('the band: you colour + on-accent when you won, sunken + text otherwise; the record sits at the end (source guard)', () => {
+Deno.test('the band: you colour + on-you (§9C) when you won, sunken + text otherwise; the record sits at the end (source guard)', () => {
   const src = SOURCES['components/game/FinalBanner.tsx'];
   assert(src.includes("const fill = won ? colors.you : colors.sunken;"));
-  assert(src.includes("const ink = won ? colors.onAccent : colors.text;"));
+  assert(src.includes("const ink = won ? colors.onYou : colors.text;"));
   assert(src.includes('{model.recordText}'));
   assert(SOURCES['app/(tabs)/matchup.tsx'].includes('record: derived.myRecord,'));
 });

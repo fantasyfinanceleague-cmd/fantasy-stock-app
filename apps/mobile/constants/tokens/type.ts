@@ -1,5 +1,12 @@
-// Stockpile — "Game Day" type tokens (Phase 2 foundation).
-// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9.
+// Stockpile — type tokens. §9 originally; the score type and the new
+// `hero` / `money` / `ticker` variants are §9C ("Game Night", 2026-10-12).
+// SOURCE OF TRUTH: docs/design/DESIGN_DIRECTION.md §9C (display / title /
+// headline / body / callout / caption unchanged from §9).
+//
+// §9C: "Game numbers heavy, money numbers regular" (rule 5) — scores and the
+// team value at ExtraBold (800), the Portfolio value at Medium (500). The
+// condensed Black cut (62/900) LEAVES the app's numbers; it stays bundled only
+// for the landing's hero. No new font files.
 //
 // React Native can't drive Archivo's variable width axis, so we bundle
 // static instances cut from the variable TTF (see
@@ -8,6 +15,12 @@
 // the static instances were verified to keep the `tnum` GSUB feature.
 
 export type TypeVariant =
+  | 'hero'
+  | 'money'
+  | 'ticker'
+  | 'ticker.card'
+  | 'ticker.tile'
+  | 'score.sm'
   | 'score.xl'
   | 'score.lg'
   | 'score.md'
@@ -33,9 +46,9 @@ export interface TypeStyle {
    * that scales less (or not at all, like `display`, which callers often
    * render at a fixed size) can end up SMALLER on screen than one that
    * scales more, inverting the type ramp at accessibility sizes even though
-   * their base sizes are correctly ordered. score/display/title/headline
-   * caps are chosen so `score ≥ display ≥ title ≥ headline` holds at every
-   * fontScale — see `effectiveFontSize` and its test in tests-deno/.
+   * their base sizes are correctly ordered. The caps are chosen to keep the
+   * type-ramp invariant (§9C, Design Lead ruling 2026-10-12), which is stated
+   * and checked in ONE place: tests-deno/sp-type.test.ts.
    */
   maxScale?: number;
 }
@@ -43,7 +56,7 @@ export interface TypeStyle {
 // Font family keys — must match the keys passed to useFonts() in
 // app/_layout.tsx, not any name baked into the TTF's own name table.
 const FONT = {
-  condensedBlack: 'Archivo-Condensed-Black', // wdth 62,  wght 900
+  condensedBlack: 'Archivo-Condensed-Black', // wdth 62,  wght 900 — landing hero only since §9C
   expandedExtraBold: 'Archivo-Expanded-ExtraBold', // wdth 125, wght 800
   regular: 'Archivo-Regular', // wdth 100, wght 400
   medium: 'Archivo-Medium', // wdth 100, wght 500
@@ -53,15 +66,27 @@ const FONT = {
 } as const;
 
 export const type: Record<TypeVariant, TypeStyle> = {
-  'score.xl': { fontFamily: FONT.condensedBlack, fontSize: 56, lineHeight: 52, tabularNums: true, maxScale: 1.2 },
-  'score.lg': { fontFamily: FONT.condensedBlack, fontSize: 40, lineHeight: 38, tabularNums: true, maxScale: 1.2 },
-  'score.md': { fontFamily: FONT.condensedBlack, fontSize: 28, lineHeight: 28, tabularNums: true, maxScale: 1.2 },
-  // The only uppercase in the app, and game surfaces only (§9).
+  // §9C: the one standout (Home's team value). 46/48, −0.015em.
+  hero: { fontFamily: FONT.extraBold, fontSize: 46, lineHeight: 48, letterSpacing: -0.69, tabularNums: true, maxScale: 1.2 },
+  // §9C: the Portfolio value, regular weight (rule 5, Robinhood). 44/46, −0.015em.
+  money: { fontFamily: FONT.medium, fontSize: 44, lineHeight: 46, letterSpacing: -0.66, tabularNums: true, maxScale: 1.2 },
+  // §9C: tickers on rows (16/20, +0.01em).
+  ticker: { fontFamily: FONT.extraBold, fontSize: 16, lineHeight: 20, letterSpacing: 0.16 },
+  // §9C: the ticker at 26/28 on the player card, and 13/800 in a draft tile.
+  'ticker.card': { fontFamily: FONT.extraBold, fontSize: 26, lineHeight: 28, letterSpacing: 0.26, maxScale: 1.3 },
+  'ticker.tile': { fontFamily: FONT.extraBold, fontSize: 13, lineHeight: 16, maxScale: 1.2 },
+  'score.xl': { fontFamily: FONT.extraBold, fontSize: 32, lineHeight: 36, tabularNums: true, maxScale: 1.2 },
+  'score.lg': { fontFamily: FONT.extraBold, fontSize: 28, lineHeight: 30, tabularNums: true, maxScale: 1.2 },
+  // A row size now (roster week gain).
+  'score.md': { fontFamily: FONT.extraBold, fontSize: 17, lineHeight: 22, tabularNums: true, maxScale: 1.3 },
+  // §9C: standings' season gain at 15/20.
+  'score.sm': { fontFamily: FONT.extraBold, fontSize: 15, lineHeight: 20, tabularNums: true, maxScale: 1.3 },
+  // The only uppercase in the app, and game surfaces only (§9). §9C: +0.06em.
   tag: {
     fontFamily: FONT.expandedExtraBold,
     fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 0.44, // 0.04em @ 11px
+    letterSpacing: 0.66, // 0.06em @ 11px
     textTransform: 'uppercase',
     maxScale: 1.4,
   },
@@ -80,9 +105,8 @@ export const typeFontFamily = FONT;
 /**
  * The effective on-screen font size after RN applies Dynamic Type and this
  * variant's `maxScale` ceiling — pure math mirroring what
- * `maxFontSizeMultiplier` does natively, so the type-ramp ordering invariant
- * (score ≥ display ≥ title ≥ headline at every fontScale) is testable
- * without rendering an actual RN tree. Not used at render time itself; the
+ * `maxFontSizeMultiplier` does natively, so the type-ramp invariant
+ * (tests-deno/sp-type.test.ts) is testable without rendering an RN tree. Not used at render time itself; the
  * real cap is enforced by passing `maxScale` as `maxFontSizeMultiplier`.
  */
 export function effectiveFontSize(variant: TypeVariant, fontScale: number): number {

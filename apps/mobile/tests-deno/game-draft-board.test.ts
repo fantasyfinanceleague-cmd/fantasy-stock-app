@@ -89,8 +89,10 @@ Deno.test('indexPicks keys picks by overall number; a legacy SKIP row keeps its 
 import { color } from '../constants/tokens/color.ts';
 const { light, dark } = color;
 
-Deno.test('why live: in Light accent is you; live differs from you in both themes (G-11)', () => {
-  assertEquals(light.accent, light.you); // the reason an accent outline vanished in your column
+Deno.test('why live: live differs from you in both themes (G-11)', () => {
+  // §9A had Light accent === you (why an accent outline vanished in your column); §9C's
+  // accent is the cyan/teal, so it differs too — the clock ring stays live either way.
+  assertEquals(light.accent !== light.you && dark.accent !== dark.you, true);
   assertEquals(light.live !== light.you, true);
   assertEquals(dark.live !== dark.you, true);
 });

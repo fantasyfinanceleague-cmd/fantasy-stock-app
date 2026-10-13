@@ -17,7 +17,8 @@ import { TabIcon, type TabIconName } from '@/components/shell/TabIcon';
 // Replaces the default bottom-tab bar, which read the legacy white palette regardless of
 // theme. Everything here reads useTheme(): `tabbar` background, `accent` for
 // the active tab, `text2` for inactive (both pairs are already in
-// contrastPairs.ts: "Active tab label" / "Inactive tab labels").
+// contrastPairs.ts: "Active tab label" / "Inactive tab labels"). §9C (Game Night) keeps
+// exactly these roles; `accent` is the cyan / deep teal now.
 //
 // S2: a small accent pill under the active label springs between tabs
 // (spring.snappy), and the newly selected icon does a one-shot 1 → 1.12 → 1
@@ -83,7 +84,7 @@ export function ShellTabBar({ state, navigation }: BottomTabBarProps) {
       accessibilityRole="tablist"
       style={[
         styles.bar,
-        { backgroundColor: colors.tabbar, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, space[3]) },
+        { backgroundColor: colors.tabbar, paddingBottom: Math.max(insets.bottom, space[3]) },
       ]}
     >
       <View style={styles.row} onLayout={onRowLayout}>
@@ -162,8 +163,8 @@ function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemP
 }
 
 const styles = StyleSheet.create({
+  // Game Night (§9C rule 2): no top rule — the translucent `tabbar` surface separates it.
   bar: {
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingTop: space[3],
   },
   row: {
