@@ -1,0 +1,42 @@
+/**
+ * draftClockCard (W4 Draft, Game Night §9C): what the room's clock card is, and how its ring
+ * runs down. The board's frame (#call-game-night, "Draft room, on the clock"): a 74pt ring
+ * (a 6pt `track` circle under a `live` arc that runs down with the clock, the clock inside it)
+ * beside the headline. §9C Motion: your turn "flashes twice in the accent, then rests with an
+ * accent ring that runs down". Pure, so tests-deno pins it; the flash itself is yourTurn.ts.
+ */
+import type { ClockState } from './draftRoom';
+
+/** Whose card it is. `yours` is the screen's one emphasis (the accent tint, the 2pt live
+ * edge, the flash); `stalled` and `auto_picking` draw no clock (B-4: never an empty gap). */
+export type ClockCardKind = 'yours' | 'theirs' | 'auto_picking' | 'stalled';
+
+export function clockCardKind(o: { isMyTurn: boolean; stalled: boolean; clockKind: ClockState['kind'] }): ClockCardKind {
+  if (o.stalled) return 'stalled';
+  if (o.clockKind === 'auto_picking') return 'auto_picking';
+  return o.isMyTurn ? 'yours' : 'theirs';
+}
+
+/** The ring's size and stroke (the board's 74 / 6). */
+export const CLOCK_RING_SIZE = 74;
+export const CLOCK_RING_STROKE = 6;
+/** The clock inside the ring: 20/800 tabular (the board's), capped so "1:30" stays inside. */
+export const CLOCK_RING_TEXT = 20;
+export const CLOCK_RING_TEXT_MAX_SCALE = 1.2;
+
+/** The arc's dash: the full circle at the turn's start, nothing at 0:00. Past either end
+ * (a re-read that lands late, a clock longer than the setting) it clamps, never draws more
+ * than one turn. `total` 0 or less draws no arc. */
+export function clockRingArc(secondsLeft: number | null, total: number, size = CLOCK_RING_SIZE, stroke = CLOCK_RING_STROKE): { radius: number; circumference: number; dashOffset: number } {
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const frac = total > 0 && secondsLeft !== null ? Math.min(1, Math.max(0, secondsLeft / total)) : 0;
+  return { radius, circumference, dashOffset: circumference * (1 - frac) };
+}
+
+/** The arc's colour: `live`, and `loss` in the last 10 seconds (the room's existing rule:
+ * "loss in the last 10 s either way"). The number itself says it too, so colour is never the
+ * only code. */
+export function clockRingTone(kind: ClockState['kind']): 'live' | 'loss' {
+  return kind === 'last10' ? 'loss' : 'live';
+}

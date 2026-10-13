@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, View } from 'react-native';
 
-import { radius, space } from '@/constants/tokens';
+import { radius, space, typeFontFamily } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { YOUR_ROSTER } from '@/lib/game/draftRoom';
+import { keepDots } from '@/lib/game/keepDots';
 import {
   DRAFT_COMPLETE_TAG, SEE_WEEK_ONE_MATCHUP, SEE_WEEK_ONE_MATCHUPS, YOUR_TEAM_IS_SET, draftPriceLabel, rosterPickCaption, type RosterPick,
 } from '@/lib/game/draftComplete';
@@ -59,20 +60,21 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
           <Text variant="caption" tone="secondary">{caption}</Text>
         </View>
         <Card style={styles.rows}>
-          {roster.map((r, i) => {
+          {/* Game Night rule 2: rows divide by space, never by rules. */}
+          {roster.map((r) => {
             const price = draftPriceLabel(r.price);
             return (
               <View
                 key={r.pick}
-                style={[styles.row, i > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border } : null]}
+                style={styles.row}
                 accessible
                 accessibilityLabel={`${r.symbol}, ${rosterPickCaption(r)}${price ? `, ${price}` : ''}`}
               >
                 <View style={styles.rowText}>
-                  <Text variant="callout" style={styles.ticker}>{r.symbol}</Text>
-                  <Text variant="caption" tone="secondary">{rosterPickCaption(r)}</Text>
+                  <Text variant="ticker">{r.symbol}</Text>
+                  <Text variant="caption" tone="secondary">{keepDots(rosterPickCaption(r))}</Text>
                 </View>
-                {price ? <Text variant="callout" style={styles.tabular}>{price}</Text> : null}
+                {price ? <Text variant="callout" style={[styles.tabular, styles.price]}>{price}</Text> : null}
               </View>
             );
           })}
@@ -86,14 +88,15 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
 
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
-  rows: { borderRadius: radius.lg, paddingHorizontal: space[5] },
-  stack: { gap: space[4] },
+  rows: { borderRadius: radius.lg, paddingHorizontal: space[5], paddingVertical: space[3] },
+  // The room's block gap (16): the ending replaces the room in place.
+  stack: { gap: space[5] },
   hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   section: { gap: space[2] },
   // Wraps at large text (XL capture: the caption ran off the screen).
   sectionHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', columnGap: space[2] },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3], minHeight: 44 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[2], minHeight: 44 },
   rowText: { flex: 1, gap: 2 },
-  ticker: { fontWeight: '700' },
   tabular: { fontVariant: ['tabular-nums'] },
+  price: { fontFamily: typeFontFamily.semiBold },
 });

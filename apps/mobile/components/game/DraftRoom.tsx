@@ -6,10 +6,11 @@ import * as Haptics from 'expo-haptics';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
-import { LiveDot } from '@/components/sp/game/LiveDot';
+import { ClockRing } from '@/components/sp/gn';
+import { useLargeText } from '@/components/sp/useLargeText';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
-import { radius, space } from '@/constants/tokens';
+import { radius, space, typeFontFamily } from '@/constants/tokens';
 import SymbolSearchField from '@/components/SymbolSearchField';
 import { supabase } from '@/lib/supabase';
 import { seamInvoke } from '@/lib/game/seamCalls';
@@ -19,7 +20,11 @@ import { alertYourTurn } from '@/lib/game/yourTurnAlert';
 import { yourTurnKey } from '@/lib/game/yourTurnPush';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
-import { managerAtPick, boardHeader, boardRows } from '@/lib/game/draftBoard';
+import { managerAtPick } from '@/lib/game/draftBoard';
+import { clockCardKind, clockRingTone } from '@/lib/game/draftClockCard';
+import { useSymbolCategories } from '@/lib/game/useSymbolCategories';
+import { keepDots } from '@/lib/game/keepDots';
+import { DraftBoard } from '@/components/game/DraftBoard';
 import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, snakeThenPick, liveClock } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { DraftRoomSkeleton } from '@/components/game/LoadingSkeletons';
@@ -248,6 +253,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   }, [draftDone, onEnding]);
   const finished = room.draftStatus === 'completed';
   const weekOne = useWeekOne(leagueId, myUserId, draftDone && finished);
+  // The board's category lines (W4, §9C): one batch read, kept per stock; a failed read draws no line.
+  const pickedSymbols = useMemo(() => Array.from(room.picks.values()).map((p) => p.symbol), [room.picks]);
+  const categories = useSymbolCategories(pickedSymbols);
+  // At the large text sizes the ring sits over the headline instead of beside it.
+  const largeText = useLargeText();
 
   const onSelect = (r: ShapedSearchResult) => {
     if (!r.selectable) return;
@@ -300,7 +310,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     return (
       <DraftComplete
         roster={myRosterPicks(room.picks, room.order, myUserId)}
-        caption={caption}
+        caption={keepDots(caption)}
         finished={finished}
         weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null, weekOneIsBye(weekOne))}
         bye={weekOneIsBye(weekOne)}
@@ -312,48 +322,48 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     );
   }
 
-  const rows = boardRows(room.order, rounds, room.picks, onClockPick);
   const log = Array.from(room.picks.entries()).sort((a, b) => b[0] - a[0]).slice(0, 8);
   const stalled = stalledAt === onClockPick ? turnState({ reason: 'stalled', pickNumber: onClockPick, managerName: nameOf(onClockManager), isCommissioner }) : null;
   const lastMine = mine.symbols.length > 0 ? mine.symbols[mine.symbols.length - 1] : null;
   const lastMineAuto = mine.sources.length > 0 && isAutoPick(mine.sources[mine.sources.length - 1]);
   // Your turn, really yours (not stalled, not the auto-pick running): the screen's one emphasis (G-2).
-  const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';
+  const kind = clockCardKind({ isMyTurn, stalled: stalled !== null, clockKind: shownClock.kind });
+  const onTheClock = kind === 'yours';
   const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
 
   return (
     <View style={styles.stack}>
-      {/* Your turn at rest (the spec): warn-tint over the surface, a 2 pt live border, the
-          44 pt clock, and "You're on the clock" as the largest text on screen. The flash is
-          a live-gold layer over the tint, under the text; it never takes a touch. */}
-      <Card style={[styles.card, onTheClock ? [styles.yourTurnCard, { borderColor: colors.live }] : null]}>
-        {onTheClock ? <View testID="your-turn-tint" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.warnTint }]} /> : null}
+      {/* The clock card (§9C; the board's Draft room frame). Your turn at rest: the accent
+          tint with a 2 pt live edge, the ring running down, "You're on the clock" in liveText.
+          The flash is a live layer over the tint, under the text; it never takes a touch.
+          Someone else's turn: the plain card, the same ring. B-4: no clock, no ring. */}
+      <Card style={[styles.card, onTheClock ? [styles.yourTurnCard, { backgroundColor: colors.accentTint, borderColor: colors.live }] : null]}>
         {onTheClock ? <Animated.View testID="your-turn-flash" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.live }, flashStyle]} /> : null}
         {stalled?.tag ? <Text variant="tag" color={colors.liveText}>{stalled.tag}</Text> : null}
-        {/* B-4: no clock (auto-picking, idle) draws no clock row, never an empty gap. */}
-        {clockLabel ? (
-          <View style={styles.clockRow}>
-            {shownClock.kind === 'last10' ? <LiveDot size={8} /> : null}
-            {/* G-2 (rule 6): on your turn the clock is score type; loss in the last 10 s either way. */}
-            <Text
-              variant={onTheClock ? 'score.lg' : 'headline'}
-              style={[onTheClock ? styles.yourTurnClock : null, { color: clockRest }]}
-              animatedStyle={onTheClock ? clockInk : undefined}
-            >
-              {clockLabel}
-            </Text>
+        <View style={[styles.clockRow, largeText ? styles.clockRowStacked : null]}>
+          {clockLabel ? (
+            <ClockRing
+              label={clockLabel}
+              secondsLeft={shownClock.secondsLeft}
+              totalSeconds={room.pickSeconds}
+              tone={clockRingTone(shownClock.kind)}
+              textColor={clockRest}
+              textAnimatedStyle={onTheClock ? clockInk : undefined}
+            />
+          ) : null}
+          <View style={styles.clockText} accessible accessibilityLabel={[headline, clockLabel].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
+            {onTheClock ? (
+              <Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>
+            ) : (
+              <Text variant="headline" style={styles.headline}>{headline}</Text>
+            )}
+            <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks)))}</Text>
           </View>
-        ) : null}
-        {onTheClock ? (
-          <Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk} accessibilityRole="header">{headline}</Text>
-        ) : (
-          <Text variant="callout">{headline}</Text>
-        )}
-        <Text variant="callout" tone={isMyTurn ? undefined : 'secondary'} animatedStyle={onTheClock ? bodyInk : undefined}>{roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks))}</Text>
+        </View>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
         {!isMyTurn && lastMine && afterPickLine(lastMine, picksAway, lastMineAuto) ? (
-          <Text variant="caption" color={colors.youText} accessibilityLiveRegion="polite">{afterPickLine(lastMine, picksAway, lastMineAuto)}</Text>
+          <Text variant="callout" color={colors.youText} style={styles.bold} accessibilityLiveRegion="polite">{keepDots(afterPickLine(lastMine, picksAway, lastMineAuto) ?? '')}</Text>
         ) : null}
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" tone="secondary">{picksUntilYouLine(picksAway)}</Text>
@@ -363,47 +373,16 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
 
-      <Card style={styles.card}>
-        {/* G-1 (rule 7): each column is a manager; yours in team blue. */}
-        <View style={styles.boardRow} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          {boardHeader(room.order, room.names, myUserId).map((h) => (
-            <Text
-              key={h.manager}
-              variant="tag"
-              color={h.you ? colors.youText : colors.text2}
-              style={[styles.headCell, h.you ? styles.bold : null]}
-              numberOfLines={1}
-            >
-              {h.initials}
-            </Text>
-          ))}
-        </View>
-        {rows.map((row, ri) => (
-          <View key={ri} style={styles.boardRow}>
-            {row.map((cell) => {
-              const made = cell.symbol !== null ? pickRowView({ symbol: cell.symbol, source: cell.source ?? 'manual' }) : null;
-              const auto = made?.auto === true;
-              // G-1: your picks in `you` (border + tint); the pick on the clock keeps its accent outline.
-              const mine = cell.manager === myUserId;
-              const cellStyle = [
-                styles.cell,
-                mine ? { borderColor: colors.you, backgroundColor: colors.youTint } : null,
-                // G-11 (ruled): the clock's own colour, live, at 2 pt in both themes; in Light
-                // accent === you, so an accent outline vanished in your own column.
-                cell.onClock ? { borderColor: colors.live, borderWidth: 2 } : null,
-              ];
-              const who = mine ? 'your pick' : null;
-              return (
-                <View key={cell.pick} style={cellStyle} accessible accessibilityLabel={[`Round ${cell.round}, pick ${cell.pick}`, who, made ? made.symbolLabel : 'open'].filter(Boolean).join(', ')}>
-                  <Text variant="caption" tone={mine ? undefined : 'secondary'} color={mine ? colors.youText : undefined}>{cell.pick}</Text>
-                  <Text variant="callout">{made ? made.symbolCell : ''}</Text>
-                  {auto ? <Text variant="tag" tone="secondary">Auto</Text> : null}
-                </View>
-              );
-            })}
-          </View>
-        ))}
-      </Card>
+      <DraftBoard
+        order={room.order}
+        rounds={rounds}
+        picks={room.picks}
+        onClockPick={onClockPick}
+        clock={clockLabel}
+        names={room.names}
+        myUserId={myUserId}
+        categories={categories}
+      />
 
       {isMyTurn ? (
         <Card style={[styles.card, styles.searchCard]}>
@@ -417,7 +396,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
             selectedSymbol={selected ?? ''}
             ownedSymbols={owned}
           />
-          <Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={!selected || pending} />
+          {/* Nothing tappable does nothing: Draft shows once there's a stock to draft (the
+              screen's one primary, the accent pill), and waits while the pick is sent. */}
+          {selected || pending ? (
+            <Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={pending} status={pending ? 'loading' : 'idle'} fullWidth />
+          ) : null}
           {refusal ? (
             <View accessibilityLiveRegion="polite" style={styles.refusal}>
               <Text variant="callout">{refusal.line}</Text>
@@ -428,22 +411,24 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       ) : null}
 
       {/* Under the search results (board key screen 4). */}
-      <TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} />
+      <TeamSoFarGrid title={YOUR_ROSTER} caption={keepDots(caption)} symbols={mine.symbols} numRounds={rounds} />
 
-      <Card style={styles.card}>
-        <Text variant="tag" tone="secondary">Latest picks</Text>
-        {log.map(([pick, p]) => {
-          // G-4: your own auto-pick reads "from your queue".
-          const row = pickRowView({ symbol: p.symbol, source: p.source }, managerAtPick(pick, room.order) === myUserId);
-          return (
-            <View key={pick} style={styles.logRow}>
-              <Text variant="caption" tone="secondary" style={styles.logPick}>{pick}</Text>
-              <Text variant="callout">{row.symbolCell}</Text>
-              {row.label ? <Text variant="caption" tone="secondary">{`· ${row.label}`}</Text> : null}
-            </View>
-          );
-        })}
-      </Card>
+      {log.length > 0 ? (
+        <Card style={styles.card}>
+          <Text variant="tag" tone="secondary">Latest picks</Text>
+          {log.map(([pick, p]) => {
+            // G-4: your own auto-pick reads "from your queue".
+            const row = pickRowView({ symbol: p.symbol, source: p.source }, managerAtPick(pick, room.order) === myUserId);
+            return (
+              <View key={pick} style={styles.logRow}>
+                <Text variant="caption" tone="secondary" style={styles.logPick}>{pick}</Text>
+                <Text variant="ticker" style={styles.logTicker}>{row.symbolCell}</Text>
+                {row.label ? <Text variant="caption" tone="secondary" style={styles.logWho}>{keepDots(`· ${row.label}`)}</Text> : null}
+              </View>
+            );
+          })}
+        </Card>
+      ) : null}
 
       {/* Never seeded from a failed read (draftQueueRead.ts): the save replaces the whole list. */}
       {room.queue.status === 'ready' ? (
@@ -461,22 +446,25 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
 const styles = StyleSheet.create({
   // The sp Card has no padding or radius of its own (callers set both; DraftCountdownCard's).
-  card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
-  // Your turn at rest: the 2 pt live border (colour set inline); the clock at 44 pt in score
-  // type; the title at 30 pt in ExtraBold (no 900 normal-width face is loaded; flagged).
+  card: { borderRadius: radius.lg, padding: space[5], gap: space[3] },
+  // Your turn at rest: the 2 pt live edge (colour set inline, over the accent tint); the
+  // title at the board's 26/28 in ExtraBold (its 900 maps to 800: §9C Type).
   yourTurnCard: { borderWidth: 2 },
-  yourTurnClock: { fontSize: 44, lineHeight: 42 },
-  yourTurnTitle: { fontSize: 30, lineHeight: 34 },
+  yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },
+  headline: { fontFamily: typeFontFamily.extraBold },
   // The sp Card clips (overflow hidden), which cut the search's dropdown off at the card edge;
   // a search card lets it overflow, above the cards that follow it.
   searchCard: { overflow: 'visible', zIndex: 10 },
-  stack: { gap: space[3] },
+  // The board's Body gap: 16 between the room's blocks.
+  stack: { gap: space[5] },
   refusal: { gap: space[1] },
-  clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  boardRow: { flexDirection: 'row', gap: space[1] },
-  headCell: { flex: 1, textAlign: 'center' },
-  bold: { fontWeight: '700' },
-  cell: { flex: 1, minHeight: 44, borderWidth: 1, borderColor: 'transparent', borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingVertical: space[1] },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[1] },
-  logPick: { minWidth: 24, textAlign: 'right' },
+  // The ring beside the headline (the board's 14 between them); stacked at large text.
+  clockRow: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  clockRowStacked: { flexDirection: 'column', alignItems: 'flex-start' },
+  clockText: { flex: 1, gap: space[1], alignSelf: 'stretch', justifyContent: 'center' },
+  bold: { fontFamily: typeFontFamily.bold },
+  logRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 32 },
+  logPick: { minWidth: 24, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  logTicker: { minWidth: 56 },
+  logWho: { flex: 1 },
 });

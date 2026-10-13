@@ -4,7 +4,7 @@
  * writing anything. Reads return the board's own data (the Season 1 roster and the
  * draft board). A name with no fixture gives null, and the real call is not made.
  */
-import { draftRoomClock, type DraftRoomVariant } from './seamRoom';
+import { STRESS_SEATS, draftRoomClock, draftRoomClockRead, type DraftRoomVariant } from './seamRoom';
 import { SEAM_ME, seamLivePrices, seamPreviousRanks } from './seamTables';
 import { draftStartStatusFixture, parseDraftStartFixture } from './autoStartFixture';
 import { fixtureRoster } from './renewalFixture';
@@ -58,6 +58,14 @@ export function fixtureSeasonPlayoffs() {
 
 /** The draft board's clock and order (the board's Serie A / Stock Scudetto draft). */
 function fixtureDraftRoom(roomVariant: DraftRoomVariant = 'on_clock') {
+  if (roomVariant === 'stress') {
+    const seats = STRESS_SEATS.map((s) => ({ ...s, id: s.id === '__me__' ? SEAM_ME : s.id }));
+    return {
+      clock: [draftRoomClock(roomVariant, Date.now())],
+      order: { ok: true, mode: 'random', state: 'finalized', order: seats.map((s, i) => ({ position: i + 1, user_id: s.id })) },
+      names: seats.map((s) => ({ user_id: s.id, display_name: s.name, is_bot: false })),
+    };
+  }
   const order = ['paolo', SEAM_ME, 'alessandro', 'francesco', 'gianluigi', 'andrea'];
   return {
     clock: [draftRoomClock(roomVariant, Date.now())],
@@ -93,9 +101,12 @@ export function fixtureFor(name: string, args: Record<string, unknown>, roomVari
     // The through-week ranking (the League tab's movement): last week's order.
     case 'league_standings_ranked': return typeof args.p_through_week === 'number' ? { data: seamPreviousRanks(), error: null } : null;
     // ---- the draft room: reads ----
-    case 'get_draft_clock': return { data: fixtureDraftRoom(roomVariant).clock, error: null };
-    case 'get_draft_order': return { data: fixtureDraftRoom().order, error: null };
-    case 'get_league_display_names': return { data: fixtureDraftRoom().names, error: null };
+    case 'get_draft_clock':
+      // 'failed': the read errors (the room's "Couldn't load" card). 'loading' is seamCalls' (a read that never answers).
+      if (draftRoomClockRead(roomVariant) === 'error') return { data: null, error: { message: 'fixture: the clock read failed' } } as unknown as { data: unknown; error: null };
+      return { data: fixtureDraftRoom(roomVariant).clock, error: null };
+    case 'get_draft_order': return { data: fixtureDraftRoom(roomVariant).order, error: null };
+    case 'get_league_display_names': return { data: fixtureDraftRoom(roomVariant).names, error: null };
     default: return null;
   }
 }

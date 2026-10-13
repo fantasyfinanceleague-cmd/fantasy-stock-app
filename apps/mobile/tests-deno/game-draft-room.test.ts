@@ -203,7 +203,8 @@ Deno.test('indexPicks keeps the price as a number (or null), from a number or a 
 Deno.test('the room and Home show the SAME team grid; the room\'s is the board\'s roster strip, under the search (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
   // Not wrapped in !draftDone any more: a finished draft returns the ending first.
-  assertEquals(room.includes('<TeamSoFarGrid title={YOUR_ROSTER} caption={caption} symbols={mine.symbols} numRounds={rounds} />'), true);
+  // W4: the caption keeps each "·" with the segment before it (keepDots; the gate's "Wrapping at XL").
+  assertEquals(room.includes('<TeamSoFarGrid title={YOUR_ROSTER} caption={keepDots(caption)} symbols={mine.symbols} numRounds={rounds} />'), true);
   assertEquals(room.indexOf('<SymbolSearchField') < room.indexOf('<TeamSoFarGrid title={YOUR_ROSTER}'), true);
   assertEquals(SOURCES['app/(tabs)/league.tsx'].includes('notionalPerSlot={activeLeague?.notional_per_slot ?? null}'), true);
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);
@@ -219,8 +220,13 @@ Deno.test('the ruled strings', () => {
   assertEquals(PICK_UNCONFIRMED, "Couldn't confirm your pick. Checking…");
 });
 
-Deno.test('the Draft button says Sending… and is disabled while the pick is on its way (source guard)', () => {
-  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes("<Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={!selected || pending} />"), true);
+// W4 Draft ("Nothing tappable does nothing"): Draft shows once a stock is selected (it was a
+// disabled pill with no reason beside it), still says Sending… and waits while the pick is sent.
+Deno.test('the Draft button shows with a selection, says Sending… and is disabled while the pick is on its way (source guard)', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  assertEquals(room.includes("{selected || pending ? (\n            <Button label={pending ? PICK_SENDING : 'Draft'} onPress={draft} disabled={pending} status={pending ? 'loading' : 'idle'} fullWidth />\n          ) : null}"), true);
+  // The handler still refuses with nothing selected, off your turn, or while sending.
+  assertEquals(room.includes('if (!selected || !isMyTurn || pending) return;'), true);
 });
 
 Deno.test('a transport error or server fault never says "That pick can\'t be made.": Checking…, a re-read, cleared by the new board (source guard)', () => {
@@ -353,25 +359,28 @@ Deno.test('the room, its queue and the ending pad their cards (no bare <Card>; s
   for (const p of ['components/game/DraftRoom.tsx', 'components/game/QueueEditor.tsx', 'components/game/DraftComplete.tsx']) {
     assertEquals(SOURCES[p].includes('<Card>'), false, p);
   }
-  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
+  assertEquals(SOURCES['components/game/DraftRoom.tsx'].includes('card: { borderRadius: radius.lg, padding: space[5], gap: space[3] },'), true);
   assertEquals(SOURCES['components/game/DraftComplete.tsx'].includes('hero: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
 });
 
 // ── G-2 (pass-2 gate, rule 6): on your turn the clock card's one emphasis ──
 
-// The your-turn spec (board #your-turn ac74345) grew G-2's emphasis: display at 30 pt and
-// score.lg at 44 pt (game-your-turn-card.test.ts pins the rest of the card).
-Deno.test('your turn: "You\'re on the clock" as the header in liveText, the clock in score type; off-turn unchanged (source guard)', () => {
+// W4 Draft (Game Night §9C; the board's Draft room frame): the title at the board's 26/28 in
+// ExtraBold (its 900 maps to 800), the clock inside the ring at 20/800 (ClockRing), the last
+// 10 s in loss on and off your turn. Off your turn, "{Name} is up" in ExtraBold headline.
+Deno.test('your turn: "You\'re on the clock" as the header in liveText, the clock in its ring; off-turn the headline (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  assertEquals(room.includes("const onTheClock = isMyTurn && !stalled && shownClock.kind !== 'auto_picking';"), true);
-  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk} accessibilityRole="header">{headline}</Text>'), true);
-  assertEquals(room.includes("variant={onTheClock ? 'score.lg' : 'headline'}"), true);
-  // The last 10 s stay in loss on and off your turn (navy only under the flash's gold).
+  assertEquals(room.includes("const kind = clockCardKind({ isMyTurn, stalled: stalled !== null, clockKind: shownClock.kind });"), true);
+  assertEquals(room.includes("const onTheClock = kind === 'yours';"), true);
+  assertEquals(room.includes('<Text variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>'), true);
+  assertEquals(room.includes("accessibilityRole={onTheClock ? 'header' : undefined}"), true);
+  assertEquals(room.includes('yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },'), true);
+  // The last 10 s stay in loss on and off your turn (navy only under the flash).
   assertEquals(room.includes("const clockRest = shownClock.kind === 'last10' ? colors.loss : colors.text;"), true);
-  assertEquals(room.includes('{ color: clockRest }'), true);
-  // Off your turn ("{Name} is up") keeps the plain callout.
-  assertEquals(room.includes('<Text variant="callout">{headline}</Text>'), true);
-  assertEquals(room.includes("style={isMyTurn ? { fontWeight: '700' } : undefined}"), false);
+  assertEquals(room.includes('textColor={clockRest}'), true);
+  assertEquals(room.includes('tone={clockRingTone(shownClock.kind)}'), true);
+  // Off your turn ("{Name} is up").
+  assertEquals(room.includes('<Text variant="headline" style={styles.headline}>{headline}</Text>'), true);
 });
 
 // ── G-4 (pass-2 gate, ruled): your own auto-pick in the log ──

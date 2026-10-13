@@ -78,13 +78,25 @@ Deno.test('on-live follows the accent: #080D25 in Dark, #FDFEFF in Light, and cl
 // above scores them in both themes at 4.5; this pins that they stay there and
 // the ratios the Design Lead measured.
 
+// W4 Draft (§9C: accentTint is "the your-turn card at rest"): the rest moved from §9A's warn
+// tint to the accent tint over the page. Its title is the LIVE chip's pair; the round line, the
+// captions and the last-10 s clock are new rows. Ratios measured from the §9C hex.
 Deno.test('B-1: the your-turn pairs are in PAIRS and clear the measured ratios', () => {
   const has = (fg: string, bg: string, over: string | null) => PAIRS.some(([f, b, o]) => f === fg && b === bg && o === over);
-  assertEquals(has('onLive', 'live', null), true); // the flash: navy text on the live gold fill
-  assertEquals(has('liveText', 'warnTint', 'surface'), true); // at rest: "You're on the clock" on the warn tint
-  // §9C values: liveText on warnTint over surface, Light 5.17:1, Dark 10.77:1.
-  const restLight = ratioOf(color.light, 'liveText', 'warnTint', 'surface');
-  const restDark = ratioOf(color.dark, 'liveText', 'warnTint', 'surface');
-  assertEquals(Math.abs(restLight - 5.17) < 0.05, true, `light ${restLight.toFixed(2)}`);
-  assertEquals(restDark >= 4.5, true, `dark ${restDark.toFixed(2)}`); // 10.77:1 today
+  assertEquals(has('onLive', 'live', null), true); // the flash: on-live text on the live fill
+  assertEquals(has('liveText', 'accentTint', 'bg'), true); // at rest: "You're on the clock"
+  assertEquals(has('text', 'accentTint', 'bg'), true); // the round line, the clock
+  assertEquals(has('text2', 'accentTint', 'bg'), true); // the captions
+  assertEquals(has('loss', 'accentTint', 'bg'), true); // the clock's last 10 s
+  assertEquals(has('liveText', 'warnTint', 'surface'), false); // the §9A rest is gone
+  const near = (t: 'light' | 'dark', fg: string, want: number) => {
+    const got = ratioOf(color[t], fg as never, 'accentTint', 'bg');
+    assertEquals(Math.abs(got - want) < 0.05, true, `${t} ${fg} ${got.toFixed(2)}`);
+  };
+  near('light', 'liveText', 4.91);
+  near('dark', 'liveText', 9.9);
+  near('light', 'loss', 4.55); // the tightest
+  near('dark', 'loss', 5.01);
+  near('light', 'text2', 5.29);
+  near('dark', 'text2', 5.84);
 });

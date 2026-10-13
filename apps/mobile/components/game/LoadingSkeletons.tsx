@@ -4,6 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Skeleton } from '@/components/Skeleton';
+import { CLOCK_RING_SIZE } from '@/lib/game/draftClockCard';
+import { BOARD_GAP, TILE_HEIGHT } from '@/lib/game/draftBoardLayout';
 
 // 3c-2, UX rule 9 (Design Lead): loading shows the SHAPE of what's coming, not
 // an empty body. The room: its clock card and a board grid. Home: the draft /
@@ -13,23 +15,30 @@ import { Skeleton } from '@/components/Skeleton';
 const LOADING = 'Loading';
 
 export function DraftRoomSkeleton() {
+  // W4 Draft: the room's own shape. The clock card (the ring beside its two lines), then the
+  // board's six columns of tiles, at the board's gap and the tile's radius.
   return (
-    <View style={styles.stack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
+    <View style={styles.roomStack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
       <Card style={styles.card}>
-        <Skeleton width={70} height={12} />
-        <Skeleton width={90} height={28} />
-        <Skeleton width={180} height={16} />
-        <Skeleton width={120} height={14} />
+        <View style={styles.clockRow}>
+          <Skeleton width={CLOCK_RING_SIZE} height={CLOCK_RING_SIZE} borderRadius={CLOCK_RING_SIZE / 2} />
+          <View style={styles.clockLines}>
+            <Skeleton width={180} height={24} />
+            <Skeleton width={140} height={16} />
+          </View>
+        </View>
       </Card>
-      <Card style={styles.card}>
+      <View style={styles.board}>
         {Array.from({ length: 3 }, (_, r) => (
           <View key={r} style={styles.boardRow}>
-            {Array.from({ length: 4 }, (__, c) => (
-              <Skeleton key={c} width={64} height={40} borderRadius={radius.sm} />
+            {Array.from({ length: 6 }, (__, c) => (
+              <View key={c} style={styles.tile}>
+                <Skeleton height={TILE_HEIGHT} borderRadius={radius.tile} />
+              </View>
             ))}
           </View>
         ))}
-      </Card>
+      </View>
     </View>
   );
 }
@@ -114,9 +123,26 @@ const styles = StyleSheet.create({
     padding: space[5],
     gap: space[3],
   },
+  roomStack: {
+    gap: space[5],
+  },
+  clockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[4],
+  },
+  clockLines: {
+    gap: space[3],
+  },
+  board: {
+    gap: BOARD_GAP,
+  },
   boardRow: {
     flexDirection: 'row',
-    gap: space[2],
+    gap: BOARD_GAP,
+  },
+  tile: {
+    flex: 1,
   },
   scoreRow: {
     flexDirection: 'row',

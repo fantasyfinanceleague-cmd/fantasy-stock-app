@@ -162,8 +162,13 @@
     ['medal-bronze', 'you-tint', 'surface', 3, 'Medal disc, bronze, on the you-tint row (graphic)'],
     // Your turn (Design Lead, 2026-10-06; board #your-turn): the flash fills the clock card with
     // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
-    ['on-live', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
-    ['live-text', 'warn-tint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
+    // W4 Draft (§9C, accent-tint = "your-turn card at rest"): the rest moved to the accent tint
+    // over the page; the title there is the LIVE chip row's pair (live-text on accent-tint over
+    // bg), and the round line, the captions and the last-10 s clock are these three.
+    ['on-live', 'live', null, 4.5, 'Your-turn flash: text on the live fill'],
+    ['text', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the round line and the clock on the accent-tint card'],
+    ['text-2', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the captions on the accent-tint card'],
+    ['loss', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the clock in the last 10 seconds'],
 
     // ── Game Night, §9C v3.1 (2026-10-12): the 49 new scored pairs. §9C names them by group
     // (your side on the card surface and on the page, the clock cell, the money page, the

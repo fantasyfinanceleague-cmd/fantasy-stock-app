@@ -9,6 +9,8 @@ export { RosterRow, GroupHead } from './RosterRow';
 export type { RosterHalf, RosterRowProps, GroupHeadProps } from './RosterRow';
 export { rosterHalfLabel } from './RosterRow';
 export { DraftTile } from './DraftTile';
+export { ClockRing } from './ClockRing';
+export type { ClockRingProps } from './ClockRing';
 export { CategoryPill } from './CategoryPill';
 export type { DraftTileProps } from './DraftTile';
 export { ManagerRow, MANAGER_ROW_GAP } from './ManagerRow';

@@ -32,15 +32,18 @@ Deno.test('the flash is a layer under the text that never takes a touch', () => 
   assert(flash.includes('StyleSheet.absoluteFill'));
   assert(flash.includes('backgroundColor: colors.live'));
   // It sits before the clock row, so the text renders on top of it.
-  assert(room.indexOf('testID="your-turn-flash"') < room.indexOf('<View style={styles.clockRow}>'));
+  assert(room.indexOf('testID="your-turn-flash"') < room.indexOf('<View style={[styles.clockRow, largeText ? styles.clockRowStacked : null]}>'));
 });
 
-Deno.test('rest: warn-tint over the surface, a 2 pt live border, the 44 pt clock, the 30 pt title in liveText', () => {
-  assert(room.includes('testID="your-turn-tint" pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.warnTint }]}'));
-  assert(room.includes("onTheClock ? [styles.yourTurnCard, { borderColor: colors.live }] : null"));
+// W4 Draft (Game Night §9C): the rest is the accent tint (accentTint: "your-turn card at rest";
+// it was §9A's warn-tint), the 2 pt live edge stays, and the clock moved into the ring that
+// runs down ("then rests with an accent ring that runs down"). The title is 26/28 (the board).
+Deno.test('rest: the accent tint, a 2 pt live edge, the clock in its ring, the 26 pt title in liveText', () => {
+  assert(room.includes("onTheClock ? [styles.yourTurnCard, { backgroundColor: colors.accentTint, borderColor: colors.live }] : null"));
   assert(room.includes('yourTurnCard: { borderWidth: 2 },'));
-  assert(room.includes('yourTurnClock: { fontSize: 44, lineHeight: 42 },'));
-  assert(room.includes('yourTurnTitle: { fontSize: 30, lineHeight: 34 },'));
+  assert(!room.includes('colors.warnTint'));
+  assert(room.includes('<ClockRing'));
+  assert(room.includes('yourTurnTitle: { fontSize: 26, lineHeight: 28, fontFamily: typeFontFamily.extraBold },'));
   assert(room.includes('variant="display" style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}'));
   assert(room.includes('const titleRest = colors.liveText;'));
 });
@@ -67,7 +70,8 @@ Deno.test('every line on the card takes the ink: the clock, the title, the round
   }
   assert(room.includes('const onLive = colors.onLive;'));
   assertEquals((room.match(/colors\.onLive/g) ?? []).length, 1); // only through `ink`
-  assert(room.includes('animatedStyle={onTheClock ? clockInk : undefined}'));
+  assert(room.includes('textAnimatedStyle={onTheClock ? clockInk : undefined}'));
+  assert(SOURCES['components/sp/gn/ClockRing.tsx'].includes('animatedStyle={textAnimatedStyle}'));
   assert(room.includes('animatedStyle={titleInk}'));
   assert(room.includes('animatedStyle={onTheClock ? bodyInk : undefined}'));
   assertEquals((room.match(/animatedStyle=\{onTheClock \? captionInk : undefined\}/g) ?? []).length, 2); // "N-second picks", waiting for prices
@@ -114,6 +118,6 @@ Deno.test('the chime logs its evidence in dev only (a simulator recording has no
 
 Deno.test('B-4: no clock (auto-picking, idle) draws no clock row, never an empty gap', () => {
   assert(room.includes('const clockLabel = pickClockLabel(shownClock);'));
-  assert(room.includes('{clockLabel ? (\n          <View style={styles.clockRow}>'));
+  assert(room.includes('{clockLabel ? (\n            <ClockRing'));
   assertEquals((room.match(/pickClockLabel\(/g) ?? []).length, 1); // the row and its text share one label
 });
