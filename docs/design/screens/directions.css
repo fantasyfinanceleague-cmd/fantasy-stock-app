@@ -61,6 +61,7 @@
   --d-cat-health: oklch(80% 0.11 334);
   --d-cat-misc: oklch(74% 0.02 270);
   --d-on-cat: oklch(18% 0.05 272);      /* dark ink on the brighter Dark category fills */
+  --c-on-opp: oklch(17% 0.05 272);
 }
 
 /* ── B · Broadcast (primary: ESPN S3) ────────────────────────────────────
@@ -277,6 +278,7 @@
   --d-cat-health: oklch(52% 0.13 334);
   --d-cat-misc: oklch(50% 0.02 270);
   --d-on-cat: oklch(99.6% 0.003 272);  /* white ink on the darker Light category fills */
+  --c-on-opp: oklch(15% 0.04 272);
 }
 /* the dark on-the-clock cell keeps its own light ink */
 .dir-a-light .dr-clockcell { --c-text: oklch(99.6% 0.003 272); --c-live-text: oklch(87% 0.14 205); --c-live: oklch(87% 0.14 205); }

@@ -267,14 +267,12 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
-    ['call-shading', 'Matchup shading when you\'re behind'],
-    ['call-categories', 'The 11 category names'],
-    ['call-game-night', 'Game Night as you picked it · the player card'],
-    ['call-game-night-ask', 'A label · the Portfolio chart · the your-turn colour'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-shading', title: 'The Matchup shading, and the 11 category names', decision: 'B: your side is always shaded in your colour, win or lose ("it\'s you … Not whoever\'s winning"); no row-winner lighting. The 11 categories with their short names and 3-letter codes as drawn.', date: '2026-10-12', rec: 'docs/rules-redesign-decisions', render: () => window.KSShadingArchived },
+    { id: 'call-redesign-answers', title: 'The redesign\'s open questions', decision: '"Go with your recommendations": cyan your turn; "Since the draft"; the Portfolio chart; two end dates on Home; price per share; the navy clock cell; the owner\'s avatar on the card; 1.3, one build.', date: '2026-10-12', rec: 'docs/rules-redesign-decisions', render: () => window.KSRedesignAnswers },
     { id: 'call-direction', title: 'The direction', decision: 'A, Game Night, for Home, Matchup, Standings and Portfolio; the draft tiles take Broadcast\'s line at the bottom; no small lines on rows; the centre column empty. B closed ("doing a little too much"), C closed ("a little too robotic").', date: '2026-10-12', rec: 'docs/rules-direction-game-night', render: () => window.KSDirectionsArchived },
     { id: 'call-row-order', title: 'The order of the Matchup rows', decision: 'Best week first; slotted leagues (categories and price tiers) grouped by slot; re-ordered at each market close, never live.', date: '2026-10-12', rec: 'PR #229 (rules) · #230 (board)', render: () => window.KSRowOrder },
     { id: 'call-calm-home', title: 'A calmer Home', decision: 'A, same content, calmer, in every state as drawn.', date: '2026-10-12', rec: 'PR #218 (rules) · #219 (board) · #222 (build)', render: () => window.KSHomeCalm },
@@ -359,9 +357,11 @@
           </dl>
           <div className="b-open" aria-label="Waiting on you">
             <span className="b-open__lbl">Waiting on you ({OPEN.length})</span>
-            <nav className="b-toc" aria-label="Open calls">
-              {OPEN.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
-            </nav>
+            {OPEN.length ? (
+              <nav className="b-toc" aria-label="Open calls">
+                {OPEN.map(([id, t]) => <a key={id} href={`#${id}`}>{t}</a>)}
+              </nav>
+            ) : <p className="b-open__more" style={{ color: 'var(--c-text)' }}>Nothing right now. Game Night is approved: <a href="#game-night">see it under Approved screens</a>.</p>}
             <p className="b-open__more"><a href="#approved">Approved screens</a> · <a href="#archive">Archive ({ARCHIVE.length} decided)</a></p>
           </div>
         </header>
@@ -371,8 +371,10 @@
         <header className="b-part" id="approved">
           <span className="b-part__eyebrow">Reference</span>
           <h2>Approved screens</h2>
-          <p>What the app is built from: the five key screens, then every other screen, on the current (1.2.0) tokens. The new direction replaces the skin once you pick it; the structure stays.</p>
+          <p>What the app is built from. First Game Night, the new look (approved 2026-10-12, both themes); then the five key screens and every other screen, which show the STRUCTURE on the 1.2.0 skin until each is rebuilt in Game Night.</p>
         </header>
+
+        {window.KSGameNight ? <window.KSGameNight /> : null}
 
         <ThemesSection />
 
