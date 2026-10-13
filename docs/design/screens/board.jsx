@@ -370,14 +370,14 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
-    ['call-mx-withheld', 'A final week whose stock-by-stock results can\'t be shown'],
-    ['call-mx-empty', 'How an empty slot reads'],
-    ['call-mx-bye', 'The bye week'],
-    ['call-mx-order', 'Saying why the rows are in this order'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-mx-order', title: 'Saying why the Matchup rows are in this order', decision: 'B: one small line over the rows, "Ordered by Wednesday\'s close" (the last close whose trading has ended; "Thursday\'s close" from that evening).', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.order },
+    { id: 'call-mx-empty', title: 'How an empty slot reads', decision: 'B: the empty half keeps its row, with a dashed edge and "Empty"; yours keeps your shade.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.empty },
+    { id: 'call-mx-bye', title: 'The bye week', decision: 'B: your half of the scoreboard, "Bye week" in the opponent\'s half, the shipped "Bye week · no result" line, then your stocks in one column.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.bye },
+    { id: 'call-mx-withheld', title: 'A final whose stock-by-stock results can\'t be shown', decision: 'B: "Stock-by-stock results aren\'t available for this week." and both lineups as ticker and company, no figures, draft order, your side shaded.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.withheld },
     { id: 'call-shading', title: 'The Matchup shading, and the 11 category names', decision: 'B: your side is always shaded in your colour, win or lose ("it\'s you … Not whoever\'s winning"); no row-winner lighting. The 11 categories with their short names and 3-letter codes as drawn.', date: '2026-10-12', rec: 'docs/rules-redesign-decisions', render: () => window.KSShadingArchived },
     { id: 'call-redesign-answers', title: 'The redesign\'s open questions', decision: '"Go with your recommendations": cyan your turn; "Since the draft"; the Portfolio chart; two end dates on Home; price per share; the navy clock cell; the owner\'s avatar on the card; 1.3, one build.', date: '2026-10-12', rec: 'docs/rules-redesign-decisions', render: () => window.KSRedesignAnswers },
     { id: 'call-direction', title: 'The direction', decision: 'A, Game Night, for Home, Matchup, Standings and Portfolio; the draft tiles take Broadcast\'s line at the bottom; no small lines on rows; the centre column empty. B closed ("doing a little too much"), C closed ("a little too robotic").', date: '2026-10-12', rec: 'docs/rules-direction-game-night', render: () => window.KSDirectionsArchived },

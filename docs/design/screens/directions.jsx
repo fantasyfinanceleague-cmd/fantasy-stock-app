@@ -1290,7 +1290,7 @@
   const mxLine = (text) => <span className="dr-call" style={{ textAlign: 'center' }}>{text}</span>;
   const mxNote = (text) => <span className="dr-cap" style={{ textAlign: 'center', display: 'block' }}>{text}</span>;
   /** Four figures per call: A Dark, A Light, B Dark, B Light. */
-  function MxCall({ id, title, intro, a, b, rec, notes, frame }) {
+  function MxCall({ id, title, intro, a, b, rec, notes, frame, archived }) {
     const fig = (opt, t) => (
       <figure key={opt + t} className="b-fig b-fig--inv" style={{ margin: 0 }}>
         <Fit>{frame(opt, t)}</Fit>
@@ -1302,13 +1302,14 @@
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.3</span>
           <div>
-            <h2 id={`${id}-h`}>Your call: {title}</h2>
+            <h2 id={`${id}-h`}>{archived ? `Decided: B, ${title}` : `Your call: ${title}`}</h2>
             <p className="b-job">{intro}</p>
           </div>
         </header>
         <ul className="b-inv__notes">
           {notes}
           <li><b>Recommended: {rec}</b></li>
+          {archived ? <li><b>Decided by Giorgio (2026-10-13): B</b>, one call at a time from these images, with the new words exactly as drawn.</li> : null}
         </ul>
         <div className="b-concepts b-concepts--three">{fig('A', 'dark')}{fig('A', 'light')}{fig('B', 'dark')}{fig('B', 'light')}</div>
       </section>
@@ -1317,11 +1318,12 @@
 
   const MX_FINAL = K.MATCHUP.final;
   const byPick = (rows) => [...rows].sort((p, q) => p.pick - q.pick);
-  function CallWithheld() {
+  function CallWithheld({ archived }) {
     const a = byPick(MX_FINAL.you.rows), b = byPick(MX_FINAL.opp.rows);
     const note = "Stock-by-stock results aren't available for this week.";
     return (
       <MxCall
+        archived={archived}
         id="call-mx-withheld" title="a final week whose stock-by-stock results can't be shown"
         intro={<>Rare, but real: a week is scored and its final is posted, but the stored figures for each stock don't add up to that final to the cent (a price that was corrected later, for example). The app then shows no rows at all, because a row that disagrees with the score would be wrong. Today the screen is the banner and the scoreboard, and nothing under them. Week 6's final, both rows withheld; the scores are data.js's.</>}
         a="the scoreboard and one line" b="who held what, without figures"
@@ -1350,7 +1352,7 @@
     { name: 'Financials', you: ['V'], opp: ['JPM'] },
     { name: 'Flex', you: ['CRM'], opp: [null] },
   ];
-  function CallEmpty() {
+  function CallEmpty({ archived }) {
     const L = K.MATCHUP.live;
     const row = (side, t) => (t ? L[side].rows.find((r) => r.t === t) : null);
     const groups = EMPTY_SLOTS.map((g) => {
@@ -1359,6 +1361,7 @@
     });
     return (
       <MxCall
+        archived={archived}
         id="call-mx-empty" title="how an empty slot reads"
         intro={<>A slot is empty when a manager has sold a stock and not yet bought its replacement (cash from a sale). In a slotted league the row still exists, so one side has nothing in it. Today your empty half is your shade with nothing inside, and the other side's is blank. In the frames: a category league (SAMPLE slots) where you sold TSLA and Gianluigi B. sold BA; Thu 1:37 PM ET.</>}
         a="as built: the slot is just space" b="marked: a dashed edge and “Empty”"
@@ -1382,12 +1385,13 @@
     );
   }
 
-  function CallBye() {
+  function CallBye({ archived }) {
     const L = K.MATCHUP.live;
     const mine = [...L.you.rows].sort((p, q) => q.weekGain - p.weekGain);
     const bye = 'Bye week · no result';
     return (
       <MxCall
+        archived={archived}
         id="call-mx-bye" title="the bye week"
         intro={<>With an odd number of managers, someone sits out each week. Today Matchup shows one line on an empty page ("{bye}", the shipped copy). Your stocks still move that week; it just doesn't count. Roberto B. on a bye in Week 6, Thu 1:37 PM ET; his holdings and numbers are data.js's.</>}
         a="as built: one line" b="your half, and your stocks"
@@ -1419,7 +1423,7 @@
     );
   }
 
-  function CallOrder() {
+  function CallOrder({ archived }) {
     const L = K.MATCHUP.live;
     // The order at Thu 1:37 PM: each stock's gain at Wednesday's close (the last close whose
     // trading has ended, Giorgio's rule); the numbers shown are live.
@@ -1429,6 +1433,7 @@
     const cap = "Ordered by Wednesday's close";
     return (
       <MxCall
+        archived={archived}
         id="call-mx-order" title="saying why the rows are in this order"
         intro={<>Your rule: the rows are re-ordered once a day, after trading ends, never while you watch. So at Thu 1:37 PM ET the order is Wednesday's close, while every number is live. On a day that turns, a column can look unsorted: Gianluigi B.'s AMZN was his best stock at Wednesday's close and sits on top, but it is down {K.formatMoney(Math.abs(b[0].weekGain))} this week right now. Week 6, data.js's numbers.</>}
         a="as built: no label" b="a short label over the rows"
@@ -1449,11 +1454,13 @@
     );
   }
 
-  function MatchupCalls() {
-    return <><CallWithheld /><CallEmpty /><CallBye /><CallOrder /></>;
-  }
-
-  window.KSDirections = MatchupCalls; // waiting on Giorgio: the four Matchup calls (2026-10-12)
+  window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
+  window.KSMxCalls = {
+    order: () => <CallOrder archived />,
+    empty: () => <CallEmpty archived />,
+    bye: () => <CallBye archived />,
+    withheld: () => <CallWithheld archived />,
+  };
   window.KSGameNight = GameNight;
   window.KSShadingArchived = () => <Amended.Provider value={false}><ShadingCall archived /></Amended.Provider>;
   window.KSRedesignAnswers = RedesignAnswers;
