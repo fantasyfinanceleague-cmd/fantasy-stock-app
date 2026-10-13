@@ -16,6 +16,6 @@ export type { ManagerRowProps } from './ManagerRow';
 export { RangePills } from './RangePills';
 export type { RangePillsProps } from './RangePills';
 export { Chart } from './Chart';
-export type { ChartProps } from './Chart';
+export type { ChartProps, UnderRow } from './Chart';
 export { PlayerCard, PlayerCardBody } from './PlayerCard';
 export type { PlayerCardProps, PlayerCardOwnership, PlayerCardOwnerInfo } from './PlayerCard';

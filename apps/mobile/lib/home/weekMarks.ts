@@ -130,7 +130,10 @@ export function layoutWeekMarks(weeks: WeekMarkInput[], slots: WeekSlot[], width
     const slot = slots[i];
     if (wk.result === null) continue;
     const { glyph, tone } = pick(wk.result, slot.end - slot.start, fontScale);
-    marks.push({ week: wk.week, x: (slot.start + slot.end) / 2, w: glyphWidth(glyph, fontScale), glyph, tone });
+    // The live week's dot sits under the line's END DOT (its slot's end: the last point),
+    // not mid-slot (Design Lead, W4 gate, 2026-10-13); every other mark is centred.
+    const x = wk.result === 'LIVE' ? slot.end : (slot.start + slot.end) / 2;
+    marks.push({ week: wk.week, x, w: glyphWidth(glyph, fontScale), glyph, tone });
   }
   // Too many marks for the width as text: every week a 5pt shape, never an overlap.
   if (rowWidth(marks) > width) {
@@ -139,14 +142,19 @@ export function layoutWeekMarks(weeks: WeekMarkInput[], slots: WeekSlot[], width
       m.w = glyphWidth(m.glyph, fontScale);
     }
   }
-  // Inside the chart's own edges.
-  for (const m of marks) m.x = Math.min(Math.max(m.x, m.w / 2), width - m.w / 2);
-  // No overlaps: push right, then pull back from the right edge.
+  // Inside the chart's own edges — except the live dot, which follows the end dot past the
+  // gutter (the line runs edge to edge; the end dot keeps its halo on screen).
+  const pinned = (m: WeekMark) => m.glyph === 'live';
+  for (const m of marks) if (!pinned(m)) m.x = Math.min(Math.max(m.x, m.w / 2), width - m.w / 2);
+  // No overlaps: push right, then pull back from the right edge. The live dot never moves;
+  // its neighbours make room for it.
   for (let i = 1; i < marks.length; i++) {
+    if (pinned(marks[i])) continue;
     const min = marks[i - 1].x + marks[i - 1].w / 2 + MARK_GAP + marks[i].w / 2;
     if (marks[i].x < min) marks[i].x = min;
   }
   for (let i = marks.length - 1; i >= 0; i--) {
+    if (pinned(marks[i])) continue;
     const max = i === marks.length - 1 ? width - marks[i].w / 2 : marks[i + 1].x - marks[i + 1].w / 2 - MARK_GAP - marks[i].w / 2;
     if (marks[i].x > max) marks[i].x = max;
   }
@@ -164,11 +172,13 @@ export function weekMarks(
   return layoutWeekMarks(results, regularWeekSlots(points.map((p) => p.x), weekStartIdx), width, fontScale);
 }
 
-/** Do any two marks overlap (or touch closer than MARK_GAP), or leave [0, width]? For the tests. */
+/** Do any two marks overlap (or touch closer than MARK_GAP), or leave [0, width] (the live dot
+ * excepted)? For the tests. */
 export function marksCollide(marks: WeekMark[], width: number): boolean {
   for (let i = 0; i < marks.length; i++) {
     const m = marks[i];
-    if (m.x - m.w / 2 < -0.001 || m.x + m.w / 2 > width + 0.001) return true;
+    // The live dot may pass the gutter (it sits under the end dot); nothing else may.
+    if (m.glyph !== 'live' && (m.x - m.w / 2 < -0.001 || m.x + m.w / 2 > width + 0.001)) return true;
     if (i > 0) {
       const p = marks[i - 1];
       if (p.x + p.w / 2 + MARK_GAP > m.x - m.w / 2 + 0.001) return true;
@@ -260,16 +270,43 @@ export function chartLiveEnd(marketOpen: boolean, isPlayoff: boolean): boolean {
  * gate F1, 2026-10-12): the tabs belong to the chart, 8pt under it, while the 24pt block
  * gap sits between their underline and the next card. */
 export const TAB_TEXT_UNDER_MARKS = 8;
-/** How far the tabs row is pulled up over the chart's bottom edge so the labels sit
- * TAB_TEXT_UNDER_MARKS under the marks: the 8pt layout gap is between BOXES, and both
- * boxes carry empty space of their own (the chart's strip under the marks' glyphs, the
- * label's line leading). Measured from device pixels (capture pass): 24.3pt glyph to
- * glyph at standard text, 22.0pt at the 1.3x cap, so the pull is 16pt there, 14pt here,
- * and linear between. The tabs keep their 44pt hit area through hitSlop, not padding,
- * and draw after the chart, so the overlap never covers a mark. */
-export function rangeTabsPullUp(fontScale: number): number {
+/**
+ * Game Night (W4): Home's tabs are RangePills "tabs", whose every option is a 44pt box
+ * (§9B) with 4pt above the label and the 2 + 2pt underline under it, the content centred
+ * in what's left. The box's empty strip under the underline would add to the 24pt block
+ * gap, so HomeSeason takes it back with a negative bottom margin; the gap stays measured
+ * from the underline, as before. Callout is 18pt tall, capped at 1.3x for the tabs.
+ */
+export const RANGE_PILL_TAB = { minHeight: MIN_HIT, padTop: 4, under: 2 + RANGE_TAB_UNDERLINE, labelLine: 18 } as const;
+export function rangeTabsSlackBelow(fontScale: number): number {
   const s = Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE);
-  return Math.round(16 - ((s - 1) / (RANGE_TAB_MAX_FONT_SCALE - 1)) * 2);
+  const content = RANGE_PILL_TAB.padTop + RANGE_PILL_TAB.labelLine * s + RANGE_PILL_TAB.under;
+  return Math.max(0, Math.round((RANGE_PILL_TAB.minHeight - content) / 2));
+}
+
+/** How far the tabs row is pulled up over the chart's bottom edge so the labels sit
+ * TAB_TEXT_UNDER_MARKS under the glyphs above them: the 8pt layout gap is between BOXES,
+ * and the boxes carry empty space of their own (the strip under the axis glyphs, the
+ * label's leading, the RangePills box above the label). Game Night (W4): the two end dates
+ * sit under the marks, so the tabs measure from the DATES (their lowest pixel is a
+ * descender, the "p" of "Sep").
+ *
+ * The gap with NO pull is MEASURED from device pixels, row-wise, on both phones (W4 gate
+ * capture pass, README F1 row): 28.7pt at Large (fontScale 1) and 28.0pt at XL. It is
+ * linear between 1x and 1.3x and FLAT above, and that part is derived, not measured: every
+ * row above the tabs (the marks, the dates, the tab labels) caps at 1.3x
+ * (MARK_MAX_FONT_SCALE, the Chart's AXIS_MAX_SCALE, RANGE_TAB_MAX_FONT_SCALE; a test pins
+ * the three equal), so no row changes size past it. XL, XXL, XXXL all sit at the cap. */
+export const NO_PULL_GAP_1X = 28.7;
+export const NO_PULL_GAP_CAP = 28.0;
+
+export function noPullGap(fontScale: number): number {
+  const c = Math.min(Math.max(fontScale, 1), RANGE_TAB_MAX_FONT_SCALE);
+  return NO_PULL_GAP_1X + ((c - 1) / (RANGE_TAB_MAX_FONT_SCALE - 1)) * (NO_PULL_GAP_CAP - NO_PULL_GAP_1X);
+}
+
+export function rangeTabsPullUp(fontScale: number): number {
+  return Math.round(noPullGap(fontScale) - TAB_TEXT_UNDER_MARKS);
 }
 
 /** The axis marks show in the Season window only (the one with week ticks). */

@@ -8,12 +8,19 @@ import { assert, assertEquals } from 'jsr:@std/assert';
 import {
   weekMarks, regularWeekSlots, layoutWeekMarks, marksCollide, regularMarkResults, resultFromGains, seasonChartA11yLabel,
   rangeTabLook, rangeTabHitSlop, marksShownFor, chartLiveEnd, glyphWidth, pipFor, RANGE_TABS, MIN_HIT, BYE_MIN_SLOT, MARK_MAX_FONT_SCALE,
-  PIP_SIZE, PIP_RING_STROKE, rangeTabsPullUp, TAB_TEXT_UNDER_MARKS,
+  PIP_SIZE, PIP_RING_STROKE, rangeTabsPullUp, TAB_TEXT_UNDER_MARKS, rangeTabsSlackBelow, RANGE_PILL_TAB, NO_PULL_GAP_1X, NO_PULL_GAP_CAP, noPullGap, RANGE_TAB_MAX_FONT_SCALE,
   type WeekMarkInput,
 } from '../lib/home/weekMarks.ts';
 import { buildSeasonGainSeries, type SeasonWeekInput } from '../lib/home/seasonGainSeries.ts';
 import { buildChartGeometry } from '../lib/chart/chartGeometry.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
+
+// W4 gate capture pass (both phones, the README's F1 row): the dates' lowest pixel (a
+// descender) -> the tabs' highest pixel, row-wise, in points, with the tabs NOT pulled up;
+// Large text, and XL (accessibility-extra-large), where every row above the tabs is at its
+// 1.3x cap. (XL measured 5.0pt with the 23pt pull then in place: 5.0 + 23 = 28.0.)
+const MEASURED_NO_PULL_1X = 28.7;
+const MEASURED_NO_PULL_CAP = 28.0;
 
 /** A built season of `n` scored weeks (plus an optional live week), laid out on a `width` chart the way SeasonChart does. */
 function season(n: number, width: number, opts: { liveDays?: number } = {}) {
@@ -199,9 +206,11 @@ Deno.test("B′: the line's end is the static dot in the playoffs; it pulses onl
   const block = SOURCES['components/home/HomeSeason.tsx'];
   assert(block.includes('const live = chartLiveEnd(marketOpen, isPlayoff);'));
   assert(block.includes('live={live}'));
-  const chart = SOURCES['components/home/SeasonChart.tsx'];
-  assert(chart.includes('{endpoint && !scrubPoint && !live ? ('));
-  assert(chart.includes('{endpoint && !scrubPoint && live ? ('));
+  // W4: Home's chart is the gn <Chart>: the static dot + halo when not live, LiveDot when live.
+  assert(SOURCES['components/home/SeasonChart.tsx'].includes('live={live}'));
+  const chart = SOURCES['components/sp/gn/Chart.tsx'];
+  assert(chart.includes('{endVisible && !live ? ('));
+  assert(chart.includes('{endVisible && live ? ('));
   assert(SOURCES['app/(tabs)/index.tsx'].includes("isPlayoff={'isPlayoff' in phase && !!phase.isPlayoff}"));
 });
 
@@ -216,22 +225,32 @@ Deno.test('the chart label lists the results (the spec\'s own example); a bye re
 
 // ── Scrub, height, wiring ──────────────────────────────────────────────────
 
-Deno.test("the scrub underlines the scrubbed week's mark (2pt accent), and the label is unchanged", () => {
+Deno.test("the scrub underlines the scrubbed week's mark (2pt accent); the label names the date (§9C)", () => {
   const chart = SOURCES['components/home/SeasonChart.tsx'];
-  assert(chart.includes('const scrubbedWeek = scrubValue ? scrubValue.week : null;'));
-  assert(chart.includes('{scrubbedWeek === m.week ? <View style={[styles.markUnderline, {'));
-  assert(chart.includes('backgroundColor: colors.accent'));
+  // The gn Chart reports the scrubbed index; Home turns it into the week whose mark it underlines.
+  assert(chart.includes('onScrubIndex={(i) => setScrubbedWeek(i != null ? points[i]?.week ?? null : null)}'));
+  assert(chart.includes("backgroundColor: scrubbedWeek === m.week ? colors.accent : 'transparent'"));
   assert(/markUnderline:\s*\{\s*height: 2,/.test(chart));
-  assert(chart.includes('seasonScrubLabel(scrubValue, scrubIndex > 0 ? points[scrubIndex - 1].gain : null)'));
+  assert(SOURCES['components/sp/gn/Chart.tsx'].includes('useChartScrub(width > 0 ? geometry : null, reduced, onScrubIndex)'));
+  // §9C Scrub: "the scrub label names the point's date or day" — "Oct 6 · +$41.26".
+  assert(SOURCES['components/sp/gn/Chart.tsx'].includes('`${pointName(axis, scrubbed.t)} · ${formatValue(scrubbed.value)}`'));
+  assert(chart.includes("formatValue={(v) => formatMoney(v, { sign: 'always' })}"));
 });
 
-Deno.test('the chart is 124pt on Home (the axis row inside it), 148 by default; marks only in the Season window', () => {
+Deno.test('the season axis: dated, first point → last point (today), two labels, under the marks', () => {
   const chart = SOURCES['components/home/SeasonChart.tsx'];
-  assert(chart.includes('const DEFAULT_HEIGHT = 148;'));
-  assert(chart.includes('height: HEIGHT = DEFAULT_HEIGHT'));
-  assert(SOURCES['lib/home/calmHome.ts'].includes('export const HOME_CHART_HEIGHT = 124;'));
+  assert(chart.includes("return { kind: 'dated', start, end, maxLabels: 2 };"));
+  assert(chart.includes('underPlacement="beforeAxis"'));
+  assert(chart.includes('line = points.map((p) => ({ t: dayOffset(start, day(p.date)), value: p.gain }))'));
+});
+
+Deno.test('the plot is 108pt on Home (marks and dates add below, ~142 in all, the board\'s Line); marks only in the Season window', () => {
+  const chart = SOURCES['components/home/SeasonChart.tsx'];
+  assert(SOURCES['lib/home/calmHome.ts'].includes('export const HOME_CHART_HEIGHT = 108;'));
   const block = SOURCES['components/home/HomeSeason.tsx'];
   assert(block.includes('height={HOME_CHART_HEIGHT}'));
+  // Edge to edge (§9C Chart): the line bleeds past the 20pt gutter.
+  assert(block.includes('bleed={space[6]}'));
   assert(block.includes('markResults={marksShownFor(window) ? results : undefined}'));
   assertEquals([marksShownFor('Season'), marksShownFor('1W'), marksShownFor('1M')], [true, false, false]);
   // The marks follow Dynamic Type, capped at 1.3x, ExtraBold.
@@ -253,45 +272,52 @@ Deno.test('range tabs: every hit area is at least 44 × 44, and neighbours never
     assert(h + slop.top + slop.bottom >= MIN_HIT, `height ${h}`);
     assert(slop.top >= 0 && slop.bottom >= 0);
   }
+  // W4: Home's tabs are the Game Night RangePills ("tabs"): each option a 44 × 44 box of its own.
   const block = SOURCES['components/home/HomeSeason.tsx'];
-  // Width from the tab's own box (minWidth), never a horizontal hitSlop that would overlap the next tab.
-  assert(/tab:\s*\{\s*minWidth: MIN_HIT,/.test(block));
-  assert(block.includes('hitSlop={hitSlop}'));
-  assert(block.includes('accessibilityRole="tab"'));
-  assert(block.includes('accessibilityState={{ selected }}'));
+  assert(block.includes('<RangePills options={RANGE_OPTIONS} value={window} onChange={setWindow} variant="tabs" />'));
+  const pills = SOURCES['components/sp/gn/RangePills.tsx'];
+  assert(/option:\s*\{\s*minHeight: 44,/.test(pills));
+  assert(/tab:\s*\{\s*minWidth: 44,/.test(pills));
+  assert(pills.includes('accessibilityRole="tab"'));
+  assert(pills.includes('accessibilityState={{ selected }}'));
   assert(!block.includes('SegmentedControl'));
 });
 
 // ── F1 (Design Lead gate, 2026-10-12): the range tabs belong to the chart ──────
 
-Deno.test('F1: the tab labels sit 8pt (±2) under the marks; the 24pt block gap sits under the tabs', () => {
+Deno.test('F1: the tab labels sit 8pt (±2) under the date labels; the 24pt block gap sits under the tabs', () => {
   assertEquals(TAB_TEXT_UNDER_MARKS, 8);
-  // Device pixels before the fix (capture pass): marks' glyph bottom -> tab glyph top was
-  // 24.3pt at standard text and 22.0pt at the 1.3x cap. The pull-up takes each to ~8.
-  const before = [[1, 24.3], [1.3, 22.0], [3, 22.0]] as const;
-  for (const [scale, gap] of before) {
+  // The constants are the README's F1 measurements (the dates' lowest pixel -> the tabs'
+  // highest, no pull), at Large and at XL.
+  assertEquals([NO_PULL_GAP_1X, NO_PULL_GAP_CAP], [MEASURED_NO_PULL_1X, MEASURED_NO_PULL_CAP]);
+  assertEquals([noPullGap(1), noPullGap(1.3)], [MEASURED_NO_PULL_1X, MEASURED_NO_PULL_CAP]);
+  // The flat part is derived: every row above the tabs caps at the same 1.3x, so nothing
+  // above them changes size past it.
+  const chart = SOURCES['components/sp/gn/Chart.tsx'];
+  assert(chart.includes('export const AXIS_MAX_SCALE = 1.3;'));
+  assertEquals([MARK_MAX_FONT_SCALE, RANGE_TAB_MAX_FONT_SCALE], [1.3, 1.3]);
+  assert(SOURCES['components/sp/gn/RangePills.tsx'].includes('const LABEL_MAX_SCALE = 1.3;'));
+  for (const [scale, gap] of [[1, MEASURED_NO_PULL_1X], [1.3, MEASURED_NO_PULL_CAP], [2.35, MEASURED_NO_PULL_CAP]] as const) {
     const after = gap - rangeTabsPullUp(scale);
     assert(Math.abs(after - TAB_TEXT_UNDER_MARKS) <= 2, `${scale}x: ${after}pt`);
   }
-  assertEquals([rangeTabsPullUp(1), rangeTabsPullUp(1.3), rangeTabsPullUp(3)], [16, 14, 14]);
+  // Every row above the tabs caps at 1.3x (marks, dates, tabs), so the pull is flat above it.
+  assertEquals(rangeTabsPullUp(1.3), rangeTabsPullUp(2.35));
+  assertEquals(rangeTabsPullUp(3.12), rangeTabsPullUp(1.3));
   // Wiring: the row is pulled up by exactly that, and draws after the chart (on top of its strip).
   const block = SOURCES['components/home/HomeSeason.tsx'];
-  assert(block.includes('<View style={[styles.tabs, { marginTop: -rangeTabsPullUp(fontScale) }]} accessibilityRole="tablist">'));
+  assert(block.includes('<View style={{ marginTop: -rangeTabsPullUp(fontScale), marginBottom: -rangeTabsSlackBelow(fontScale) }}>'));
   assert(block.indexOf('<SeasonChart') < block.indexOf('marginTop: -rangeTabsPullUp(fontScale)'));
   // The block gap stays on the wrapper (24pt), never on the tabs.
   assert(SOURCES['app/(tabs)/index.tsx'].includes("style={{ gap: space[7] }}"));
 });
 
-Deno.test('F1: the 44pt hit area comes from hitSlop, never visible padding', () => {
-  const block = SOURCES['components/home/HomeSeason.tsx'];
-  const tab = block.match(/ {2}tab: \{([^}]*)\}/)![1];
-  // Only the underline's own 2pt of air above the label; no vertical padding or minHeight.
-  assert(tab.includes('paddingTop: RANGE_TAB_UNDERLINE,'));
-  for (const banned of ['paddingVertical', 'paddingBottom', 'minHeight', 'height:']) assert(!tab.includes(banned), banned);
-  // The row is the label's height; hitSlop grows each tab to MIN_HIT tall at every scale.
-  for (const scale of [1, 1.3]) {
-    const content = 18 * scale + 2 * 2;
-    const slop = rangeTabHitSlop(content);
-    assert(content + slop.top + slop.bottom >= MIN_HIT);
-  }
+Deno.test('F1: the tabs keep their 44pt boxes, and the strip under the underline is taken back from the block gap', () => {
+  // RangePills: 4pt above the label, the 2 + 2pt underline under it, centred in a 44pt box.
+  const pills = SOURCES['components/sp/gn/RangePills.tsx'];
+  assert(/tab:\s*\{\s*minWidth: 44,\s*paddingTop: space\[2\],/.test(pills));
+  assert(/underline:\s*\{\s*marginTop: space\[1\],/.test(pills));
+  assertEquals(RANGE_PILL_TAB, { minHeight: 44, padTop: 4, under: 4, labelLine: 18 });
+  // Standard text: 44 − (4 + 18 + 4) = 18, so 9 below; at the 1.3x cap 44 − 31.4 = 12.6, so 6.
+  assertEquals([rangeTabsSlackBelow(1), rangeTabsSlackBelow(1.3), rangeTabsSlackBelow(3)], [9, 6, 6]);
 });

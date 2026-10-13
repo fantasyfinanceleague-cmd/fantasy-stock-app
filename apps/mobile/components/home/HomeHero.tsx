@@ -12,8 +12,9 @@ import { formatMoney, formatPercent, isZeroMoney } from '@/components/sp/logic/m
 import { RollingMoney } from '@/components/home/RollingMoney';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, heroAccessibilityLabel, heroUnpricedCaption } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
+import { heroMetaLine } from '@/lib/home/calmHome';
 
-// Stockpile — <HomeHero> (Phase 3b-2, D1 Concept A). The big number is
+// Stockpile — <HomeHero> (Phase 3b-2, D1 Concept A; Game Night, W4). The big number is
 // team VALUE; the line under it is the scored season gain plus today's
 // live change, labelled "season gain" — never "since the draft" (that
 // label is Portfolio's alone, a different number: value − cost).
@@ -27,6 +28,10 @@ import { ordinal } from '@/lib/home/ordinal';
 // Zero is grey (never green/red) via Money/RollingMoney's caller passing
 // colors.zero explicitly when the value rounds to zero cents — matching
 // the app-wide "money flat" rule (§9A).
+//
+// Game Night (§9C, the board's HeroText): the value in `hero` (46/800, the screen's one
+// standout); the sub-line's numbers at 700 in their sign's colour, its words ("season
+// gain", "today") and the middle dot at 500 in `text2`; the meta line a `caption`.
 
 export interface HomeHeroProps {
   leagueId: string;
@@ -124,12 +129,12 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
             fits one line and lays out exactly as before. */}
         <Text variant="caption" tone="secondary" style={[styles.metaNum, styles.metaRight]}>
           {rank != null
-            ? `${ordinal(rank)} of ${totalPlayers} · ${record}${weekOrRound ? ` · ${weekOrRound}` : ''}`
+            ? heroMetaLine([`${ordinal(rank)} of ${totalPlayers}`, record, weekOrRound])
             // Pre-season (rank null, board: "Week 1 of 14 · 0–0"): the
             // week/round leads, since there's no record worth leading
             // with yet -- the one case where this order differs from
             // every other state's "record · week" (Design Lead, B3).
-            : `${weekOrRound ?? ''}${weekOrRound && record ? ' · ' : ''}${record}`}
+            : heroMetaLine([weekOrRound, record])}
         </Text>
       </View>
 
@@ -139,23 +144,24 @@ export function HomeHero({ leagueId, rank, totalPlayers, record, weekOrRound, va
           RollingMoney renders one Text per character, so VoiceOver could
           land on a single digit of the value or the gain. */}
       <View accessible accessibilityLabel={a11yLabel} style={styles.heroBody}>
-        <RollingMoney text={valueText} size="score.xl" rollKey={leagueId} />
+        {/* §9C: the team value is the one standout, `hero` 46/800 (the board's HeroText). */}
+        <RollingMoney text={valueText} size="hero" rollKey={leagueId} />
 
         {preSeasonLabel != null ? (
           <View style={styles.gainRow}>
-            <RollingMoney text={formatMoney(0, { sign: 'always' })} size="callout" color={colors.zero} rollKey={leagueId} />
+            <RollingMoney text={formatMoney(0, { sign: 'always' })} size="callout" color={colors.zero} rollKey={leagueId} fontWeight="700" />
             <Text variant="callout" tone="secondary"> · {preSeasonLabel}</Text>
           </View>
         ) : (
           <View style={styles.gainRow}>
-            <RollingMoney text={gainDollarsText} size="callout" color={gainColor} rollKey={leagueId} />
-            <Text variant="callout" style={{ color: gainColor }}> · </Text>
-            <RollingMoney text={gainPctText} size="callout" color={gainColor} rollKey={leagueId} />
+            <RollingMoney text={gainDollarsText} size="callout" color={gainColor} rollKey={leagueId} fontWeight="700" />
+            <Text variant="callout" style={{ color: gainColor, fontWeight: '700' }}> · </Text>
+            <RollingMoney text={gainPctText} size="callout" color={gainColor} rollKey={leagueId} fontWeight="700" />
             <Text variant="callout" tone="secondary"> {HERO_SEASON_GAIN_LABEL}</Text>
             {todayText ? (
               <>
                 <Text variant="callout" tone="secondary"> · </Text>
-                <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} />
+                <RollingMoney text={todayText} size="callout" color={todayColor} rollKey={leagueId} fontWeight="700" />
                 <Text variant="callout" tone="secondary"> {HERO_TODAY_LABEL}</Text>
               </>
             ) : null}

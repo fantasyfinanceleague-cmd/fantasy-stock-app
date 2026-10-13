@@ -233,6 +233,8 @@ function HomeBody({
   // named the WRONG opponent during the Fri-close -> next-open grace
   // period, when the card is about last week's (already-different)
   // matchup.
+  // Your avatar's initials on the This week card (it says "You").
+  const youName = myRow?.displayName || undefined;
   const opponentName = thisWeek?.opponentUserId
     ? standings.find((s) => s.user_id === thisWeek.opponentUserId)?.display_name ?? 'Opponent'
     : 'Opponent';
@@ -254,6 +256,7 @@ function HomeBody({
         you={{ gain: thisWeek?.you.gain ?? 0, pct: 0 }}
         opponent={{ gain: thisWeek?.opponent.gain ?? 0, pct: 0 }}
         opponentName={opponentName}
+        youName={youName}
         rightLabel=""
         tag={PRE_SEASON_TAG}
         liveChipLabel={PRE_SEASON_CHIP}
@@ -284,6 +287,7 @@ function HomeBody({
         you={{ gain: 0, pct: 0 }}
         opponent={{ gain: 0, pct: 0 }}
         opponentName={opponentName}
+        youName={youName}
         rightLabel=""
         tag={phase.round ?? THIS_WEEK_TAG}
         scoring
@@ -293,7 +297,7 @@ function HomeBody({
   } else if (thisWeek) {
     if (phase.kind === 'scoring') {
       middleCard = (
-        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} rightLabel="" liveChipLabel={chrome.liveChipLabel} tag={chrome.tag} scoring />
+        <ThisWeekCard week={week} isLive={false} you={thisWeek.you} opponent={thisWeek.opponent} opponentName={opponentName} youName={youName} rightLabel="" liveChipLabel={chrome.liveChipLabel} tag={chrome.tag} scoring />
       );
     } else if (phase.kind === 'scored') {
       // `thisWeek.won` — the AUTHORITATIVE result from the pure phase
@@ -308,6 +312,7 @@ function HomeBody({
           you={thisWeek.you}
           opponent={thisWeek.opponent}
           opponentName={opponentName}
+          youName={youName}
           rightLabel={'nextStart' in phase ? nextWeekStartsLabel(week + 1, phase.nextStart) : ''}
           liveChipLabel={chrome.liveChipLabel}
           tag={chrome.tag}
@@ -322,6 +327,7 @@ function HomeBody({
           you={thisWeek.you}
           opponent={thisWeek.opponent}
           opponentName={opponentName}
+          youName={youName}
           rightLabel={chrome.rightLabel}
           leadSuffix={chrome.leadSuffix}
           liveChipLabel={chrome.liveChipLabel}
@@ -451,7 +457,7 @@ export default function HomeScreen() {
       <ShellHeader title="Home" showAvatar />
       <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
         {/* 24pt between Home's blocks (a calm Home, 2026-10-12), on the wrapper that holds
-            them (PR #217). Never compressed to win back the 17e's fold. */}
+            them (PR 217). Never compressed to win back the 17e's fold. */}
         <HomeLeagueTransition key={activeLeagueId ?? 'none'} style={{ gap: space[7] }}>
           <HomeBody status={status} viewModel={viewModel} league={activeLeague} leagueId={activeLeagueId} onRefresh={refresh} skipEntrance={skipEntrance} />
         </HomeLeagueTransition>

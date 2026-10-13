@@ -273,3 +273,12 @@ const dark: ThemeColors = {
 
 export const color = { light, dark };
 export type ThemeMode = keyof typeof color;
+
+/** The same colour at alpha 0: a gradient that fades a token out ends on THIS, never on
+ * 'transparent' (which is black at alpha 0 on iOS, so the fade passes through grey or
+ * khaki; Design Lead, W4 gate, 2026-10-13, on the champion's gold wash). Hex tokens only. */
+export function clearOf(hex: string): string {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h.slice(0, 6), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0)`;
+}

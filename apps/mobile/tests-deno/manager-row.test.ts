@@ -34,7 +34,9 @@ Deno.test('every manager list marks you with the shared row (source guards)', ()
     for (const n of needles) assert(src.includes(n), `${path}: ${n}`);
   };
   uses('components/game/StandingsTable.tsx', 'yourRowTint(r.isYou, colors.youTint, 0)', 'style={yourNameStyle(r.isYou)}', '${r.name}${youA11y(r.isYou)}');
-  uses('components/home/StandingsCard.tsx', 'yourNameStyle(r.isYou)', 'r.isYou ? colors.youTint', '${youA11y(r.isYou)}');
+  // Home's excerpt is the Game Night ManagerRow (W4), which carries all three itself.
+  uses('components/home/StandingsCard.tsx', '<ManagerRow excerpt rank={r.rank} name={r.displayName} isYou={r.isYou}');
+  uses('components/sp/gn/ManagerRow.tsx', 'yourNameStyle(isYou)', 'backgroundColor: colors.youTint', '${youA11y(isYou)}');
   uses('components/game/HistoryList.tsx', "yourRowTint(st.user_id === myUserId, colors.youTint)", 'yourNameStyle(st.user_id === myUserId)', 'youA11y(st.user_id === myUserId)');
   uses('components/game/DraftLobby.tsx', 'yourRowTint(id === myUserId, colors.youTint)', 'yourNameStyle(id === myUserId)', 'youA11y(id === myUserId)');
   // Where bold already means something (the winner; "Running back"), the tint alone marks you.

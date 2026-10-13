@@ -53,13 +53,33 @@ export interface ChartProps {
   formatValue: (value: number) => string;
   /** What the chart is ("NVDA this week"); the range and the last value follow it. */
   accessibilityLabel: string;
-  /** A row the Chart lays out but doesn't own: Home's W/L marks. */
-  under?: ReactNode;
+  /** A row the Chart lays out but doesn't own: Home's W/L marks. A function receives the
+   * line's points in the row's own coordinates (the gutter is x = 0, so a mark centred
+   * under a point lines up with it) and the row's width, plus the scrubbed point. */
+  under?: ReactNode | ((row: UnderRow) => ReactNode);
   /** Where `under` sits. 'beforeAxis' puts it between the plot and the axis labels: Home's
    * season chart as the board draws it (directions.jsx Line: the marks at h−22, the two end
    * dates — `axis.maxLabels: 2` — at h−3, under the marks). 'afterAxis' (the default) puts
    * it below the labels. */
   underPlacement?: 'beforeAxis' | 'afterAxis';
+  /** The `under` row's height, reserved before the chart has a width, so nothing below the
+   * chart moves when the row mounts on the first layout (W4 gate: the tabs dropped ~19pt). */
+  underHeight?: number;
+  /** H5 (Home): this mount is a league switch, not the first open — the line shows drawn,
+   * with no draw-in to replay. A later `drawKey` change still draws in. */
+  skipEntrance?: boolean;
+  /** The scrubbed point's index (null when the scrub ends), for a caller's own marks. */
+  onScrubIndex?: (index: number | null) => void;
+}
+
+/** What a function `under` is handed (see ChartProps.under). */
+export interface UnderRow {
+  /** Each point's x, in the under row's coordinates (the gutter at 0); the last is the end
+   * dot's own (clamped) x. */
+  xs: number[];
+  /** The under row's width (the chart's, less the bleed on both sides). */
+  width: number;
+  scrubIndex: number | null;
 }
 
 const STROKE = 2.5;
@@ -70,11 +90,15 @@ const PAD = { top: HALO_R + 3, bottom: HALO_R, left: 2, right: HALO_R + 3 };
 const SCRUB_HALF = 40;
 // A centred label's box is widened this much on each side, so a wide glyph never truncates it.
 const LABEL_SLACK = 12;
+/** The axis labels follow Dynamic Type up to 1.3x, like the W/L marks and the range tabs
+ * (Design Lead, W4 gate, 2026-10-13: uncapped, XL dates outgrew everything around them). */
+export const AXIS_MAX_SCALE = 1.3;
 
-export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under, underPlacement = 'afterAxis' }: ChartProps) {
+export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under, underPlacement = 'afterAxis', underHeight, skipEntrance = false, onScrubIndex }: ChartProps) {
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
-  const { fontScale } = useWindowDimensions();
+  const { fontScale: deviceScale } = useWindowDimensions();
+  const fontScale = Math.min(deviceScale, AXIS_MAX_SCALE);
   const [width, setWidth] = useState(0);
 
   const geometry = buildLine(points, axisDomain(axis), base, {
@@ -83,10 +107,10 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
   const tone = lineTone(points, base);
   const lineColor = colors[tone];
 
-  const progress = useDrawIn({ key: drawKey, lineLength: geometry.length, reduced, durationMs: duration.feature });
+  const progress = useDrawIn({ key: drawKey, lineLength: geometry.length, reduced, durationMs: duration.feature, skipFirst: skipEntrance });
   const path = progress >= 1 || geometry.length === 0 ? geometry.path : partialLinePath(geometry.points, progress, geometry.length);
 
-  const { scrubIndex, pan, setScrubIndex } = useChartScrub(width > 0 ? geometry : null, reduced);
+  const { scrubIndex, pan, setScrubIndex } = useChartScrub(width > 0 ? geometry : null, reduced, onScrubIndex);
   const scrubbed = scrubIndex != null ? points[scrubIndex] : null;
   const scrubPx = scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubText = scrubbed ? `${pointName(axis, scrubbed.t)} · ${formatValue(scrubbed.value)}` : null;
@@ -104,6 +128,11 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
   // A 0/1-point line has no length to draw in (useDrawIn waits for one), so its dot shows at once.
   const drawn = progress >= 1 || geometry.length === 0;
   const endVisible = end && drawn && !scrubPx;
+  const underNode = typeof under === 'function'
+    // The last x is the END DOT's (clamped so its halo stays on screen), so a mark placed
+    // under the line's end sits under the dot itself.
+    ? (width > 0 ? under({ xs: geometry.points.map((p, i) => (i === geometry.points.length - 1 && end ? end.x : p.x) - bleed), width: inner, scrubIndex }) : <View style={{ height: underHeight ?? 0 }} />)
+    : under;
 
   function step(dir: 1 | -1) {
     if (!points.length) return;
@@ -160,7 +189,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
       ) : (
         <View style={{ height }} />
       )}
-      {under && underPlacement === 'beforeAxis' ? <View testID="chart-under-before-axis" style={[styles.underBefore, { marginHorizontal: bleed }]}>{under}</View> : null}
+      {under && underPlacement === 'beforeAxis' ? <View testID="chart-under-before-axis" style={[styles.underBefore, { marginHorizontal: bleed }]}>{underNode}</View> : null}
       <View style={[styles.axis, underPlacement === 'beforeAxis' && under ? styles.axisAfterUnder : null, { height: AXIS_LINE_HEIGHT * fontScale + 2 }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         {labels.map((l) => (
           // Anchored by the aligned edge, never given the estimated width, so a glyph wider
@@ -170,6 +199,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
             variant="caption"
             tone="secondary"
             numberOfLines={1}
+            maxFontSizeMultiplier={AXIS_MAX_SCALE}
             style={[
               styles.label,
               l.align === 'left' ? { left: l.left + bleed }
@@ -181,7 +211,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
           </Text>
         ))}
       </View>
-      {under && underPlacement === 'afterAxis' ? <View style={{ marginHorizontal: bleed }}>{under}</View> : null}
+      {under && underPlacement === 'afterAxis' ? <View style={{ marginHorizontal: bleed }}>{underNode}</View> : null}
     </View>
   );
 }

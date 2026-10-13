@@ -6,9 +6,11 @@
  * touch (24pt between blocks); one primary action per screen.
  */
 
-/** The season chart's height on Home (includes the axis-mark row). Never compressed to
- * win back the 17e's fold (the spec's ruling), nor is the 24pt block gap (index.tsx). */
-export const HOME_CHART_HEIGHT = 124;
+/** The season chart's PLOT height on Home (Game Night, W4): the W/L marks and the two
+ * end dates add their rows under it, so the whole chart is about 142pt, the board's
+ * Line(h 142). Never compressed to win back the 17e's fold (the spec's ruling), nor is
+ * the 24pt block gap (index.tsx). */
+export const HOME_CHART_HEIGHT = 108;
 
 // ── Tap through ────────────────────────────────────────────────────────────
 /** This week opens Matchup, in every state the card shows. */
@@ -98,4 +100,23 @@ export function preDraftBlocks(f: PreDraftFlags): PreDraftBlock[] {
 /** The draft card's chip: only "Postponed" is left (the "Pre-draft" chip went). */
 export function preDraftChipShown(postponed: boolean): boolean {
   return postponed;
+}
+
+/** "Through Week N" names the last completed week; in Week 1 there is none yet (N = 0), so the
+ * label is hidden (no new copy); the chevron and the card still open Standings (W4 gate). */
+export function throughWeekShown(throughWeek: number): boolean {
+  return throughWeek > 0;
+}
+
+// ── The hero's meta line ───────────────────────────────────────────────────
+const NBSP = ' ';
+/** "2nd of 6 · 4–1 · Week 6 of 14", wrapping only BETWEEN segments at large text: each
+ * segment's own spaces are non-breaking ("Week 6 of 14" stays together) and each " · "
+ * keeps its dot with the segment before it (Design Lead, W4 gate P3, 2026-10-13). Empty
+ * segments drop out with their separator. */
+export function heroMetaLine(segments: (string | null | undefined)[]): string {
+  return segments
+    .filter((s): s is string => !!s)
+    .map((s) => s.replace(/ /g, NBSP))
+    .join(`${NBSP}· `);
 }

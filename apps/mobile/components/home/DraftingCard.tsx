@@ -2,12 +2,13 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { LiveDot } from '@/components/sp/game/LiveDot';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { chipLook } from '@/components/sp/logic/gameNight';
 import { useDraftingData } from '@/lib/home/useDraftingData';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
 import { currentPickerFor, picksUntilTurn } from '@/lib/home/draftTurn';
@@ -22,6 +23,9 @@ import {
 // just "should I go to the draft room right now", not to BE the draft
 // room. The fetch itself (and its DEV-ONLY fixture seam) lives in
 // useDraftingData, not here — Design Lead ruling, 2026-09-30.
+//
+// Game Night (§9C, W4): the rimmed card, the live chip, "You're on the clock" in the live
+// colour (cyan / teal: your turn), Go to the draft room as the one primary.
 
 export interface DraftingCardProps {
   leagueId: string;
@@ -32,6 +36,8 @@ export interface DraftingCardProps {
 export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProps) {
   const { colors } = useTheme();
   const { clock, order, myPicks } = useDraftingData(leagueId, myUserId);
+  // §9C Chip: the draft is live, so the accent chip (`accentTint` + `liveText`) with its dot.
+  const chip = chipLook('live', colors);
 
   if (!clock || !order) {
     return (
@@ -53,9 +59,9 @@ export function DraftingCard({ leagueId, myUserId, numRounds }: DraftingCardProp
       <Card style={styles.card}>
         <View style={styles.header}>
           <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_TAG}</Text>
-          <View style={[styles.chip, { backgroundColor: colors.inset }]}>
+          <View style={[styles.chip, { backgroundColor: chip.fill }]}>
             <LiveDot size={7} />
-            <Text variant="tag" style={{ color: colors.liveText }}>{DRAFTING_CHIP}</Text>
+            <Text variant="tag" style={{ color: chip.ink }}>{DRAFTING_CHIP}</Text>
           </View>
         </View>
 
@@ -88,7 +94,7 @@ const styles = StyleSheet.create({
   card: {
     padding: space[6],
     gap: space[3],
-    borderRadius: 14,
+    borderRadius: radius.lg,
   },
   header: {
     flexDirection: 'row',
@@ -99,8 +105,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[2],
-    paddingHorizontal: space[3],
+    minHeight: 24,
+    paddingHorizontal: space[4],
     paddingVertical: space[2],
-    borderRadius: 999,
+    borderRadius: radius.pill,
   },
 });

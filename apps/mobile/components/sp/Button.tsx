@@ -4,12 +4,12 @@ import { ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-import { radius, space } from '@/constants/tokens';
+import { space } from '@/constants/tokens';
 import { PressableScale, PressableScaleProps } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
-import { buttonStatusA11y, type ButtonStatus } from '@/components/sp/logic/buttonStatus';
+import { buttonRadius, buttonStatusA11y, type ButtonStatus } from '@/components/sp/logic/buttonStatus';
 
 export type { ButtonStatus } from '@/components/sp/logic/buttonStatus';
 
@@ -119,7 +119,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
           minHeight: MIN_HEIGHT[size],
           paddingHorizontal: PADDING_X[size],
           paddingVertical: PADDING_Y[size],
-          borderRadius: radius.md,
+          borderRadius: buttonRadius(variant),
           backgroundColor,
           borderWidth,
           borderColor,

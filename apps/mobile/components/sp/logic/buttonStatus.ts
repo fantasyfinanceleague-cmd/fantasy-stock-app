@@ -26,3 +26,12 @@ export function buttonStatusA11y(label: string, status: ButtonStatus, disabled: 
       return { label, busy: false, pressable: !disabled };
   }
 }
+
+/** §9C (Design Lead, W4 gates, 2026-10-13): EVERY sp Button is a pill (radius 999) — primary,
+ * secondary, ghost, destructive, and the compact `sm` ("Share"). The board's `.dr-btn` and
+ * `.dr-btn--line` are both pills; shapes never mix. Full width where a screen asks for it.
+ * The value is constants/tokens/radius.ts's `pill`. */
+export const PILL_RADIUS = 999;
+export function buttonRadius(_variant: 'primary' | 'secondary' | 'ghost' | 'destructive'): number {
+  return PILL_RADIUS;
+}

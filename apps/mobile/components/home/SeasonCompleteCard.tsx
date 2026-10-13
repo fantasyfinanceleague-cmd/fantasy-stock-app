@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
+import { clearOf } from '@/constants/tokens/color';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { ListRow } from '@/components/sp/ListRow';
@@ -39,10 +40,14 @@ import { seasonCompletePlace } from '@/lib/game/finalStandings';
 // season predates #77, or genuinely inconsistent data) -- never a
 // half-filled tile mixing the two sources.
 //
-// A calm Home (2026-10-12): ONE card. The medallion block (a 60pt disc), a hairline,
-// the tiles, a hairline, then "See the final standings" as a row with a chevron. No
-// filled button: Run it back (commissioner) or the ask (member) is the screen's only
-// primary (lib/home/calmHome seasonOverPrimary).
+// A calm Home (2026-10-12): ONE card. The medallion block (a 60pt disc), the tiles, then
+// "See the final standings" as a row with a chevron. No filled button: Run it back
+// (commissioner) or the ask (member) is the screen's only primary (lib/home/calmHome
+// seasonOverPrimary).
+//
+// Game Night (§9C, W4): the rimmed card; the tiles on an `inset` panel (radius 14) instead
+// of between hairlines (rule 2); the champion's disc and wash in `medalGold` with its own
+// `onMedal` ink (rule 4); the headline at 28pt (`score.lg`).
 
 export interface SeasonCompleteCardProps {
   leagueId: string;
@@ -156,11 +161,15 @@ export function SeasonCompleteCard({
             live-gold wash or circle, so the color itself never implies
             a win that didn't happen. */}
         {/* The champion's gold wash fades out by the card's middle. */}
-        {isChampion ? <LinearGradient colors={[colors.liveGlow, 'transparent']} locations={[0, 0.5]} style={styles.wash} pointerEvents="none" /> : null}
+        {/* Game Night (W4): gold is `medalGold` now (§9C: "Medal disc, gold, season complete
+            only") — W3 made `live` the cyan accent, so the old live-gold wash would have read
+            as "live", not "champion". The wash is the gold at a low opacity, fading to the
+            same gold at alpha 0 (never the transparent keyword, which is black at 0: a grey fade). */}
+        {isChampion ? <LinearGradient colors={[colors.medalGold, clearOf(colors.medalGold)]} locations={[0, 0.5]} style={[styles.wash, styles.goldWash]} pointerEvents="none" /> : null}
         <View style={styles.medallionBlock}>
         {/* The medallion draws its own disc (§9B): a 30 pt glyph in a 60 pt disc, scaled with Dynamic Type. */}
         <Animated.View style={trophyStyle}>
-          <Icon name="trophy" size="medallion" tone="surface" discTone={isChampion ? 'live' : 'text2'} discPt={60} />
+          <Icon name="trophy" size="medallion" tone={isChampion ? 'onMedal' : 'surface'} discTone={isChampion ? 'medalGold' : 'text2'} discPt={60} />
         </Animated.View>
         <Text variant="tag" style={{ color: colors.liveText }}>
           {SEASON_COMPLETE_TITLE}
@@ -172,7 +181,7 @@ export function SeasonCompleteCard({
                 than its own subtitle. The title's cap now matches the subtitle's reach. */}
             {/* GS-4: a place is shown only once the playoff result proves it (never the regular-season rank). */}
             {headline !== null ? (
-              <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
+              <Text variant="score.lg" maxFontSizeMultiplier={2.4} style={styles.headline}>
                 {headline}
               </Text>
             ) : null}
@@ -180,7 +189,7 @@ export function SeasonCompleteCard({
           </>
         ) : (
           <>
-            <Text variant="score.md" maxFontSizeMultiplier={2.4} style={styles.headline}>
+            <Text variant="score.lg" maxFontSizeMultiplier={2.4} style={styles.headline}>
               {result?.champion_display_name ?? CHAMPION_LABEL}
             </Text>
             <Text variant="callout">{championAnnounceLine(leagueName)}</Text>
@@ -190,8 +199,9 @@ export function SeasonCompleteCard({
 
       {participated ? (
         <>
-          <View style={[styles.hairline, { backgroundColor: colors.line }]} />
-          <View style={styles.tilesGrid}>
+          {/* §9C rule 2: separation by surface, never by rules — the tiles sit on an `inset`
+              panel (the key-figures strip's look), not between hairlines. */}
+          <View style={[styles.tilesGrid, { backgroundColor: colors.inset }]}>
             <View style={styles.tile}>
               <Text variant="caption" tone="secondary">{core.seasonGainTitle}</Text>
               <Money value={core.seasonGain} size="headline" colorBySign sign="always" />
@@ -222,7 +232,6 @@ export function SeasonCompleteCard({
         </>
       ) : null}
 
-      <View style={[styles.hairline, { backgroundColor: colors.line }]} />
       <ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} divider={false} />
       {/* B4 (Design Lead gate, 2026-10-05): no "Start next season" here. The
        * start_new_league_season path is revoked, so a button for it is dead;
@@ -237,18 +246,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingBottom: space[2],
     gap: space[5],
-    borderRadius: 14,
+    borderRadius: radius.lg,
     overflow: 'hidden',
   },
   medallionBlock: {
     gap: space[2],
     alignItems: 'center',
   },
-  hairline: {
-    height: StyleSheet.hairlineWidth,
-  },
   wash: {
     ...StyleSheet.absoluteFillObject,
+  },
+  goldWash: {
+    opacity: 0.22,
   },
   headline: {
     textAlign: 'center',
@@ -257,8 +266,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space[5],
+    padding: space[4],
+    borderRadius: radius.lg,
   },
+  // Two across (a 2 × 2 grid of the four tiles) inside the inset panel; a tile too wide
+  // for its half (large text) takes the whole row.
   tile: {
+    flexBasis: '40%',
+    flexGrow: 1,
     minWidth: 130,
     gap: space[1],
   },

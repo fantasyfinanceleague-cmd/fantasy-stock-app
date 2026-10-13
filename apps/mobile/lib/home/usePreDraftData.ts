@@ -24,6 +24,7 @@ import { parseDraftOrder } from '@/lib/draftOrder';
 import { seamRpc } from '@/lib/game/seamCalls';
 import { HOME_FIXTURE } from './devFixture';
 import { FIXTURE_USER_ID } from '@/lib/shell/fixtureIds';
+import { scheduledFixtureStartMs } from '@/lib/game/autoStartFixture';
 
 export interface PreDraftMember {
   userId: string;
@@ -79,7 +80,10 @@ function fixturePreDraft(): PreDraftData {
       { userId: 'marco', displayName: 'Marco T.', isBot: false },
     ],
     loading: false,
-    finalizeAt: '2026-10-03T22:00:00.000Z', // Sat 6:00 PM ET, an hour before
+    // An hour before the 'scheduled' draft-start fixture's draft time (the server's
+    // contract, finalize = draft − 1h). It was a fixed Sat Oct 3 while the draft time is
+    // relative to now, so the card named two different days (W4 gate, 2026-10-13).
+    finalizeAt: new Date(scheduledFixtureStartMs(Date.now()) - 60 * 60 * 1000).toISOString(),
     memberCount: 6,
     minMembers: 4,
   };

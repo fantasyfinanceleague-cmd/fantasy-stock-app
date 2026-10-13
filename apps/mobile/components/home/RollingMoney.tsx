@@ -4,6 +4,7 @@ import { StyleSheet, Text as RNText, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { type, TypeVariant } from '@/constants/tokens';
+import { resolveFontFamily } from '@/components/sp/logic/fontWeight';
 import { digitDiff } from '@/components/sp/logic/digits';
 import { alignSelfFor, fitScale, transformOriginFor, type RollingMoneyAlign } from '@/components/sp/logic/fitScale';
 import { useMotion } from '@/components/sp/motion';
@@ -106,9 +107,12 @@ export interface RollingMoneyProps {
   /** Which edge the row shrinks toward when it doesn't fit. Default
    * 'left' — a normal left-aligned number. See the module doc. */
   align?: RollingMoneyAlign;
+  /** A weight other than the variant's own (Home's sub-line: the gains at 700 on a 500
+   * callout), resolved to the matching Archivo face as the sp Text does. */
+  fontWeight?: '500' | '600' | '700' | '800';
 }
 
-export function RollingMoney({ text, size, color, rollKey, align = 'left' }: RollingMoneyProps) {
+export function RollingMoney({ text, size, color, rollKey, align = 'left', fontWeight }: RollingMoneyProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
   const prevTextRef = useRef(text);
@@ -139,7 +143,7 @@ export function RollingMoney({ text, size, color, rollKey, align = 'left' }: Rol
             key={`${i}-${diff.length}-${rollKey}`}
             char={entry.char}
             changed={entry.changed}
-            fontFamily={typeStyle.fontFamily}
+            fontFamily={resolveFontFamily(typeStyle.fontFamily, fontWeight)}
             fontSize={typeStyle.fontSize}
             lineHeight={typeStyle.lineHeight}
             textColor={textColor}

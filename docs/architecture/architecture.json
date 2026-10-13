@@ -2,39 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "8641eedfb0d8b40f176faa77872f59f5955e7f86",
-    "commitShort": "8641eedf",
+    "commit": "7c1b5dfa202c56422b8ff72aaeb4cd4ca8b5a635",
+    "commitShort": "7c1b5dfa",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/gn-w4-matchup",
+    "branch": "feat/gn-w4-home",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/Scoreboard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/gameNight.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-night-primitives.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/matchup-calls.test.ts"
+        "path": "apps/mobile/tests-deno/w4-home-gate-fixes.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T08:34:03Z",
-    "sourceHash": "sha256:9dc794f1123dc586010694dfe2213ccf2011c63e3cff129839aaf49b8d371fa9",
+    "timestamp": "2026-10-13T17:04:42Z",
+    "sourceHash": "sha256:1827c950570fec00a36a3158ef363d8266c1277634296d30005e230839cc2c11",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 28.7,
-    "ageDays": 1.2,
+    "ageHours": 37.2,
+    "ageDays": 1.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -16654,7 +16642,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:639"
+        "apps/mobile/lib/home/useHomeLeague.ts:671"
       ]
     },
     {
@@ -16666,7 +16654,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:622"
+        "apps/mobile/lib/home/useHomeLeague.ts:654"
       ]
     },
     {
@@ -16678,7 +16666,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:595"
+        "apps/mobile/lib/home/useHomeLeague.ts:627"
       ]
     },
     {
@@ -16690,7 +16678,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_draft_order')",
       "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:106"
+        "apps/mobile/lib/home/usePreDraftData.ts:110"
       ],
       "via": [
         "seamRpc"
@@ -16705,7 +16693,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_league_display_names')",
       "callSites": [
-        "apps/mobile/lib/home/usePreDraftData.ts:107"
+        "apps/mobile/lib/home/usePreDraftData.ts:111"
       ],
       "via": [
         "seamRpc"
@@ -18676,7 +18664,7 @@
             "apps/mobile/components/TradeModal.tsx:134",
             "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:622",
+            "apps/mobile/lib/home/useHomeLeague.ts:654",
             "apps/mobile/lib/money/priceReads.ts:28",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -18739,7 +18727,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:639",
+            "apps/mobile/lib/home/useHomeLeague.ts:671",
             "apps/mobile/lib/money/priceReads.ts:40",
             "apps/mobile/lib/money/useStockChartData.ts:39",
             "apps/mobile/lib/useHistoricalPL.ts:65"
@@ -19747,8 +19735,8 @@
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:622 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:639 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:654 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:671 -> historical-bars",
       "apps/mobile/lib/money/priceReads.ts:28 -> quote",
       "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
       "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
@@ -19799,9 +19787,9 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:29 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:595 -> get_home_league",
-      "apps/mobile/lib/home/usePreDraftData.ts:106 -> get_draft_order (via seamRpc)",
-      "apps/mobile/lib/home/usePreDraftData.ts:107 -> get_league_display_names (via seamRpc)",
+      "apps/mobile/lib/home/useHomeLeague.ts:627 -> get_home_league",
+      "apps/mobile/lib/home/usePreDraftData.ts:110 -> get_draft_order (via seamRpc)",
+      "apps/mobile/lib/home/usePreDraftData.ts:111 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
       "apps/mobile/lib/money/usePortfolioLedger.ts:39 -> get_portfolio_ledger",

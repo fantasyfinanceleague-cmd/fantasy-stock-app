@@ -3,11 +3,13 @@ import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { space } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
+import { Avatar } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { chipLook } from '@/components/sp/logic/gameNight';
 import { usePreDraftData } from '@/lib/home/usePreDraftData';
 import { draftDateTimeLabel, orderSetLine } from '@/lib/home/draftCountdown';
 import { ordinal } from '@/lib/home/ordinal';
@@ -55,6 +57,10 @@ import { preDraftBlocks, preDraftChipShown, type PreDraftBlock } from '@/lib/hom
 // screen's one big number), then the date (callout 700); the "Pre-draft" chip went
 // ("Postponed" stays); the order line has no dot; the no-buying line is a centred
 // caption under the button, inside the draft card (lib/home/calmHome preDraftBlocks).
+//
+// Game Night (§9C, W4): rimmed cards; the countdown in `score.xl` (the one big number);
+// the managers' progress and your avatar in YOUR fill (`you`), the others on `inset`; the
+// invite code on a `sunken` well; the one primary is the accent pill (sp Button).
 
 export interface PreDraftCardProps {
   leagueId: string;
@@ -73,13 +79,6 @@ export interface PreDraftCardProps {
    * last reply lands; Build your queue, Members and the invite code stay (newcomers join
    * by code meanwhile). The counts card above carries the reason. */
   repliesPending?: boolean;
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? '';
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
-  return `${first}${last}`.toUpperCase();
 }
 
 export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, draftDate, numParticipants, repliesPending = false }: PreDraftCardProps) {
@@ -185,7 +184,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
             </Text>
             <View style={styles.progressRow} accessibilityLabel={`${memberCount} of ${minMembers} managers`}>
               {Array.from({ length: minMembers }, (_, i) => (
-                <View key={i} style={[styles.progressSeg, { backgroundColor: i < memberCount ? colors.youText : colors.track }]} />
+                <View key={i} style={[styles.progressSeg, { backgroundColor: i < memberCount ? colors.you : colors.track }]} />
               ))}
             </View>
             <Text variant="caption" style={styles.progressCaption}>
@@ -234,8 +233,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
             {view?.memberPostponed ? memberPostponedCopy(commissionerName, 'home').tag : PRE_DRAFT_TAG}
           </Text>
           {preDraftChipShown(postponed) ? (
-            <View style={[styles.chip, { backgroundColor: colors.inset }]}>
-              <Text variant="tag" tone="secondary">
+            <View style={[styles.chip, { backgroundColor: chipLook('default', colors).fill }]}>
+              <Text variant="tag" color={chipLook('default', colors).ink}>
                 Postponed
               </Text>
             </View>
@@ -255,11 +254,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
         <View style={styles.membersRow}>
           {/* S-3: you are marked by your own id and placed first, never "whoever the server listed first". */}
           {membersYouFirst(members, user?.id).map(({ member: m, isYou }) => (
-            <View key={m.userId} style={[styles.avatarCircle, { backgroundColor: isYou ? colors.youText : colors.inset }]}>
-              <Text variant="callout" style={{ color: isYou ? colors.surface : colors.text }}>
-                {initialsOf(m.displayName)}
-              </Text>
-            </View>
+            // §9C: yours on your fill (`you` + `onYou`), everyone else's on `inset` + `text`.
+            <Avatar key={m.userId} name={m.displayName} size={AVATAR} tone={isYou ? 'you' : 'neutral'} />
           ))}
           {overflow > 0 ? (
             <View style={[styles.avatarCircle, styles.avatarDashed, { borderColor: colors.borderStrong }]}>
@@ -293,11 +289,13 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   );
 }
 
+const AVATAR = 36;
+
 const styles = StyleSheet.create({
   card: {
     padding: space[6],
     gap: space[3],
-    borderRadius: 14,
+    borderRadius: radius.lg,
   },
   stack: {
     gap: space[3],
@@ -315,9 +313,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chip: {
-    paddingHorizontal: space[3],
+    minHeight: 24,
+    justifyContent: 'center',
+    paddingHorizontal: space[4],
     paddingVertical: space[2],
-    borderRadius: 999,
+    borderRadius: radius.pill,
   },
   countdown: {
     fontVariant: ['tabular-nums'],
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   orderWaiting: {
     padding: space[4],
-    borderRadius: 10,
+    borderRadius: radius.md,
     gap: space[2],
   },
   orderWaitingLine: {
@@ -361,9 +361,9 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   avatarCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 10,
+    borderRadius: radius.md,
     paddingHorizontal: space[4],
     paddingVertical: space[3],
   },
