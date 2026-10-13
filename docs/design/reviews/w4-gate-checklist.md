@@ -75,13 +75,17 @@ with the reason beside it**. A silent no-op is a P1.
 | No rule lines between rows | inspect the row stack in the capture at 1:1 | a divider line between list rows (separation is space, surface or your side's tint) |
 | Depth | Dark: page / card / inset are lightness steps, no shadows; Light: white cards with the rim on the tinted page, the sheet's shadow only | a drop shadow on Dark; a card without its rim |
 | Numbers | game numbers ExtraBold (800); the Portfolio value Medium (500); everything tabular | a condensed Black number in the app; proportional digits in a column |
-| Lines | edge to edge, stops at now, end dot in `live` with its halo, base line dashed; the 0-point and 1-point states captured (e.g. Monday before the first close, a stock bought today) | a blank frame, an axis or grid, a fill under a Game Night line |
+| Lines | edge to edge, stops at now, end dot in `live` with its halo, base line dashed; the 0-point and 1-point states captured (e.g. Monday before the first close, a stock bought today). A one-point line: the dot at the RIGHT end (now), the y-scale centred on the base so the dot sits above or below it by its move (W4 Matchup and Home gates) | a blank frame, an axis or grid, a fill under a Game Night line; a lone dot pinned to a corner or clipped at the plot's edge |
 | No sparklines on rows | Portfolio holdings, Matchup roster, watchlist, search rows | any small line on a row (the player card carries the lines) |
 | Draft tiles | `surface` tile, the 3pt category line at the bottom, label row (pick · 3-letter code) | a colour-filled tile ("a carbon copy of Sleeper"); a sample sector instead of the app's category |
 | Block rhythm | measured from pixels, glyph to glyph, in points (the existing gate step) | a flush stack; a gap off the token |
 | Uppercase in the string | grep the changed files for `textTransform` | any `textTransform` (React Native measures before the transform and can clip the last glyph; uppercase with `.toUpperCase()`, §9C Type) |
 | Shrink-to-fit floor | grep for `minimumFontScale` and check size × scale | any label that can shrink under 11pt; avatar initials under 11pt |
-| 11pt floor, 44pt targets, drawn icons, colour never the only code | §9B (text tabs need `minWidth: 44`, not only `hitSlop`) | §9B |
+| 11pt floor, 44pt targets, drawn icons, colour never the only code | §9B (text tabs need `minWidth: 44`, not only `hitSlop`; range tabs are equal-width, as wide as the widest label + 16, so they space evenly, with the underline under the LABEL) | §9B |
+| The standout stays loudest | at Large, XL and with the stress fixture, measure cap heights: the screen's standout number against every other text on the screen | any name, line, label or row figure rendering larger than the standout it belongs to. Shrink-to-fit numbers have no fixed size: cap the neighbour by the number's FITTED size (`stackedNameCap`), not by a flat multiplier. Known open case: at ≥ $1M and XL, Matchup's stacked row gains outgrow the scoreboard totals (W4 Matchup gate, P3), so check it at the League and Portfolio gates |
+| One button shape | every sp Button variant and size, side by side on one card | two shapes on one surface: every Button is a pill (§9C; W4 Home gate) |
+| Wrapping at XL | read every line that wraps at XL | a line starting with "·", a date or "Week 6 of 14" split across lines (non-breaking spaces keep each "·" with the segment before it) |
+| Labels that can read as nonsense | the label in its emptiest real state (Week 1, nothing scored, no close yet) | "Through Week 0", "Ordered by …" before any close: hide a label that has nothing to name (no new copy) |
 
 ## 6. Per screen: the states to capture and what to check
 
