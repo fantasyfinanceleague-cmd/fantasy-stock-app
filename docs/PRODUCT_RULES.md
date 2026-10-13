@@ -162,6 +162,27 @@ building anything, and don't reopen a rule without him.
   season line chart of that holding, how it was acquired (drafted, with pick and date and
   price; claimed off waivers, with date and price; bought, with date and price) and the
   rest of the ESPN-style overview.
+- **Redesign decisions, the consolidated list** (2026-10-12 evening; the Orchestrator's and
+  Design Lead's 14 open items, answered in one go):
+  - **Matchup shading = YOUR side, always**: "I was going more on the side of it's you. So
+    when it's you versus someone, it shades it so that it's clear. Not whoever's winning.
+    That's going to be able to be seen by the uh, the point total up top." (Option B; the
+    1.1.0 leader-follows shade is NOT kept.)
+  - Home's season chart X axis: two end-date labels (start and today). ("yeah")
+  - The player card's draft amount = the price per share ($290.10), not the total put in.
+  - For everything else he took the recommendations: "I'm going to go with your
+    recommendation there. Let's just go with your recommendations on the rest after that."
+    Namely: (4) categories: 10 hues plus a neutral Misc, short labels (Tech · Finance ·
+    Health · Energy · Autos · Retail · Food · Media · Industry · Property · Misc; new copy);
+    (5) the on-the-clock draft cell stays dark navy in Light, a single spotlight; (7) the
+    1.2.0 walkthrough tests only what survives the reskin (first-pick push with the app
+    closed, buzz/chime in-app, Run it back end to end); (8) the held post-1.1.0 drops
+    (`start_new_league_season`, I6/I2b) may be released now, with his explicit go at the
+    `db push` itself; (9) Matchup's "My matchup / All matchups" switch stays as navigation;
+    (10) the watchlist's Home hook is decided after the Home rebuild; (11) your-turn colour
+    = cyan; (12) the card's third figure = "Since the draft" ("Since Oct 2" for a later
+    buy); (13) the Portfolio chart with range pills: yes; (14) the owner's avatar beside
+    "Owned by": add; a weekly game log on the card: later.
 - **Lock everything down; nothing scrapable** (2026-10-08): "I don't want people to be able
   to scrape anything and the more secure and locked down this can be the better." Chosen over
   keeping the public stock-symbol list readable (option B): the symbols table becomes
