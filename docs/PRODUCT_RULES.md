@@ -108,6 +108,11 @@ building anything, and don't reopen a rule without him.
   job or is not shown (a control that can't act in the current state is hidden, or disabled
   with the reason beside it; never a silent no-op). Audited once the UI redesign lands
   (plan `plans/2026-10-12-visual-language-reset.md`, W8) and checked at every gate after.
+- **1.3 = the visual-language reset** (2026-10-12): "let's do the 1.3." The Game Night
+  redesign ships as 1.3 with every screen on the new skin in both themes, after Giorgio's
+  walkthrough in both themes; no 1.2.x with a partial reskin. The old direction's sections
+  (`DESIGN_DIRECTION.md` §1, §9, §9A) are superseded by the Game Night token spec ("Yes, on
+  point two"); §4, §5 and §9B stay.
 - **1.2.0 TestFlight** ships only when EVERY screen is on the new UI, after Giorgio's
   full walkthrough. Phone only (`supportsTablet: false`); iPad is a later project.
 - **Bots and the manual draft Start are testing tools only** (2026-10-06): bots exist "simply to simulate drafts" and "will get removed"; they're "not going to be a feature in the actual app". A real league always has real players, so never design product behaviour, copy or decisions around bot-only or one-real-player leagues. The manual Start is likewise "simply for testing purposes"; auto-start is the real feature. See **League size** under League lifecycle.
@@ -162,6 +167,33 @@ building anything, and don't reopen a rule without him.
   season line chart of that holding, how it was acquired (drafted, with pick and date and
   price; claimed off waivers, with date and price; bought, with date and price) and the
   rest of the ESPN-style overview.
+- **The stock player card, after the first mockups** (2026-10-12, Giorgio's review of the
+  Design Lead's frames):
+  - **Order like ESPN; acquisition at the bottom.** "I want the order of like the layout to be
+    like you're on ESPN Fantasy. So like the fact that it says like drafted and then like kind
+    of at the top, no, that should be at the bottom. It should say the date that you picked
+    them up, whether that be draft and then you say the, and then it shows the pick and the
+    amount that it was drafted at, or you show like the waiver wire, the date, and then …
+    the price." So the "How you got it" block is the LAST section of the card: the date,
+    then Draft (with the pick) or Waiver claim or Buy, then the price.
+  - **Three key figures, not four.** "I like the kind of initial top card with like the price,
+    the week gain since draft their position. I don't love the their position. In that, I
+    think it does seem a little cluttered. Maybe we just go with three." So the strip is
+    price · week gain · since draft (or since acquired); no "their position" figure.
+  - **The season chart gets a real X axis with dates**, and NO "Drafted" label or marker on
+    the chart: "there should be a, some sort of X axis with like dates on it. Also, if at the
+    bottom, like we don't need to say drafted on that chart, like A player can see from this
+    pop-up card if they were drafted or picked up on waivers."
+  - **The this-week chart shows the days of the week on its X axis** (Mon … Fri) and the
+    mockup must use realistic movement: "why is there just like a flat line for half the
+    chart and then like a slight pop-up? Like, that's not how it should be."
+  - **No Save (star) on a stock you already own**: "there probably shouldn't be a save option
+    if you already have the stock, if it's one of yours." Clarified the same day: "if I am
+    looking at the player card of a stock I already own, there shouldn't be a save button
+    because there's no reason to save it if I already own it. You should only have the save
+    if it's a stock that's not currently being held or an opponent's stock that you want to
+    keep tabs on." So Save shows on unowned stocks and on other managers' stocks; never on
+    yours.
 - **Redesign decisions, the consolidated list** (2026-10-12 evening; the Orchestrator's and
   Design Lead's 14 open items, answered in one go):
   - **Matchup shading = YOUR side, always**: "I was going more on the side of it's you. So

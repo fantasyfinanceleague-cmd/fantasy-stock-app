@@ -435,6 +435,8 @@ Remotion's licence is confirmed before anything is published.
 
 ## 9. Game Day token spec (approved; Phase 2 implements exactly this)
 
+> **Superseded for colour and the score type by §9C (Game Night, 2026-10-12).** Space, radius base, the money formatting and the type floor below still stand.
+
 > **Amended 2026-09-29 (Giorgio): the money/game surface axis below is
 > SUPERSEDED as a colour axis by §9A, "One design, two themes".** Type,
 > space, radius, motion and the data/team colour *rules* in this section still
@@ -573,6 +575,8 @@ importable only from game components.
 ---
 
 ## 9A. One design, two themes (2026-09-29, supersedes the surface axis)
+
+> **The values in this table are superseded by §9C (Game Night, 2026-10-12).** The rules in this section (one design, two complete themes, no screen mixes them, the Settings control, the colour rules) still stand.
 
 **Decision (Giorgio):** one design everywhere (the same layout, features and
 components) in two complete themes, **Light** and **Dark**. The user picks in
@@ -771,6 +775,288 @@ board, which stand):
 - large collapsing titles (the 3b-1 pill + avatar header);
 - "San Francisco carries the UI" (Archivo is our UI face);
 - its tooling (detector, hooks, live mode). Never run it.
+
+## 9C. Game Night · token spec v3 (2026-10-12; supersedes the §9 colour and type values and the §9A values)
+
+**Decision (Giorgio, 2026-10-12, verbatim in PRODUCT_RULES):** direction **A, "Game Night"**
+for Home, Matchup, Standings and Portfolio: "I'm leaning more towards the game night as like
+the color palette and the styling." B ("doing a little too much") and C ("a little too
+robotic") closed. Amendments: the draft tiles carry their sector as a line at the bottom, not a
+fill ("without it being like a carbon copy of Sleeper"); no small lines on rows ("I don't want
+that like line thing there visible"); tapping any stock opens a player card. And, overruling
+the plan's "dark first": "I want one that it doesn't matter what mode you're in, it's going to
+be built for either." So this spec is **Light and Dark at once**; a value without its twin is
+incomplete.
+
+**What it supersedes, what stands.**
+- Superseded: §1's "Game Day" direction; the §9 colour table and the score type; the §9A token
+  **values** (the condensed scoreboard, the gold live colour, the orange opponent, the navy
+  primary button).
+- Stands: §9A's **rules** (one design, two complete themes, no screen mixes them, System /
+  Light / Dark in Settings, colour never the only code, secondary text on a tint is
+  hue-derived), §2 token architecture, §4 motion, §5 Reduce Motion, §9B native craft floor,
+  the 4pt space scale, the calm-Home structure and the UX rules.
+
+**Sources:** the board section `#call-game-night` (the frames, both themes) and
+`docs/design/screens/directions.css` (`.dir-a`, `.dir-a-light`), which carry exactly these
+values; the studied DNA in [`design.md`](design.md); the audit in
+[`reviews/hallmark-audit-w1.md`](reviews/hallmark-audit-w1.md). Machine-readable:
+[`tokens-v3-game-night.json`](tokens-v3-game-night.json) (OKLCH source + hex, both themes).
+**Port:** React Native takes the hex column; translucent roles are `rgba()`.
+
+### The six rules (from the studied DNA, now binding)
+
+1. **Depth from lightness steps of one hue (272°), never shadow on Dark.** Dark: page 15.5% →
+   card 20% → inset 25% L, a 1pt `rim` inside every card. Light: a navy-tinted off-white page
+   (97%), white cards with the `rim` as their edge; the only shadow is the sheet's.
+2. **Separation by surface, never by rules.** Rows divide by space, by a surface step or by
+   the `lit` slab. A rule line between rows is a finding.
+3. **One accent, small.** Cyan in Dark, deep teal in Light (a bright cyan has no edge on white),
+   ≤ 5% of any screen by area. It means live, your turn, selected. Gain/loss are data colours,
+   counted apart.
+4. **Every fill has its own ink.** Anything on a fill reads that fill's `on*` token, never the
+   page's text. (The Light pass found three leaks of page text onto fills.)
+5. **Game numbers heavy, money numbers regular.** Scores and the team value at 800; the
+   Portfolio value at 500 (Robinhood).
+6. **A line stops at now, over a labelled X axis.** No grid, no fill, no Y axis; **every chart
+   has a labelled X axis** (dates or weekdays; Giorgio, 2026-10-12, binding); the end dot
+   carries the live state; a 0-point or 1-point line is a designed short state, never a blank
+   frame.
+
+### Colour, both themes (62 keys)
+
+Every existing `ThemeColors` key keeps its name (`apps/mobile/constants/tokens/color.ts`), so the
+port is a value swap plus the **14 new keys** marked NEW (48 existing + 14 = 62): `onYou`, `rim`,
+`lit`, `leadWash`, `moneyBg`, `clockCell`, `onClockCell`, `clockCellLive`, `onTile`, and the five
+sector tiles.
+
+| Key | Dark | Light | Role |
+|---|---|---|---|
+| `bg` | `#060A1F` | `#F3F5FC` | App background (game screens) |
+| `surface` | `#0E132F` | `#FDFEFF` | Cards, sheets |
+| `inset` | `#181F3E` | `#E7EBF6` | Panels in cards, chips, the key-figures strip |
+| `sunken` | `#030513` | `#E6E9F4` | Segmented tracks, empty draft cells |
+| `line` | `#222C4C` | `#D5DAEA` | Dividers (rare: Game Night divides by surface) |
+| `border` | `#222C4C` | `#D5DAEA` | Card borders |
+| `borderStrong` | `#58698C` | `#737A8D` | Control borders (≥3:1) |
+| `text` | `#F3F5FB` | `#0E142C` | Primary text |
+| `text2` | `#98A8C5` | `#505B72` | Secondary text |
+| `text3` | `#5E6981` | `#969EB2` | Disabled / decorative ONLY |
+| `accent` | `#35EEFF` | `#00708E` | Live, your turn, selected (cyan in Dark, deep teal in Light) |
+| `accentTint` | `rgba(53, 238, 255, 0.16)` | `rgba(0, 112, 142, 0.12)` | Live chip, your-turn card at rest |
+| `accentWash` | `rgba(53, 238, 255, 0.06)` | `rgba(0, 112, 142, 0.05)` | Faint accent wash |
+| `onAccent` | `#080D25` | `#FDFEFF` | Ink ON accent fills (dark in Dark, white in Light) |
+| `onYou` | `#FAFCFE` | `#FAFCFE` | Ink on you and loss-fill fills (white in both) · NEW key |
+| `you` | `#0067DF` | `#0064DC` | Your fills: avatar, tug, ring |
+| `youText` | `#83BAFF` | `#0053C2` | Your name / score text |
+| `youTint` | `rgba(0, 103, 223, 0.22)` | `rgba(0, 100, 220, 0.1)` | Your row |
+| `opp` | `#7F8DA5` | `#788093` | Opponent fill (tug, opponent avatar) |
+| `oppText` | `#98A8C5` | `#505B72` | Opponent text |
+| `onOpp` | `#080D25` | `#06091C` | Ink on opponent fill |
+| `live` | `#35EEFF` | `#00708E` | Live dot, clock ring |
+| `liveText` | `#35EEFF` | `#006885` | Live tags |
+| `liveGlow` | `rgba(53, 238, 255, 0.35)` | `rgba(0, 112, 142, 0.3)` | Live end-dot halo |
+| `onLive` | `#080D25` | `#FDFEFF` | Ink on the live fill (your-turn flash) |
+| `gain` | `#39EEBA` | `#006C47` | Money up |
+| `loss` | `#F76D89` | `#C02447` | Money down |
+| `zero` | `#98A8C5` | `#505B72` | Money flat |
+| `gainTint` | `rgba(57, 238, 186, 0.12)` | `rgba(0, 108, 71, 0.1)` | Gain tint |
+| `lossTint` | `rgba(247, 109, 137, 0.14)` | `rgba(192, 36, 71, 0.1)` | Loss tint |
+| `danger` | `#FB8371` | `#B7191C` | Errors |
+| `lossFill` | `#C12440` | `#BD1F3D` | Sell / destructive fill |
+| `warnTint` | `rgba(244, 191, 63, 0.1)` | `#FAE7B3` | "Your call" / heads-up fill |
+| `warnLine` | `rgba(244, 191, 63, 0.35)` | `#EFCC83` | Its edge |
+| `warnText` | `#FAC547` | `#784900` | Its text |
+| `medalGold` | `#ECAE30` | `#AD7300` | Medal disc, gold (season complete only) |
+| `medalSilver` | `#BBC5D1` | `#7C8795` | Medal disc, silver |
+| `medalBronze` | `#DE8F57` | `#C36C36` | Medal disc, bronze |
+| `onMedal` | `#080D25` | `#160E02` | Rank numeral on a medal |
+| `primaryBg` | `#35EEFF` | `#00708E` | Primary button fill (the accent) |
+| `primaryFg` | `#080D25` | `#FDFEFF` | Primary button label |
+| `secondaryBg` | `rgba(14, 19, 47, 0.0)` | `rgba(253, 254, 255, 0.0)` | Secondary button (no fill) |
+| `secondaryFg` | `#F3F5FB` | `#0E142C` | Secondary label |
+| `secondaryBorder` | `#58698C` | `#737A8D` | Secondary edge |
+| `inverseBg` | `#F3F5FB` | `#0E142C` | Selected toggle |
+| `inverseFg` | `#060A1F` | `#FDFEFF` | Its label |
+| `track` | `#222C4C` | `#D5DAEA` | Tug / chart track |
+| `scrim` | `rgba(2, 3, 12, 0.55)` | `rgba(14, 20, 44, 0.38)` | Behind sheets |
+| `tabbar` | `rgba(4, 6, 23, 0.94)` | `rgba(253, 254, 255, 0.94)` | Tab bar (translucent) |
+| `rim` | `#253154` | `#D5DAEA` | Card rim, 1pt inset · NEW |
+| `lit` | `#002C4A` | `#D5EEFF` | Roster: the winning half's slab · NEW |
+| `leadWash` | `rgba(57, 238, 186, 0.12)` | `rgba(0, 108, 71, 0.09)` | Scoreboard: the leader's half · NEW |
+| `moneyBg` | `#020309` | `#FDFEFF` | Money screens page (Dark: near-black) · NEW |
+| `clockCell` | `#01020A` | `#131832` | Draft: the on-the-clock cell · NEW |
+| `onClockCell` | `#F3F5FB` | `#FDFEFF` | Its clock · NEW |
+| `clockCellLive` | `#35EEFF` | `#35EEFF` | Its pick number · NEW |
+| `onTile` | `#0A0F27` | `#0E142C` | Ink on a sector pill · NEW |
+| `tileTech` | `#A7C0F9` | `#6991DC` | Sector: Tech (draft tile line, pill) · NEW |
+| `tileComm` | `#B7A1F5` | `#956ED2` | Sector: Comm · NEW |
+| `tileCons` | `#F8BD8A` | `#CE7B3A` | Sector: Cons · NEW |
+| `tileFin` | `#4DE3CA` | `#23A28C` | Sector: Fin · NEW |
+| `tileHealth` | `#E181B0` | `#CD568B` | Sector: Hlth · NEW |
+
+**Changes in meaning from §9A** (each one a decision already taken, listed so W3 doesn't
+"restore" them):
+- `onAccent` is now the ink ON accent fills: **dark navy in Dark, white in Light**. Fills that
+  take white in both themes (you, loss-fill) move to the new **`onYou`**. Re-point three
+  `contrastPairs.ts` rows: avatar initials / winner banner / filled roster slots, the Sell
+  label, the draft-track chevrons: `onAccent` → `onYou`.
+- `opp` is no longer orange: Game Night marks the opponent by **position** (the right-hand
+  side), not colour. `opp` is a mid slate (the tug bar's other side, the opponent's avatar)
+  with dark `onOpp` ink.
+- `primaryBg` is the accent (a cyan or teal pill), not navy/white.
+- `live` / `liveText` / `onLive` are the accent (cyan / teal), not gold. **Open with Giorgio**
+  (the your-turn colour): if he keeps gold, these three revert to §9A's gold values in both
+  themes, and the your-turn flash keeps the approved gold spec; nothing else changes.
+- `bg` is for game screens; money screens (Portfolio, the stock sheet) use `moneyBg`
+  (near-black in Dark, the white surface in Light).
+
+### Type (Archivo; no new font files)
+
+| Variant | Font (bundled cut) | Size / line | Use |
+|---|---|---|---|
+| `hero` **NEW** | ExtraBold (100/800) | 46 / 48, −0.015em, tabular, maxScale 1.2 | Home's team value: the one standout |
+| `money` **NEW** | Medium (100/500) | 44 / 46, −0.015em, tabular, maxScale 1.2 | Portfolio value (regular weight: rule 5) |
+| `score.xl` | ExtraBold (100/800) | 32 / 36, tabular, maxScale 1.2 | Matchup scoreboard totals |
+| `score.lg` | ExtraBold | 28 / 30, tabular, maxScale 1.2 | This week (Home) |
+| `score.md` | ExtraBold | 17 / 22, tabular, maxScale 1.3 | Roster week gain; standings season gain at 15 / 20 |
+| `ticker` **NEW** | ExtraBold | 16 / 20, +0.01em | Tickers on rows; 26 / 28 on the player card |
+| `tag` | Expanded ExtraBold (125/800) | 11 / 14, +0.06em, uppercase | Broadcast tags, group headers, strip labels |
+| `display`, `title`, `headline`, `body`, `callout`, `caption` | unchanged | unchanged | §9 |
+
+- The condensed Black cut (62/900) leaves the app's numbers; it stays only for the landing's
+  hero. The board's 900-weight touches (the player-card ticker, "You're on the clock") map to
+  800: no new font file.
+- **The type-ramp invariant** (Design Lead ruling, 2026-10-12, asked by the W3 worker): the
+  invariant exists so that each screen's standout number stays the loudest text **on its own
+  screen** at every Dynamic Type size. Under Game Night, `score.xl` (Matchup) and `display`
+  never share a screen, and their caps differ (1.2 vs 1.6), so `score.xl ≥ display` holds at
+  1× only (at 1.35×, 38.4 < 43.2). `type.ts` therefore checks:
+  - at **1× only**: `score.xl ≥ display`;
+  - at **every fontScale**: `display ≥ title ≥ headline`, and each screen standout against
+    `display`: `hero ≥ display` (46×1.2 = 55.2 ≥ 32×1.6 = 51.2) and `money ≥ display`
+    (44×1.2 = 52.8 ≥ 51.2).
+  Not taken: capping `display` at 1.2 (it takes Dynamic Type away from page titles, a §9B
+  regression to satisfy a test), or raising `score.xl` to 1.6 (two 51pt totals don't fit
+  side by side in the Scoreboard's halves). No value changes.
+  `score.md` is a row size now and is not in the ramp.
+- The 11pt floor stands (§9B).
+
+### Shape and space
+
+- Radius: card **14**, sheet **20**, chip/pill **999**, draft tile **5**, the key-figures strip
+  **14**, roster slab inner corners **12**. Scoreboard halves follow the card radius on their
+  outer corners only.
+- The `rim`: a 1pt inset edge on every card (Dark and Light).
+- The draft tile's sector line: **3pt** at the bottom, in the sector colour (graphic ≥ 3:1).
+- Space: the 4pt scale, the 20pt screen gutter and the 24pt block gap are unchanged.
+
+### Components (the W3 primitives)
+
+- **`Card`**: `surface` + `rim`; no shadow in Dark.
+- **`Scoreboard`** (Matchup): two halves in one card; avatars (44, you ringed in `you` with a
+  2pt `bg` gap) at the outer edges; names; totals in `score.xl`; the **leader's half** fills
+  with `leadWash`; under the card, one line: "{name} leads by {margin}" (or "won by"). Nothing
+  else (Giorgio's Matchup ruling).
+- **`RosterRow`**: mirrored halves (ticker + company; week gain in `score.md` + week %), an
+  empty centre gap; the half that wins the row sits on the **`lit` slab**, which runs off its
+  outer screen edge with only its inner corners rounded. No row lines. **`GroupHead`** (slotted
+  leagues): the slot group ("Tech ×3", "$100–$200") as a `tag` in an `inset` pill with a `rim`,
+  centred across both columns.
+- **`DraftTile`**: `surface`, radius 5, the 3pt sector line at the bottom, label row (pick
+  number left, sector right) in `text2`, ticker in 13/800. The on-the-clock cell: `clockCell`
+  with a 2pt `live` ring, the pick number in `clockCellLive`, the clock in `onClockCell`.
+- **`ManagerRow`** (Standings, in full): each row a `surface` tile (radius 12, 6pt apart); your
+  row `youTint` with a 1.5pt `you` ring (S-10: bold name, no "(you)"); movement as drawn
+  chevrons + number.
+- **`Chip`**: `accentTint` + `liveText`, the dot drawn; FINAL as `inset` + `text`.
+- **`RangePills`**: Season / 1M / 1W as text tabs with a 2pt `accent` underline (Home); filled
+  `accent` pills with `onAccent` ink on money screens.
+- **`Chart`**: one line, 2.5pt, in `gain` or `loss` by the window's sign, edge to edge (it runs
+  past the gutter to the screen's edge), a dashed zero/base line in `borderStrong`, the end dot
+  in `live` with a 9pt `liveGlow` halo; it stops at the last real point. W/L marks under the
+  axis on Home (calm-Home spec).
+- **The X axis (every chart, Giorgio 2026-10-12: "a real X axis with dates"; this-week
+  charts "Mon…Fri"):**
+  - **Labels only:** `caption` (12/16 Medium), `text2`, tabular; no axis line, no tick marks, no
+    grid. A 6pt gap between the plot's lowest point and the labels.
+  - **What the axis spans:**
+    - **A week** (1W on a stock, This week on the player card): the whole trading week, Mon
+      open → Fri close, labels **Mon · Tue · Wed · Thu · Fri** under each day's slot, even
+      when it is Thursday: the line stops at now and the days still to come stay empty (the
+      Robinhood 1D pattern: the length of the line says how far the week has run).
+    - **Dated ranges** (the season, 1M, 3M, 1Y; the player card's Season): from the range's
+      start to **now**, no future slots (the B′ ruling stands: a slot with no point reads as
+      missing data). 3 to 5 date labels, evenly spaced in time, the first at the start and
+      the last at now: "Sep 29 · Oct 6 · Oct 13" (`MMM d`); 1Y uses months ("Oct · Jan · Apr ·
+      Jul").
+  - **Edges:** the first label is left-aligned to its point and the last right-aligned to its
+    point, so neither leaves the plot; labels never overlap (drop interior labels first;
+    test with the longest month names at XL).
+  - **Home's season chart** (the approved calm-Home chart): the W/L marks stay; the axis adds
+    **two** date labels under them, the first week's start date under the first mark (left)
+    and today's date at the live end (right), so marks and labels never collide at 124pt. A
+    Design Lead reading of "every chart", to confirm with Giorgio.
+  - **The 0- and 1-point states** draw the full axis (a week chart on Monday morning shows Mon
+    … Fri with a dot at Monday's open).
+  - **Scrub:** the scrub label names the point's date or day ("Wed · +$41.26").
+  - **Accessibility:** the chart's label names the range ("from Mon to Thu", "from Sep 29 to
+    Oct 9") before the values.
+
+- **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`), in this order (Giorgio's review,
+  2026-10-12, on ESPN's player card):
+  1. **Header** (he liked it as drawn): ticker, company, the pill "Yours" or "Owned by …",
+     and the slot pill in slotted leagues.
+  2. **Key figures, THREE** ("a little cluttered. Maybe we just go with three"), on `inset`:
+     **Price** · **Week gain** · **Since the draft** (or "Since {date}" for a stock bought or
+     claimed later; the label "Season gain" vs "Since the draft" is still his call). No
+     position figure.
+  3. **Season line** with its X axis of dates (start → now). **No acquisition marker or
+     "Drafted" label** ("A player can see from this pop-up card if they were drafted or picked
+     up on waivers"): the "How you got it" block says it.
+  4. **This week's line** with its Mon…Fri axis.
+  5. **The one action for the state:** your own stock → **Sell** while the market is open
+     (disabled with "Market's closed. Opens Mon 9:30 ET." beside it while closed), and **never
+     Save** ("there probably shouldn't be a save option if you already have the stock");
+     a stock you don't own → **Save** / Saved.
+  6. **"How you got it" at the BOTTOM** ("How they got it" on theirs), like ESPN's Latest
+     transaction: "Drafted 2nd overall · Sep 29 · $290.10" / "Claimed off waivers · Oct 7 ·
+     $187.20" / "Bought · Oct 2 · $214.80".
+  7. The Alpaca credit.
+- **Tab bar**: `tabbar`, active in `accent`, inactive `text2`.
+
+### Motion (Game Night's notes on top of §4)
+
+- The hero number rolls only the digits that changed, on a live update, never on first paint.
+- The chart draws left to right once (first open only); then only the end dot breathes, and
+  only while the market is open and the value is live.
+- Your turn: the clock card flashes twice in the accent (the approved two-flash spec,
+  recoloured; gold if Giorgio keeps gold), then rests with an accent ring that runs down.
+- The player card rises as a sheet (spring.snappy, no overshoot); exit faster than entrance.
+- Reduce Motion (§5): no roll, no draw-in, no flash; the sheet fades.
+
+### Contrast evidence
+
+Computed from the values above against **the app's own tables**
+(`apps/mobile/constants/tokens/contrastPairs.ts`: 18 `TOKEN_ROWS` + 40 `PAIRS`, with the three
+re-pointed rows) plus **24 new Game Night pairs** (the lit slab, the leader's wash, the clock
+cell, the sector pills and lines, the money page, the "Yours" pill, the accent fill, your
+ring). Translucent fills composited over what they sit on, WCAG 2.x.
+
+| Theme | Scored | Pass | Tightest |
+|---|---|---|---|
+| Dark | 82 | 82 | `borderStrong` on `surface` 3.29 (needs 3); `onYou` on `you` 5.07; `loss` on `lit` 5.15 |
+| Light | 82 | 82 | `onTile` on `tileHealth` 4.59; `tileTech` line on `surface` 3.10 (needs 3); `medalSilver` on the you-tint row 3.11 (needs 3) |
+
+**W3 adds the 24 new pairs to `contrastPairs.ts` and the board's `PAIRS` together** (the rule
+in that file: the two lists stay identical).
+
+### Open with Giorgio (the spec is complete either way)
+
+- The your-turn colour: accent (drawn) or the approved gold (a three-key swap, above).
+- The key-figures label: "Since the draft" (his Portfolio rule, drawn) or "Season gain" (his
+  card list).
+- Portfolio's chart and range pills (drawn, NEW): yes or no.
 
 ## 10. What happens next
 

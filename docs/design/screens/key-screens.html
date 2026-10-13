@@ -541,7 +541,7 @@
   --c-sunken: oklch(12% 0.035 272);
   --c-line: oklch(30% 0.06 270);
   --c-border: oklch(30% 0.06 270);
-  --c-border-strong: oklch(45% 0.06 265);
+  --c-border-strong: oklch(52% 0.06 265);
   --c-text: oklch(97% 0.008 270);
   --c-text-2: oklch(73% 0.045 262);
   --c-accent: oklch(87% 0.14 205);
@@ -550,7 +550,7 @@
   --c-you: oklch(54% 0.2 258);          /* holds white initials (4.5:1+) */
   --c-you-text: oklch(78% 0.12 256);
   --c-you-tint: oklch(54% 0.2 258 / 0.22);
-  --c-opp: oklch(70% 0.03 262);
+  --c-opp: oklch(64% 0.04 262);
   --c-gain: oklch(85% 0.16 168);
   --c-loss: oklch(71% 0.17 10);
   --c-zero: oklch(73% 0.045 262);
@@ -574,6 +574,19 @@
   --d-hero-weight: 800;
   --d-hero-stretch: 100%;
   --d-radius: 14px;
+  /* the 11 product categories (supabase/seed/categories.json), PROPOSED, for Giorgio */
+  --d-cat-food: oklch(80% 0.11 10);
+  --d-cat-retail: oklch(80% 0.11 46);
+  --d-cat-realestate: oklch(80% 0.11 82);
+  --d-cat-energy: oklch(80% 0.11 118);
+  --d-cat-finance: oklch(80% 0.11 154);
+  --d-cat-industrials: oklch(80% 0.11 190);
+  --d-cat-transport: oklch(80% 0.11 226);
+  --d-cat-tech: oklch(80% 0.11 262);
+  --d-cat-media: oklch(80% 0.11 298);
+  --d-cat-health: oklch(80% 0.11 334);
+  --d-cat-misc: oklch(74% 0.02 270);
+  --d-on-cat: oklch(18% 0.05 272);      /* dark ink on the brighter Dark category fills */
 }
 
 /* ── B · Broadcast (primary: ESPN S3) ────────────────────────────────────
@@ -749,7 +762,7 @@
   --c-sunken: oklch(93.5% 0.015 272);
   --c-line: oklch(89% 0.022 270);
   --c-border: oklch(89% 0.022 270);
-  --c-border-strong: oklch(70% 0.03 268);
+  --c-border-strong: oklch(58% 0.03 268);
   --c-text: oklch(20% 0.05 272);
   --c-text-2: oklch(47% 0.04 265);
   --c-accent: oklch(50% 0.11 220);
@@ -758,25 +771,38 @@
   --c-you: oklch(53% 0.2 258);
   --c-you-text: oklch(47% 0.19 258);
   --c-you-tint: oklch(53% 0.2 258 / 0.1);
-  --c-opp: oklch(47% 0.04 265);
+  --c-opp: oklch(60% 0.03 266);
   --c-gain: oklch(46% 0.12 165);
   --c-loss: oklch(53% 0.19 15);
   --c-zero: oklch(47% 0.04 265);
   --c-live: oklch(50% 0.11 220);
   --c-live-text: oklch(47% 0.11 220);
   --c-tabbar: oklch(99.6% 0.003 272 / 0.94);
-  --c-track: oklch(90% 0.02 270);
+  --c-track: oklch(89% 0.022 270);
   --d-rim: oklch(89% 0.022 270);
   --d-lit: oklch(93.5% 0.035 238);
-  --d-lead-wash: oklch(50% 0.12 165 / 0.09);
+  --d-lead-wash: oklch(46% 0.12 165 / 0.09);
   --d-money-bg: oklch(99.6% 0.003 272);
   --d-on-tile: oklch(20% 0.05 272);
-  --d-tile-tech: oklch(81% 0.085 266);
-  --d-tile-comm: oklch(78% 0.11 295);
-  --d-tile-cons: oklch(85% 0.09 62);
-  --d-tile-fin: oklch(84% 0.12 180);
-  --d-tile-health: oklch(76% 0.12 350);
+  --d-tile-tech: oklch(66% 0.12 262);
+  --d-tile-comm: oklch(62% 0.15 300);
+  --d-tile-cons: oklch(66% 0.13 56);
+  --d-tile-fin: oklch(64% 0.11 178);
+  --d-tile-health: oklch(62% 0.16 355);
   --d-clock-cell: oklch(22% 0.05 272);
+  /* the 11 product categories (supabase/seed/categories.json), PROPOSED, for Giorgio */
+  --d-cat-food: oklch(52% 0.13 10);
+  --d-cat-retail: oklch(52% 0.13 46);
+  --d-cat-realestate: oklch(52% 0.13 82);
+  --d-cat-energy: oklch(52% 0.13 118);
+  --d-cat-finance: oklch(52% 0.13 154);
+  --d-cat-industrials: oklch(52% 0.13 190);
+  --d-cat-transport: oklch(52% 0.13 226);
+  --d-cat-tech: oklch(52% 0.13 262);
+  --d-cat-media: oklch(52% 0.13 298);
+  --d-cat-health: oklch(52% 0.13 334);
+  --d-cat-misc: oklch(50% 0.02 270);
+  --d-on-cat: oklch(99.6% 0.003 272);  /* white ink on the darker Light category fills */
 }
 /* the dark on-the-clock cell keeps its own light ink */
 .dir-a-light .dr-clockcell { --c-text: oklch(99.6% 0.003 272); --c-live-text: oklch(87% 0.14 205); --c-live: oklch(87% 0.14 205); }
@@ -8050,7 +8076,7 @@ window.KS_REFS = {
   }
 
   /** One side of a roster row. `mid` = what the centre column carries ('none' | 'cat' | 'num'). */
-  function Half({ d, r, mirror, final, lit }) {
+  function Half({ d, r, mirror, final, lit, litBg }) {
     const pctWeek = ((r.price - r.mon) / r.mon) * 100;
     const name = (
       <span style={{ display: 'grid', gap: 1, justifyItems: mirror ? 'end' : 'start', minWidth: 0 }}>
@@ -8072,7 +8098,7 @@ window.KS_REFS = {
         <div style={{
           ...base, padding: '12px 12px', minHeight: 64,
           marginLeft: mirror ? 0 : -G, paddingLeft: mirror ? 12 : G, marginRight: mirror ? -G : 0, paddingRight: mirror ? G : 12,
-          background: lit ? 'var(--d-lit)' : undefined, borderRadius: mirror ? '12px 0 0 12px' : '0 12px 12px 0',
+          background: lit ? (litBg || 'var(--d-lit)') : undefined, borderRadius: mirror ? '12px 0 0 12px' : '0 12px 12px 0',
         }}>{parts}</div>
       );
     }
@@ -8445,45 +8471,50 @@ window.KS_REFS = {
   // THE PLAYER CARD (Giorgio, 2026-10-12): tapping ANY stock, yours or theirs, on Portfolio
   // or Matchup, opens it, on the ESPN player-card model.
   // ═════════════════════════════════════════════════════════════════════
-  // SAMPLE: each stock's Friday closes for weeks 1–5. data.js has the draft price and Week 6's
-  // Monday open, Wednesday close and Thursday price; those are real.
+  // SAMPLE (captioned on the board): each stock's Friday closes for weeks 1–5 and a midday +
+  // close for Mon–Wed of this week. data.js has the draft price, Monday's open, Wednesday's
+  // close and Thursday's price; those are real. Sample calendar: drafted Tue Sep 29, weekly
+  // Friday closes Oct 2 … Oct 30, this week Mon Nov 2 → now (Thu Nov 5, 1:37 PM ET).
   const SEASON_CLOSES = { NVDA: [292.4, 296.8, 288.9, 295.6, 299.1], NKE: [81.9, 80.4, 78.8, 79.9, 79.3] };
-  /** A price line on a trading-day axis; `marks` = [{ i, text }] markers (where it was acquired). */
-  function CardLine({ pts, days, base, h = 128, marks = [], label }) {
-    const w = 402, padT = 22, padB = 10;
+  const WEEK_MID = { NVDA: { mon: [302.6, 303.9], tue: [299.8, 301.4], wed: 304.1, thu: 312.5 }, NKE: { mon: [80.3, 80.1], tue: [79.2, 78.9], wed: 79.4, thu: 80.6 } };
+  /** A price line over a labelled X axis (§9C): `span` is the axis length in trading days, so a
+   * week can run Mon→Fri while the line stops at now; `axis` = [{ d, text, align }]. */
+  function CardLine({ pts, days, span, base, h = 128, axis = [], label }) {
+    const w = 402, padT = 10, padB = 26;
     const min = Math.min(base, ...pts), max = Math.max(base, ...pts);
-    const span = days[days.length - 1] || 1;
-    const X = (i) => 2 + (days[i] / span) * (w - 24);
+    const X = (d) => 14 + (d / span) * (w - 28); // inside the sheet, so the end dot never clips
     const Y = (v) => padT + (1 - (v - min) / (max - min || 1)) * (h - padT - padB);
-    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    const path = pts.map((v, i) => `${i ? 'L' : 'M'}${X(days[i]).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
     const last = pts.length - 1;
     const c = pts[last] >= base ? 'var(--c-gain)' : 'var(--c-loss)';
     return (
       <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={label} style={{ display: 'block', marginInline: -G, overflow: 'visible' }}>
         <line x1="0" x2={w} y1={Y(base)} y2={Y(base)} stroke="var(--c-border-strong)" strokeDasharray="3 5" opacity=".8" />
         <path d={path} fill="none" stroke={c} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {marks.map((m) => (
-          <g key={m.i}>
-            <circle cx={X(m.i)} cy={Y(pts[m.i])} r="6" fill="var(--c-surface)" stroke="var(--c-text)" strokeWidth="2" />
-            <text x={X(m.i) + 10} y={Y(pts[m.i]) - 9} fontSize="11" fontWeight="800" fill="var(--c-text)">{m.text}</text>
-          </g>
+        <circle cx={X(days[last])} cy={Y(pts[last])} r="9" fill="var(--c-live)" opacity=".22" />
+        <circle cx={X(days[last])} cy={Y(pts[last])} r="4.5" fill="var(--c-live)" />
+        {axis.map((a) => (
+          <text key={a.text} x={a.align === 'start' ? G : a.align === 'end' ? w - G : X(a.d)} y={h - 6} textAnchor={a.align === 'start' ? 'start' : a.align === 'end' ? 'end' : 'middle'} fontSize="12" fontWeight="500" fill="var(--c-text-2)" style={{ fontVariantNumeric: 'tabular-nums' }}>{a.text}</text>
         ))}
-        <circle cx={X(last)} cy={Y(pts[last])} r="9" fill="var(--c-live)" opacity=".22" />
-        <circle cx={X(last)} cy={Y(pts[last])} r="4.5" fill="var(--c-live)" />
       </svg>
     );
   }
+  const WEEK_AXIS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((t, i) => ({ d: i + 0.5, text: t }));
+  const SEASON_AXIS = [{ d: 0, text: 'Sep 29', align: 'start' }, { d: 8, text: 'Oct 9' }, { d: 18, text: 'Oct 23' }, { d: 26.63, text: 'Nov 5', align: 'end' }];
   function PlayerCard({ who }) {
     const you = who === 'you';
     const t = you ? 'NVDA' : 'NKE';
     const r = (you ? K.MATCHUP.live.you.rows : K.MATCHUP.live.opp.rows).find((x) => x.t === t);
+    const m = WEEK_MID[t];
     const weekPct = ((r.thu - r.mon) / r.mon) * 100;
     const season = [r.draft, ...SEASON_CLOSES[t], r.mon, r.prev, r.thu];
-    const seasonDays = [0, 5, 10, 15, 20, 25, 25.2, 27, 28.6];
+    const seasonDays = [0, 3, 8, 13, 18, 23, 23.02, 26, 26.63];
+    const week = [r.mon, m.mon[0], m.mon[1], m.tue[0], m.tue[1], m.wed, r.prev, m.thu, r.thu];
+    const weekDays = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.25, 3.63];
     const fig = (lbl, v, sub, cls) => (
       <span>
         <span className="dr-tag dr-muted" style={{ fontStretch: '100%', letterSpacing: '.04em' }}>{lbl}</span>
-        <b className={`dr-num ${cls || ''}`} style={{ fontSize: 17, lineHeight: '22px', fontWeight: 800 }}>{v}</b>
+        <b className={`dr-num ${cls || ''}`} style={{ fontSize: 18, lineHeight: '24px', fontWeight: 800 }}>{v}</b>
         <span className={`dr-cap dr-num ${sub[1] || ''}`} style={{ fontWeight: 700 }}>{sub[0]}</span>
       </span>
     );
@@ -8503,33 +8534,32 @@ window.KS_REFS = {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {you ? <span className="dr-pill dr-pill--you">Yours</span> : <span className="dr-pill">Owned by Gianluigi B.</span>}
           </div>
-          <div className="dr-strip4">
+          <div className="dr-strip4" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
             {fig('Price', $(r.thu), [`${pct(r.todayPct)} today`, tone(r.todayPct)])}
             {fig('Week gain', $s(r.weekGain), [pct(weekPct), tone(weekPct)], tone(r.weekGain))}
             {fig('Since the draft', $s(r.gain), [pct((r.gain / r.cost) * 100), tone(r.gain)], tone(r.gain))}
-            {fig(you ? 'Your position' : 'Their position', $(r.value), [`${r.qty.toFixed(2)} sh`])}
           </div>
-          <div style={{ display: 'grid', gap: 4 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 15, fontWeight: 800 }}>Season</span>
-              <span className="dr-cap">Drafted {$(r.draft)} · now {$(r.thu)}</span>
+              <span className="dr-cap dr-num">{$(r.draft)} → {$(r.thu)}</span>
             </div>
-            <CardLine pts={season} days={seasonDays} base={r.draft} marks={[{ i: 0, text: 'Drafted' }]} label={`${t} this season, from the draft at ${$(r.draft)} to ${$(r.thu)} now`} />
+            <CardLine pts={season} days={seasonDays} span={26.63} base={r.draft} h={132} axis={SEASON_AXIS} label={`${t} from Sep 29 to Nov 5: ${$(r.draft)} to ${$(r.thu)}`} />
           </div>
-          <div style={{ display: 'grid', gap: 3 }}>
-            <span style={{ fontSize: 15, fontWeight: 800 }}>{you ? 'How you got it' : 'How they got it'}</span>
-            <span className="dr-call dr-num" style={{ fontSize: 15 }}>Drafted {K.ordinal(r.pick)} overall · Sep 29 · {$(r.draft)}</span>
-          </div>
-          <div style={{ display: 'grid', gap: 4 }}>
+          <div style={{ display: 'grid', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span style={{ fontSize: 15, fontWeight: 800 }}>This week</span>
               <span className={`dr-call dr-num ${tone(r.weekGain)}`} style={{ fontWeight: 800 }}>{$s(r.weekGain)} · {pct(weekPct)}</span>
             </div>
-            <CardLine pts={[r.mon, r.prev, r.thu]} days={[0, 2, 3.6]} base={r.mon} h={70} label={`${t} this week, from Monday's open at ${$(r.mon)} to ${$(r.thu)} now`} />
+            <CardLine pts={week} days={weekDays} span={5} base={r.mon} h={104} axis={WEEK_AXIS} label={`${t} this week, from Monday's open at ${$(r.mon)} to ${$(r.thu)} now, Thursday`} />
           </div>
           {you
             ? <span className="dr-btn dr-btn--line" style={{ width: '100%' }}>Sell</span>
             : <span className="dr-btn dr-btn--line" style={{ width: '100%', gap: 8 }}><Icon d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" size={18} width={2} />Save</span>}
+          <div style={{ display: 'grid', gap: 4, padding: '12px 14px', borderRadius: 14, background: 'var(--c-inset)' }}>
+            <span className="dr-tag dr-muted" style={{ fontStretch: '100%', letterSpacing: '.04em' }}>{you ? 'How you got it' : 'How they got it'}</span>
+            <span className="dr-call dr-num" style={{ fontSize: 15, fontWeight: 700 }}>Drafted {K.ordinal(r.pick)} overall · Sep 29 · {$(r.draft)}</span>
+          </div>
           <span className="dr-cap" style={{ textAlign: 'center' }}>Market data provided by Alpaca</span>
         </div>
       </>
@@ -8564,10 +8594,10 @@ window.KS_REFS = {
         <ul className="b-inv__notes">
           <li><b>What changed from the A you picked:</b> the draft tiles carry their sector as a line at the bottom (Broadcast's treatment, in Game Night's surfaces); the Portfolio rows lose their small lines; the Matchup keeps the shaded side for whoever leads the row and the "leads by" line; the centre column stays empty.</li>
           <li><b>Your question:</b> was the small line on each Portfolio row the whole season? No: it was this week only (Monday's open, Wednesday's close, now). It is gone now; the player card carries the season line instead, with a marker where the stock was acquired.</li>
-          <li><b>The player card</b> opens from any stock, yours or theirs, on Portfolio or Matchup: the header (ticker, company, "Yours" or "Owned by …", and the slot pill in leagues that have slots, so not in Stock Scudetto), the four key figures, the season line with where it was acquired, how it was got, this week's line, and the one action for the state (Sell for yours while the market is open; Save for theirs).</li>
+          <li><b>The player card, redrawn after your review (2026-10-12):</b> three key figures (Price · Week gain · Since the draft; no position: "a little cluttered. Maybe we just go with three"); the season line with a date axis and no "Drafted" marker; this week's line on a Mon…Fri axis (the days still to come stay empty); the one action (Sell on yours, never Save: "there probably shouldn't be a save option if you already have the stock"; Save on theirs); "How you got it" at the bottom, like ESPN's Latest transaction. The top card is as you liked it.</li>
           <li><b>A label clash for you:</b> your list says "season gain" in the key figures. Your rule from 2026-10-05 keeps "season gain" for a manager's regular-season total and says Portfolio's gain is "since the draft", never one for the other. Drawn as "Since the draft"; a stock bought or claimed later would read "Since Oct 2"<NEW />. Say if you want "Season gain" there anyway.</li>
-          <li><b>New copy</b><NEW />: "Yours", "How they got it", "Their position" (your words: "How you got it", "Drafted 2nd overall · Sep 29 · $290.10"). Everything else is the app's own ("Owned by …", "Your position", "Week gain", "Sell", "Save").</li>
-          <li><b>SAMPLE:</b> each stock's Friday closes for weeks 1–5 on the season line. The draft price and Week 6's prices are data.js's.</li>
+          <li><b>New copy</b><NEW />: "Yours", "How they got it" (your words: "How you got it", "Drafted 2nd overall · Sep 29 · $290.10"). Everything else is the app's own ("Owned by …", "Your position", "Week gain", "Sell", "Save").</li>
+          <li><b>SAMPLE:</b> each stock's Friday closes for weeks 1–5, a midday and a close for Mon–Wed of this week, and the calendar (drafted Sep 29, now Thu Nov 5). The draft price, Monday's open, Wednesday's close and Thursday's price are data.js's.</li>
         </ul>
         <div className="dr-pairs">
           {A('Player card · opened from Matchup (their stock: Gianluigi B.\'s NKE)', 'Tap any row on either side. The header says whose it is; the action is Save, since another manager owns it.', (t) => <MatchupFrame d="a" t={t} overlay={<PlayerCard who="opp" />} />, ['pc', 'ESPN: the big name, the stat strip, the action.'], ['s5', 'E*TRADE: the key figures, right-aligned and tabular.'])}
@@ -8579,6 +8609,136 @@ window.KS_REFS = {
           {A('League › Standings, in full', 'Unchanged.', (t) => <StandingsFrame d="a" t={t} />, ['s1', 'Rows divided by space and surface.'], ['s5', 'White cards, right-aligned numbers.'])}
           {A('Portfolio', <>Changed: no small lines on the rows. The chart and the range pills are still new on Portfolio<NEW /> (one of your open questions).</>, (t) => <PortfolioFrame d="a" t={t} />, ['s4', 'The number, then its line.'], ['s5', 'Key figures on white.'])}
         </div>
+      </section>
+    );
+  }
+
+
+  // ═════════════════════════════════════════════════════════════════════
+  // YOUR CALL: the Matchup shading when you're BEHIND (A follows the leader, B is always you)
+  // and the 11 category labels. Game Night, Light + Dark.
+  // ═════════════════════════════════════════════════════════════════════
+  /** Matchup from a TRAILING manager's phone. scene 'scud' = Stock Scudetto live from
+   * Gianluigi B.'s phone (real data.js numbers, Roberto sweeps every row); scene 'tier' =
+   * the Tier Cup sample from Paolo M.'s phone (a mixed week). mode 'A' = the shade follows the
+   * leader (the scoreboard half and each row's winning half); mode 'B' = your side is always
+   * shaded and the lead is said only by the line and the numbers. */
+  function ShadeFrame({ t, mode, scene }) {
+    const tier = scene === 'tier';
+    const m = tier ? tierMatch(false) : K.MATCHUP.live;
+    const me = m.opp, them = m.you; // the trailing manager is "you" on this phone
+    const meN = tier ? { name: 'Paolo M.', init: 'PM' } : { name: 'Gianluigi B.', init: 'GB' };
+    const themN = { name: 'Roberto B.', init: 'RB' };
+    const meLead = me.gain >= them.gain;
+    const half = (who, mirror) => {
+      const mine = who === 'me';
+      const lead = mine === meLead;
+      const shaded = mode === 'A' ? lead : mine;
+      return (
+        <div style={{ display: 'grid', gap: 8, justifyItems: mirror ? 'end' : 'start', padding: '16px 14px', background: shaded ? (mode === 'A' ? 'var(--d-lead-wash)' : 'var(--c-you-tint)') : undefined, borderRadius: mirror ? '0 14px 14px 0' : '14px 0 0 14px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: mirror ? 'row-reverse' : 'row' }}>
+            <Av init={(mine ? meN : themN).init} you={mine} size={44} />
+            <span className="dr-call" style={{ fontWeight: mine ? 800 : 600, fontSize: 15 }}>{(mine ? meN : themN).name}</span>
+          </span>
+          <span className="dr-score" style={{ fontSize: 32, lineHeight: '36px' }}>{SD(mine ? me : them).primary}</span>
+        </div>
+      );
+    };
+    const row = ([a, b]) => {
+      const litA = mode === 'A' ? a.weekGain > b.weekGain : true;
+      const litB = mode === 'A' ? b.weekGain > a.weekGain : false;
+      const bg = mode === 'A' ? 'var(--d-lit)' : 'var(--c-you-tint)';
+      return (
+        <div key={a.t} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 10px minmax(0,1fr)', gap: 6 }}>
+          <Half d="a" r={a} lit={litA} litBg={bg} />
+          <span />
+          <Half d="a" r={b} mirror lit={litB} litBg={bg} />
+        </div>
+      );
+    };
+    const sortG = (rows) => [...rows].sort((p, q) => q.weekGain - p.weekGain);
+    const body = tier
+      ? TIER_SLOTS.map((g) => {
+          const a = sortG(me.rows.filter((r) => g.opp.includes(r.t))), b = sortG(them.rows.filter((r) => g.you.includes(r.t)));
+          return [<GroupHead key={g.name} d="a" g={g} />, ...a.map((r, i) => row([r, b[i]]))];
+        })
+      : sortG(me.rows).map((r, i) => row([r, sortG(them.rows)[i]]));
+    return (
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`}>
+        <Device tab="matchup" full label={`Matchup when you're behind, option ${mode}, ${t}`}>
+          <div className="ks-head" style={{ paddingInline: G }}>
+            <span className="ks-pill"><span>{tier ? 'Tier Cup' : K.LEAGUE.name}</span><Icon d={ICON.chevron} size={14} width={2.6} /></span>
+            <LiveChip />
+          </div>
+          <Body gap={18}>
+            <div className="dr-seg"><span className="on">My matchup</span><span>All matchups</span></div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div className="dr-a-card" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>{half('me')}{half('them', true)}</div>
+              <span className="dr-call" style={{ textAlign: 'center' }}>Roberto B. leads by <b className="dr-num">{K.formatMoney(Math.abs(me.gain - them.gain))}</b></span>
+            </div>
+            <div style={{ display: 'grid', gap: 6 }}>{body}</div>
+          </Body>
+        </Device>
+      </div>
+    );
+  }
+
+  // The 11 product categories (supabase/seed/categories.json), each a colour (--d-cat-*) and
+  // PROPOSED short names: `label` for pills and legends (≤ 8 letters), `code` for the narrow
+  // draft tile (3 letters, the way fantasy apps write positions). All NEW copy.
+  const CATS = [
+    ['tech', 'Technology', 'Tech', 'TEC', 'NVDA'], ['finance', 'Financials', 'Finance', 'FIN', 'JPM'], ['health', 'Healthcare', 'Health', 'HLT', 'LLY'],
+    ['energy', 'Energy & Utilities', 'Energy', 'NRG', 'XOM'], ['transport', 'Autos & Transport', 'Autos', 'AUT', 'TSLA'], ['retail', 'Retail & Consumer Goods', 'Retail', 'RTL', 'COST'],
+    ['food', 'Food & Beverage', 'Food', 'F&B', 'KO'], ['media', 'Entertainment & Media', 'Media', 'MED', 'DIS'], ['industrials', 'Industrials & Materials', 'Industry', 'IND', 'BA'],
+    ['realestate', 'Real Estate & Construction', 'Property', 'PRP', 'PLD'], ['misc', 'Misc', 'Misc', 'MSC', 'BRK.B'],
+  ];
+  function CategoryStrip({ t }) {
+    return (
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`} style={{ background: 'var(--c-bg)', color: 'var(--c-text)', borderRadius: 18, padding: 16, display: 'grid', gap: 12 }} role="img" aria-label={`The 11 categories, ${t}`}>
+        <span className="dr-tag dr-muted">{t === 'dark' ? 'Dark' : 'Light'}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+          {CATS.map(([slug, name, label, code, tk]) => (
+            <div key={slug} style={{ display: 'grid', gap: 6, padding: 10, borderRadius: 12, background: 'var(--c-surface)', boxShadow: 'inset 0 0 0 1px var(--d-rim)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span className="dr-pillcat" style={{ background: `var(--d-cat-${slug})`, color: 'var(--d-on-cat)', height: 22, fontSize: 12 }}>{label}</span>
+                <span style={{ height: 44, width: 57, borderRadius: 5, background: 'var(--c-inset)', boxShadow: `inset 0 -3px 0 var(--d-cat-${slug})`, padding: '4px 6px', display: 'grid', alignContent: 'space-between' }}>
+                  <span className="dr-num dr-muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700 }}><span>14</span><span>{code}</span></span>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--c-text)' }}>{tk}</span>
+                </span>
+              </div>
+              <span className="dr-cap">{name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  function ShadingCall() {
+    const pair = (scene, mode) => ['dark', 'light'].map((t) => <figure key={scene + mode + t} className="b-fig b-fig--inv" style={{ margin: 0 }}><Fit><ShadeFrame t={t} mode={mode} scene={scene} /></Fit><figcaption><b>{mode === 'A' ? 'A · the shade follows the leader' : 'B · your side is always shaded'} · {t === 'dark' ? 'Dark' : 'Light'}</b></figcaption></figure>);
+    return (
+      <section className="b-sec" id="call-shading" aria-labelledby="call-shading-h">
+        <header className="b-sec__head">
+          <span className="b-sec__n b-sec__n--code">1.3</span>
+          <div>
+            <h2 id="call-shading-h">Your call: the Matchup shading when you're behind, and the category labels</h2>
+            <p className="b-job"><b>Giorgio, 2026-10-12:</b> "I like the way that where you are is kind of shaded." In the frames you picked you were winning, so the shaded half was both yours and the leader's. Here you are BEHIND, to tell the two readings apart. The moment is real: Thu 1:37 PM ET on Gianluigi B.'s phone (Roberto B. leads every row), and a mixed week on Paolo M.'s phone in the Tier Cup sample.</p>
+          </div>
+        </header>
+        <ul className="b-inv__notes">
+          <li><b>A · the shade follows the leader:</b> the leader's half of the scoreboard is shaded, and in each row the stock that's winning sits on the lit slab. What 1.1.0 did ("Leading"). You read "am I winning?" from the shade alone.</li>
+          <li><b>B · your side is always shaded:</b> your half of the scoreboard and your column are tinted blue (your colour, as on your Standings row), win or lose. Who leads is said by the line and the numbers only.</li>
+          <li><b>Recommendation: A.</b> The shade then means something that changes during the week; B's shade says the same thing every time (which side is yours), which the left position and your bold name already say.</li>
+        </ul>
+        <h3 className="b-sub">Stock Scudetto, live, on Gianluigi B.'s phone (he's behind; Roberto B. wins every row)</h3>
+        <div className="b-concepts b-concepts--three">{pair('scud', 'A')}{pair('scud', 'B')}</div>
+        <h3 className="b-sub">Tier Cup (sample), live, on Paolo M.'s phone (behind, but winning two rows)</h3>
+        <div className="b-concepts b-concepts--three">{pair('tier', 'A')}{pair('tier', 'B')}</div>
+        <h3 className="b-sub" id="call-categories">The 11 categories: a colour and a short name each<NEW /></h3>
+        <ul className="b-inv__notes">
+          <li><b>Why:</b> the draft tiles' line and the sector pill follow the app's real categories (11, from the league setup), not the five sample sectors on the earlier frames. Each needs a colour and a name short enough for a tile.</li>
+          <li><b>Two lengths:</b> a short name for pills and lists (≤ 8 letters), and a 3-letter code for the draft tile, the way fantasy apps write positions (QB, RB). Misc is neutral grey. Say which names you'd change.</li>
+        </ul>
+        <div style={{ display: 'grid', gap: 14 }}><CategoryStrip t="dark" /><CategoryStrip t="light" /></div>
       </section>
     );
   }
@@ -8693,7 +8853,7 @@ window.KS_REFS = {
     );
   }
 
-  window.KSDirections = GameNight;
+  window.KSDirections = () => <><ShadingCall /><GameNight /></>;
   window.KSDirectionsArchived = () => <Amended.Provider value={false}><Directions archived /></Amended.Provider>;
   window.KSRowOrder = RowOrder;
 })();
@@ -8969,6 +9129,8 @@ window.KS_REFS = {
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
+    ['call-shading', 'Matchup shading when you\'re behind'],
+    ['call-categories', 'The 11 category names'],
     ['call-game-night', 'Game Night as you picked it · the player card'],
     ['call-game-night-ask', 'A label · the Portfolio chart · the your-turn colour'],
   ];

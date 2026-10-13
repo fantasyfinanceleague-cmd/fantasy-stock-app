@@ -2,22 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "ddab31f0f9c4daeb7771596da39f53d07a0d13cc",
-    "commitShort": "ddab31f0",
+    "commit": "906e95693f9861e7d2758e333ef15333f904bcae",
+    "commitShort": "906e9569",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/calm-home",
+    "branch": "chore/promote-post-110-drops",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-12T06:18:31Z",
-    "sourceHash": "sha256:dbd85587554a63a073dd1a5790987bfbb72561f8e19370eb5349ee26028d0626",
+    "timestamp": "2026-10-13T01:21:37Z",
+    "sourceHash": "sha256:3766307cb5cf4e9d1f18ed4d8da355088c1661cc72243b12b9d7efe465ab2bed",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 2.5,
-    "ageDays": 0.1,
+    "ageHours": 21.5,
+    "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -18448,75 +18448,6 @@
       ]
     },
     {
-      "id": "flow.season-reset",
-      "title": "Season reset",
-      "trigger": {
-        "kind": "user",
-        "detail": "Commissioner taps reset in league settings"
-      },
-      "nodePath": [
-        "pg.start_new_league_season",
-        "tbl.leagues",
-        "tbl.league_seasons",
-        "tbl.league_standings",
-        "tbl.matchups"
-      ],
-      "steps": [
-        {
-          "n": 1,
-          "edge": "e.ui.league-settings->pg.start_new_league_season",
-          "detail": "Called directly from the client as an authenticated user. EXECUTE is granted to `authenticated`, so the authorization is NOT the grant — it is an INTERNAL commissioner check inside the function body. That gate is the only thing standing between any league member and the four destructive writes below.",
-          "files": [],
-          "verified": false
-        },
-        {
-          "n": 2,
-          "edge": "e.pg.start_new_league_season->tbl.leagues",
-          "detail": "GATE 1 — commissioner check: `commissioner_id = auth.uid()::text`. auth.uid() is NULL for anon, so it fails closed. Checked BEFORE the state guard so an unauthorized caller learns nothing about league state.",
-          "files": [
-            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:58"
-          ]
-        },
-        {
-          "n": 3,
-          "edge": "e.pg.start_new_league_season->tbl.league_seasons#insert",
-          "detail": "WRITE 1 — new league_seasons row at MAX(season_number)+1. This is what preserves the old season, so it must succeed before anything is destroyed.",
-          "files": [
-            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:75"
-          ]
-        },
-        {
-          "n": 4,
-          "edge": "e.pg.start_new_league_season->tbl.league_standings#update",
-          "detail": "WRITE 2 — every standings row for the league zeroed: wins, losses, ties, points_for, points_against.",
-          "files": [
-            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:80"
-          ]
-        },
-        {
-          "n": 5,
-          "edge": "e.pg.start_new_league_season->tbl.matchups#delete",
-          "detail": "WRITE 3 — DESTRUCTIVE: every matchup for the league is deleted outright. History survives only via league_seasons.final_standings, so if WRITE 1 did not capture it, it is gone.",
-          "files": [
-            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:85"
-          ]
-        },
-        {
-          "n": 6,
-          "edge": "e.pg.start_new_league_season->tbl.leagues#update",
-          "detail": "WRITE 4 — league pointed at the new season: current_season_id, season_status=active, current_week=1. All four writes share one implicit transaction, so a failure rolls back the whole reset.",
-          "files": [
-            "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:91"
-          ]
-        }
-      ],
-      "annotation": "RETIRED by Run it back (PR #94, migration 20261115000008 applying its DROP; EXECUTE revoked from every role at 20261023000000 first). This flow used to be the only one where a destructive operation was authorized entirely inside a function body: EXECUTE on start_new_league_season was granted to `authenticated`, so any logged-in user could call it with any league id, and the internal commissioner check was the whole control. The replacement is renew_league + start_renewed_season (docs/migrations/RUN_IT_BACK_DESIGN.md): a new leagues row per season, so there is no destructive reset to authorize in the first place.",
-      "unverified": [
-        "step 1: anchor not found — apps/mobile/app/league-settings.tsx no longer contains \"rpc('start_new_league_season'\"",
-        "step 1: edge 'e.ui.league-settings->pg.start_new_league_season' was not generated from any call site"
-      ]
-    },
-    {
       "id": "flow.quote-fanout",
       "title": "Quote / symbol fan-out",
       "trigger": {
@@ -19558,29 +19489,17 @@
       "claim": "flow step is current",
       "reason": "step 5: edge 'e.fn.validate-and-record-pick->tbl.leagues#update' was not generated from any call site",
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
-    },
-    {
-      "scope": "flow.season-reset",
-      "claim": "flow step is current",
-      "reason": "step 1: anchor not found — apps/mobile/app/league-settings.tsx no longer contains \"rpc('start_new_league_season'\"",
-      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
-    },
-    {
-      "scope": "flow.season-reset",
-      "claim": "flow step is current",
-      "reason": "step 1: edge 'e.ui.league-settings->pg.start_new_league_season' was not generated from any call site",
-      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     }
   ],
   "orphanAnnotations": [],
   "stats": {
     "nodes": 259,
     "edges": 633,
-    "flows": 8,
+    "flows": 7,
     "drift": 29,
     "driftHigh": 0,
     "deadCode": 43,
-    "unverified": 15
+    "unverified": 13
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -20125,7 +20044,9 @@
       "20261119000000_frozen_leaver_names.sql",
       "20261119000001_frozen_leaver_names_callers.sql",
       "20261120000000_transfer_commissioner_refuses_hidden.sql",
-      "20261120000001_league_members_insert_self_not_hidden.sql"
+      "20261120000001_league_members_insert_self_not_hidden.sql",
+      "20261121000000_drop_start_new_league_season.sql",
+      "20261121000001_drop_I6_I2b.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
