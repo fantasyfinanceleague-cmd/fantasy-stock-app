@@ -379,6 +379,7 @@
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-draft-auto', title: 'Marking an auto-pick on the draft board', decision: 'A, as built: no tag on an auto-picked square ("no auto tag"). The card, the pick log and VoiceOver still say it.', date: '2026-10-13', rec: 'PRODUCT_RULES (on feat/gn-w4-draft)', render: () => window.KSDraftAutoArchived },
     { id: 'call-mx-order', title: 'Saying why the Matchup rows are in this order', decision: 'B: one small line over the rows, "Ordered by Wednesday\'s close" (the last close whose trading has ended; "Thursday\'s close" from that evening).', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.order },
     { id: 'call-mx-empty', title: 'How an empty slot reads', decision: 'B: the empty half keeps its row, with a dashed edge and "Empty"; yours keeps your shade.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.empty },
     { id: 'call-mx-bye', title: 'The bye week', decision: 'B: your half of the scoreboard, "Bye week" in the opponent\'s half, the shipped "Bye week · no result" line, then your stocks in one column.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.bye },
