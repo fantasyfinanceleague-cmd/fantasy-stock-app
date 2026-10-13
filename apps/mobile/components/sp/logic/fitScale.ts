@@ -44,3 +44,11 @@ export function transformOriginFor(align: RollingMoneyAlign): string {
   if (align === 'center') return 'center center';
   return 'left center';
 }
+
+/** A conservative width for a tabular ExtraBold money string at `fontPt` (figures, $ and
+ * signs ≈ 0.66em, separators ≈ 0.3em). Over-estimating only shrinks a little sooner. */
+export function estimateMoneyWidth(text: string, fontPt: number): number {
+  let em = 0;
+  for (const ch of text) em += ch === ',' || ch === '.' ? 0.3 : 0.66;
+  return em * fontPt;
+}

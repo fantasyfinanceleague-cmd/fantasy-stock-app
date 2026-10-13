@@ -264,7 +264,7 @@ Deno.test('XL: the card stacks its three figures and caps its small text; the sc
   const sb = strip(SOURCES['components/sp/gn/Scoreboard.tsx']);
   assert(sb.includes('maxFontSizeMultiplier={NAME_MAX_SCALE}'));
   assert(sb.includes('stacked ? (mirror ? styles.whoStackedMirror : styles.whoStacked)'), 'the avatar sits over the name when it won\'t fit beside it');
-  assert(sb.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE}'), 'one line, never "Gianluigi" / "B."');
+  assert(sb.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale}'), 'one line, never "Gianluigi" / "B."');
   assert(sb.includes('maxFontSizeMultiplier={LINE_MAX_SCALE}') && sb.includes('export const LINE_MAX_SCALE = 1.3;'), 'the leads-by line stays under the totals');
   const row = strip(SOURCES['components/sp/gn/RosterRow.tsx']);
   assert((row.match(/maxFontSizeMultiplier=\{ROW_TEXT_MAX_SCALE\}/g) ?? []).length >= 2, 'ticker and company capped');

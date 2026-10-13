@@ -263,6 +263,8 @@ export function cardAction(p: PlayerCardOwnership & { marketOpen: boolean; opens
 /** A name never wraps ("Gianluigi" / "B." is never acceptable): one line, shrinking to this
  * at most; past it the avatar stacks over the name and the name gets the half's width. */
 export const NAME_MIN_SCALE = 0.75;
+/** The compact (All matchups) name is 13pt: its floor keeps it at 11pt (13 × 0.85 = 11.05). */
+export const NAME_MIN_SCALE_COMPACT = 0.85;
 
 /** A conservative width for a bold Archivo name at `fontPt` (Archivo is wide: M/W ≈ 0.95em,
  * other capitals ≈ 0.75em, lower case ≈ 0.6em, a space ≈ 0.28em, "." ≈ 0.3em). Over-estimating
@@ -282,6 +284,6 @@ export function estimateNameWidth(name: string, fontPt: number): number {
 
 /** Beside the avatar, or stacked under it: beside while the name fits on one line at no
  * less than NAME_MIN_SCALE of its size. */
-export function nameBesideAvatar(name: string, availablePt: number, fontPt: number): boolean {
-  return availablePt > 0 && estimateNameWidth(name, fontPt) * NAME_MIN_SCALE <= availablePt;
+export function nameBesideAvatar(name: string, availablePt: number, fontPt: number, minScale = NAME_MIN_SCALE): boolean {
+  return availablePt > 0 && estimateNameWidth(name, fontPt) * minScale <= availablePt;
 }

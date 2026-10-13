@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 
 import { supabase } from '../supabase';
 import { SEAM_ON } from './devSeam';
+import { SEAM_LEAGUE } from './seamTables';
 import { checkRowsComplete } from './readGuard';
 import { fetchCategories } from '../categoryData';
 import { usePortfolioLedger } from '../money/usePortfolioLedger';
@@ -41,8 +42,9 @@ export interface RosterData {
   retry: () => void;
 }
 
-async function loadSlots(leagueId: string, me: string, opp: string): Promise<{ slots: SlotRow[]; bySide: Record<string, Record<string, string | null>> }> {
-  if (SEAM_ON) return fixtureSlots(VARIANT, me, opp) ?? { slots: [], bySide: {} };
+async function loadSlots(leagueId: string, me: string, opp: string | null): Promise<{ slots: SlotRow[]; bySide: Record<string, Record<string, string | null>> }> {
+  // A bye week has no opponent: only your own rows are read.
+  if (SEAM_ON) return fixtureSlots(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) ?? { slots: [], bySide: {} };
 
   const sl = await supabase
     .from('league_draft_slots')
@@ -67,7 +69,7 @@ async function loadSlots(leagueId: string, me: string, opp: string): Promise<{ s
   if (rawSlots.some((s, i) => s.category_id && slots[i].category === null)) throw new Error('slot category unresolved');
   if (!isSlotted(slots)) return { slots: [], bySide: {} };
 
-  const users = [me, opp];
+  const users = opp ? [me, opp] : [me];
   const dr = await supabase
     .from('drafts')
     .select('user_id, symbol, slot_id, created_at', { count: 'exact' })
@@ -90,7 +92,9 @@ async function loadSlots(leagueId: string, me: string, opp: string): Promise<{ s
     ...(dr.data ?? []).map((r) => ({ user_id: String(r.user_id), symbol: r.symbol, slot_id: r.slot_id ?? null, kind: 'draft' as const, at: r.created_at })),
     ...(tr.data ?? []).map((r) => ({ user_id: String(r.user_id), symbol: r.symbol, slot_id: r.slot_id ?? null, kind: 'buy' as const, at: r.created_at })),
   ];
-  return { slots, bySide: { [me]: recordedSlots(me, events), [opp]: recordedSlots(opp, events) } };
+  const bySide: Record<string, Record<string, string | null>> = { [me]: recordedSlots(me, events) };
+  if (opp) bySide[opp] = recordedSlots(opp, events);
+  return { slots, bySide };
 }
 
 export function useRosterData(leagueId: string | null, me: string | null, opp: string | null): RosterData {
@@ -99,7 +103,7 @@ export function useRosterData(leagueId: string | null, me: string | null, opp: s
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!leagueId || !me || !opp) return;
+    if (!leagueId || !me) return;
     let cancelled = false;
     setSlots((s) => ({ ...s, status: 'loading' }));
     loadSlots(leagueId, me, opp)
@@ -122,8 +126,8 @@ export function useRosterData(leagueId: string | null, me: string | null, opp: s
 
   if (SEAM_ON) {
     return {
-      ledger: me && opp ? fixtureLedger(VARIANT, me, opp) : null,
-      ledgerStatus: me && opp ? 'ready' : 'loading',
+      ledger: me ? fixtureLedger(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) : null,
+      ledgerStatus: me ? 'ready' : 'loading',
       slots,
       retry,
     };

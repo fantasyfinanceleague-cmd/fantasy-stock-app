@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Text as RNText, TextProps as RNTextProps, StyleSheet, useWindowDimensions, type TextStyle } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, StyleSheet, type TextStyle } from 'react-native';
 import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { resolveFontFamily } from './logic/fontWeight';
-import { cappedLineHeight } from './logic/largeText';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -66,9 +65,6 @@ export function Text({
   const upperInJs = typeStyle.textTransform === 'uppercase' && typeof children === 'string';
   const content = upperInJs ? (children as string).toUpperCase() : children;
   const resolvedMaxFontSizeMultiplier = maxFontSizeMultiplier ?? typeStyle.maxScale;
-  // iOS scales lineHeight by the UNCAPPED factor: pre-divide so the line box hugs capped text.
-  const { fontScale } = useWindowDimensions();
-  const lineHeight = cappedLineHeight(typeStyle.lineHeight, fontScale, resolvedMaxFontSizeMultiplier);
 
   // A caller's fontWeight picks the matching Archivo face (iOS ignores fontWeight on a
   // single-weight family: logic/fontWeight.ts); the weight itself is then cleared.
@@ -79,7 +75,7 @@ export function Text({
     {
       fontFamily,
       fontSize: typeStyle.fontSize,
-      lineHeight,
+      lineHeight: typeStyle.lineHeight,
       color: resolvedColor,
       letterSpacing: typeStyle.letterSpacing,
       textTransform: upperInJs ? undefined : typeStyle.textTransform,

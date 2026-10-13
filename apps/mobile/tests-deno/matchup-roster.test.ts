@@ -301,7 +301,7 @@ Deno.test('Matchup: the order reads the last CLOSE (never the live gain), and th
   assert(src.includes('const closes = useMemo(() => closesBefore(now, sessions), [now, sessions]);'));
   assert(src.includes('barsAt: orderBarsAt(raw.now, orderAsOf, SEAM_ON),'), 'the fetch time, held to the last focus or refresh');
   assert(src.includes('useFocusEffect(useCallback(() => {\n    setOrderAsOf(new Date());'), 'a new order applies on arrival');
-  assert(src.includes('setOrderAsOf(new Date());\n    await refresh();'), '…and on pull to refresh');
+  assert(src.includes('setOrderAsOf(new Date());\n    await Promise.all([refresh(), mRefresh()]);'), '…and on pull to refresh');
   assert(src.includes('if (!view) return <RosterRowsSkeleton />;'), 'no list that re-sorts once the ledger lands');
   const view = SOURCES['lib/game/matchupRosterView.ts'];
   assert(view.includes('const ordering = orderingClose({ closes, sides: opp ? [me, opp] : [me], bars, barsAt });'));

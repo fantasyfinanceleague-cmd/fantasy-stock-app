@@ -17,9 +17,9 @@ import { liveWeekScore, type LiveSnapshot } from '../lib/home/liveWeekScore.ts';
 import { lineupRows } from '../lib/game/lineupLedger.ts';
 import { standardWeekSessions } from '../lib/time/marketWeek.ts';
 import { GIANLUIGI_HOLDINGS, ROBERTO_HOLDINGS, fixtureQty } from '../lib/home/homeFixtureData.ts';
-import { cappedLineHeight } from '../components/sp/logic/largeText.ts';
+import { estimateMoneyWidth, fitScale } from '../components/sp/logic/fitScale.ts';
 import { buildLine } from '../components/sp/logic/lineChart.ts';
-import { estimateNameWidth, NAME_MIN_SCALE, nameBesideAvatar } from '../components/sp/logic/gameNight.ts';
+import { estimateNameWidth, NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar } from '../components/sp/logic/gameNight.ts';
 import { COPY } from '../lib/game/gameCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -62,7 +62,8 @@ Deno.test('an empty slot: a dashed edge and "Empty", on both sides', () => {
   assert(src.includes("testID={shaded ? 'roster-empty-yours' : 'roster-empty-theirs'}"), 'either side');
   assert(/emptyHalf: \{\s*borderWidth: 1\.5,\s*borderStyle: 'dashed',/.test(src));
   assert(src.includes('>{EMPTY_SLOT}</Text>'));
-  assert(!src.includes('if (!half) return <View style={slab} />;'), 'never the blank slab again');
+  assert(src.includes('if (!half && !markEmpty) return <View style={slab} />;'), 'unslotted: an unmatched half is space, not a slot');
+  assert(SOURCES['app/(tabs)/matchup.tsx'].includes('markEmpty={g.label !== null}'), '"Empty" only under a slot group');
 });
 
 // ── 3. The bye (#call-mx-bye, B) ───────────────────────────────────────────────
@@ -79,6 +80,9 @@ Deno.test('bye: your half, "Bye week" in theirs, the app\'s bye line, your stock
   assert(src.includes("bye={{ label: BYE_HALF, line: COPY.byeNoResult }}"));
   assert(src.includes('theirRows={null}') && src.includes('single={!sides.opp}'));
   assert(SOURCES['components/sp/gn/Scoreboard.tsx'].includes('const line = bye || !model ? bye?.line ?? \'\' : model.line;'), 'never a "leads by" on a bye');
+  const data = SOURCES['lib/game/useRosterData.ts'];
+  assert(data.includes('if (!leagueId || !me) return;'), 'the roster loads with no opponent (else a bye shows a skeleton forever)');
+  assert(data.includes('const users = opp ? [me, opp] : [me];'));
 });
 
 Deno.test('All matchups: a bye is the bye — the team and "Bye week · no result", never a nameless "?" opponent', () => {
@@ -120,11 +124,14 @@ Deno.test('lost fixture: Roberto\'s week mirrored, so the rows still reconcile (
   assertEquals(closeFor('gianluigi', { symbol: 'X', quantity: 1, start: 10, live: 11, close: 12 }, true), 12, 'only your week mirrors');
 });
 
-Deno.test('XL line boxes hug capped text (iOS scales lineHeight by the uncapped factor)', () => {
-  assertEquals(cappedLineHeight(18, 2.353, 1.6), (18 * 1.6) / 2.353); // shows 18 × 1.6 on screen
-  assertEquals(cappedLineHeight(18, 1.2, 1.6), 18); // under the cap: untouched
-  assertEquals(cappedLineHeight(18, 2.353, undefined), 18); // uncapped text: untouched
-  assert(SOURCES['components/sp/Text.tsx'].includes('const lineHeight = cappedLineHeight(typeStyle.lineHeight, fontScale, resolvedMaxFontSizeMultiplier);'));
+Deno.test('XL: a stacked roster number is fitted by measurement (fitScale, floor 0.7), never iOS\'s shrink', () => {
+  // iOS adjustsFontSizeToFit on a not-yet-laid-out frame drew the first row's week at ~3pt.
+  assertEquals(fitScale(165, estimateMoneyWidth('+$287,268.00', 22.1)), Math.min(1, Math.max(0.7, 165 / estimateMoneyWidth('+$287,268.00', 22.1))));
+  assertEquals(fitScale(null, 200), 1, 'unmeasured: full size, never a guess');
+  assertEquals(fitScale(50, 400), 0.7, 'never under the floor (17 × 1.3 × 0.7 ≥ 11)');
+  const src = SOURCES['components/sp/gn/RosterRow.tsx'];
+  assert(src.includes('const stackedScale = fitScale(numWidth, estimateMoneyWidth(gainText, SCORE_MD_PT * Math.min(fontScale, SCORE_MD_MAX)));'));
+  assert(src.includes('style={[{ fontSize: SCORE_MD_PT * stackedScale }, mirror ? styles.textEnd : null]}'));
 });
 
 Deno.test('a 1-point season line: the dot at the RIGHT end (now), the scale centred on the dashed base', () => {
@@ -143,7 +150,8 @@ Deno.test('names: one line beside the avatar while it fits at 75%, else the stac
   assert(nameBesideAvatar('Gianluigi B.', 83, 15));
   assert(!nameBesideAvatar('Alessandro Mart.', 83, 15), 'a 16-character name stacks');
   assert(estimateNameWidth('MW', 15) > estimateNameWidth('il', 15));
-  assert(SOURCES['components/sp/gn/Scoreboard.tsx'].includes('const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt);'));
+  assert(SOURCES['components/sp/gn/Scoreboard.tsx'].includes('const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt, minScale);'));
+  assert(15 * NAME_MIN_SCALE >= 11 && 13 * NAME_MIN_SCALE_COMPACT >= 11, 'names never shrink under the 11pt floor');
 });
 
 Deno.test('the splash-screen promise rejections are handled (the red toast over every reloaded screen)', () => {

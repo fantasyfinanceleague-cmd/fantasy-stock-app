@@ -54,8 +54,8 @@ Deno.test('RosterRow: no sparkline, no row rule, no winner lighting; your half b
   assert(src.includes('marginLeft: -gutter') && src.includes('marginRight: -gutter'));
   assert(src.includes('borderTopRightRadius: radius.row') && src.includes('borderTopLeftRadius: radius.row'));
   assert(src.includes('shaded ? { backgroundColor: colors.youTint } : null'));
-  assert(src.includes('<Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" />'));
-  assert(src.includes('<Half half={right} mirror shaded={false} gutter={gutter} whose={opponentName} />'));
+  assert(src.includes('<Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" markEmpty={markEmpty} />'));
+  assert(src.includes('<Half half={right} mirror shaded={false} gutter={gutter} whose={opponentName} markEmpty={markEmpty} />'));
   assert(!/colors\.lit\b|litSide|weekGain >/.test(src), 'no per-row winner lighting');
   assert(src.includes('variant="score.md"'));
 });

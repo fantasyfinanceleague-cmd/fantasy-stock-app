@@ -90,7 +90,7 @@ export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: s
     rows.push(bought
       ? { kind: 'trade', user_id: userId, symbol: h.symbol, action: 'buy', quantity: q, round: null, pick_number: null,
         occurred_at: NKE_BUY_AT, total_value: null, price: h.draft }
-      : { kind: 'draft', user_id: userId, symbol: h.symbol, action: 'buy', quantity: q, round: null, pick_number: PICKS[h.symbol],
+      : { kind: 'draft', user_id: userId, symbol: h.symbol, action: 'buy', quantity: q, round: Math.ceil(PICKS[h.symbol] / 6), pick_number: PICKS[h.symbol],
         occurred_at: DRAFTED_AT, total_value: null, price: h.draft });
   };
   // The XL leagues (EXPO_PUBLIC_HOME_FIXTURE=xl_large_numbers / xl_million) hold the same
@@ -107,7 +107,10 @@ export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: s
       rows.push({ kind: 'trade', user_id: me, symbol: t.symbol, action: t.action, quantity: t.quantity, round: null, pick_number: null, occurred_at: t.created_at, total_value: null, price: t.price });
     }
   }
-  return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES), MSFT: 'Microsoft' }, members: [] };
+  return { activity: rows, symbol_names: { ...(variant === 'stress' ? STRESS_NAMES : NAMES), MSFT: 'Microsoft' },
+    // The two managers, so the stock sheet names an owner (it skips a pick without a round,
+    // and names owners from members).
+    members: [{ user_id: me, display_name: 'Roberto B.', is_bot: false }, { user_id: opp, display_name: 'Gianluigi B.', is_bot: false }] };
 }
 
 function bySide(me: string, opp: string, slotOf: (sym: string) => string): Record<string, Record<string, string | null>> {

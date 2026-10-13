@@ -8,7 +8,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { NAME_MIN_SCALE, nameBesideAvatar, scoreboardModel, type ScoreSide } from '@/components/sp/logic/gameNight';
+import { NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, scoreboardModel, type ScoreSide } from '@/components/sp/logic/gameNight';
 import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 
 // Stockpile — <Scoreboard>, Game Night (§9C "Scoreboard"; Giorgio, 2026-10-12: "I like the
@@ -92,7 +92,8 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
   // avatar stacks over it and the name takes the half's whole width (never "Gianluigi" / "B.").
   const fontPt = NAME_PT[size] * Math.min(fontScale, NAME_MAX_SCALE);
   const besideRoom = halfWidth - 2 * HALF_PAD - (AVATAR[size] + 2 * (AVATAR_RING + AVATAR_RING_GAP)) - WHO_GAP;
-  const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt);
+  const minScale = size === 'compact' ? NAME_MIN_SCALE_COMPACT : NAME_MIN_SCALE;
+  const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt, minScale);
   return (
     <View
       testID={you ? 'scoreboard-you' : undefined}
@@ -114,7 +115,7 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
         )}
         {/* The board's 15pt name (a 17pt headline cut "Roberto B." to "Robert…" beside the 44pt
             avatar on a 17e); a long name wraps to a second line before it truncates. */}
-        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE} maxFontSizeMultiplier={NAME_MAX_SCALE} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
+        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale} maxFontSizeMultiplier={NAME_MAX_SCALE} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
           {team.name}
         </Text>
       </View>

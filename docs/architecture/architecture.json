@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a9a2c55343976f392ecf726c2759557fbab111b3",
-    "commitShort": "a9a2c553",
+    "commit": "a710e370abb4a68b580f89a706d255e404c79dbd",
+    "commitShort": "a710e370",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/gn-w4-matchup",
     "dirty": true,
@@ -11,14 +11,6 @@
       {
         "code": "M",
         "path": "apps/mobile/app/(tabs)/matchup.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/design-gallery.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/StockSheetBody.tsx"
       },
       {
         "code": "M",
@@ -30,7 +22,19 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/devSeam.ts"
+        "path": "apps/mobile/components/sp/logic/fitScale.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/gameNight.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/largeText.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/Text.tsx"
       },
       {
         "code": "M",
@@ -38,26 +42,14 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/matchupRosterView.ts"
+        "path": "apps/mobile/lib/game/useRosterData.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/home/devFixture.ts"
+        "path": "apps/mobile/tests-deno/game-night-primitives.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/home/useHomeLeague.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/money/usePortfolioLedger.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/money/useStockSheetData.ts"
-      },
-      {
-        "code": "??",
         "path": "apps/mobile/tests-deno/matchup-calls.test.ts"
       },
       {
@@ -69,16 +61,16 @@
         "path": "apps/mobile/tests-deno/player-card-model.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T07:26:03Z",
-    "sourceHash": "sha256:8a204234d697735811d6273adcffd6790e7eb2489ed56f71ef4b956f1a2983a5",
+    "timestamp": "2026-10-13T08:22:39Z",
+    "sourceHash": "sha256:9dc794f1123dc586010694dfe2213ccf2011c63e3cff129839aaf49b8d371fa9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 27.6,
-    "ageDays": 1.1,
+    "ageHours": 28.5,
+    "ageDays": 1.2,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -16572,7 +16564,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useRosterData.ts:72"
+        "apps/mobile/lib/game/useRosterData.ts:74"
       ]
     },
     {
@@ -16587,7 +16579,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useRosterData.ts:48"
+        "apps/mobile/lib/game/useRosterData.ts:50"
       ]
     },
     {
@@ -16602,7 +16594,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/lib/game/useRosterData.ts:80"
+        "apps/mobile/lib/game/useRosterData.ts:82"
       ]
     },
     {
@@ -19581,7 +19573,7 @@
         "surface": "client",
         "name": "loadSlots",
         "file": "apps/mobile/lib/game/useRosterData.ts",
-        "line": 43,
+        "line": 44,
         "kind": "seam-stub",
         "detail": "league_draft_slots.select, drafts.select, trades.select, categories.select"
       },
@@ -19645,7 +19637,7 @@
         "surface": "client",
         "name": "useRosterData",
         "file": "apps/mobile/lib/game/useRosterData.ts",
-        "line": 95,
+        "line": 99,
         "kind": "seam-stub",
         "detail": "rpc:get_portfolio_ledger, league_draft_slots.select, drafts.select, trades.select, categories.select"
       }
@@ -19947,9 +19939,9 @@
       "apps/mobile/lib/game/useFinalLineups.ts:52 -> trades.select",
       "apps/mobile/lib/game/useLeaveLeague.ts:33 -> league_members.select",
       "apps/mobile/lib/game/useLeaveLeague.ts:60 -> league_members.select",
-      "apps/mobile/lib/game/useRosterData.ts:48 -> league_draft_slots.select",
-      "apps/mobile/lib/game/useRosterData.ts:72 -> drafts.select",
-      "apps/mobile/lib/game/useRosterData.ts:80 -> trades.select",
+      "apps/mobile/lib/game/useRosterData.ts:50 -> league_draft_slots.select",
+      "apps/mobile/lib/game/useRosterData.ts:74 -> drafts.select",
+      "apps/mobile/lib/game/useRosterData.ts:82 -> trades.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
       "apps/mobile/lib/notifications.ts:102 -> user_profiles.update",

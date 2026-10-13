@@ -89,10 +89,13 @@ export default function MatchupScreen() {
   useFocusEffect(useCallback(() => {
     setOrderAsOf(new Date());
   }, []));
+  // Pull to refresh re-reads the league AND this matchup's own data (useMatchup's fetch), so
+  // the rows' numbers and a newly settled order land together.
+  const mRefresh = m.refresh;
   const onRefresh = useCallback(async () => {
     setOrderAsOf(new Date());
-    await refresh();
-  }, [refresh]);
+    await Promise.all([refresh(), mRefresh()]);
+  }, [refresh, mRefresh]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -297,6 +300,14 @@ function Withheld({ raw, roster, me, opp }: { raw: HomeRawInputs; roster: Roster
   );
 }
 
+/** Capture seam: the fixture's daily path up to Wednesday, then Home's own bars after it
+ * (Thursday's close lives there), so a closed Thursday shows its close. */
+function seamBars(symbol: string, homeBars: readonly { date: string; close: number }[]): { date: string; close: number }[] {
+  const path = fixtureWeekBars(symbol, MATCHUP_FIXTURE_VARIANT).length ? fixtureSeasonBars(symbol, MATCHUP_FIXTURE_VARIANT) : [];
+  const last = path.length ? path[path.length - 1].date : '';
+  return [...path, ...homeBars.filter((b) => b.date > last)];
+}
+
 /** The roster and the player card it opens. */
 function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt, orderAsOf }: {
   derived: MatchupDerived;
@@ -383,8 +394,8 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
       price,
       // Under the capture seam the fixture's own daily bars (a real move every day); MSFT, bought
       // this week in the 'bought' fixture, has its bars in Home's raw inputs.
-      bars: SEAM_ON && fixtureWeekBars(shown.symbol, MATCHUP_FIXTURE_VARIANT).length ? fixtureSeasonBars(shown.symbol, MATCHUP_FIXTURE_VARIANT) : raw.bars[shown.symbol] ?? [],
-      seasonBars: SEAM_ON ? fixtureSeasonBars(shown.symbol, MATCHUP_FIXTURE_VARIANT) : seasonBars.status === 'ready' ? seasonBars.bars : null,
+      bars: SEAM_ON ? seamBars(shown.symbol, raw.bars[shown.symbol] ?? []) : raw.bars[shown.symbol] ?? [],
+      seasonBars: SEAM_ON ? seamBars(shown.symbol, raw.bars[shown.symbol] ?? []) : seasonBars.status === 'ready' ? seasonBars.bars : null,
       sessions,
       now,
     });
@@ -455,6 +466,7 @@ function Roster({ derived, raw, roster, myRows, theirRows, final, seamResumesAt,
               right={half('opp', r.right)}
               opponentName={opp?.name ?? ''}
               single={!sides.opp}
+              markEmpty={g.label !== null}
             />
           ))}
         </Fragment>

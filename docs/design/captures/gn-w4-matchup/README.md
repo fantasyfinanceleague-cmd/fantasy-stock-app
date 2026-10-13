@@ -1,63 +1,69 @@
-# gn-w4-matchup captures
+# gn-w4-matchup captures (recaptured on the final build)
 
-W4 gate evidence for **Matchup + the player card** (`docs/design/reviews/w4-gate-checklist.md`,
-"Matchup + the player card"), branch `feat/gn-w4-matchup`. Captured 2026-10-12 on two
-simulators made for this branch ("W4 Matchup 17e" and "W4 Matchup 17 Pro", iOS 27.0), Expo Go
-from Metro on port 8097, per `docs/testing/MOBILE_SIMULATOR.md`.
+W4 gate evidence for **Matchup + the player card**, re-shot in full on the final build of
+`feat/gn-w4-matchup` after the DL's BLOCK and Giorgio's four calls (#call-mx-order / -empty /
+-bye / -withheld, B on each). Every state is in **both themes** (`-light` / `-dark`), unless
+a row says otherwise.
 
-**Fixtures** (`apps/mobile/.env.local`, every var written explicitly each switch):
-`EXPO_PUBLIC_SHELL_FIXTURE=leagues`, `EXPO_PUBLIC_GAME_SEAM=1`, plus
-`EXPO_PUBLIC_HOME_FIXTURE` (the week's state) and the new `EXPO_PUBLIC_MATCHUP_FIXTURE`
-(`lib/game/matchupFixture.ts`: the league ledger and slots — unset/`unslotted`, `category`,
-`tiers`, `bought`, `stress`). The fixture's "now" is Thursday Sep 24, 1:37 PM ET (week 6) unless
-the state says otherwise. Large = `large` content size; XL = `accessibility-extra-large`.
+**How it was captured:** the simulators "W4 Matchup 17e" and "W4 Matchup 17 Pro" (iOS 27.0),
+Expo Go, Metro on port 8097. Each fixture switch is a COLD launch (Expo Go terminated, then
+reopened), so there's no dev chrome: no "◀ Safari" breadcrumb, and no reload toast (that toast
+was a real unhandled splash-screen rejection, now handled). Fixtures come from
+`apps/mobile/.env.local`, with every var written explicitly each time:
+- `EXPO_PUBLIC_SHELL_FIXTURE=leagues` and `EXPO_PUBLIC_GAME_SEAM=1`;
+- `EXPO_PUBLIC_HOME_FIXTURE` (the week's state);
+- `EXPO_PUBLIC_MATCHUP_FIXTURE`: unslotted, category, tiers, bought, or stress;
+- `EXPO_PUBLIC_SCORED_OUTCOME`: won, lost, or withheld.
 
-**Order of captures matters for one detail:** the opponent's name right-aligning in its half
-and the XL caps (names, row text, the card's stacked figures) landed during this pass; the
-earliest Large captures (live leading, the first cards) predate the right-align only. Nothing
-else changed between captures.
+The fixture clock is Thursday Sep 24, 1:37 PM ET (week 6) unless a row says otherwise.
+Large = `large`; XL = `accessibility-extra-large`.
 
-## Matchup — the page
+## Matchup
 
-| File | State · device · text | Proves |
+| File | State | Shows |
 |---|---|---|
-| `17e-large-live-leading-{light,dark}` | live, you lead (`live_open`) | Scoreboard: names, avatars (yours ringed), the two totals, "Roberto B. leads by $123.15", nothing else. Your half shaded. Mirrored roster, centre column empty, no row lit for its winner, no race chart, no chyron. Order = each stock's gain at **Wednesday's close** (the last close), best first. |
-| `17e-large-live-behind-{light,dark}` | live, you're BEHIND (`leader_flip`, flipped) | "Gianluigi B. leads by $7.54" — and YOUR half (and every one of your roster halves) is still the shaded one (Giorgio, 2026-10-12: "it's you … Not whoever's winning"). |
-| `17e-large-live-update-{before,after}-light`, `rec-live-update-rows-hold-light-frames` | live updates (`leader_flip`, a 30 s poll flips who leads) | Across the updates the totals and every row's number change; **the rows hold still** (same tickers, same order). Measured: a pixel diff of the left and right ticker columns across 7 samples — the only right-column diffs were the company truncation moving as the numbers widened; ticker order identical. |
-| `17e-large-after-thu-close-reordered-light` | `live_closed` (Thursday 8 PM, after Thursday's close) | The order re-reads at the close: now by **Thursday's** close (NKE moved up on the right, TSLA to the bottom). |
-| `17e-large-monday-before-first-close-{light,dark}` | `monday_preclose` (new: Mon 10:30 AM ET, every stock at Monday's open) | Every gain $0.00 and the rows in **draft order** by pick (NVDA 2 · AAPL 11 · CRM 14 · TSLA 23 · COST 26 · V 35 / AMZN 5 · JPM 8 · DIS 17 · NKE 20 · KO 29 · BA 32). |
-| `17e-large-category-league-{top,scrolled}-{light,dark}` | category slots (`MATCHUP_FIXTURE=category`) | Grouped under centred GroupHeads in slot order — TECH ×3 · FINANCE · RETAIL ×2 · FLEX ×3 — best first within each; empty halves where a side has fewer (your empty half keeps its slab). |
-| `17e-large-tier-league-{light,dark}`, `17e-large-tier-league-scrolled-dark` | price tiers (`tiers`) | $200 OR MORE ×5 · $100–$200 ×2 · UP TO $100 ×2 — the same grouping logic. |
-| `17e-large-final-won-category-{light,dark}`, `rec-final-reveal-won-category-light.mov` + `-frames` | final, won (`scored`, category) | FinalBanner ("Roberto B. wins Week 6 · W · 5–1"), the same Scoreboard ("won by $390.67"), and the same grouped rows from the posted week's own per-stock rows. The reveal plays once on the first open. |
-| `17e-large-final-lost-withheld-rows-{light,dark}` | final, lost (`scored`, `SCORED_OUTCOME=lost`) | Banner + scoreboard. **No rows:** this fixture's `lost` swaps the two posted totals, so the per-stock rows no longer reconcile to the cent and are withheld (finalLineup's rule, unchanged). Fixture artefact, not a product state — see "Open" below. |
-| `17e-large-playoffs-live-{light,dark}` | playoff week, live (`playoff_live`) | The same page. Draft order holds because the fixture's only December close is Monday's (= open price): ties fall to the draft order. |
-| `17e-large-bye-{light,dark}` | bye | Unchanged one-liner ("Bye week · no result"). No new copy allowed, so not redesigned here. |
-| `17e-large-all-matchups-{light,dark}` | All matchups (navigation, kept) | gn Scoreboard, compact. Only YOUR game shades your half; the other games are two plain halves. |
-| `17pro-large-category-live-{light,dark}` | 17 Pro, Large, category | Same page on the wider phone; both names on one line. |
-| `17e-xl-stress-million-longest-names-{light,dark}` | XL + the stress fixture (`xl_million` ≥ $1M, `stress` longest company names) | Names stack under the avatars and never break mid-word; tickers, companies and percents capped at 1.6×; the seven-figure weeks shrink to fit (≥ 11pt). |
+| `17e-large-live-leading` | live, you lead | Scoreboard: names on ONE line ("Gianluigi B." beside its avatar at 17e Large), totals, "Roberto B. leads by $123.15". Then **"Ordered by Wednesday's close"** (#call-mx-order), and the mirrored rows best-first at Wednesday's settled close. The centre is empty and no row is lit. |
+| `17e-large-live-behind` | live, behind (`leader_flip`) | "Gianluigi B. leads by $7.54", with YOUR half still shaded. The opponent's rows are priced at Thursday (no $0.00 rows). |
+| `17e-large-live-update-before/after-light`, `rec-live-update-rows-hold-light-frames` | a pull-to-refresh fetch while you look (`leader_flip`) | Pixel diff of before vs after: the scoreboard and the row numbers changed, and both ticker columns stayed still. |
+| `17e-large-after-thu-close-reordered` | `live_closed` (Thu 8:00 PM ET) | **"Ordered by Thursday's close"**: Thursday settled at 8 PM, so the rows re-read Thursday's closes. |
+| `17e-large-monday-before-first-close` | `monday_preclose` | Every gain $0.00, draft order by pick, **no label**. |
+| `17e-large-category-empty-slots-top`, `…-category-scrolled` | category slots | TECH · RETAIL ×2 · FINANCE · FLEX ×3, best-first within each. **An open slot is a dashed edge with "Empty"** on either side (#call-mx-empty): Gianluigi's Tech slot and your second Retail slot. |
+| `17e-large-tier-league-top`, `…-tier-league-scrolled` | price tiers | $200 OR MORE ×5 · $100–$200 ×2 · UP TO $100 ×2, with dashed "Empty" slots on both sides. |
+| `17e-large-midweek-sale-and-buy` | `bought`: V sold Tue, MSFT bought Thu | MSFT (bought after Wednesday's close) sits after every held number. Unslotted, so the unmatched half is plain space, not "Empty". |
+| `17e-large-final-won-category`, `rec-final-reveal-won-category-light.mov` + `-frames` | final, won | FinalBanner (the one-time reveal), "won by $390.67", and the same grouped rows. |
+| `17e-large-final-lost-with-rows` | final, lost (item 7) | "Gianluigi B. wins Week 6 · L · 4–2", and the rows **reconcile** because your week is mirrored (−$351.79). |
+| `17e-large-final-withheld` | `SCORED_OUTCOME=withheld` | **"Stock-by-stock results aren't available for this week."**, then both lineups as ticker + company with no figures, in draft order, your side shaded (#call-mx-withheld). |
+| `17e-large-bye-my-matchup` | bye | Your half (+$213.60), **"Bye week"** in theirs, "Bye week · no result", then your stocks in ONE column under the same order rules and label (#call-mx-bye). |
+| `17e-large-all-matchups-with-byes` | All matchups on a bye week (item 5) | Each bye is the team plus "Bye week · no result"; never a nameless "?" opponent and never a "leads by". |
+| `17e-large-all-matchups` | All matchups, final | Only your game shades your half. |
+| `17e-large-playoffs-live` | a playoff week | The same page. Draft order, because the playoff week's first close hasn't settled on the fixture clock. |
+| `17e-xl-stress-million-longest-names` | XL + stress (≥ $1M, the longest company names) | Names stack under the avatars. The leads-by line and the unpriced note are capped at 1.3×, so the totals stay loudest (item 2). Stacked halves carry both numbers on the outer edge, and the gain is larger than its percent (item 3). |
+| `17pro-large-category-live`, `17pro-xl-stress` | 17 Pro, Large and XL | The same page on the wider phone. |
 
-## The player card (sheet)
+## The player card
 
-| File | State | Proves |
+| File | State | Shows |
 |---|---|---|
-| `card-yours-sell-enabled-{light,dark}` | yours, market open | "Yours" pill; THREE figures (Price · Week gain · Since the draft); Season with "$290.10 → $318.37" on the title row and a dated axis, no acquisition marker; This week on Mon…Fri, stopping at now (Thu); **Sell** enabled, NO Save; "HOW YOU GOT IT" in its inset panel: "Drafted 2nd overall · Aug 31 · $290.10"; the Alpaca credit. |
-| `card-yours-market-closed-{light,dark}` | yours, closed (`live_closed`) | Sell disabled with "Market's closed. Opens Fri 9:30 AM ET." beside it. |
-| `card-theirs-no-watchlist-{light,dark}` | theirs | "Owned by Gianluigi B." with the 20pt `opp` disc showing ONE initial ("G"); "HOW THEY GOT IT". **No Save** — there is no watchlist in the app yet (see Open). |
-| `card-theirs-category-pill-{light,dark}`, `17pro-card-theirs-{light,dark}` | theirs, category league | The category pill ("Retail", "Finance") beside "Owned by". |
-| `card-yours-tier-pill-{light,dark}` | yours, tier league | The price-tier pill "$100–$200". |
-| `card-bought-today-{light,dark}` | yours, bought this morning (`bought`) | "Bought · Sep 24 · $911.70"; the third figure "Since Sep 24"; the season line is ONE dot on its one-date axis. |
-| `card-monday-week-one-point-dark` | Monday before the first close | This week = one dot at Monday's open on the full Mon…Fri axis; week gain $0.00. |
-| `card-xl-dark`, `card-xl-scrolled-{light,dark}` | XL, stress | The three figures stack (side by side they truncated to "+5.8…"); "SINCE THE DRAFT" fits; Season/This week titles wrap their figures under them; the axis drops interior labels at XL. |
-| `rec-card-reduce-motion-fade-xl-dark.mov` | Reduce Motion ON, XL | The sheet fades in place (no rise). |
-| `rec-card-sell-to-stock-sheet-dark-frames` | Sell tapped (market open) | The card closes, and once it has left (Sheet `onClosed`) the existing stock sheet rises. Under the capture seam that sheet reads the real ledger and shows its own "This stock didn't load" — the sheet is unchanged and out of this branch. |
+| `card-yours-sell-enabled` | yours, market open | Three figures; a season line from its own seeded path; this week moving every day; Sell; "HOW YOU GOT IT" in its inset panel. |
+| `rec-card-sell-to-stock-sheet-dark-frames`, `stock-sheet-after-sell` | the Sell tap-through (item 8) | The card leaves, and the **real stock sheet** rises: Your position, Buy \| Sell with Sell selected, "Sell all 6.8942 sh ≈ $2,194.91", "Review sell". |
+| `card-yours-market-closed` | `live_closed` | Sell disabled, with "Market's closed. Opens Fri 9:30 AM ET." beside it. The week line ends at Thursday's close. |
+| `card-theirs-no-watchlist` | theirs | "Owned by Gianluigi B." with a one-initial "G" disc, and "HOW THEY GOT IT". No Save: there's no watchlist (accepted). |
+| `card-theirs-category-pill`, `17pro-card-theirs-category` | category league | The "Retail" pill. |
+| `card-yours-tier-pill` | tier league | The "$100–$200" pill. |
+| `card-bought-today-msft` | MSFT bought Thu 10:05 AM (item 6) | "Bought · Sep 24 · $412.30", "Since Sep 24". The week line **starts at the buy** (Thursday, $412.30) and the week figure equals MSFT's row (+$32.64). The season line is one dot at the right end, with the dashed base at the buy price. |
+| `card-monday-week-one-point` | Monday before the first close | The week is one dot at Monday's open on the full Mon…Fri axis, at $0.00. |
+| `card-xl-top`, `card-xl-scrolled` | XL, stress | The figures stack. The "Yours" pill and the "How you got it" panel hug their text (item 4). Week +$287,268 and since-the-draft +$529,692 are coherent. |
+| `rec-card-sheet-rises-dark-frames` | normal motion | The sheet **rising** (5 frames) as the lines draw in. |
+| `rec-card-reduce-motion-fade-xl-dark.mov` + `-frames` | Reduce Motion ON, XL | Exactly one frame changes from the page to the card: no rise and no draw-in. |
 
-## Not captured (and why)
+## Gallery
 
-- **Save → Saved in the app:** Save is hidden because the app has no watchlist (`save: null`).
-  The star / filled-star / "Saved" rendering is pinned by `tests-deno/player-card-model.test.ts`
-  (`cardAction`) and lives in the design gallery's card.
-- **VoiceOver:** the simulator can't be driven under VoiceOver from this harness. The labels are
-  pinned by tests: RosterRow "Yours, NVDA, NVIDIA, +$125.27 this week, +6.05%" /
-  "Gianluigi B., AMZN, …"; each figure "Price, $318.37, +3.81% today"; the owner pill
-  "Owned by Gianluigi B."; the action "Sell, NVDA" with the closed reason as its hint.
-- **Light** for `card-monday-week-one-point` and `17e-large-tier-league-scrolled`; the rest are in both themes.
+| File | Shows |
+|---|---|
+| `gallery-one-initial-marco-w` | 20pt discs: "Marco W." → "M", "Gianluigi B." → "G". |
+| `gallery-card-save`, `gallery-card-saved` | Save is the outline star; Saved is the same star filled, with the label "Saved" and no accent fill. |
+
+## Not captured
+
+- VoiceOver: it can't be driven from this harness. The labels are pinned by tests.
+- Live-update before/after are Light only (a pixel-diff pair); every other state has both themes.
