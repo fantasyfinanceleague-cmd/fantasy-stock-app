@@ -14,8 +14,9 @@ import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 // way that where you are is kind of shaded. And then I like the way that it says like the
 // leads by"). The Matchup header, and nothing else (his Matchup ruling): two halves in one
 // card, avatars (44) at the outer edges — yours ringed in `you` across a 2pt `bg` gap —
-// names, the totals in `score.xl`, the LEADER's half filled with `leadWash`; under the
-// card, one line: "{name} leads by {margin}" (or "won by").
+// names, the totals in `score.xl`. YOUR half is always shaded in your colour (`youTint`),
+// win or lose (Giorgio's ruling, 2026-10-12, replacing §9C's leader wash); who leads is said
+// by the totals and the one line under the card: "{name} leads by {margin}" (or "won by").
 //
 // The opponent is marked by POSITION (the right half), not colour: its avatar is the slate
 // `opp`, its total plain `text` like yours. Beside the old components/sp/game/Scoreboard
@@ -36,8 +37,8 @@ export function Scoreboard({ you, opponent, final = false }: GnScoreboardProps) 
   return (
     <View style={styles.wrap}>
       <Card style={styles.card} accessible accessibilityLabel={label}>
-        <Half side="you" team={you} lead={model.leader === 'you'} />
-        <Half side="opp" team={opponent} lead={model.leader === 'opp'} />
+        <Half side="you" team={you} />
+        <Half side="opp" team={opponent} />
       </Card>
       <Text variant="callout" tone="secondary" style={styles.line} importantForAccessibility="no" accessibilityElementsHidden>
         {model.line}
@@ -46,16 +47,16 @@ export function Scoreboard({ you, opponent, final = false }: GnScoreboardProps) 
   );
 }
 
-function Half({ side, team, lead }: { side: 'you' | 'opp'; team: ScoreSide & { avatarUri?: string | null }; lead: boolean }) {
+function Half({ side, team }: { side: 'you' | 'opp'; team: ScoreSide & { avatarUri?: string | null } }) {
   const { colors } = useTheme();
   const mirror = side === 'opp';
   return (
     <View
-      testID={lead ? `scoreboard-lead-${side}` : undefined}
+      testID={mirror ? undefined : 'scoreboard-you'}
       style={[
         styles.half,
         mirror ? styles.halfRight : styles.halfLeft,
-        lead ? { backgroundColor: colors.leadWash } : null,
+        mirror ? null : { backgroundColor: colors.youTint },
       ]}
     >
       <View style={[styles.who, mirror ? styles.whoMirror : null]}>
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     paddingVertical: space[5],
     paddingHorizontal: 14,
   },
-  // The leader's wash follows the card radius on its OUTER corners only (§9C).
+  // Your half's shading follows the card radius on its OUTER corners only (§9C).
   halfLeft: {
     alignItems: 'flex-start',
     borderTopLeftRadius: radius.lg,

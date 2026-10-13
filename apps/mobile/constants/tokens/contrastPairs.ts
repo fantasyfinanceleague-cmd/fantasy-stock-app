@@ -107,13 +107,14 @@ export const PAIRS: readonly ContrastPair[] = [
   // leader's wash, the clock cell, the sector pills and lines, the money page, the "Yours"
   // pill, the accent fill, your ring) — these are those groups, row by row, as the W3
   // primitives render them. The board's PAIRS must carry the same rows.
-  // The lit slab (RosterRow: the half that wins the row).
-  ['text', 'lit', null, 4.5, 'Roster: ticker on the lit slab'],
-  ['text2', 'lit', null, 4.5, 'Roster: company and week % on the lit slab'],
-  ['gain', 'lit', null, 4.5, 'Roster: week gain on the lit slab'],
-  ['loss', 'lit', null, 4.5, 'Roster: week loss on the lit slab (both halves down)'],
-  // The leader's half of the Scoreboard.
-  ['text', 'leadWash', 'surface', 4.5, "Scoreboard: name and total on the leader's wash"],
+  // Your side, shaded in your colour, win or lose (Giorgio, 2026-10-12, replacing §9C's lit
+  // slab and leader wash, whose tokens stay ported but unused until §9C is revised): your
+  // roster half sits on the page, so `youTint` over `bg`. (Your Scoreboard half is youTint
+  // over the card's surface: the existing "Your standings row" pair, text on youTint/surface.)
+  ['text', 'youTint', 'bg', 4.5, 'Roster: your ticker on your shaded half'],
+  ['text2', 'youTint', 'bg', 4.5, 'Roster: your company and week % on your shaded half'],
+  ['gain', 'youTint', 'bg', 4.5, 'Roster: your week gain on your shaded half'],
+  ['loss', 'youTint', 'bg', 4.5, 'Roster: your week loss on your shaded half'],
   // The draft's on-the-clock cell.
   ['onClockCell', 'clockCell', null, 4.5, 'Draft: the clock in the on-the-clock cell'],
   ['clockCellLive', 'clockCell', null, 4.5, 'Draft: the pick number (and its ring) in the on-the-clock cell'],

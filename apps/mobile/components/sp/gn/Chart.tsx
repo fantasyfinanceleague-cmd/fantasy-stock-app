@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { LayoutChangeEvent, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -53,6 +53,9 @@ export interface ChartProps {
   formatValue: (value: number) => string;
   /** What the chart is ("NVDA this week"); the range and the last value follow it. */
   accessibilityLabel: string;
+  /** A row under the axis labels: Home's W/L marks (Giorgio, 2026-10-12: the two end date
+   * labels — `axis.maxLabels: 2` — sit on top of the marks). The Chart doesn't own them. */
+  under?: ReactNode;
 }
 
 const STROKE = 2.5;
@@ -62,7 +65,7 @@ const PAD = { top: HALO_R + 3, bottom: HALO_R, left: 2, right: HALO_R + 3 };
 // The scrub label sits beside the scrubbed point, flipping side past the middle.
 const SCRUB_HALF = 40;
 
-export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel }: ChartProps) {
+export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under }: ChartProps) {
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const { fontScale } = useWindowDimensions();
@@ -154,6 +157,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
           </Text>
         ))}
       </View>
+      {under ? <View style={{ marginHorizontal: bleed }}>{under}</View> : null}
     </View>
   );
 }

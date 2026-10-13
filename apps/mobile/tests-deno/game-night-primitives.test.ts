@@ -6,9 +6,10 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { color } from '../constants/tokens/color.ts';
 import {
-  acquisitionLine, actionLabel, chipLook, draftTileLook, howTitle, litSide, movement, playerAction, rangeLook,
-  scoreboardModel, sectorColorKey, SECTOR_LABEL, SECTOR_LINE, sinceLabel, toneOf, type Sector,
+  acquisitionLine, actionLabel, CATEGORIES, categoryPillLook, chipLook, draftTileLook, howTitle, movement, playerAction,
+  rangeLook, scoreboardModel, SECTOR_LINE, SHADED_SIDE, sinceLabel, toneOf, type Category,
 } from '../components/sp/logic/gameNight.ts';
+import categoriesSeed from '../../../supabase/seed/categories.json' with { type: 'json' };
 import { SOURCES } from './sourceManifest.generated.ts';
 
 const THEMES = ['light', 'dark'] as const;
@@ -16,7 +17,7 @@ const strip = (src: string) => src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*
 
 // ── Scoreboard ───────────────────────────────────────────────────────────────────
 
-Deno.test('Scoreboard: the leader\'s half is lit and the line says "{name} leads by {margin}" / "won by"', () => {
+Deno.test('Scoreboard: who leads is in the line — "{name} leads by {margin}" / "won by"', () => {
   const you = { name: 'Roberto B.', gain: 343.59 };
   const opp = { name: 'Gianluigi B.', gain: 121.26 };
   assertEquals(scoreboardModel(you, opp, false), { leader: 'you', line: 'Roberto B. leads by $222.33' });
@@ -26,47 +27,59 @@ Deno.test('Scoreboard: the leader\'s half is lit and the line says "{name} leads
   assertEquals(scoreboardModel(you, { ...opp, gain: you.gain }, false), { leader: null, line: 'Dead even' });
 });
 
-Deno.test('Scoreboard: totals in score.xl, the lead wash on the leader only, your avatar ringed, nothing else', () => {
+Deno.test('Scoreboard: totals in score.xl, YOUR half always shaded (never the leader\'s), your avatar ringed, nothing else', () => {
   const src = strip(SOURCES['components/sp/gn/Scoreboard.tsx']);
   assert(src.includes('variant="score.xl"'));
-  assert(src.includes('lead ? { backgroundColor: colors.leadWash } : null'));
+  assert(src.includes('mirror ? null : { backgroundColor: colors.youTint }'));
+  assert(!/leadWash|model\.leader ===/.test(src), 'no leader shading');
   assert(src.includes("ring={side === 'you'}"));
   assert(!/TugBar|Chyron|LiveDot|SeasonChart|Chart\b/.test(src), 'the Matchup header carries nothing else');
 });
 
 // ── RosterRow ────────────────────────────────────────────────────────────────────
 
-Deno.test('RosterRow: the half that wins the row is lit; level or an empty side lights nothing', () => {
-  assertEquals(litSide(41.26, 12.5), 'left');
-  assertEquals(litSide(-3, 7), 'right');
-  assertEquals(litSide(-3, -7), 'left'); // the smaller loss wins the row
-  assertEquals(litSide(5, 5), null);
-  assertEquals(litSide(5, null), null);
+Deno.test('RosterRow: your side (left) is the shaded one, win or lose (Giorgio, 2026-10-12)', () => {
+  assertEquals(SHADED_SIDE, 'left');
   assertEquals(toneOf(0), 'zero');
 });
 
-Deno.test('RosterRow: no sparkline, no row rule, the slab bleeds past the gutter with inner corners only', () => {
+Deno.test('RosterRow: no sparkline, no row rule, no winner lighting; your half bleeds past the gutter, inner corners only', () => {
   const src = strip(SOURCES['components/sp/gn/RosterRow.tsx']);
   assert(!/Svg|Spark|Path|borderBottomWidth|borderTopWidth/.test(src), 'no line on rows');
   assert(src.includes('marginLeft: -gutter') && src.includes('marginRight: -gutter'));
   assert(src.includes('borderTopRightRadius: radius.row') && src.includes('borderTopLeftRadius: radius.row'));
-  assert(src.includes('lit ? { backgroundColor: colors.lit } : null'));
+  assert(src.includes('shaded ? { backgroundColor: colors.youTint } : null'));
+  assert(src.includes('<Half half={left} mirror={false} shaded gutter={gutter} />'));
+  assert(src.includes('<Half half={right} mirror shaded={false} gutter={gutter} />'));
+  assert(!/colors\.lit\b|litSide|weekGain >/.test(src), 'no per-row winner lighting');
   assert(src.includes('variant="score.md"'));
 });
 
 // ── DraftTile ────────────────────────────────────────────────────────────────────
 
-Deno.test('DraftTile: a picked tile is `surface` with its sector as a 3pt LINE — never a sector fill', () => {
+Deno.test('Categories: the 11 real slugs, Giorgio\'s pill names and 3-letter codes', () => {
+  assertEquals(Object.keys(CATEGORIES).sort(), categoriesSeed.map((c) => c.slug).sort());
+  assertEquals(
+    Object.values(CATEGORIES).map((c) => `${c.pill}/${c.code}`),
+    ['Tech/TEC', 'Finance/FIN', 'Health/HLT', 'Energy/NRG', 'Autos/AUT', 'Retail/RTL', 'Food/F&B', 'Media/MED', 'Industry/IND', 'Property/PRP', 'Misc/MSC'],
+  );
+  assertEquals(CATEGORIES.misc.color, null); // Misc is neutral
+});
+
+Deno.test('DraftTile: a picked tile is `surface` with its category as a 3pt LINE — never a category fill', () => {
   assertEquals(SECTOR_LINE, 3);
   for (const theme of THEMES) {
     const c = color[theme];
-    for (const s of Object.keys(SECTOR_LABEL) as Sector[]) {
-      const look = draftTileLook('picked', s, c);
-      assertEquals(look.fill, c.surface, `${theme} ${s}: fill`);
-      assertEquals(look.line, c[sectorColorKey(s)], `${theme} ${s}: line`);
-      assert(look.fill !== look.line, `${theme} ${s}: filled with its sector`);
+    for (const k of Object.keys(CATEGORIES) as Category[]) {
+      const look = draftTileLook('picked', k, c);
+      const key = CATEGORIES[k].color;
+      assertEquals(look.fill, c.surface, `${theme} ${k}: fill`);
+      assertEquals(look.line, key ? c[key] : null, `${theme} ${k}: line`);
+      assert(look.fill !== look.line, `${theme} ${k}: filled with its category`);
       assertEquals(look.tickerInk, c.text);
       assertEquals(look.labelInk, c.text2);
+      // Its pill: the colour with onTile ink, or neutral.
+      assertEquals(categoryPillLook(k, c), key ? { fill: c[key], ink: c.onTile } : { fill: c.inset, ink: c.text });
     }
     assertEquals(draftTileLook('picked', null, c).line, null);
   }
@@ -78,7 +91,6 @@ Deno.test('DraftTile: the on-the-clock cell is `clockCell`, ringed, with its own
     assertEquals(draftTileLook('onClock', null, c), { fill: c.clockCell, line: null, ring: c.clockCellLive, labelInk: c.clockCellLive, tickerInk: c.onClockCell });
     assertEquals(draftTileLook('empty', null, c).fill, c.sunken);
   }
-  assertEquals(SECTOR_LABEL.health, 'Hlth');
 });
 
 Deno.test('DraftTile: the component draws the line from the look, at the bottom', () => {
@@ -187,6 +199,8 @@ Deno.test('PlayerCard: the order — header, three figures, season (dated), this
   assertEquals((src.match(/<Figure /g) ?? []).length, 3, 'three key figures, no position');
   assert(!/position/i.test(src.replace(/position: 'absolute'/g, '')), 'no position figure');
   assert(!/marks=|<Circle|'Drafted'/.test(src), 'no acquisition marker on the chart');
+  assert(src.includes('<Avatar name={owner.name}'), 'the owner\'s avatar beside "Owned by …"');
+  assert(!/game log|GameLog/i.test(src), 'no game log');
   assert(!/marks/.test(strip(SOURCES['components/sp/gn/Chart.tsx'])), 'the Chart takes no marker');
 });
 

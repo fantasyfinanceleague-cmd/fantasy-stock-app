@@ -7,16 +7,18 @@ import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
-import { litSide, toneOf } from '@/components/sp/logic/gameNight';
+import { toneOf } from '@/components/sp/logic/gameNight';
 
 // Stockpile — <RosterRow> and <GroupHead>, Game Night (§9C; Giorgio's Matchup ruling: "it
 // lists your stocks as if they are like a football roster … and it stacks them up").
 //
 // A row is two mirrored halves — yours left, theirs right — each: ticker + company, and the
 // week gain in `score.md` + week %. The centre is an EMPTY gap (Giorgio took the Design
-// Lead's "Empty" for unslotted leagues). The half that wins the row sits on the `lit`
-// slab, which runs off its OUTER screen edge (pass the screen `gutter` so it bleeds past it)
-// with only its inner corners rounded. No row lines: rows divide by space (rule 2).
+// Lead's "Empty" for unslotted leagues). YOUR half always sits on the slab in your colour
+// (`youTint`), win or lose (Giorgio, 2026-10-12: no per-row winner lighting; who leads is
+// the Scoreboard's job). The slab runs off the LEFT screen edge (pass the screen `gutter` so
+// it bleeds past it) with only its inner corners rounded. No row lines: rows divide by
+// space (rule 2).
 // No sparkline (Giorgio, 2026-10-12: "I don't want that like line thing there visible").
 //
 // Tapping a stock opens its player card: pass `onPress` per half. A half without `onPress`
@@ -34,7 +36,7 @@ export interface RosterHalf {
 export interface RosterRowProps {
   left: RosterHalf | null;
   right: RosterHalf | null;
-  /** The screen gutter the lit slab bleeds past (20 on a phone screen). */
+  /** The screen gutter your shaded half bleeds past (20 on a phone screen). */
   gutter?: number;
 }
 
@@ -42,24 +44,23 @@ export interface RosterRowProps {
 const CENTRE_GAP = 10;
 
 export function RosterRow({ left, right, gutter = space[6] }: RosterRowProps) {
-  const lit = litSide(left?.weekGain ?? null, right?.weekGain ?? null);
   return (
     <View style={styles.row}>
-      <Half half={left} mirror={false} lit={lit === 'left'} gutter={gutter} />
+      <Half half={left} mirror={false} shaded gutter={gutter} />
       <View style={{ width: CENTRE_GAP }} />
-      <Half half={right} mirror lit={lit === 'right'} gutter={gutter} />
+      <Half half={right} mirror shaded={false} gutter={gutter} />
     </View>
   );
 }
 
-function Half({ half, mirror, lit, gutter }: { half: RosterHalf | null; mirror: boolean; lit: boolean; gutter: number }) {
+function Half({ half, mirror, shaded, gutter }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number }) {
   const { colors } = useTheme();
   const slab = [
     styles.half,
-    // Off the OUTER edge: the slab extends past the gutter, its padding keeps the text put.
+    // Off the OUTER edge: the half extends past the gutter, its padding keeps the text put.
     mirror ? { marginRight: -gutter, paddingRight: gutter, paddingLeft: space[4] } : { marginLeft: -gutter, paddingLeft: gutter, paddingRight: space[4] },
     mirror ? styles.innerCornersRight : styles.innerCornersLeft,
-    lit ? { backgroundColor: colors.lit } : null,
+    shaded ? { backgroundColor: colors.youTint } : null,
   ];
   if (!half) return <View style={slab} />;
 
@@ -77,19 +78,19 @@ function Half({ half, mirror, lit, gutter }: { half: RosterHalf | null; mirror: 
       <Text variant="caption" color={toneColor} style={styles.pct}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
     </View>
   );
-  const a11y = `${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}${lit ? ', wins the row' : ''}`;
+  const a11y = `${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
   const content = mirror ? [num, name] : [name, num];
 
   if (!half.onPress) {
     return (
-      <View testID={lit ? 'roster-lit' : undefined} style={[slab, styles.content]} accessible accessibilityLabel={a11y}>
+      <View testID={shaded ? 'roster-yours' : undefined} style={[slab, styles.content]} accessible accessibilityLabel={a11y}>
         {content[0]}
         {content[1]}
       </View>
     );
   }
   return (
-    <PressableScale testID={lit ? 'roster-lit' : undefined} style={[slab, styles.content]} onPress={half.onPress} accessibilityRole="button" accessibilityLabel={a11y}>
+    <PressableScale testID={shaded ? 'roster-yours' : undefined} style={[slab, styles.content]} onPress={half.onPress} accessibilityRole="button" accessibilityLabel={a11y}>
       {content[0]}
       {content[1]}
     </PressableScale>

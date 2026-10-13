@@ -93,10 +93,10 @@ Deno.test('contrast: the three §9C rows are re-pointed from onAccent to onYou',
   assert(!PAIRS.some(([f, b]) => f === 'onAccent' && (b === 'you' || b === 'lossFill')), 'no onAccent left on a you / loss fill');
 });
 
-// The Game Night rows (§9C's groups, row by row). The board's PAIRS must carry the same.
+// The Game Night rows (§9C's groups, row by row; your shaded side in place of the lit slab
+// and the leader's wash, Giorgio 2026-10-12). The board's PAIRS must carry the same.
 const GAME_NIGHT_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
-  ['text', 'lit', null, 4.5], ['text2', 'lit', null, 4.5], ['gain', 'lit', null, 4.5], ['loss', 'lit', null, 4.5],
-  ['text', 'leadWash', 'surface', 4.5],
+  ['text', 'youTint', 'bg', 4.5], ['text2', 'youTint', 'bg', 4.5], ['gain', 'youTint', 'bg', 4.5], ['loss', 'youTint', 'bg', 4.5],
   ['onClockCell', 'clockCell', null, 4.5], ['clockCellLive', 'clockCell', null, 4.5],
   ['onTile', 'tileTech', null, 4.5], ['onTile', 'tileComm', null, 4.5], ['onTile', 'tileCons', null, 4.5],
   ['onTile', 'tileFin', null, 4.5], ['onTile', 'tileHealth', null, 4.5],
@@ -134,4 +134,8 @@ Deno.test('depth from lightness steps of one hue (Dark): bg < surface < inset; s
   assert(lum(d.bg) < lum(d.surface) && lum(d.surface) < lum(d.inset), 'bg → surface → inset rises');
   assert(lum(d.sunken) < lum(d.bg), 'sunken sits below the page');
   assert(lum(d.moneyBg) < lum(d.bg), 'the money page is darker than the game page');
+});
+
+Deno.test("Giorgio's shading ruling: no PAIRS row puts anything on lit or leadWash (your side is shaded, not the winner's)", () => {
+  assert(!PAIRS.some(([, b]) => b === 'lit' || b === 'leadWash'));
 });

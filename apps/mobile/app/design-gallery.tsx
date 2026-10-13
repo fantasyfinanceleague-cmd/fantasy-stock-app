@@ -24,10 +24,10 @@ import { Scoreboard } from '@/components/sp/game/Scoreboard';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme, ThemePreference } from '@/components/sp/ThemeProvider';
 import {
-  Chart, DraftTile, GroupHead, MANAGER_ROW_GAP, ManagerRow, PlayerCard, PlayerCardBody, RangePills, RosterRow,
+  CategoryPill, Chart, DraftTile, GroupHead, MANAGER_ROW_GAP, ManagerRow, PlayerCard, PlayerCardBody, RangePills, RosterRow,
   Scoreboard as GnScoreboard, type PlayerCardProps, type RosterHalf,
 } from '@/components/sp/gn';
-import type { Sector } from '@/components/sp/logic/gameNight';
+import { CATEGORIES, type Category } from '@/components/sp/logic/gameNight';
 import { formatMoney } from '@/components/sp/logic/money';
 
 // Stockpile — dev-only design gallery (§9A, "One design, two themes",
@@ -334,8 +334,10 @@ const STANDINGS = [
   { rank: 5, delta: -1, name: 'Fabio C.', record: '2–4', seasonGain: -88.75 },
   { rank: 6, delta: -1, name: 'Marco R.', record: '1–5', seasonGain: -240.1 },
 ];
-const SECTORS: Sector[] = ['tech', 'comm', 'cons', 'fin', 'health'];
-const BOARD_TICKERS = ['MSFT', 'NVDA', 'META', 'AVGO', 'AMZN', 'GOOGL', 'JPM', 'AAPL', 'NKE', 'V', 'KO'];
+const BOARD: [string, Category][] = [
+  ['MSFT', 'tech'], ['NVDA', 'tech'], ['META', 'media'], ['UNH', 'health'], ['AMZN', 'retail'], ['XOM', 'energy'],
+  ['JPM', 'finance'], ['TSLA', 'transport'], ['NKE', 'retail'], ['KO', 'food'], ['CAT', 'industrials'],
+];
 const WEEK_THU = [{ t: 0, value: 0 }, { t: 1, value: 28.1 }, { t: 2, value: 64.3 }, { t: 3, value: 41.26 }, { t: 3.6, value: 343.59 }];
 // NVDA from the draft (Sep 29) to Thursday (Oct 8), in days since the draft.
 const SEASON = [[0, 290.1], [1, 292.4], [2, 296.8], [3, 288.9], [4, 295.6], [6, 299.1], [8, 306.68], [9, 318.37]].map(([t, value]) => ({ t, value }));
@@ -351,7 +353,7 @@ const CARD_YOURS: PlayerCardProps = {
   marketOpen: false, opens: 'Mon 9:30 ET',
 };
 const CARD_THEIRS: PlayerCardProps = {
-  ...CARD_YOURS, ticker: 'NKE', company: 'Nike', owner: { name: 'Gianluigi B.' }, slot: 'Cons', price: 81.3, todayPct: 2.0,
+  ...CARD_YOURS, ticker: 'NKE', company: 'Nike', owner: { name: 'Gianluigi B.' }, category: 'retail', price: 81.3, todayPct: 2.0,
   weekGain: 21.38, weekPct: 2.14, sinceGain: -11.1, sincePct: -1.33, acquisition: { kind: 'claimed', date: 'Oct 7', price: 79.6 },
   season: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }], base: 79.6, axis: { kind: 'dated', start: '2026-10-07', end: '2026-10-08' } },
   week: { points: [{ t: 0, value: 79.6 }, { t: 2, value: 79.71 }, { t: 3.6, value: 81.3 }], base: 79.6 },
@@ -409,7 +411,7 @@ function GameNightGallery() {
         <GnScoreboard you={{ name: 'Roberto B.', gain: 0 }} opponent={{ name: 'Gianluigi B.', gain: 0 }} />
       </Section>
 
-      <Section title="GN · RosterRow (unslotted) + GroupHead (slotted)">
+      <Section title="GN · RosterRow: your side shaded (unslotted) + GroupHead (slotted)">
         <View style={{ gap: 6 }}>
           {ROSTER.map(([a, b], i) => (
             <RosterRow key={i} left={a} right={b} />
@@ -424,7 +426,13 @@ function GameNightGallery() {
         </View>
       </Section>
 
-      <Section title="GN · DraftTile (sector line, on the clock, empty)">
+      <Section title="GN · CategoryPill (11 categories; 5 coloured until the cat tokens land)">
+        <View style={[styles.row, styles.wrap]}>
+          {(Object.keys(CATEGORIES) as Category[]).map((k) => <CategoryPill key={k} category={k} />)}
+        </View>
+      </Section>
+
+      <Section title="GN · DraftTile (category line + code, on the clock, empty)">
         {[0, 1, 2].map((row) => (
           <View key={row} style={styles.boardRow}>
             {[0, 1, 2, 3, 4, 5].map((col) => {
@@ -432,7 +440,7 @@ function GameNightGallery() {
               const tile =
                 pick === 11 ? <DraftTile pick={pick} state="onClock" clock="0:42" />
                   : pick > 11 ? <DraftTile pick={pick} state="empty" />
-                    : <DraftTile pick={pick} state="picked" ticker={BOARD_TICKERS[pick - 1]} sector={SECTORS[(pick - 1) % 5]} />;
+                    : <DraftTile pick={pick} state="picked" ticker={BOARD[pick - 1][0]} category={BOARD[pick - 1][1]} />;
               return <View key={col} style={styles.boardCell}>{tile}</View>;
             })}
           </View>
@@ -457,6 +465,9 @@ function GameNightGallery() {
         <Chart points={WEEK_THU} base={0} axis={{ kind: 'week' }} bleed={space[6]} live drawKey="g-week" formatValue={money} accessibilityLabel="This week" />
         <Text variant="caption" tone="secondary">Season to now (dated), market closed</Text>
         <Chart points={CARD_YOURS.season.points} base={290.1} axis={SEASON_AXIS} bleed={space[6]} drawKey="g-season" formatValue={(v) => formatMoney(v)} accessibilityLabel="NVDA this season" />
+        <Text variant="caption" tone="secondary">Home: two end dates (start, today) over the W/L marks</Text>
+        <Chart points={[{ t: 0, value: 0 }, { t: 7, value: 120 }, { t: 14, value: 80 }, { t: 21, value: 210 }, { t: 28, value: 300 }, { t: 35, value: 280 }, { t: 37, value: 343.59 }]} base={0} axis={{ kind: 'dated', start: '2026-09-01', end: '2026-10-08', maxLabels: 2 }} bleed={space[6]} drawKey="g-home" formatValue={money} accessibilityLabel="Season gain"
+          under={<View style={styles.marks}>{['W', 'W', 'L', 'W', 'L', 'W'].map((r, i) => <Text key={i} variant="callout" color={r === 'W' ? colors.gain : colors.loss} style={styles.mark}>{r}</Text>)}</View>} />
         <Text variant="caption" tone="secondary">Down window (loss)</Text>
         <Chart points={[{ t: 0, value: 0 }, { t: 1, value: -12 }, { t: 2, value: -48.2 }]} base={0} axis={{ kind: 'week' }} bleed={space[6]} height={80} drawKey="g-loss" formatValue={money} accessibilityLabel="This week" />
         <Text variant="caption" tone="secondary">1Y, months</Text>
@@ -538,6 +549,13 @@ const styles = StyleSheet.create({
   boardCell: {
     flex: 1,
     minWidth: 0,
+  },
+  marks: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  mark: {
+    fontWeight: '800',
   },
   moneyStrip: {
     borderRadius: radius.lg,

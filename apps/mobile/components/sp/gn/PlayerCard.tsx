@@ -9,8 +9,10 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import {
-  acquisitionLine, actionLabel, howTitle, playerAction, sinceLabel, toneOf, type Acquisition,
+  acquisitionLine, actionLabel, howTitle, playerAction, sinceLabel, toneOf, type Acquisition, type Category,
 } from '@/components/sp/logic/gameNight';
+import { Avatar } from '@/components/sp/Avatar';
+import { CategoryPill } from '@/components/sp/gn/CategoryPill';
 import type { AxisSpec } from '@/components/sp/logic/chartAxis';
 import type { LinePointIn } from '@/components/sp/logic/lineChart';
 import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
@@ -29,6 +31,7 @@ import { Chart } from '@/components/sp/gn/Chart';
 //      reason while closed, NEVER Save; a stock you don't own → Save / Saved.
 //   6. "How you got it" at the BOTTOM ("How they got it" on theirs).
 //   7. The Alpaca credit.
+// Giorgio, 2026-10-12: the owner's avatar sits in "Owned by …"; no game log.
 // No new copy: every string is the spec's or the app's own (moneyCopy).
 
 export interface PlayerCardProps {
@@ -36,10 +39,13 @@ export interface PlayerCardProps {
   onClose: () => void;
   ticker: string;
   company: string;
-  /** 'you', or the owning manager's name. */
-  owner: 'you' | { name: string };
-  /** The slot pill in slotted leagues ("Tech", "$100–$200"); omit in unslotted leagues. */
+  /** 'you', or the owning manager (their avatar sits in the "Owned by …" pill). */
+  owner: 'you' | { name: string; avatarUri?: string | null };
+  /** The slot pill in slotted leagues: a category league passes `category` (a coloured
+   * CategoryPill), a price-tier league its tier as `slot` ("$100–$200"); omit both in
+   * unslotted leagues. */
   slot?: string;
+  category?: Category;
   price: number;
   /** Today's change, percent. */
   todayPct: number;
@@ -73,7 +79,7 @@ export function PlayerCard(props: PlayerCardProps) {
 
 /** The card's content, without the sheet — the design gallery renders it inline. */
 export function PlayerCardBody({
-  onClose, ticker, company, owner, slot, price, todayPct, weekGain, weekPct, sinceGain, sincePct, acquisition,
+  onClose, ticker, company, owner, slot, category, price, todayPct, weekGain, weekPct, sinceGain, sincePct, acquisition,
   draftLabel, season, week, marketOpen, opens, saved = false, onSell, onToggleSave,
 }: PlayerCardProps) {
   const { colors } = useTheme();
@@ -104,9 +110,12 @@ export function PlayerCardBody({
         {mine ? (
           <View style={[styles.pill, { backgroundColor: colors.youTint }]}><Text variant="callout" color={colors.youText} style={styles.pillText}>Yours</Text></View>
         ) : (
-          <View style={[styles.pill, { backgroundColor: colors.inset }]}><Text variant="callout" style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text></View>
+          <View style={[styles.pill, styles.ownerPill, { backgroundColor: colors.inset }]}>
+            <Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="neutral" />
+            <Text variant="callout" style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text>
+          </View>
         )}
-        {slot ? <View style={[styles.pill, { backgroundColor: colors.inset }]}><Text variant="callout" style={styles.pillText}>{slot}</Text></View> : null}
+        {category ? <CategoryPill category={category} /> : slot ? <View style={[styles.pill, { backgroundColor: colors.inset }]}><Text variant="callout" style={styles.pillText}>{slot}</Text></View> : null}
       </View>
 
       {/* 2. Three key figures */}
@@ -212,6 +221,12 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontWeight: '700',
+  },
+  ownerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 3,
   },
   strip: {
     flexDirection: 'row',

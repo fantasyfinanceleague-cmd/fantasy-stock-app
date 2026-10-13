@@ -19,7 +19,8 @@ export interface ScoreSide {
 }
 
 export interface ScoreboardModel {
-  /** The side whose half fills with `leadWash`; null when level. */
+  /** Who leads — said by the totals and the line only. The SHADED half is always yours
+   * (Giorgio, 2026-10-12: your side is shaded, win or lose), never the leader's. */
   leader: Side | null;
   /** The one line under the card: "{name} leads by {margin}" (or "won by"). */
   line: string;
@@ -35,32 +36,50 @@ export function scoreboardModel(you: ScoreSide, opp: ScoreSide, final: boolean):
 
 // ── RosterRow (Matchup) ──────────────────────────────────────────────────────────
 
-/** Which half of a mirrored roster row sits on the `lit` slab: the one that wins the row.
- * Level, or a side with no stock in that row, lights nothing. */
-export function litSide(left: number | null, right: number | null): 'left' | 'right' | null {
-  if (left === null || right === null || left === right) return null;
-  return left > right ? 'left' : 'right';
-}
+/** Giorgio, 2026-10-12: YOUR side is shaded in your colour, win or lose — on the Scoreboard
+ * and on every roster row. No per-row winner lighting; who leads lives in the totals and the
+ * "leads by" line. Your side is the left half. */
+export const SHADED_SIDE = 'left' as const;
 
 export type Tone = 'gain' | 'loss' | 'zero';
 export function toneOf(n: number): Tone {
   return n > 0 ? 'gain' : n < 0 ? 'loss' : 'zero';
 }
 
-// ── DraftTile ────────────────────────────────────────────────────────────────────
+// ── Categories (DraftTile, CategoryPill) ─────────────────────────────────────────
 
-export type Sector = 'tech' | 'comm' | 'cons' | 'fin' | 'health';
+/** The 11 real categories (supabase/seed/categories.json slugs). */
+export type Category =
+  | 'tech' | 'finance' | 'health' | 'energy' | 'transport' | 'retail'
+  | 'food' | 'media' | 'industrials' | 'realestate' | 'misc';
 
-/** The board's sector labels (§9C, "Sector: Hlth"). */
-export const SECTOR_LABEL: Record<Sector, string> = { tech: 'Tech', comm: 'Comm', cons: 'Cons', fin: 'Fin', health: 'Hlth' };
-
-const SECTOR_KEY: Record<Sector, keyof ThemeColors> = {
-  tech: 'tileTech', comm: 'tileComm', cons: 'tileCons', fin: 'tileFin', health: 'tileHealth',
-};
-
-export function sectorColorKey(sector: Sector): keyof ThemeColors {
-  return SECTOR_KEY[sector];
+export interface CategoryInfo {
+  /** The short pill name (Giorgio, 2026-10-12). */
+  pill: string;
+  /** The 3-letter draft-tile code. */
+  code: string;
+  /** Its colour token; null = neutral (Misc), or no token yet. */
+  color: keyof ThemeColors | null;
 }
+
+/**
+ * Giorgio's names and codes (2026-10-12). The colours are §9C's five sample tiles until
+ * the Design Lead's 11 `cat*` tokens land: swapping to them is THIS TABLE ONLY (data, not
+ * code). Until then the categories without a token draw no line and a neutral pill.
+ */
+export const CATEGORIES: Record<Category, CategoryInfo> = {
+  tech: { pill: 'Tech', code: 'TEC', color: 'tileTech' },
+  finance: { pill: 'Finance', code: 'FIN', color: 'tileFin' },
+  health: { pill: 'Health', code: 'HLT', color: 'tileHealth' },
+  energy: { pill: 'Energy', code: 'NRG', color: null },
+  transport: { pill: 'Autos', code: 'AUT', color: null },
+  retail: { pill: 'Retail', code: 'RTL', color: 'tileCons' },
+  food: { pill: 'Food', code: 'F&B', color: null },
+  media: { pill: 'Media', code: 'MED', color: 'tileComm' },
+  industrials: { pill: 'Industry', code: 'IND', color: null },
+  realestate: { pill: 'Property', code: 'PRP', color: null },
+  misc: { pill: 'Misc', code: 'MSC', color: null },
+};
 
 /** §9C: the sector line's height at the bottom of a draft tile. */
 export const SECTOR_LINE = 3;
@@ -71,8 +90,8 @@ export type DraftTileState = 'picked' | 'empty' | 'onClock';
 
 export interface DraftTileLook {
   fill: string;
-  /** The 3pt sector line at the bottom; null = none. A tile is NEVER filled with its
-   * sector (Giorgio, 2026-10-12: "with that line at the bottom … without it being like a
+  /** The 3pt category line at the bottom; null = none. A tile is NEVER filled with its
+   * category (Giorgio, 2026-10-12: "with that line at the bottom … without it being like a
    * carbon copy of Sleeper"). */
   line: string | null;
   ring: string | null;
@@ -80,12 +99,25 @@ export interface DraftTileLook {
   tickerInk: string;
 }
 
-export function draftTileLook(state: DraftTileState, sector: Sector | null, c: ThemeColors): DraftTileLook {
+export function draftTileLook(state: DraftTileState, category: Category | null, c: ThemeColors): DraftTileLook {
   if (state === 'onClock') {
     return { fill: c.clockCell, line: null, ring: c.clockCellLive, labelInk: c.clockCellLive, tickerInk: c.onClockCell };
   }
   if (state === 'empty') return { fill: c.sunken, line: null, ring: null, labelInk: c.text2, tickerInk: c.text2 };
-  return { fill: c.surface, line: sector ? c[sectorColorKey(sector)] : null, ring: null, labelInk: c.text2, tickerInk: c.text };
+  const key = category ? CATEGORIES[category].color : null;
+  return { fill: c.surface, line: key ? c[key] : null, ring: null, labelInk: c.text2, tickerInk: c.text };
+}
+
+export interface PillLook {
+  fill: string;
+  ink: string;
+}
+
+/** A category pill: its colour with `onTile` ink; a neutral category (or one without a
+ * token yet) is `inset` + `text`. */
+export function categoryPillLook(category: Category, c: ThemeColors): PillLook {
+  const key = CATEGORIES[category].color;
+  return key ? { fill: c[key], ink: c.onTile } : { fill: c.inset, ink: c.text };
 }
 
 // ── ManagerRow (Standings) ───────────────────────────────────────────────────────
