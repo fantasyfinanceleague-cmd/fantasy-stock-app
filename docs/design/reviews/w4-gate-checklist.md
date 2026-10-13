@@ -69,15 +69,15 @@ with the reason beside it**. A silent no-op is a P1.
 | Check | How | Fail if |
 |---|---|---|
 | Tokens only | grep the branch's changed files for `#[0-9A-Fa-f]{3,8}` and `rgba(` outside `constants/tokens/` | any colour literal in a component |
-| Every fill has its own ink | for each fill on the screen (accent, you, loss-fill, lit, lead wash, clock cell, tiles, the band of a chip), name the `on*` token its text reads | text on a fill reads page text (`text`/`text2`) |
+| Every fill has its own ink | for each fill on the screen (accent, you, loss-fill, your-side tint, clock cell, category pills, the band of a chip), name the `on*` token its text reads | text on a fill reads page text (`text`/`text2`) |
 | Contrast | the worker's `contrastPairs.ts` test green in both themes; the board's `PAIRS` updated in the same change | a red test, or the two lists differ |
 | Accent by area | `python3 ~/fantasy-stock-design-review/tools/game-night/app_accent_area.py <capture> <dark\|light> docs/design/tokens-v3-game-night.json` on every capture | accent > 5% of a frame (data colours are reported apart) |
-| No rule lines between rows | inspect the row stack in the capture at 1:1 | a divider line between list rows (separation is space, surface or the lit slab) |
+| No rule lines between rows | inspect the row stack in the capture at 1:1 | a divider line between list rows (separation is space, surface or your side's tint) |
 | Depth | Dark: page / card / inset are lightness steps, no shadows; Light: white cards with the rim on the tinted page, the sheet's shadow only | a drop shadow on Dark; a card without its rim |
 | Numbers | game numbers ExtraBold (800); the Portfolio value Medium (500); everything tabular | a condensed Black number in the app; proportional digits in a column |
 | Lines | edge to edge, stops at now, end dot in `live` with its halo, base line dashed; the 0-point and 1-point states captured (e.g. Monday before the first close, a stock bought today) | a blank frame, an axis or grid, a fill under a Game Night line |
 | No sparklines on rows | Portfolio holdings, Matchup roster, watchlist, search rows | any small line on a row (the player card carries the lines) |
-| Draft tiles | `surface` tile, the 3pt sector line at the bottom, label row (pick · sector) | a colour-filled tile ("a carbon copy of Sleeper") |
+| Draft tiles | `surface` tile, the 3pt category line at the bottom, label row (pick · 3-letter code) | a colour-filled tile ("a carbon copy of Sleeper"); a sample sector instead of the app's category |
 | Block rhythm | measured from pixels, glyph to glyph, in points (the existing gate step) | a flush stack; a gap off the token |
 | 11pt floor, 44pt targets, drawn icons, colour never the only code | §9B | §9B |
 
@@ -91,35 +91,38 @@ with the reason beside it**. A silent no-op is a P1.
   24pt between blocks; the range tabs 8pt under the marks (the F1 rule).
 
 ### Matchup + the player card
-- **States:** live; final; the reveal; Monday before the first close (rows in draft/slot
-  order, every gain $0.00, no lit slab); an unslotted league (one list, best first, centre
-  empty); a category league and a price-tier league (grouped by slot, the group header
-  centred); a tied pair (equal week gain: neither half lit); a sweep (one side wins every
-  row); a bye week; the playoffs; XL with the longest names.
-- **Check:** the scoreboard is names, the two totals, who leads (the leader's half in
-  `leadWash` + "{name} leads by {margin}"), nothing else (no win %, bars, projections,
-  records, chart); the order is recomputed at each market close and never re-sorts while you
-  look (record a live update: the rows hold still); tap a row on either side → the player card.
+- **States:** live while you lead and while you're BEHIND; final (won and lost); the reveal;
+  Monday before the first close (rows in draft/slot order, every gain $0.00); an unslotted
+  league (one list, best first, centre empty); a category league and a price-tier league
+  (grouped by slot, the group header centred); a bye week; the playoffs; XL with the longest
+  names.
+- **Check:** the scoreboard is names, the two totals, who leads ("{name} leads by {margin}"),
+  nothing else (no win %, bars, projections, records, chart); **your half and your roster
+  column are shaded (`youTint`) in every state, win or lose, and nothing marks a row's winner**
+  (Giorgio, 2026-10-12: "it's you … Not whoever's winning"); the order is recomputed at each
+  market close and never re-sorts while you look (record a live update: the rows hold still);
+  tap a row on either side → the player card.
 - **The player card's states:** yours and theirs; drafted, bought and claimed ("How you got
-  it" / "How they got it": "Drafted 2nd overall · Sep 29 · $290.10", "Claimed off waivers ·
-  Oct 7 · $187.20", "Bought · Oct 2 · $214.80"); market open (yours: Sell; theirs: Save /
-  Saved) and closed (yours: Sell disabled with "Market's closed. Opens Mon 9:30 ET." beside
-  it; theirs: Save); a slotted league (the slot pill in the header); a stock bought today (a
-  1-point season line); the acquisition marker inside the line, not only at its start; XL;
-  Reduce Motion (the sheet fades); VoiceOver reads the four key figures with their labels.
+  it" / "How they got it", at the BOTTOM, the price per share: "Drafted 2nd overall · Sep 29 ·
+  $290.10", "Claimed off waivers · Oct 7 · $187.20", "Bought · Oct 2 · $214.80"); market open
+  (yours: Sell, NEVER Save; theirs: Save / Saved) and closed (yours: Sell disabled with
+  "Market's closed. Opens Mon 9:30 ET." beside it; theirs: Save); the owner's avatar inside the
+  "Owned by" pill; a slotted league (the slot pill in the header); THREE key figures (Price ·
+  Week gain · Since the draft, or "Since Oct 2" for a later buy); the season line on a date
+  axis with no acquisition marker; this week on a Mon…Fri axis (days to come empty); a stock
+  bought today (a 1-point season line, the full axis); XL; Reduce Motion (the sheet fades);
+  VoiceOver reads the three figures with their labels.
 - **Reference notes from Giorgio's own screenshots** (`~/fantasy-stock-design-review/
-  references/espn-player-card-{1,2,3}.webp`): ESPN shows the owning team **with its avatar**
-  under the name, a **five-figure strip** in an outlined card, and a week-by-week game log
-  (zebra rows). The board card has the owner as a pill without an avatar and four figures;
-  the gate notes these as absent traits, for Giorgio, not as findings.
+  references/espn-player-card-{1,2,3}.webp`): the owner's avatar is now drawn (approved); the
+  week-by-week game log is "later" (not in this build); the gate does not flag its absence.
 
 ### Draft room + lobby
 - **States:** on the clock (with the flash recorded in both themes), someone else's turn,
   after your pick, an auto-pick, the last 10 seconds, the room before the start, Draft
   complete; 16 managers; XL.
-- **Check:** tiles per §5; the on-the-clock cell (`clockCell`, the 2pt `live` ring, the pick
-  number in `clockCellLive`); the your-turn colour as Giorgio rules it (accent or gold: a
-  three-key swap, §9C); haptic and chime timing unchanged.
+- **Check:** tiles per §5; the on-the-clock cell (`clockCell`, navy in both themes, the 2pt
+  `live` ring, the pick number in `clockCellLive`); your turn in the accent (cyan / teal,
+  decided); haptic and chime timing unchanged.
 
 ### League
 - **States:** Standings in full (6 and 16 managers, ties, your row in the middle and at the
@@ -140,10 +143,9 @@ with the reason beside it**. A silent no-op is a P1.
 - **States:** each step; refusals (rule 8); the invite and the join preview (names nobody).
 - **Check:** Yahoo's warmth in copy and avatars only; one primary per step; both themes.
 
-## 7. Open with Giorgio (a gate never decides these)
+## 7. Decided with Giorgio (2026-10-12), so a gate checks, never asks
 
-- The your-turn colour: accent (drawn) or the approved gold.
-- The player card's figure label: "Since the draft" (drawn) or "Season gain".
-- Portfolio's chart and range pills.
-- Any trait the reference check finds absent and the board never drew (e.g. the owner's
-  avatar in the card, a weekly game log): listed for him, not added.
+Cyan your turn; "Since the draft"; the Portfolio chart and range pills; two end dates on Home;
+price per share; the navy clock cell in Light; the owner's avatar on the card (the weekly log
+later); the 11 categories; Matchup shading B (your side). A trait the reference check finds
+absent that the board never drew is listed for Giorgio, not added.
