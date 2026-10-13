@@ -103,13 +103,12 @@ export const PAIRS: readonly ContrastPair[] = [
   ['onLive', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
   ['liveText', 'warnTint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
 
-  // ── Game Night, §9C v3.1 (2026-10-12): the 49 new scored pairs. §9C names them by group
+  // ── Game Night, §9C v3.1 (2026-10-12): the 50 new scored pairs. §9C names them by group
   // (your side on the card surface and on the page, the clock cell, the money page, the
   // "Yours" pill, the accent fill, your ring, the owner's avatar disc, the 11 category pills
   // and the 11 category lines on the tile and on an inset); these are those groups row by
-  // row. The owner's avatar disc is the existing `onOpp` on `opp` row above, and your text on
-  // your card-surface half is the existing "Your standings row" row. The board's PAIRS must
-  // carry the same rows.
+  // row. Your text on your card-surface half is the existing "Your standings row" row. The
+  // board's PAIRS must carry the same rows, in this order.
   // Your side, shaded in your colour, win or lose (shading B): on the card surface (your
   // Scoreboard half, your Standings row)...
   ['text2', 'youTint', 'surface', 4.5, 'Your side on a card: secondary text (your Scoreboard half, your Standings record)'],
@@ -133,8 +132,8 @@ export const PAIRS: readonly ContrastPair[] = [
   // The accent fill (the money range pills, the Draft button).
   ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
   // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
+  // ...and, right after it, the owner's avatar disc on the player card's "Owned by" pill.
   ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
-  // The owner's avatar disc in the player card's "Owned by" pill (Design Lead gate, 2026-10-12).
   ['opp', 'inset', null, 3, 'Owner avatar disc in the "Owned by" pill (graphic)'],
   // The 11 category pills (text on the fill)...
   ['onCat', 'catTech', null, 4.5, 'Category pill: Tech'],
@@ -173,7 +172,7 @@ export const PAIRS: readonly ContrastPair[] = [
   ['catRealEstate', 'inset', null, 3, 'The Property line on an inset (graphic)'],
   ['catMisc', 'inset', null, 3, 'The Misc line on an inset (graphic)'],
 
-  // W3's own, beyond §9C's 49 — the Chip renders text and a dot on its tint (§9C "Chip":
+  // W3's own, beyond §9C's 50 — the Chip renders text and a dot on its tint (§9C "Chip":
   // accentTint + liveText, the dot drawn), on the page (the header) and on cards / sheets.
   ['liveText', 'accentTint', 'bg', 4.5, 'LIVE chip on the page background'],
   ['liveText', 'accentTint', 'surface', 4.5, 'LIVE chip on a card or sheet'],

@@ -96,7 +96,7 @@ Deno.test('contrast: the three §9C rows are re-pointed from onAccent to onYou',
   assert(!PAIRS.some(([f, b]) => f === 'onAccent' && (b === 'you' || b === 'lossFill')), 'no onAccent left on a you / loss fill');
 });
 
-// The Game Night rows (§9C v3.1's 49, by its groups) + W3's three Chip rows. The board's
+// The Game Night rows (§9C v3.1's 50, by its groups) + W3's three Chip rows. The board's
 // PAIRS must carry the same.
 const GAME_NIGHT_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
   ['text2', 'youTint', 'surface', 4.5], ['gain', 'youTint', 'surface', 4.5], ['loss', 'youTint', 'surface', 4.5],
@@ -114,7 +114,7 @@ const W3_CHIP_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
 ];
 
 Deno.test('contrast: every Game Night pair is in PAIRS (sp-contrast.test.ts scores each in both themes)', () => {
-  assertEquals(GAME_NIGHT_PAIRS.length, 50, '§9C v3.1: 49 new pairs + the owner disc (DL gate)');
+  assertEquals(GAME_NIGHT_PAIRS.length, 50, '§9C v3.1: 50 new pairs');
   for (const [fg, bg, over, min] of [...GAME_NIGHT_PAIRS, ...W3_CHIP_PAIRS]) {
     assert(PAIRS.some(([f, b, o, m]) => f === fg && b === bg && o === over && m === min), `${fg} on ${bg}${over ? ` over ${over}` : ''} >= ${min}`);
   }
@@ -141,4 +141,9 @@ Deno.test('depth from lightness steps of one hue (Dark): bg < surface < inset; s
   assert(lum(d.bg) < lum(d.surface) && lum(d.surface) < lum(d.inset), 'bg → surface → inset rises');
   assert(lum(d.sunken) < lum(d.bg), 'sunken sits below the page');
   assert(lum(d.moneyBg) < lum(d.bg), 'the money page is darker than the game page');
+});
+
+Deno.test('the owner disc row sits directly after your ring row, worded as the board has it', () => {
+  const i = PAIRS.findIndex(([f, b]) => f === 'you' && b === 'bg');
+  assertEquals(PAIRS[i + 1], ['opp', 'inset', null, 3, 'Owner avatar disc in the "Owned by" pill (graphic)']);
 });
