@@ -67,11 +67,21 @@ shot with the simulator panel's device access (17e).
 | `07-tap-through-season-over-17e.mov` · `-frames.png` | See the final standings → League › Final standings; Home; Run it back (seam) → the renewed league's roster |
 | `07-tap-through-pre-draft-17e.mov` · `-frames.png` | Set draft time → the Draft time sheet → X; Build your queue → League; Home; Share → the share sheet (dismissed) |
 
+## Pass 2 deltas (DL items a–d, 2026-10-13; recaptured on the rebased branch, `origin/main` @ 717316c2)
+
+| Item | Recaptured (both themes) | What it shows |
+|---|---|---|
+| a · every Button a pill | `08-pre_draft-scheduled-{17e,17pro}`, `08-renewed_season2_pre_draft-commissioner-17e`, `09-complete-member-out-17e` (+ `08-pre_draft-no_date-commissioner-*`, `02-eliminated-*`, which carry secondaries too) | Primary, secondary, outline and the compact "Share" all pills; no mixed shapes |
+| b · This week at XL | `04-live_open-xl-scrolled-17e` | "vs Gianluigi B." under its avatar on ONE line, shrink-to-fit, never larger than the total (stackedNameCap) |
+| c · no "Through Week 0" | `01b-week1_monday-{17e,17pro}` | The label hidden in Week 1; the chevron stays |
+| d · the lone point | `01b-week1_monday-{17e,17pro}` | Monday's one point at the RIGHT end (now), above the centred base, nothing clipped |
+| the axis cap reaching the card | `14-card-xl-17e` | The player card at XL (Matchup → NVDA): the Season axis dates hold at 1.3× while the card's text is at XL |
+
+Pass 2's accent split for these is merged into `accent-split.txt` (highest primary 4.54%, rest 1.32%).
+Not in the named set and so still pre-(a): `09-complete-member-ask_pending-17e-*` shows "I'm out"
+at the old 10 pt (it is the same sp Button, now a pill, as `09-complete-member-out` shows).
+
 ## For the Design Lead
 
-- **The primary is a pill, secondaries keep 10 pt** (as ruled): "Set draft time" (pill) sits over
-  "Build your queue" (10 pt) on the commissioner's pre-draft card.
-- **XL, This week:** "vs Gianluigi B." at 40 pt can't fit half the card and truncates after two
-  lines ("vs / Gian…"). Not changed.
-- **"Through Week 0"** shows on the Standings card in a live Week 1 (`01b`/`01c`): existing copy
-  logic (`standingsThroughWeek`), not touched; a copy decision.
+- Pass 1's three notes are resolved in pass 2: every Button is a pill (a), the XL opponent name
+  stacks (b), and "Through Week 0" is hidden (c).

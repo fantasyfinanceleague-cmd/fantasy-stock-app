@@ -2,13 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "f324d4c6e2c9db69936fe14237b332e80217f862",
-    "commitShort": "f324d4c6",
+    "commit": "7c1b5dfa202c56422b8ff72aaeb4cd4ca8b5a635",
+    "commitShort": "7c1b5dfa",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-13T16:48:39Z",
+    "branch": "feat/gn-w4-home",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/w4-home-gate-fixes.test.ts"
+      }
+    ],
+    "timestamp": "2026-10-13T17:04:42Z",
     "sourceHash": "sha256:1827c950570fec00a36a3158ef363d8266c1277634296d30005e230839cc2c11",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -16,8 +21,8 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 37,
-    "ageDays": 1.5,
+    "ageHours": 37.2,
+    "ageDays": 1.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",

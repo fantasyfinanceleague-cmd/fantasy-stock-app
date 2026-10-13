@@ -200,8 +200,10 @@ Deno.test('"Through Week N" is hidden while N = 0; the chevron and the card stil
   assertEquals([throughWeekShown(0), throughWeekShown(1), throughWeekShown(5)], [false, true, true]);
   const card = SOURCES['components/home/StandingsCard.tsx'];
   assert(card.includes('{throughWeekShown(throughWeek) ? ('));
-  // The chevron stays outside the condition, and the press still wraps the whole card.
-  assert(card.indexOf('{throughWeekShown(throughWeek) ? (') < card.indexOf('<Ionicons name="chevron-forward"'));
+  // The chevron stays OUTSIDE the condition (rendered unconditionally right after it), and
+  // exactly one chevron exists, so it can't hide with the label.
+  assert(card.includes(') : null}\n          <Ionicons name="chevron-forward" size={16} color={colors.text2} />'));
+  assertEquals((card.match(/chevron-forward/g) ?? []).length, 1);
   assert(card.includes('<PressableScale onPress={() => router.push(STANDINGS_HREF)}'));
 });
 
