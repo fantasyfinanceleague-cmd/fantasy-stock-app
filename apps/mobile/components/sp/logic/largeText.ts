@@ -18,3 +18,4 @@ export function scaledBadge(base: number, fontScale: number, cap = 1.6): number 
   const s = Number.isFinite(fontScale) && fontScale > 1 ? Math.min(fontScale, cap) : 1;
   return Math.round(base * s);
 }
+

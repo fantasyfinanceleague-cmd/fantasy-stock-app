@@ -5,7 +5,7 @@
 export type IconName =
   | 'chevronRight' | 'chevronLeft' | 'chevronDown' | 'chevronUp'
   | 'check' | 'circle' | 'info' | 'close' | 'search' | 'add' | 'remove' | 'share'
-  | 'trophy' | 'lock' | 'mail' | 'alert';
+  | 'trophy' | 'lock' | 'mail' | 'alert' | 'star' | 'starFilled';
 
 /** The text roles an icon sits beside, plus the medallion (a 36 pt glyph in a
  * 72 pt disc, used only by the season-complete trophy and the Run it back card). */
@@ -29,6 +29,9 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   lock: 'lock-closed-outline',
   mail: 'mail-outline',
   alert: 'alert-circle-outline',
+  // The player card's Save (outline) and Saved (filled) — §9C, the W3 gate (2026-10-12).
+  star: 'star-outline',
+  starFilled: 'star',
 };
 
 /** Icon size (pt) by the text role it sits with (the board's scale). */

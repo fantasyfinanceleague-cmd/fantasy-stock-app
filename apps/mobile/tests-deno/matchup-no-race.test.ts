@@ -13,9 +13,10 @@ Deno.test('Matchup renders no WeekRace and imports no race chart (source guard)'
   assert(!screen.includes('<WeekRace'));
   assert(!/import[^;]*\b(WeekRace|raceLayout|raceCoords|weekRacePoints)\b/.test(screen));
   assert(!/['"]@\/(components\/game\/WeekRace|lib\/game\/(raceLayout|weekRace))['"]/.test(screen));
-  // What stays: the scoreboard and both lineups.
-  assert(screen.includes('<MatchScoreboard'));
-  assert(screen.includes('<Lineup title={youName} rows={live.me.lineup} />'));
+  // What stays (W4): the Scoreboard and the mirrored roster, both lineups in it.
+  assert(screen.includes('<Scoreboard you={{ name: youName, gain: mine }}'));
+  assert(screen.includes('myRows={live.me.lineup} theirRows={live.opp.lineup}'));
+  assert(screen.includes('<RosterRow'));
 });
 
 Deno.test('the race chart, its layout, and its points are gone from the app (source guard)', () => {

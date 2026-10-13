@@ -35,3 +35,13 @@ export function avatarInitials(name: string): string {
   if (words.length === 1) return first;
   return first + words[words.length - 1].charAt(0).toUpperCase();
 }
+
+/** §9C Type (the W3 gate, 2026-10-12): a disc under 24pt shows ONE initial, the first
+ * name's. Two wide initials ("MW") at the 11pt floor are as wide as a 20pt disc and clip. */
+export const ONE_INITIAL_BELOW = 24;
+
+/** The initials a disc of `size` shows: two from 24pt up, the first one below. */
+export function discInitials(name: string, size: number): string {
+  const initials = avatarInitials(name);
+  return size < ONE_INITIAL_BELOW ? initials.charAt(0) : initials;
+}

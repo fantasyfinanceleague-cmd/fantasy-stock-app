@@ -35,10 +35,11 @@ Deno.test('each screen that broke stacks at large text (source guards)', () => {
   const schedule = SOURCES['components/game/ScheduleList.tsx'];
   assert(schedule.includes('largeText ? styles.rowWrap : null'));
   assert(schedule.includes("resultLine: { width: '100%' },"));
-  const matchup = SOURCES['app/(tabs)/matchup.tsx'];
-  assert(matchup.includes('const largeText = useLargeText();'));
-  assertEquals((matchup.match(/largeText \? styles\.lineupsStacked : null/g) ?? []).length, 2); // live and final
-  assert(matchup.includes('lineup: { flex: 1, minWidth: 0, gap: space[2] },'));
+  // W4: Matchup's roster stays mirrored (it's the head-to-head); at large text each HALF
+  // stacks the stock over its week, so a long number never squeezes the ticker out.
+  const roster = SOURCES['components/sp/gn/RosterRow.tsx'];
+  assert(roster.includes('const stacked = useLargeText();'));
+  assert(roster.includes('const layout = stacked ? styles.contentStacked : styles.content;'));
   const sb = SOURCES['components/game/MatchScoreboard.tsx'];
   assert(sb.includes("namesRow: { flexDirection: 'row', flexWrap: 'wrap',"));
   assert(sb.includes("oppName: { flexShrink: 1, textAlign: 'right', marginLeft: 'auto' },"));

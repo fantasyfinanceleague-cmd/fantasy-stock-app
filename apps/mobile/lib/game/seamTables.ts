@@ -70,25 +70,37 @@ export function seamWeekClosed(homeFixture: string | null | undefined): boolean 
   return ['scored', 'complete', 'complete_runner_up', 'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs'].includes(homeFixture ?? '');
 }
 
-/** A team's week-6 gain at Friday's close, to the cent: the Home fixture's own formula
- * (week6Gains: shares × (Friday close − Monday open)), so it matches the posted gain. */
-function closedGain(user: string): number {
-  return Math.round((HOLDINGS[user] ?? []).reduce((s, h) => s + h.quantity * (h.close - h.start), 0) * 100) / 100;
+/** Under SCORED_OUTCOME=lost, your week is mirrored: each Friday close = 2 × Monday open −
+ * Friday close, so your total is exactly minus your won total and the rows still add up. */
+export function closeFor(user: string, h: SeamHolding, lost: boolean): number {
+  return lost && user === SEAM_ME ? Math.round((2 * h.start - h.close) * 100) / 100 : h.close;
 }
 
-function snapshotRows(weekClosed: boolean) {
+/** A team's week-6 gain at Friday's close, to the cent: the Home fixture's own formula
+ * (week6Gains: shares × (Friday close − Monday open)), so it matches the posted gain. */
+function closedGain(user: string, lost = false): number {
+  return Math.round((HOLDINGS[user] ?? []).reduce((s, h) => s + h.quantity * (closeFor(user, h, lost) - h.start), 0) * 100) / 100;
+}
+
+function snapshotRows(weekClosed: boolean, lost = false) {
   return Object.entries(HOLDINGS).flatMap(([user, rows]) =>
-    rows.map((h) => ({ user_id: user, symbol: h.symbol, quantity: h.quantity, week_start_price: h.start, week_end_price: weekClosed ? h.close : null, entered_mid_week: false, created_at: WEEK_START })),
+    rows.map((h) => ({ user_id: user, symbol: h.symbol, quantity: h.quantity, week_start_price: h.start, week_end_price: weekClosed ? closeFor(user, h, lost) : null, entered_mid_week: false, created_at: WEEK_START })),
   );
 }
 
-function weekMatchups(weekClosed: boolean) {
+function weekMatchups(weekClosed: boolean, bye = false, lost = false) {
   const game = (team1: string, team2: string) => {
     if (!weekClosed) return { team1_user_id: team1, team2_user_id: team2, team1_gain: null, team2_gain: null, winner_user_id: null, is_tie: false, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK };
-    const g1 = closedGain(team1);
-    const g2 = closedGain(team2);
+    const g1 = closedGain(team1, lost);
+    const g2 = closedGain(team2, lost);
     return { team1_user_id: team1, team2_user_id: team2, team1_gain: g1, team2_gain: g2, winner_user_id: g1 === g2 ? null : g1 > g2 ? team1 : team2, is_tie: g1 === g2, is_playoff: false, week_start: WEEK_START, week_end: WEEK_END, week_number: WEEK };
   };
+  if (bye) {
+    // The bye fixture: you sit the week out (Home's 'bye' has no opponent for you), so does
+    // Gianluigi, and All matchups lists each bye as its own row (team2 null).
+    const sit = (team: string) => ({ ...game(team, team), team2_user_id: null, team2_gain: null, winner_user_id: null });
+    return [game(paolo, luca), game(chiara, marco), sit(SEAM_ME), sit(gianluigi)];
+  }
   return [game(SEAM_ME, gianluigi), game(paolo, luca), game(chiara, marco)];
 }
 
@@ -109,7 +121,7 @@ function playoffMatchups() {
 }
 
 /** The fixture rows for a table read, or null when the seam is off (the real query stands). */
-export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock', opts: { weekClosed?: boolean } = {}): unknown[] | null {
+export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock', opts: { weekClosed?: boolean; bye?: boolean; lost?: boolean } = {}): unknown[] | null {
   if (!on) return null;
   switch (table) {
     case 'drafts':
@@ -121,7 +133,7 @@ export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: Dr
         { symbol: 'CRM', position: 2 },
         { symbol: 'V', position: 3 },
       ];
-    case 'matchups_week': return weekMatchups(opts.weekClosed === true);
+    case 'matchups_week': return weekMatchups(opts.weekClosed === true, opts.bye === true, opts.lost === true);
     // The transfer picker's current members (the draft fixture's names; Roberto is you).
     // Your own row, for a leave's re-read: still a member (the capture of "You're still in …").
     case 'league_members_me': return [{ hidden_at: null }];
@@ -132,7 +144,7 @@ export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: Dr
       { team1_user_id: SEAM_ME, team2_user_id: 'gianluigi', week_start: nextNominalTuesday(Date.now()) },
     ];
     case 'matchups_playoff': return playoffMatchups();
-    case 'week_snapshots': return snapshotRows(opts.weekClosed === true);
+    case 'week_snapshots': return snapshotRows(opts.weekClosed === true, opts.lost === true);
     case 'trades': return [];
   }
 }

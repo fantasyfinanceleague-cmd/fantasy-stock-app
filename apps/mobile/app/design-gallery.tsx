@@ -25,7 +25,7 @@ import { useMotion } from '@/components/sp/motion';
 import { useTheme, ThemePreference } from '@/components/sp/ThemeProvider';
 import {
   CategoryPill, Chart, DraftTile, GroupHead, MANAGER_ROW_GAP, ManagerRow, PlayerCard, PlayerCardBody, RangePills, RosterRow,
-  Scoreboard as GnScoreboard, type PlayerCardProps, type RosterHalf,
+  Scoreboard as GnScoreboard, type RosterHalf,
 } from '@/components/sp/gn';
 import { CATEGORIES, type Category } from '@/components/sp/logic/gameNight';
 import { formatMoney } from '@/components/sp/logic/money';
@@ -346,21 +346,22 @@ const SEASON_AXIS = { kind: 'dated' as const, start: '2026-09-29', end: '2026-10
 const ranges = ['Season', '1M', '1W'] as const;
 const stockRanges = ['1W', '1M', '3M', '1Y'] as const;
 
-const CARD_YOURS: PlayerCardProps = {
-  visible: true, onClose: () => {}, ticker: 'NVDA', company: 'NVIDIA', owner: 'you', price: 318.37, todayPct: 3.81,
+// The card's data; each use adds its ownership (owner + its REQUIRED handler) at the call site.
+const CARD_YOURS = {
+  visible: true, onClose: () => {}, ticker: 'NVDA', company: 'NVIDIA', owner: 'you' as const, price: 318.37, todayPct: 3.81,
   // 3.434 sh: week (318.37 − 300.20) × qty = +$62.40; since the draft (318.37 − 290.10) × qty = +$97.09.
-  weekGain: 62.4, weekPct: 6.05, sinceGain: 97.09, sincePct: 9.74, acquisition: { kind: 'drafted', pick: 2, date: 'Sep 29', price: 290.1 },
+  weekGain: 62.4, weekPct: 6.05, sinceGain: 97.09, sincePct: 9.74, acquisition: { kind: 'drafted' as const, pick: 2, date: 'Sep 29', price: 290.1 },
   season: { points: SEASON, base: 290.1, axis: SEASON_AXIS },
   // Mon open, the Mon–Wed closes (Wed = Oct 7's 306.68), Thu now (+3.81% today).
   week: { points: [{ t: 0, value: 300.2 }, { t: 1, value: 302.9 }, { t: 2, value: 304.1 }, { t: 3, value: 306.68 }, { t: 3.6, value: 318.37 }], base: 300.2 },
-  marketOpen: false, opens: 'Mon 9:30 ET',
+  marketOpen: false, opens: 'Mon 9:30 AM ET',
 };
-const CARD_THEIRS: PlayerCardProps = {
+const CARD_THEIRS = {
   // Claimed Mon Oct 5 at the open ($79.60), 12.58 sh: since the claim = this week = +$21.38 (+2.14%);
   // today from Wednesday's $80.40 close, +1.12%. The price, the lines and the figures all rise.
-  ...CARD_YOURS, ticker: 'NKE', company: 'Nike', owner: { name: 'Gianluigi B.' }, category: 'retail', price: 81.3, todayPct: 1.12,
-  weekGain: 21.38, weekPct: 2.14, sinceGain: 21.38, sincePct: 2.14, acquisition: { kind: 'claimed', date: 'Oct 5', price: 79.6 },
-  season: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }, { t: 2, value: 80.4 }, { t: 3, value: 81.3 }], base: 79.6, axis: { kind: 'dated', start: '2026-10-05', end: '2026-10-08' } },
+  ...CARD_YOURS, ticker: 'NKE', company: 'Nike', owner: { name: 'Gianluigi B.' }, category: 'retail' as const, price: 81.3, todayPct: 1.12,
+  weekGain: 21.38, weekPct: 2.14, sinceGain: 21.38, sincePct: 2.14, acquisition: { kind: 'claimed' as const, date: 'Oct 5', price: 79.6 },
+  season: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }, { t: 2, value: 80.4 }, { t: 3, value: 81.3 }], base: 79.6, axis: { kind: 'dated' as const, start: '2026-10-05', end: '2026-10-08' } },
   week: { points: [{ t: 0, value: 79.6 }, { t: 1, value: 79.71 }, { t: 2, value: 79.95 }, { t: 3, value: 80.4 }, { t: 3.6, value: 81.3 }], base: 79.6 },
   marketOpen: true,
 };
@@ -403,6 +404,13 @@ function GameNightGallery() {
             <Avatar name="Gianluigi B." size={44} tone="opp" />
             <Avatar name="Paolo M." size={32} tone="neutral" />
           </View>
+          {/* §9C: a disc under 24pt shows ONE initial — the player card's 20pt owner disc. */}
+          <View style={[styles.row, styles.wrap]} testID="gallery-one-initial">
+            <Avatar name="Marco W." size={20} tone="opp" />
+            <Text variant="caption" tone="secondary">Marco W.</Text>
+            <Avatar name="Gianluigi B." size={20} tone="opp" />
+            <Text variant="caption" tone="secondary">Gianluigi B.</Text>
+          </View>
         </Card>
         <View style={[styles.row, styles.wrap]}>
           <PhaseChip phase="live_open" label="Live" onPageBackground />
@@ -419,15 +427,15 @@ function GameNightGallery() {
       <Section title="GN · RosterRow: your side shaded (unslotted) + GroupHead (slotted)">
         <View style={{ gap: 6 }}>
           {ROSTER.map(([a, b], i) => (
-            <RosterRow key={i} left={a} right={b} />
+            <RosterRow key={i} left={a} right={b} opponentName="Gianluigi B." />
           ))}
         </View>
         <View style={{ gap: 6 }}>
           <GroupHead label="Tech ×2" />
-          <RosterRow left={ROSTER[0][0]} right={ROSTER[2][1]} />
-          <RosterRow left={ROSTER[1][0]} right={ROSTER[1][1]} />
+          <RosterRow left={ROSTER[0][0]} right={ROSTER[2][1]} opponentName="Gianluigi B." />
+          <RosterRow left={ROSTER[1][0]} right={ROSTER[1][1]} opponentName="Gianluigi B." />
           <GroupHead label="Flex" />
-          <RosterRow left={ROSTER[3][0]} right={ROSTER[3][1]} />
+          <RosterRow left={ROSTER[3][0]} right={ROSTER[3][1]} opponentName="Gianluigi B." />
         </View>
       </Section>
 
@@ -486,18 +494,22 @@ function GameNightGallery() {
 
       <Section title="GN · PlayerCard (yours, market closed)">
         <View style={[styles.cardHost, { backgroundColor: colors.surface }]}>
-          <PlayerCardBody {...CARD_YOURS} />
+          <PlayerCardBody {...CARD_YOURS} onSell={() => setCard(null)} />
         </View>
       </Section>
       <Section title="GN · PlayerCard (theirs, slotted, open)">
         <View style={[styles.cardHost, { backgroundColor: colors.surface }]}>
-          <PlayerCardBody {...CARD_THEIRS} saved={saved} onToggleSave={() => setSaved((v) => !v)} />
+          <PlayerCardBody {...CARD_THEIRS} save={{ saved, onToggle: () => setSaved((v) => !v) }} />
         </View>
         <View style={styles.row}>
           <Button label="Open yours" variant="secondary" onPress={() => setCard('yours')} />
           <Button label="Open theirs" variant="secondary" onPress={() => setCard('theirs')} />
         </View>
-        <PlayerCard {...(card === 'theirs' ? CARD_THEIRS : CARD_YOURS)} visible={card !== null} onClose={() => setCard(null)} saved={saved} onToggleSave={() => setSaved((v) => !v)} />
+        {card === 'theirs' ? (
+          <PlayerCard {...CARD_THEIRS} visible onClose={() => setCard(null)} save={{ saved, onToggle: () => setSaved((v) => !v) }} />
+        ) : (
+          <PlayerCard {...CARD_YOURS} visible={card === 'yours'} onClose={() => setCard(null)} onSell={() => setCard(null)} />
+        )}
       </Section>
     </>
   );

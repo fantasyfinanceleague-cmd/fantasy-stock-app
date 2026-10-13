@@ -11,6 +11,9 @@ import { supabase } from '@/lib/supabase';
 import { parsePortfolioLedger, type PortfolioLedger } from './portfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { buildStressMarket } from './stressFixture';
+import { MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { SEAM_LEAGUE, SEAM_ME } from '../game/seamTables';
+import { fixtureLedger } from '../game/matchupFixture';
 
 const loaded = new Map<string, PortfolioLedger>();
 const inFlight = new Map<string, Promise<PortfolioLedger | null>>();
@@ -18,6 +21,11 @@ const inFlight = new Map<string, Promise<PortfolioLedger | null>>();
 /** Loads the ledger for a league, de-duplicated and cached on success. */
 export function loadPortfolioLedger(leagueId: string): Promise<PortfolioLedger | null> {
   // DEV fixture: the stress ledger, no network (see devFixture.ts).
+  // The game capture seam (EXPO_PUBLIC_GAME_SEAM): the Matchup fixture's league ledger, so the
+  // stock sheet Sell opens from the player card is the real sheet over fixture data.
+  if (SEAM_ON) {
+    return Promise.resolve(fixtureLedger(MATCHUP_FIXTURE_VARIANT, SEAM_ME, SEAM_LEAGUE.gianluigi));
+  }
   if (MONEY_FIXTURE_CONFIG) {
     // The load_fail scenario is the LoadFailure state; every other scenario reads the stress ledger.
     return Promise.resolve(MONEY_FIXTURE_CONFIG.scenario === 'load_fail' ? null : buildStressMarket().ledger);

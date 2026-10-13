@@ -13,10 +13,10 @@ Deno.test('the Matchup body and All matchups remount per league (source guard)',
   const screen = SOURCES['app/(tabs)/matchup.tsx'];
   assert(screen.includes("<MatchupBody key={activeLeagueId ?? 'none'} status={m.status}"));
   assert(screen.includes("<AllMatchupsList key={activeLeagueId ?? 'none'} state={all}"));
-  // The scoreboard (and its tug) lives inside the keyed body, never above it.
+  // The scoreboard lives inside the keyed body, never above it.
   const body = screen.slice(screen.indexOf('function MatchupBody('));
-  assert(body.includes('<MatchScoreboard'));
-  assert(!screen.slice(0, screen.indexOf('function AllMatchupsList(')).includes('<MatchScoreboard'));
+  assert(body.includes('<Scoreboard you={{ name: youName, gain: mine }}'));
+  assert(!screen.slice(0, screen.indexOf('function AllMatchupsList(')).includes('<Scoreboard'));
   // Why: ScoreDigits remembers the previous text, so only a remount resets it.
   assert(SOURCES['components/sp/game/ScoreDigits.tsx'].includes('prevTextRef'));
   // Home does the same.

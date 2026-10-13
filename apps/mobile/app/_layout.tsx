@@ -39,7 +39,8 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-SplashScreen.preventAutoHideAsync();
+// Rejects (harmlessly) when the splash is already gone, e.g. on a dev reload: handled.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // Stable references — defined outside the component so re-renders
 // don't create new objects that cause native-stack to reconfigure
@@ -115,7 +116,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const phaseKnown = shownPhase !== 'unknown' && onboardingSeen !== null;
   useEffect(() => {
     if (fontsLoaded && themeReady && phaseKnown) {
-      SplashScreen.hideAsync();
+      // hideAsync REJECTS when no native splash is up (every JS reload after the first launch:
+      // "No native splash screen registered…"). Nothing to hide is not an error — and an
+      // unhandled rejection surfaced as a red dev toast over every reloaded screen (W4 gate).
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, themeReady, phaseKnown]);
 

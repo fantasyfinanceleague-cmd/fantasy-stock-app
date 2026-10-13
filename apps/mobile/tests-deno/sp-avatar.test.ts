@@ -75,3 +75,25 @@ Deno.test('initialFontSize: never under the 11pt floor (the player card\'s 20pt 
   assertEquals(initialFontSize(24), 11);
   assertEquals(initialFontSize(36), 14); // the floor doesn't touch the usual sizes
 });
+
+import { discInitials, ONE_INITIAL_BELOW } from '../components/sp/logic/avatar.ts';
+import { SOURCES } from './sourceManifest.generated.ts';
+
+Deno.test('discInitials: a disc under 24pt shows ONE initial, the first name\'s (§9C, the W3 gate)', () => {
+  assertEquals(ONE_INITIAL_BELOW, 24);
+  // The player card's 20pt owner disc: a wide pair would clip at the 11pt floor.
+  assertEquals(discInitials('Marco W.', 20), 'M');
+  assertEquals(discInitials('Gianluigi B.', 20), 'G');
+  assertEquals(discInitials('Gianluigi B.', 23), 'G');
+  // From 24pt up, two as before.
+  assertEquals(discInitials('Marco W.', 24), 'MW');
+  assertEquals(discInitials('Gianluigi B.', 44), 'GB');
+  assertEquals(discInitials('roberto', 20), 'R');
+  assertEquals(discInitials('', 20), '?');
+});
+
+Deno.test('Avatar draws discInitials by its size (never the two-letter form on a small disc)', () => {
+  const src = SOURCES['components/sp/Avatar.tsx'];
+  if (!src.includes('const initial = discInitials(name, size);')) throw new Error('Avatar must size its initials by the disc');
+  if (/avatarInitials\(name\)/.test(src)) throw new Error('Avatar still draws two initials regardless of size');
+});

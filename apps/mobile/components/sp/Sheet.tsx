@@ -28,6 +28,10 @@ export interface SheetProps {
    * so it isn't known up front) -- M1 uses it to compute the header's resting
    * screen position without waiting for the rise animation to finish. */
   onSheetLayout?: (height: number) => void;
+  /** Called once the sheet has finished leaving and its Modal is gone. iOS can't present a
+   * second Modal while one is still dismissing, so a sheet that hands off to another sheet
+   * (the player card's Sell → the stock sheet) opens the next one from here. */
+  onClosed?: () => void;
 }
 
 const DISMISS_DISTANCE = 120;
@@ -37,7 +41,7 @@ const DISMISS_VELOCITY = 0.8;
  * M1 uses it to place the header's resting rect without an extra measurement. */
 export const SHEET_HANDLE_AREA_HEIGHT = space[3] * 2 + 4;
 
-export function Sheet({ visible, onClose, children, dismissible = true, overlay, onSheetLayout }: SheetProps) {
+export function Sheet({ visible, onClose, children, dismissible = true, overlay, onSheetLayout, onClosed }: SheetProps) {
   const { colors, elevation } = useTheme();
   const [mounted, setMounted] = useState(visible);
   const screenHeight = Dimensions.get('window').height;
@@ -46,6 +50,12 @@ export function Sheet({ visible, onClose, children, dismissible = true, overlay,
   const { spring, duration, easing, withSpring, withTiming, reduced } = useMotion();
   // Reduce Motion (M1's spec): the sheet fades in place instead of sliding up.
   const sheetOpacity = useSharedValue(reduced ? 0 : 1);
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
+  const finishClose = () => {
+    setMounted(false);
+    onClosedRef.current?.();
+  };
 
   useEffect(() => {
     if (visible) {
@@ -60,13 +70,13 @@ export function Sheet({ visible, onClose, children, dismissible = true, overlay,
     } else if (mounted) {
       if (reduced) {
         sheetOpacity.value = withTiming(0, { duration: duration.quick }, (finished) => {
-          if (finished) runOnJS(setMounted)(false);
+          if (finished) runOnJS(finishClose)();
         });
       } else {
         // §4's exit rule: dismiss is FASTER than open — `quick` + `ease.exit`,
         // not the same rise spring played backwards.
         translateY.value = withTiming(screenHeight, { duration: duration.quick, easing: easing.exit }, (finished) => {
-          if (finished) runOnJS(setMounted)(false);
+          if (finished) runOnJS(finishClose)();
         });
       }
       backdropOpacity.value = withTiming(0, { duration: duration.quick, reduceMotion: ReduceMotion.System });

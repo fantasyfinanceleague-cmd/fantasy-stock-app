@@ -55,12 +55,17 @@ export type HomeFixture =
    * share count only, so the hero reads $1,234,567.80 / +$234,567.80 --
    * the ≥$1,000,000 case the Design Lead's final check asked for, proving
    * RollingMoney's fit-to-container fix on Home too, not just Portfolio. */
-  | 'xl_million';
+  | 'xl_million'
+  /** W4 Matchup capture (2026-10-12): week 6's Monday, 10:30 AM ET — the market open, before
+   * the week's first close, every stock still at Monday's open (every week gain $0.00), so
+   * the roster shows the draft/slot order. */
+  | 'monday_preclose';
 
 const FIXTURES: readonly HomeFixture[] = [
   'live_open', 'live_closed', 'scoring', 'scored', 'pre_season', 'pre_draft',
   'pre_draft_waiting', 'drafting_on_clock', 'drafting_waiting_turn', 'complete', 'complete_runner_up', 'bye',
   'playoff_live', 'playoff_bye', 'eliminated', 'missed_playoffs', 'leader_flip', 'xl_large_numbers', 'xl_million',
+  'monday_preclose',
 ];
 
 /** True for either drafting-family fixture — the states 6/7 group in
@@ -79,9 +84,11 @@ export const HOME_FIXTURE: HomeFixture | null = __DEV__ ? parse(process.env.EXPO
 /** Capture only (game-screens re-gate, GS-2): how week 6 ended under HOME_FIXTURE=scored.
  * `lost` swaps the two posted gains, `tied` posts equal gains; unset = you won (as before).
  * Every other fixture ignores it. */
-export type ScoredOutcome = 'won' | 'lost' | 'tied';
+/** `withheld` (W4): the posted totals swapped against the week's prices, so the stock-by-stock
+ * rows can't reconcile and Matchup withholds their figures (#call-mx-withheld). You lost. */
+export type ScoredOutcome = 'won' | 'lost' | 'tied' | 'withheld';
 const rawOutcome = __DEV__ ? process.env.EXPO_PUBLIC_SCORED_OUTCOME : undefined;
-export const SCORED_OUTCOME: ScoredOutcome = rawOutcome === 'lost' || rawOutcome === 'tied' ? rawOutcome : 'won';
+export const SCORED_OUTCOME: ScoredOutcome = rawOutcome === 'lost' || rawOutcome === 'tied' || rawOutcome === 'withheld' ? rawOutcome : 'won';
 
 if (HOME_FIXTURE) {
   console.warn(`[dev] HOME FIXTURE "${HOME_FIXTURE}" — fake league data, no Supabase reads for Home.`);

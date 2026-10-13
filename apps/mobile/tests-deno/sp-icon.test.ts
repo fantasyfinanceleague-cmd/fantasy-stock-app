@@ -11,7 +11,7 @@ import {
 
 const NAMES: IconName[] = [
   'chevronRight', 'chevronLeft', 'chevronDown', 'chevronUp', 'check', 'circle', 'info',
-  'close', 'search', 'add', 'remove', 'share', 'trophy', 'lock', 'mail', 'alert',
+  'close', 'search', 'add', 'remove', 'share', 'trophy', 'lock', 'mail', 'alert', 'star', 'starFilled',
 ];
 
 Deno.test('the name map is exhaustive and matches the spec table', () => {
@@ -26,6 +26,9 @@ Deno.test('the name map is exhaustive and matches the spec table', () => {
   assertEquals(ICON_GLYPHS.share, 'share-outline');
   assertEquals(ICON_GLYPHS.lock, 'lock-closed-outline');
   assertEquals(ICON_GLYPHS.mail, 'mail-outline');
+  // The player card's Save is the outline star; Saved the same star filled.
+  assertEquals(ICON_GLYPHS.star, 'star-outline');
+  assertEquals(ICON_GLYPHS.starFilled, 'star');
 });
 
 Deno.test('outline by default: no glyph is a filled variant (filled is only for a selected state)', () => {

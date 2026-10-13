@@ -18,6 +18,7 @@ import { Text } from '@/components/sp/Text';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from '@/lib/money/devFixture';
+import { SEAM_ON } from '@/lib/game/devSeam';
 import { FIXTURE_LEAGUE_ID, fixtureLeague, fixtureMarket } from '@/lib/money/fixtureMode';
 import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import { useSession } from '@/lib/SessionProvider';
@@ -101,7 +102,9 @@ export function StockSheetBody({
   const position = myHolding && data.price != null ? stockPosition(myHolding, data.price) : null;
   const now = useNow(1000);
   // DEV fixture: the market the scenario plays (open, or closed for market_closed); live otherwise.
-  const market = MONEY_FIXTURE_CONFIG ? fixtureMarket(MONEY_FIXTURE_CONFIG.scenario, now) : contextMarket;
+  // DEV fixtures: the money scenario's market; under the game seam an open session (the
+  // Matchup fixture's live Thursday — the shell fixture carries no market row).
+  const market = MONEY_FIXTURE_CONFIG ? fixtureMarket(MONEY_FIXTURE_CONFIG.scenario, now) : SEAM_ON ? fixtureMarket('ok', now) : contextMarket;
   const [choice, setChoice] = useState<'buy' | 'sell' | null>(null);
   const [open, setOpen] = useState<OpenReview | null>(null);
   // "Which sale pays for this?": the sales a per-slot buy can be paid from, and the one chosen.

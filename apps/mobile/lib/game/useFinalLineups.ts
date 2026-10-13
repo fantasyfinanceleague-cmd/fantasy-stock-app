@@ -18,6 +18,8 @@ export interface FinalLineupsState {
   status: 'idle' | 'loading' | 'ready' | 'error';
   mine: FinalLineupResult | null;
   theirs: FinalLineupResult | null;
+  /** Re-runs the two reads (W4: a failed final roster offers Try again). */
+  retry: () => void;
 }
 
 export function useFinalLineups(
@@ -26,7 +28,8 @@ export function useFinalLineups(
   sides: { mine: string; theirs: string; myGain: number; theirGain: number; windowStart: string; windowEnd: string } | null,
   enabled: boolean,
 ): FinalLineupsState {
-  const [state, setState] = useState<FinalLineupsState>({ status: 'idle', mine: null, theirs: null });
+  const [state, setState] = useState<Omit<FinalLineupsState, 'retry'>>({ status: 'idle', mine: null, theirs: null });
+  const [attempt, setAttempt] = useState(0);
   const key = sides ? `${sides.mine}|${sides.theirs}|${sides.myGain}|${sides.theirGain}` : '';
 
   useEffect(() => {
@@ -80,7 +83,7 @@ export function useFinalLineups(
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, leagueId, week, key]);
+  }, [enabled, leagueId, week, key, attempt]);
 
-  return state;
+  return { ...state, retry: () => setAttempt((a) => a + 1) };
 }

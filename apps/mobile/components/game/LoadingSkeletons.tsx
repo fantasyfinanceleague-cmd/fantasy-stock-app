@@ -53,29 +53,36 @@ export function HomeSkeleton() {
   );
 }
 
-/** Matchup (S-6): the score row (two names, two scores, the tug) and the two lineups. */
+/** Matchup (S-6, W4): the scoreboard (two halves, two totals) and the roster's mirrored rows. */
 export function MatchupSkeleton() {
   return (
     <View style={styles.stack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
       <Card style={styles.card}>
-        <Skeleton width={110} height={12} />
         <View style={styles.scoreRow}>
-          <Skeleton width={120} height={36} />
-          <Skeleton width={120} height={36} />
+          <Skeleton width={110} height={20} />
+          <Skeleton width={110} height={20} />
         </View>
-        <Skeleton height={8} borderRadius={radius.sm} />
-        <Skeleton width={160} height={14} />
+        <View style={styles.scoreRow}>
+          <Skeleton width={120} height={32} />
+          <Skeleton width={120} height={32} />
+        </View>
       </Card>
-      <View style={styles.scoreRow}>
-        {[0, 1].map((col) => (
-          <Card key={col} style={[styles.card, styles.lineupCard]}>
-            <Skeleton width={90} height={14} />
-            <Skeleton height={14} />
-            <Skeleton height={14} />
-            <Skeleton height={14} />
-          </Card>
-        ))}
-      </View>
+      <RosterRowsSkeleton />
+    </View>
+  );
+}
+
+/** The roster alone, while its order loads (the ledger and the slots): mirrored rows, never
+ * a list that would re-sort under the reader once the order arrives. */
+export function RosterRowsSkeleton() {
+  return (
+    <View style={styles.stack} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
+      {[0, 1, 2, 3].map((r) => (
+        <View key={r} style={styles.scoreRow}>
+          <Skeleton width={140} height={40} borderRadius={radius.row} />
+          <Skeleton width={140} height={40} borderRadius={radius.row} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -115,8 +122,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: space[3],
-  },
-  lineupCard: {
-    flex: 1,
   },
 });
