@@ -8,7 +8,7 @@ import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
-import { toneOf } from '@/components/sp/logic/gameNight';
+import { rosterHalfLabel, rosterHalfParts, toneOf } from '@/components/sp/logic/gameNight';
 import { useLargeText } from '@/components/sp/useLargeText';
 import { estimateMoneyWidth, fitScale } from '@/components/sp/logic/fitScale';
 
@@ -87,10 +87,7 @@ export function RosterRow({ left, right, opponentName, gutter = space[6], single
 }
 
 /** VoiceOver's label for a half: whose it is first, then the stock and its week. */
-export function rosterHalfLabel(whose: string, half: Pick<RosterHalf, 'ticker' | 'company' | 'weekGain' | 'weekPct' | 'figures'>): string {
-  if (half.figures === false) return `${whose}, ${half.ticker}, ${half.company}`;
-  return `${whose}, ${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
-}
+export { rosterHalfLabel };
 
 function Half({ half, mirror, shaded, gutter, whose, single = false, markEmpty = true }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number; whose: string; single?: boolean; markEmpty?: boolean }) {
   const { colors } = useTheme();
@@ -155,8 +152,7 @@ function Half({ half, mirror, shaded, gutter, whose, single = false, markEmpty =
   );
   const a11y = rosterHalfLabel(whose, half);
   // Without figures (a withheld final) the half is the stock alone.
-  const figures = half.figures !== false;
-  const content = !figures ? [name, null] : stacked ? [name, num] : mirror ? [num, name] : [name, num];
+  const content = rosterHalfParts({ figures: half.figures, stacked, mirror }).map((p) => (p === 'name' ? name : num));
   const layout = stacked ? styles.contentStacked : styles.content;
 
   if (!half.onPress) {

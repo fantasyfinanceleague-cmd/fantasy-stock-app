@@ -6,7 +6,7 @@
 // app's existing tie line (components/sp/game/Scoreboard.tsx).
 
 import type { ThemeColors } from '../../../constants/tokens/color';
-import { formatMoney } from './money';
+import { formatMoney, formatPercent } from './money';
 import { ordinal } from '../../../lib/home/ordinal';
 import { COPY as MONEY_COPY } from '../../../lib/money/moneyCopy';
 
@@ -36,6 +36,23 @@ export function scoreboardModel(you: ScoreSide, opp: ScoreSide, final: boolean):
 }
 
 // ── RosterRow (Matchup) ──────────────────────────────────────────────────────────
+
+/** What a roster half draws, in order: the stock's name, and its week number unless the half
+ * carries no figures (a withheld final — #call-mx-withheld, B: who held what, never a number).
+ * Stacked (large text): the name over the number. Side by side: the number faces the centre. */
+export type RosterPart = 'name' | 'num';
+export function rosterHalfParts(opts: { figures?: boolean; stacked: boolean; mirror: boolean }): RosterPart[] {
+  if (opts.figures === false) return ['name'];
+  if (opts.stacked) return ['name', 'num'];
+  return opts.mirror ? ['num', 'name'] : ['name', 'num'];
+}
+
+/** VoiceOver's label for a roster half: whose it is first, then the stock and — unless the half
+ * carries no figures — its week ("Yours, NVDA …" / "Gianluigi B., NKE …"). */
+export function rosterHalfLabel(whose: string, half: { ticker: string; company: string; weekGain: number; weekPct: number; figures?: boolean }): string {
+  if (half.figures === false) return `${whose}, ${half.ticker}, ${half.company}`;
+  return `${whose}, ${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
+}
 
 /** Giorgio, 2026-10-12: YOUR side is shaded in your colour, win or lose — on the Scoreboard
  * and on every roster row. No per-row winner lighting; who leads lives in the totals and the

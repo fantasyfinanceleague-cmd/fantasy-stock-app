@@ -19,7 +19,7 @@ import { standardWeekSessions } from '../lib/time/marketWeek.ts';
 import { GIANLUIGI_HOLDINGS, ROBERTO_HOLDINGS, fixtureQty } from '../lib/home/homeFixtureData.ts';
 import { estimateMoneyWidth, fitScale } from '../components/sp/logic/fitScale.ts';
 import { buildLine } from '../components/sp/logic/lineChart.ts';
-import { estimateNameWidth, NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar } from '../components/sp/logic/gameNight.ts';
+import { estimateNameWidth, NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, rosterHalfLabel, rosterHalfParts } from '../components/sp/logic/gameNight.ts';
 import { COPY } from '../lib/game/gameCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -110,7 +110,24 @@ Deno.test('withheld: the line, then who held what — draft order, no figures', 
   const src = SOURCES['app/(tabs)/matchup.tsx'];
   assert(src.includes('weekGain: 0, weekPct: 0, figures: false'), 'the halves carry no numbers');
   assert(src.includes('<Withheld raw={raw} roster={roster} me={user.id} opp={live.opp} />'));
-  assert(strip(SOURCES['components/sp/gn/RosterRow.tsx']).includes("const content = !figures ? [name, null]"));
+  assert(strip(SOURCES['components/sp/gn/RosterRow.tsx']).includes("rosterHalfParts({ figures: half.figures, stacked, mirror })"), 'the primitive draws by rosterHalfParts');
+});
+
+Deno.test('withheld: a `figures: false` half draws the stock and NO number, in every layout', () => {
+  for (const stacked of [true, false]) {
+    for (const mirror of [true, false]) {
+      assertEquals(rosterHalfParts({ figures: false, stacked, mirror }), ['name'], `stacked=${stacked} mirror=${mirror}`);
+      // With figures (the default), the number is always there.
+      assert(rosterHalfParts({ stacked, mirror }).includes('num'));
+      assert(rosterHalfParts({ figures: true, stacked, mirror }).includes('num'));
+    }
+  }
+  // Side by side the number faces the centre; stacked, the name sits over it.
+  assertEquals(rosterHalfParts({ stacked: false, mirror: false }), ['name', 'num']);
+  assertEquals(rosterHalfParts({ stacked: false, mirror: true }), ['num', 'name']);
+  assertEquals(rosterHalfParts({ stacked: true, mirror: true }), ['name', 'num']);
+  // VoiceOver says no number either.
+  assert(!rosterHalfLabel('Yours', { ticker: 'NVDA', company: 'NVIDIA', weekGain: 0, weekPct: 0, figures: false }).includes('$'));
 });
 
 // ── DL gate fixes ──────────────────────────────────────────────────────────────

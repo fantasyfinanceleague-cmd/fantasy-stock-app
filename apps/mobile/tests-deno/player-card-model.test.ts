@@ -240,7 +240,7 @@ Deno.test('PlayerCard: the 4pt scale (gap 16, pill padding 12, owner-pill gap 8,
 
 Deno.test('RosterRow: VoiceOver says whose half it is ("Yours, …" / "{name}, …")', () => {
   const src = strip(SOURCES['components/sp/gn/RosterRow.tsx']);
-  assert(src.includes('return `${whose}, ${half.ticker}, ${half.company},'));
+  assert(strip(SOURCES['components/sp/logic/gameNight.ts']).includes('return `${whose}, ${half.ticker}, ${half.company},'));
   assert(src.includes('const a11y = rosterHalfLabel(whose, half);'));
   assert(SOURCES['app/(tabs)/matchup.tsx'].includes('opponentName={opp.name}'));
 });
