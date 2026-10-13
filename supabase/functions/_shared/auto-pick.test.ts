@@ -26,7 +26,9 @@ import {
   type BestAvailableStrategy,
   chooseAutoPick,
   decideAutoPickGate,
+  decideManualPickClock,
   decideNoPick,
+  MANUAL_PICK_GRACE_MS,
   WALK_MAX_CANDIDATES,
   type DraftClock,
   MARKET_CAP_STRATEGY,
@@ -295,6 +297,63 @@ Deno.test('gate: stale / not-in-progress / unclocked', () => {
   assertEquals(decideAutoPickGate(0, clock()), { kind: 'stale_pick_number' });
   assertEquals(decideAutoPickGate(5, clock({ draftStatus: 'not_started' })), { kind: 'draft_not_in_progress' });
   assertEquals(decideAutoPickGate(5, clock({ clockRunning: false, deadlineAt: null })), { kind: 'clock_not_running' });
+});
+
+// ===========================================================================
+// decideManualPickClock — a manager's OWN pick after the clock (2026-10-13)
+// ===========================================================================
+// The clock() fixture: pick 5 is on the clock, deadline 12:01:00 (server time).
+
+const at = (serverNow: string) => clock({ serverNow });
+
+Deno.test('manual clock: the grace is 2 s (latency only, not thinking time)', () => {
+  assertEquals(MANUAL_PICK_GRACE_MS, 2_000);
+});
+
+Deno.test('manual clock: before the deadline -> go', () => {
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:00:30Z')), { kind: 'go' });
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:00:59.999Z')), { kind: 'go' });
+});
+
+Deno.test('manual clock: at the deadline and within the 2 s grace -> go', () => {
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:01:00Z')), { kind: 'go' });
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:01:01Z')), { kind: 'go' });
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:01:01.999Z')), { kind: 'go' });
+});
+
+Deno.test('manual clock: from deadline + grace on -> clock_expired, with both times (server clock)', () => {
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:01:02Z')), {
+    kind: 'clock_expired',
+    deadlineAt: '2026-10-10T12:01:00Z',
+    serverNow: '2026-10-10T12:01:02Z',
+  });
+  assertEquals(decideManualPickClock(5, at('2026-10-10T12:30:00Z')).kind, 'clock_expired');
+});
+
+Deno.test('manual clock: a stalled turn keeps its past deadline -> still expired (the auto-pick owns it)', () => {
+  // get_draft_clock has no pause: a stall writes no drafts row, so the anchor
+  // (and deadline) stays where it was and the turn reads as long overdue.
+  assertEquals(decideManualPickClock(5, at('2026-10-10T13:00:00Z')).kind, 'clock_expired');
+});
+
+Deno.test('manual clock: no clock running (unclocked draft, or no longer in_progress) -> go; no deadline exists', () => {
+  assertEquals(decideManualPickClock(5, clock({ clockRunning: false, deadlineAt: null, turnStartedAt: null, serverNow: '2026-10-10T13:00:00Z' })), { kind: 'go' });
+  assertEquals(decideManualPickClock(5, clock({ draftStatus: 'completed', clockRunning: false, deadlineAt: null })), { kind: 'go' });
+});
+
+Deno.test('manual clock: the clock read failing or malformed -> clock_unreadable (fail CLOSED)', () => {
+  assertEquals(decideManualPickClock(5, null), { kind: 'clock_unreadable' });
+  assertEquals(decideManualPickClock(5, clock({ deadlineAt: null })), { kind: 'clock_unreadable' });
+  assertEquals(decideManualPickClock(5, clock({ deadlineAt: 'not a time' })), { kind: 'clock_unreadable' });
+  assertEquals(decideManualPickClock(5, clock({ serverNow: 'not a time' })), { kind: 'clock_unreadable' });
+});
+
+Deno.test('manual clock: a clock for a different pick is not this pick\'s to judge -> turn_moved', () => {
+  // A pick (often the auto-pick) landed between the caller's read and the clock read.
+  assertEquals(decideManualPickClock(4, clock()), { kind: 'turn_moved' });
+  // ...even when that later turn's own clock is long expired: never "your clock ran out".
+  assertEquals(decideManualPickClock(4, at('2026-10-10T13:00:00Z')), { kind: 'turn_moved' });
+  assertEquals(decideManualPickClock(6, clock()), { kind: 'turn_moved' });
 });
 
 Deno.test('parseDraftClockRow: maps the RPC row; rejects garbage', () => {

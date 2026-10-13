@@ -131,6 +131,65 @@ export function decideAutoPickGate(requestedPickNumber: number, clock: DraftCloc
   return { kind: 'go' };
 }
 
+/**
+ * How late past the deadline a manager's OWN pick (action:'pick') is still
+ * accepted: network latency only, so a pick sent at 0:01 that arrives after
+ * 0:00 still counts. NOT extra thinking time — the room hides Draft at 0:00.
+ * The auto-pick may fire inside this window too; the (league_id, pick_number)
+ * unique index lets the first committed insert win (the other gets
+ * pick_conflict). Ruling: Giorgio, 2026-10-13 (docs/PRODUCT_RULES.md › Draft).
+ * NOMINAL: the clock is read BEFORE pricing (Alpaca) and the insert, so a pick
+ * that passes at deadline + 1.9 s commits later still. The effective window is
+ * this grace plus the request's own processing time; the unique
+ * (league_id, pick_number) index settles any race with the auto-pick.
+ */
+export const MANUAL_PICK_GRACE_MS = 2_000;
+
+export type ManualPickClockGate =
+  | { kind: 'go' }
+  | { kind: 'turn_moved' }
+  | { kind: 'clock_expired'; deadlineAt: string; serverNow: string }
+  | { kind: 'clock_unreadable' };
+
+/**
+ * May the server still accept a manager's own pick for `pickNumber` (the pick
+ * the caller is about to write: picks already recorded + 1)? Reads the same
+ * get_draft_clock row the auto-pick gate does, on the DB clock.
+ *  - clock_unreadable: the clock read failed or is malformed. FAIL CLOSED —
+ *    this gate exists to stop a late pick, so a read failure must not reopen
+ *    that gap. The refusal is recoverable: the caller answers 500 'unhandled',
+ *    the room re-reads, and the manager picks again while the clock runs; if
+ *    it runs out, the auto-pick takes the turn (the product rule's own path).
+ *  - turn_moved: the clock describes a different pick than the one being
+ *    written (a pick landed between the two reads), so its deadline is not
+ *    this pick's to judge. The insert would conflict anyway: pick_conflict.
+ *  - go, unclocked: clock_running false (pick_clock_enabled = false, or the
+ *    draft is no longer in_progress). There is no deadline, and the sweep never
+ *    auto-picks such a draft, so refusing would leave the turn with no way to
+ *    be filled. Every other check still runs after this gate.
+ *  - clock_expired: server_now >= deadline_at + MANUAL_PICK_GRACE_MS.
+ *  - go: otherwise (before the deadline, or within the grace).
+ * get_draft_clock has no pause: deadline_at = turn start + pick_seconds, and
+ * a STALLED turn (the auto-pick found nothing legal, or is waiting for prices)
+ * keeps its past deadline, so it stays expired here — the turn belongs to the
+ * auto-pick, which the sweep retries. RULED (Giorgio, 2026-10-13: "the auto
+ * pick has to work"): no manual rescue of a stalled turn after the clock; the
+ * fix for a stall belongs in the auto-pick, not in this gate.
+ */
+export function decideManualPickClock(pickNumber: number, clock: DraftClock | null): ManualPickClockGate {
+  if (!clock) return { kind: 'clock_unreadable' };
+  if (clock.picksMade + 1 !== pickNumber) return { kind: 'turn_moved' };
+  if (!clock.clockRunning) return { kind: 'go' };
+  if (!clock.deadlineAt) return { kind: 'clock_unreadable' };
+  const deadline = Date.parse(clock.deadlineAt);
+  const now = Date.parse(clock.serverNow);
+  if (!Number.isFinite(deadline) || !Number.isFinite(now)) return { kind: 'clock_unreadable' };
+  if (now >= deadline + MANUAL_PICK_GRACE_MS) {
+    return { kind: 'clock_expired', deadlineAt: clock.deadlineAt, serverNow: clock.serverNow };
+  }
+  return { kind: 'go' };
+}
+
 // ---------------------------------------------------------------------------
 // Open slots (what the search looks for)
 // ---------------------------------------------------------------------------
