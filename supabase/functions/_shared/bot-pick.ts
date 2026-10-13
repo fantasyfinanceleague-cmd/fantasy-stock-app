@@ -66,12 +66,16 @@ export function rankBotCandidates(i: BotCandidateInputs): string[] {
  */
 export function candidateFilter(
   i: Omit<BotCandidateInputs, 'candidates'>,
-  opts: { unpricedOk?: boolean } = {},
+  /** `margin` (default 0): widen the bracket and budget checks by this fraction,
+   * so a cached price that is stale by up to that much is still worth trying
+   * (auto-pick.ts plans the queue with its near-miss margin). */
+  opts: { unpricedOk?: boolean; margin?: number } = {},
 ): (c: BotSymbolCandidate) => boolean {
   const owned = leagueOwnedSymbols(i.picks, i.trades);
+  const m = opts.margin ?? 0;
 
   const budgetRemaining = i.rules.stakeMode === 'budget_cap'
-    ? Math.max((Number(i.rules.budgetAmount) || 0) - userCashSpent(i.botId, i.picks, i.trades), 0)
+    ? Math.max((Number(i.rules.budgetAmount) || 0) - userCashSpent(i.botId, i.picks, i.trades), 0) * (1 + m)
     : Infinity;
 
   // Slot-less leagues (no brackets defined) accept any price; otherwise a
@@ -79,7 +83,10 @@ export function candidateFilter(
   // caller's validatePick still does real slot ASSIGNMENT, which additionally
   // accounts for per-slot occupancy and category eligibility).
   const brackets = i.slots.length > 0
-    ? i.slots.map((s) => ({ min: s.priceMin, max: s.priceMax }))
+    ? i.slots.map((s) => ({
+      min: s.priceMin == null ? null : m > 0 ? s.priceMin * (1 - m) - 1e-9 : s.priceMin,
+      max: s.priceMax == null ? null : m > 0 ? s.priceMax * (1 + m) + 1e-9 : s.priceMax,
+    }))
     : [{ min: null as number | null, max: null as number | null }];
   const fitsAnyBracket = (price: number) =>
     brackets.some((b) => (b.min == null || price >= b.min) && (b.max == null || price <= b.max));

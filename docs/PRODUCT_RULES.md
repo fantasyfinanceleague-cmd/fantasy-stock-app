@@ -337,6 +337,38 @@ building anything, and don't reopen a rule without him.
 - **Auto-pick picks a good stock**: the manager's queue first, then the best available,
   meaning the largest market cap that fits. It must NEVER break the league's criteria
   (price brackets, category slots, budget, the draftable universe).
+  - **The auto-pick never stalls on a stale price** (2026-10-13). Giorgio's ruling:
+    after a manager's clock expires, only the auto-pick fills the turn, a stalled one
+    included: "the auto pick has to work". So any stock that is legal at its LIVE price
+    must be found. A stock is never ruled out on its cached catalog price when a live
+    price could make it fit: when the cached price is up to 50% past a slot's
+    bracket or the budget left, or the budget reserve is the only thing refusing it.
+    Those stocks are live-priced, in batches. "No legal stock" is reported only after
+    that. While prices are unavailable (a vendor outage, shown as Paused), the turn
+    keeps retrying and fills on its own once prices come back.
+- **The auto-pick always stays within the league's rules** (2026-10-13). Giorgio: "auto
+  draft needs to work. if a user wants to auto draft it has to work and pick a stock
+  within the paramters". And: "if a player runs out of time, then it auto picks for them.
+  there can never be an instance where a player doesnt get a pick. its like fantasy
+  football, you run out of time and it auto drafts for you."
+  - The auto-pick is the missed-turn path. There's no auto-draft switch to opt into.
+  - It only takes a stock that fits the price range, the category and the budget. With
+    the never-stall rules above it always finds one, unless no stock fits at all.
+  - If no stock fits, the turn waits and keeps retrying. Nobody is notified (see below).
+  - This supersedes the same day's "closest stock" and "cheapest anyway" rulings.
+- **No notification when the auto-pick is slow or stuck** (2026-10-13). Giorgio: "Drop the
+  wrong 'pick manually' notification and don't add a new one. The commissioner can't do
+  anything about it anyway." The commissioner still gets the one "waiting on prices"
+  notice during a price outage.
+- **Draft budget: no cushion, never stuck** (2026-10-13, budget-cap leagues). Giorgio:
+  "safety cushion? when did i ever say there should be a safety cushion?"
+  - A pick must leave enough budget to fill the manager's remaining slots at current
+    prices, exactly. No extra 10% on top.
+  - Never stuck: if prices moved so a manager's remaining slots no longer fit the budget
+    left, a pick that doesn't make that gap worse is still allowed, so the draft keeps
+    going.
+  - Never over budget: a pick can never cost more than the budget left.
+  - Same rule for manual picks and the auto-pick.
 - **Pick clock:** 60 s default, commissioner-configurable 30–90 s.
 - **Draft order:** a league setting with two modes, Random or Manual, never an automatic
   commissioner-first. Both lock at T−1h. If Manual was never saved, the random order

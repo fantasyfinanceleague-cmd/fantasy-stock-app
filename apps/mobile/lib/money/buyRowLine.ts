@@ -59,7 +59,10 @@ export function buyRowLine(input: BuyRowInput): BuyRowLine | null {
   if (input.stakeMode === 'budget_cap') {
     if (input.rosterFull) return { text: COPY.rosterFull };
     if (input.budgetLeft == null) return null;
-    return { text: COPY.budgetLeftToSpend(formatMoney(input.budgetLeft)) };
+    // Clamped at $0 (2026-10-13): if a manager is ever over budget (legacy data,
+    // a rule edit), "-$3.00 of your budget is left to spend" is wrong. Same
+    // reading as the draft room's "$0 left".
+    return { text: COPY.budgetLeftToSpend(formatMoney(Math.max(0, input.budgetLeft))) };
   }
 
   if (input.stakeMode === 'price_tiers') {

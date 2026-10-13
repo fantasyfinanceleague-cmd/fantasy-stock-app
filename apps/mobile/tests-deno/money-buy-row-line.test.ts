@@ -3,7 +3,7 @@
  * of the Design Lead's verbatim copy (2026-10-06).
  * Run with: cd apps/mobile/tests-deno && deno test .
  */
-import { assertEquals } from 'jsr:@std/assert';
+import { assert, assertEquals } from 'jsr:@std/assert';
 import { buyRowLine } from '../lib/money/buyRowLine.ts';
 
 const base = { sales: [], budgetLeft: null, rosterFull: false, openSlotLabels: [] };
@@ -103,4 +103,12 @@ Deno.test('price_tiers, three or more open slots: a count, no per-slot breakdown
 // An unknown/legacy stake mode: no line, never a guess.
 Deno.test('stakeMode null (legacy): no line', () => {
   assertEquals(buyRowLine({ ...base, stakeMode: null }), null);
+});
+
+// If a manager is ever over budget (legacy data, a rule edit), the line reads
+// $0 left, never a negative amount. Mutation: drop the Math.max -> "-$3.00".
+Deno.test('budget_cap, over budget after the draft: the line clamps at $0 left', () => {
+  const zero = buyRowLine({ ...base, stakeMode: 'budget_cap', budgetLeft: 0 });
+  assertEquals(buyRowLine({ ...base, stakeMode: 'budget_cap', budgetLeft: -3 }), zero);
+  assert(!zero!.text.includes('−') && !zero!.text.includes('-'), zero!.text);
 });
