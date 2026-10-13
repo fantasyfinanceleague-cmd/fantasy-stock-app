@@ -584,7 +584,7 @@
     }[d];
     return <div style={{ ...box, padding: 14, display: 'flex', gap: 14, alignItems: 'center' }}>{ring}{text}</div>;
   }
-  function Board({ d }) {
+  function Board({ d, autoPicks = [], autoMark = false }) {
     const amended = useContext(Amended);
     const label = (n, s, muted, dot) => (
       <span className={muted ? 'dr-num dr-muted' : 'dr-num'} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden' }}>
@@ -609,7 +609,12 @@
       if (!t) return <div key={n} style={{ ...base, background: d === 'c' ? 'transparent' : 'var(--c-sunken)', boxShadow: d === 'c' ? 'inset 0 0 0 1px var(--c-line)' : undefined }}><span className="dr-num dr-muted" style={{ fontSize: 11, fontWeight: 700 }}>{n}</span></div>;
       if (d === 'a' && amended) {
         const c = CAT_OF[t] || 'misc';
-        return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-cat-${c})`, color: 'var(--c-text)' }}><span className="dr-num dr-muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}><span>{n}</span><span>{CAT_CODE[c]}</span></span><span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
+        // The 1.2.0 "Auto" tag, redrawn (the auto-pick call, 2026-10-13): pinned over the tile's
+        // top-right corner in the inverse pair, so it never takes the label row's room.
+        const autoTag = autoMark && autoPicks.includes(n)
+          ? <span aria-label="Auto-picked" style={{ position: 'absolute', top: -7, right: -4, zIndex: 2, padding: '1px 5px', borderRadius: 6, fontSize: 11, lineHeight: '13px', fontWeight: 800, letterSpacing: '.04em', background: 'var(--c-inverse-bg)', color: 'var(--c-inverse-fg)' }}>AUTO</span>
+          : null;
+        return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-cat-${c})`, color: 'var(--c-text)' }}>{autoTag}<span className="dr-num dr-muted" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}><span>{n}</span><span>{CAT_CODE[c]}</span></span><span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
       }
       if (d === 'a') return <div key={n} style={{ ...base, background: `var(--d-tile-${s})`, color: 'var(--d-on-tile)' }}>{label(n, s)}<span style={{ fontSize: 13, fontWeight: 900 }}>{t}</span></div>;
       if (d === 'b') return <div key={n} style={{ ...base, background: 'var(--c-surface)', boxShadow: `inset 0 -3px 0 var(--d-tile-${s})` }}>{label(n, s, true)}<span style={{ fontSize: 14, fontWeight: 900, fontStretch: '75%' }}>{t}</span></div>;
@@ -1309,7 +1314,7 @@
   const mxLine = (text) => <span className="dr-call" style={{ textAlign: 'center' }}>{text}</span>;
   const mxNote = (text) => <span className="dr-cap" style={{ textAlign: 'center', display: 'block' }}>{text}</span>;
   /** Four figures per call: A Dark, A Light, B Dark, B Light. */
-  function MxCall({ id, title, intro, a, b, rec, notes, frame, archived }) {
+  function MxCall({ id, title, intro, a, b, rec, notes, frame, archived, decided = 'B', decidedNote }) {
     const fig = (opt, t) => (
       <figure key={opt + t} className="b-fig b-fig--inv" style={{ margin: 0 }}>
         <Fit>{frame(opt, t)}</Fit>
@@ -1321,14 +1326,14 @@
         <header className="b-sec__head">
           <span className="b-sec__n b-sec__n--code">1.3</span>
           <div>
-            <h2 id={`${id}-h`}>{archived ? `Decided: B, ${title}` : `Your call: ${title}`}</h2>
+            <h2 id={`${id}-h`}>{archived ? `Decided: ${decided}, ${title}` : `Your call: ${title}`}</h2>
             <p className="b-job">{intro}</p>
           </div>
         </header>
         <ul className="b-inv__notes">
           {notes}
           <li><b>Recommended: {rec}</b></li>
-          {archived ? <li><b>Decided by Giorgio (2026-10-13): B</b>, one call at a time from these images, with the new words exactly as drawn.</li> : null}
+          {archived ? (decidedNote || <li><b>Decided by Giorgio (2026-10-13): B</b>, one call at a time from these images, with the new words exactly as drawn.</li>) : null}
         </ul>
         <div className="b-concepts b-concepts--three">{fig('A', 'dark')}{fig('A', 'light')}{fig('B', 'dark')}{fig('B', 'light')}</div>
       </section>
@@ -1473,7 +1478,36 @@
     );
   }
 
+  // SAMPLE for the auto-pick call: picks 4 and 9 were made by the clock (their managers ran out
+  // of time); everything else on the board is data.js's.
+  const AUTO_PICKS = [4, 9];
+  function CallAuto({ archived }) {
+    return (
+      <MxCall
+        archived={archived} decided="A"
+        decidedNote={<li><b>Decided by Giorgio (2026-10-13): A, as built</b> ("no auto tag"), after looking at the built draft room; he ruled before seeing these frames, which record the two options.</li>}
+        id="call-draft-auto" title="marking an auto-pick on the draft board"
+        intro={<>When a manager's clock runs out, the app picks for them (from their queue, or the best available). In 1.2.0 every such pick wore a small "Auto" tag on its square, for the whole draft. The new board, as approved, has no tag, so today an auto-pick looks like any other pick. What still says it: your own card ("Auto-picked AAPL for you", until your next turn), the pick log (the last 8 picks), and VoiceOver. The frames: Serie A Traders on the clock, round 2, pick 11; picks 4 and 9 were auto-picks (SAMPLE).</>}
+        a="as built: no mark" b={'the shipped "Auto" tag, redrawn'}
+        notes={<>
+          <li><b>A:</b> as built. Squares 4 and 9 look like every other pick. A cleaner board; who was auto-picked is in the log while it's recent.</li>
+          <li><b>B:</b> the 1.2.0 "Auto" tag, redrawn for Game Night: a small dark tag over the square's top-right corner, for the whole draft. Same word, nothing new to read; the square keeps its number, category and ticker.</li>
+        </>}
+        rec="B. Seeing who got auto-picked is part of a draft's story (the friend who slept through it), and the word already shipped."
+        frame={(opt, t) => (
+          <Phone d="a" t={t} tab="league" label={`Draft room, auto-pick marking option ${opt}, ${t}`}>
+            <Head chip={<span className="dr-chip"><span className="dr-dot" />Drafting</span>} />
+            <Body gap={16}>
+              <ClockCard d="a" />
+              <Board d="a" autoPicks={AUTO_PICKS} autoMark={opt === 'B'} />
+            </Body>
+          </Phone>
+        )}
+      />
+    );
+  }
   window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
+  window.KSDraftAutoArchived = () => <CallAuto archived />;
   window.KSMxCalls = {
     order: () => <CallOrder archived />,
     empty: () => <CallEmpty archived />,
