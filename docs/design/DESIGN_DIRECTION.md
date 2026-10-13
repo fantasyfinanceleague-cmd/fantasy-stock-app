@@ -818,13 +818,17 @@ values; the studied DNA in [`design.md`](design.md); the audit in
    page's text. (The Light pass found three leaks of page text onto fills.)
 5. **Game numbers heavy, money numbers regular.** Scores and the team value at 800; the
    Portfolio value at 500 (Robinhood).
-6. **A line stops at now.** No axis, no grid, no fill; the end dot carries the live state; a
-   0-point or 1-point line is a designed short state, never a blank frame.
+6. **A line stops at now, over a labelled X axis.** No grid, no fill, no Y axis; **every chart
+   has a labelled X axis** (dates or weekdays; Giorgio, 2026-10-12, binding); the end dot
+   carries the live state; a 0-point or 1-point line is a designed short state, never a blank
+   frame.
 
 ### Colour, both themes (62 keys)
 
 Every existing `ThemeColors` key keeps its name (`apps/mobile/constants/tokens/color.ts`), so the
-port is a value swap plus the new keys marked NEW.
+port is a value swap plus the **14 new keys** marked NEW (48 existing + 14 = 62): `onYou`, `rim`,
+`lit`, `leadWash`, `moneyBg`, `clockCell`, `onClockCell`, `clockCellLive`, `onTile`, and the five
+sector tiles.
 
 | Key | Dark | Light | Role |
 |---|---|---|---|
@@ -923,8 +927,19 @@ port is a value swap plus the new keys marked NEW.
 - The condensed Black cut (62/900) leaves the app's numbers; it stays only for the landing's
   hero. The board's 900-weight touches (the player-card ticker, "You're on the clock") map to
   800: no new font file.
-- **Test to update:** `type.ts`'s ordering invariant (`score ≥ display ≥ title ≥ headline`)
-  becomes `score.xl ≥ display ≥ title ≥ headline`; `score.md` is a row size now.
+- **The type-ramp invariant** (Design Lead ruling, 2026-10-12, asked by the W3 worker): the
+  invariant exists so that each screen's standout number stays the loudest text **on its own
+  screen** at every Dynamic Type size. Under Game Night, `score.xl` (Matchup) and `display`
+  never share a screen, and their caps differ (1.2 vs 1.6), so `score.xl ≥ display` holds at
+  1× only (at 1.35×, 38.4 < 43.2). `type.ts` therefore checks:
+  - at **1× only**: `score.xl ≥ display`;
+  - at **every fontScale**: `display ≥ title ≥ headline`, and each screen standout against
+    `display`: `hero ≥ display` (46×1.2 = 55.2 ≥ 32×1.6 = 51.2) and `money ≥ display`
+    (44×1.2 = 52.8 ≥ 51.2).
+  Not taken: capping `display` at 1.2 (it takes Dynamic Type away from page titles, a §9B
+  regression to satisfy a test), or raising `score.xl` to 1.6 (two 51pt totals don't fit
+  side by side in the Scoreboard's halves). No value changes.
+  `score.md` is a row size now and is not in the ramp.
 - The 11pt floor stands (§9B).
 
 ### Shape and space
@@ -961,12 +976,53 @@ port is a value swap plus the new keys marked NEW.
   past the gutter to the screen's edge), a dashed zero/base line in `borderStrong`, the end dot
   in `live` with a 9pt `liveGlow` halo; it stops at the last real point. W/L marks under the
   axis on Home (calm-Home spec).
-- **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`): header (ticker, company, and the
-  pills "Yours" / "Owned by …" and the slot pill in slotted leagues); the key-figures strip on
-  `inset` (Price, Week gain, Since the draft — label open with Giorgio —, Your/Their position);
-  the season line with the acquisition marker (a `surface` disc with a 2pt `text` ring + its
-  label); "How you got it"; this week's line; one full-width action for the state (Sell /
-  Save, outlined in `borderStrong`); the Alpaca credit.
+- **The X axis (every chart, Giorgio 2026-10-12: "a real X axis with dates"; this-week
+  charts "Mon…Fri"):**
+  - **Labels only:** `caption` (12/16 Medium), `text2`, tabular; no axis line, no tick marks, no
+    grid. A 6pt gap between the plot's lowest point and the labels.
+  - **What the axis spans:**
+    - **A week** (1W on a stock, This week on the player card): the whole trading week, Mon
+      open → Fri close, labels **Mon · Tue · Wed · Thu · Fri** under each day's slot, even
+      when it is Thursday: the line stops at now and the days still to come stay empty (the
+      Robinhood 1D pattern: the length of the line says how far the week has run).
+    - **Dated ranges** (the season, 1M, 3M, 1Y; the player card's Season): from the range's
+      start to **now**, no future slots (the B′ ruling stands: a slot with no point reads as
+      missing data). 3 to 5 date labels, evenly spaced in time, the first at the start and
+      the last at now: "Sep 29 · Oct 6 · Oct 13" (`MMM d`); 1Y uses months ("Oct · Jan · Apr ·
+      Jul").
+  - **Edges:** the first label is left-aligned to its point and the last right-aligned to its
+    point, so neither leaves the plot; labels never overlap (drop interior labels first;
+    test with the longest month names at XL).
+  - **Home's season chart** (the approved calm-Home chart): the W/L marks stay; the axis adds
+    **two** date labels under them, the first week's start date under the first mark (left)
+    and today's date at the live end (right), so marks and labels never collide at 124pt. A
+    Design Lead reading of "every chart", to confirm with Giorgio.
+  - **The 0- and 1-point states** draw the full axis (a week chart on Monday morning shows Mon
+    … Fri with a dot at Monday's open).
+  - **Scrub:** the scrub label names the point's date or day ("Wed · +$41.26").
+  - **Accessibility:** the chart's label names the range ("from Mon to Thu", "from Sep 29 to
+    Oct 9") before the values.
+
+- **`PlayerCard`** (sheet, `surface`, radius 20, over `scrim`), in this order (Giorgio's review,
+  2026-10-12, on ESPN's player card):
+  1. **Header** (he liked it as drawn): ticker, company, the pill "Yours" or "Owned by …",
+     and the slot pill in slotted leagues.
+  2. **Key figures, THREE** ("a little cluttered. Maybe we just go with three"), on `inset`:
+     **Price** · **Week gain** · **Since the draft** (or "Since {date}" for a stock bought or
+     claimed later; the label "Season gain" vs "Since the draft" is still his call). No
+     position figure.
+  3. **Season line** with its X axis of dates (start → now). **No acquisition marker or
+     "Drafted" label** ("A player can see from this pop-up card if they were drafted or picked
+     up on waivers"): the "How you got it" block says it.
+  4. **This week's line** with its Mon…Fri axis.
+  5. **The one action for the state:** your own stock → **Sell** while the market is open
+     (disabled with "Market's closed. Opens Mon 9:30 ET." beside it while closed), and **never
+     Save** ("there probably shouldn't be a save option if you already have the stock");
+     a stock you don't own → **Save** / Saved.
+  6. **"How you got it" at the BOTTOM** ("How they got it" on theirs), like ESPN's Latest
+     transaction: "Drafted 2nd overall · Sep 29 · $290.10" / "Claimed off waivers · Oct 7 ·
+     $187.20" / "Bought · Oct 2 · $214.80".
+  7. The Alpaca credit.
 - **Tab bar**: `tabbar`, active in `accent`, inactive `text2`.
 
 ### Motion (Game Night's notes on top of §4)
