@@ -8262,6 +8262,10 @@ window.KS_REFS = {
   const D = K.DRAFT_MOMENT;
   const SEATS = [...K.PLAYERS].sort((p, q) => p.seat - q.seat);
   function ClockCard({ d }) {
+    // Giorgio, 2026-10-13, on the built room: "it just should show the you're on the clock and then
+    // what round and pick number it is. I don't think it needs that last thing at the bottom."
+    // The snake line is gone from the current frame; archived frames keep it as they were.
+    const amended = useContext(Amended);
     const mmss = `0:${String(D.secondsLeft).padStart(2, '0')}`;
     const frac = D.secondsLeft / D.secondsTotal;
     const ring = (
@@ -8275,7 +8279,7 @@ window.KS_REFS = {
       <div style={{ display: 'grid', gap: 3 }}>
         <span style={{ fontSize: 26, lineHeight: '28px', fontWeight: 900, fontStretch: d === 'b' ? '75%' : '100%', color: 'var(--c-live-text)' }}>You're on the clock</span>
         <span className="dr-call" style={{ fontWeight: 700 }}>Round 2 of {K.LEAGUE.slots} · Pick 11</span>
-        <span className="dr-cap">Then Paolo M. picks twice (12, 13)</span>
+        {amended ? null : <span className="dr-cap">Then Paolo M. picks twice (12, 13)</span>}
       </div>
     );
     const box = {

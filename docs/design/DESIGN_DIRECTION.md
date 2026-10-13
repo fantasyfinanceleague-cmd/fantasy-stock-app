@@ -969,7 +969,9 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   outer corners only.
 - The `rim`: a 1pt inset edge on every card (Dark and Light).
 - The draft tile's sector line: **3pt** at the bottom, in the sector colour (graphic ≥ 3:1).
-- Space: the 4pt scale, the 20pt screen gutter and the 24pt block gap are unchanged.
+- Space: the 4pt scale, the 20pt screen gutter and the 24pt block gap are unchanged. The 24pt
+  gap is the calm screens' (Home, League, Portfolio); the draft room and its lobby, dense working
+  screens, use 16pt between blocks, as their board frame does (W4 Draft gate, 2026-10-13).
 
 ### Components (the W3 primitives)
 
@@ -1065,9 +1067,11 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
 ### Contrast evidence (v3.1)
 
 Computed from the values above against **the app's own tables**
-(`apps/mobile/constants/tokens/contrastPairs.ts`), **110 checks per theme**: 17 scored
-`TOKEN_ROWS` (of 18; `text3` is measured, not scored) and 93 `PAIRS`. The pairs are the 40
-existing rows (three re-pointed), 50 Game Night rows and W3's 3 Chip rows. The Game Night rows
+(`apps/mobile/constants/tokens/contrastPairs.ts`), **112 checks per theme**: 17 scored
+`TOKEN_ROWS` (of 18; `text3` is measured, not scored) and 95 `PAIRS`. The pairs are the 40
+existing rows (three re-pointed; W4 Draft replaced the your-turn rest pair, liveText on
+warnTint, with three rows on the accent-tint rest card: text, text2 and the last-10-seconds
+loss, so 39 + 3), 50 Game Night rows and W3's 3 Chip rows. The Game Night rows
 cover:
 - your side (B) on the card surface and on the page;
 - the clock cell;
@@ -1084,8 +1088,8 @@ added.
 
 | Theme | Scored | Pass | Tightest |
 |---|---|---|---|
-| Dark | 110 | 110 | `borderStrong` on `surface` 3.29 (needs 3); `onYou` on `you` 5.07; `you` on `surface` 3.49 (needs 3) |
-| Light | 110 | 110 | `loss` in your column 4.67; `accent` on its tint 4.69; `medalSilver` on the you-tint row 3.11 (needs 3); the owner's disc 3.32 (needs 3) |
+| Dark | 112 | 112 | `borderStrong` on `surface` 3.29 (needs 3); `onYou` on `you` 5.07; `you` on `surface` 3.49 (needs 3) |
+| Light | 112 | 112 | the last-10-seconds `loss` on the accent-tint rest card 4.55; `loss` in your column 4.67; `accent` on its tint 4.69; `medalSilver` on the you-tint row 3.11 (needs 3); the owner's disc 3.32 (needs 3) |
 
 **`contrastPairs.ts` and the board's `PAIRS` are identical, row for row** (the board's `themes.css`
 is the app's `color.ts` key for key, so both score one palette); add a pair to both or to
