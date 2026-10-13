@@ -48,6 +48,19 @@
   --d-hero-weight: 800;
   --d-hero-stretch: 100%;
   --d-radius: 14px;
+  /* the 11 product categories (supabase/seed/categories.json), PROPOSED, for Giorgio */
+  --d-cat-food: oklch(80% 0.11 10);
+  --d-cat-retail: oklch(80% 0.11 46);
+  --d-cat-realestate: oklch(80% 0.11 82);
+  --d-cat-energy: oklch(80% 0.11 118);
+  --d-cat-finance: oklch(80% 0.11 154);
+  --d-cat-industrials: oklch(80% 0.11 190);
+  --d-cat-transport: oklch(80% 0.11 226);
+  --d-cat-tech: oklch(80% 0.11 262);
+  --d-cat-media: oklch(80% 0.11 298);
+  --d-cat-health: oklch(80% 0.11 334);
+  --d-cat-misc: oklch(74% 0.02 270);
+  --d-on-cat: oklch(18% 0.05 272);      /* dark ink on the brighter Dark category fills */
 }
 
 /* ── B · Broadcast (primary: ESPN S3) ────────────────────────────────────
@@ -251,6 +264,19 @@
   --d-tile-fin: oklch(84% 0.12 180);
   --d-tile-health: oklch(76% 0.12 350);
   --d-clock-cell: oklch(22% 0.05 272);
+  /* the 11 product categories (supabase/seed/categories.json), PROPOSED, for Giorgio */
+  --d-cat-food: oklch(52% 0.13 10);
+  --d-cat-retail: oklch(52% 0.13 46);
+  --d-cat-realestate: oklch(52% 0.13 82);
+  --d-cat-energy: oklch(52% 0.13 118);
+  --d-cat-finance: oklch(52% 0.13 154);
+  --d-cat-industrials: oklch(52% 0.13 190);
+  --d-cat-transport: oklch(52% 0.13 226);
+  --d-cat-tech: oklch(52% 0.13 262);
+  --d-cat-media: oklch(52% 0.13 298);
+  --d-cat-health: oklch(52% 0.13 334);
+  --d-cat-misc: oklch(50% 0.02 270);
+  --d-on-cat: oklch(99.6% 0.003 272);  /* white ink on the darker Light category fills */
 }
 /* the dark on-the-clock cell keeps its own light ink */
 .dir-a-light .dr-clockcell { --c-text: oklch(99.6% 0.003 272); --c-live-text: oklch(87% 0.14 205); --c-live: oklch(87% 0.14 205); }
