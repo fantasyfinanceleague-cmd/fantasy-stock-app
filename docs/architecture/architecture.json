@@ -2,27 +2,47 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "7c1b5dfa202c56422b8ff72aaeb4cd4ca8b5a635",
-    "commitShort": "7c1b5dfa",
+    "commit": "ac24fb9a00a1123ae18ac5101f8af7a7b944e99a",
+    "commitShort": "ac24fb9a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/gn-w4-home",
+    "branch": "fix/manual-pick-deadline",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/w4-home-gate-fixes.test.ts"
+        "path": "apps/mobile/lib/game/draftRoom.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/node_modules"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/auto-pick.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/_shared/auto-pick.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/validate-and-record-pick/index.ts"
       }
     ],
-    "timestamp": "2026-10-13T17:04:42Z",
-    "sourceHash": "sha256:1827c950570fec00a36a3158ef363d8266c1277634296d30005e230839cc2c11",
+    "timestamp": "2026-10-13T20:33:39Z",
+    "sourceHash": "sha256:bc18e3911debd664ffbca65918a3c62a4523db332dac78d7c849bbadc70f0fad",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 37.2,
-    "ageDays": 1.6,
+    "ageHours": 40.7,
+    "ageDays": 1.7,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
@@ -1150,7 +1170,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 374
+        "lines": 398
       },
       "db": null,
       "declared": null,
@@ -1163,7 +1183,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
-        "line": 134
+        "line": 140
       }
     },
     {
@@ -11013,8 +11033,8 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:122",
-        "supabase/functions/validate-and-record-pick/index.ts:125"
+        "supabase/functions/validate-and-record-pick/index.ts:128",
+        "supabase/functions/validate-and-record-pick/index.ts:131"
       ]
     },
     {
@@ -11042,7 +11062,7 @@
         "is_draftable, last_price"
       ],
       "callSites": [
-        "supabase/functions/validate-and-record-pick/index.ts:316"
+        "supabase/functions/validate-and-record-pick/index.ts:340"
       ]
     },
     {
@@ -18595,7 +18615,7 @@
           "edge": "e.fn.validate-and-record-pick->tbl.drafts#insert",
           "detail": "Legality (turn, uniqueness, draftable universe, slot category/price bracket, stake budget) decided by the shared pure module; a 23505 on pick_number is a lost race and the client refetches.",
           "files": [
-            "supabase/functions/validate-and-record-pick/index.ts:358"
+            "supabase/functions/validate-and-record-pick/index.ts:320"
           ]
         },
         {
@@ -19838,8 +19858,8 @@
       "supabase/functions/send-notification/index.ts:104 -> check_and_bump_rate_limit",
       "supabase/functions/snapshot-week-end/index.ts:126 -> schedule_snapshot_retry",
       "supabase/functions/snapshot-week-start/index.ts:143 -> schedule_snapshot_retry",
-      "supabase/functions/validate-and-record-pick/index.ts:122 -> check_and_bump_rate_limit",
-      "supabase/functions/validate-and-record-pick/index.ts:125 -> check_and_bump_rate_limit"
+      "supabase/functions/validate-and-record-pick/index.ts:128 -> check_and_bump_rate_limit",
+      "supabase/functions/validate-and-record-pick/index.ts:131 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> categories.select (via useRosterData)",
@@ -20080,7 +20100,7 @@
       "supabase/functions/symbols-search/index.ts:133 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:144 -> symbols.select",
       "supabase/functions/symbols-search/index.ts:155 -> symbols.select",
-      "supabase/functions/validate-and-record-pick/index.ts:316 -> symbols.select",
+      "supabase/functions/validate-and-record-pick/index.ts:340 -> symbols.select",
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "wrappers": [

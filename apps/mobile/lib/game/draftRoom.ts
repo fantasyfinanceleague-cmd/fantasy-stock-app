@@ -193,6 +193,11 @@ const PICK_REFUSALS: Record<string, RefusalRow> = {
   invalid_price: { line: (s) => `${s} has no usable price right now.`, next: 'shared' },
   not_your_turn: { line: (_s, m) => `It's ${m}'s pick now.`, next: null },
   pick_conflict: { line: () => 'Someone picked at the same moment. Pick again.', next: 'shared', refresh: true },
+  // The server refuses your own pick once your clock has expired (2 s grace;
+  // PRODUCT_RULES › Draft, 2026-10-13): existing words, NO shared next step
+  // (your clock is not still running), and a re-read so the board shows the
+  // auto-pick that takes the turn.
+  pick_clock_expired: { line: () => DIDNT_GO_THROUGH, next: null, refresh: true },
   draft_complete: { line: () => 'The draft is over. Your team is set.', next: null, refresh: true },
   draft_not_in_progress: { line: () => "The draft isn't running right now.", next: null, refresh: true },
   rate_limited: { line: () => 'Too many tries at once. Wait a moment, then pick again.', next: 'shared' },

@@ -57,6 +57,12 @@
 // it is settled by the (league_id, pick_number) unique index — the first
 // committed insert wins, the loser gets 'pick_conflict'.
 //
+// action:'pick' and the clock (Giorgio, 2026-10-13: "a missed turn is always
+// auto-picked"): a manager's own pick is refused with 'pick_clock_expired'
+// once get_draft_clock's deadline_at + MANUAL_PICK_GRACE_MS (2 s, latency
+// only) has passed on the DB clock — checked before any Alpaca call or write
+// (auto-pick.ts decideManualPickClock). bot_pick and auto_pick are unchanged.
+//
 // Draft completion: the final pick/skip FINALIZES the league — draft_status,
 // the season schedule (matchups), initial standings, league dates, num_weeks and
 // season 1 — atomically via the finalize_league_draft RPC, planned by
@@ -72,7 +78,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { fetchFillPrice } from '../_shared/alpaca-price.ts';
 import { fetchEligibleCategoryIds } from '../_shared/category-eligibility.ts';
-import { decideAutoPickGate } from '../_shared/auto-pick.ts';
+import { decideAutoPickGate, decideManualPickClock } from '../_shared/auto-pick.ts';
 import {
   autoPickTurn,
   fetchDraftClock,
@@ -298,6 +304,24 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---- Pick: price server-side, validate, record ------------------------
+    // Turn first (cheap, no Alpaca call), so the clock below is only ever
+    // judged for the caller's own turn — validatePick repeats this check.
+    const turn = currentTurn(picks.length, order, numRounds);
+    if (!turn) return json({ ok: false, reason: 'draft_complete' }); // unreachable in practice — the every-pick-made branch above returns first
+    if (turn.pickerId !== targetId) return json({ ok: false, reason: 'not_your_turn' });
+
+    // The pick clock (Giorgio, 2026-10-13): once this turn's clock has expired
+    // (past MANUAL_PICK_GRACE_MS), the manager's own pick is refused and the
+    // auto-pick takes the turn. Same get_draft_clock as auto_pick, on the DB
+    // clock; before any Alpaca call or write. Fails CLOSED on a read failure
+    // (auto-pick.ts decideManualPickClock says why).
+    const clockGate = decideManualPickClock(turn.pickNumber, await fetchDraftClock(admin, leagueId));
+    if (clockGate.kind === 'clock_unreadable') return json({ ok: false, reason: 'unhandled' }, 500);
+    if (clockGate.kind === 'turn_moved') return json({ ok: false, reason: 'pick_conflict' }); // 200: client refetches
+    if (clockGate.kind === 'clock_expired') {
+      return json({ ok: false, reason: 'pick_clock_expired', deadline_at: clockGate.deadlineAt, server_now: clockGate.serverNow }); // 200: game-flow refusal
+    }
+
     if (!ALPACA_KEY || !ALPACA_SECRET) return json({ ok: false, reason: 'server_config_error' }, 500);
     const fill = await fetchFillPrice(symbol, ALPACA_KEY, ALPACA_SECRET);
     if (fill.price == null) {

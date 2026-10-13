@@ -329,6 +329,9 @@ building anything, and don't reopen a rule without him.
 
 - **"A draft pick CAN NEVER be unused."** A missed turn is always auto-picked. There's no
   Skip, and no unfilled-slot state for people.
+- **No late picks** (2026-10-13, relayed by the Orchestrator): once a manager's clock has
+  expired, the server refuses their own pick (a 2-second grace for network latency only)
+  and the auto-pick takes the turn. Judged on the server's clock, never the phone's.
 - **Auto-pick picks a good stock**: the manager's queue first, then the best available,
   meaning the largest market cap that fits. It must NEVER break the league's criteria
   (price brackets, category slots, budget, the draftable universe).

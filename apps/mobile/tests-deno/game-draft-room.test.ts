@@ -323,6 +323,16 @@ Deno.test('the room re-reads after a conflict, a finished or stopped draft', () 
   assertEquals(pickRefusalView('symbol_owned', null, mine).refresh, false);
 });
 
+Deno.test('pick_clock_expired (2026-10-13): existing words, no "clock still running" next step, and a re-read', () => {
+  assertEquals(pickRefusalView('pick_clock_expired', null, mine), {
+    line: "That pick didn't go through.",
+    next: null,
+    checking: false,
+    refresh: true,
+  });
+  assertEquals(PICK_REFUSAL_REASONS.includes('pick_clock_expired'), true);
+});
+
 Deno.test('rule 8: every line is a whole sentence, with no em dash and no placeholder', () => {
   for (const r of [...PICK_REFUSAL_REASONS, 'unknown', 'unhandled']) {
     const l = line(r);
