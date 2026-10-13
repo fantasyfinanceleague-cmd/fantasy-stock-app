@@ -29,7 +29,7 @@ export interface TextProps extends RNTextProps {
 
 // Score variants render digits that must never wrap onto a second line —
 // a wrapped scoreboard number is worse than a clipped one.
-const NEVER_WRAP: ReadonlySet<TypeVariant> = new Set(['hero', 'money', 'ticker', 'score.xl', 'score.lg', 'score.md', 'display']);
+const NEVER_WRAP: ReadonlySet<TypeVariant> = new Set(['hero', 'money', 'ticker', 'ticker.card', 'ticker.tile', 'score.xl', 'score.sm', 'score.lg', 'score.md', 'display']);
 
 export function Text({
   variant,

@@ -40,10 +40,11 @@ Deno.test('effectiveFontSize: at fontScale 1, every variant reads as its raw bas
   }
 });
 
-// §9C (Game Night, 2026-10-12): the invariant is `score.xl ≥ display ≥ title ≥ headline`;
-// `score.md` is a row size now and leaves the ramp. With §9C's values (score.xl 32 capped
-// at 1.2, display 32 capped at 1.6), `score.xl ≥ display` holds at the base size; the
-// every-fontScale ordering is display ≥ title ≥ headline. (Raised with the Design Lead.)
+// THE TYPE-RAMP INVARIANT, in one place (§9C, Design Lead ruling 2026-10-12): each screen's
+// standout stays the loudest text on its own screen at every Dynamic Type size.
+//   at 1× only:        score.xl ≥ display (they never share a screen; caps 1.2 vs 1.6)
+//   at every fontScale: display ≥ title ≥ headline, hero ≥ display, money ≥ display
+// `score.md` is a row size now and is not in the ramp. No value changes.
 Deno.test('type ramp ordering at the base size: score.xl >= display >= title >= headline', () => {
   const [xl, display, title, headline] = (['score.xl', 'display', 'title', 'headline'] as const).map((v) => effectiveFontSize(v, 1));
   assertEquals(xl >= display, true, `score.xl (${xl}) should be >= display (${display})`);
@@ -52,11 +53,15 @@ Deno.test('type ramp ordering at the base size: score.xl >= display >= title >= 
 });
 
 for (const fontScale of FONT_SCALES) {
-  Deno.test(`type ramp ordering holds at fontScale ${fontScale}: display >= title >= headline`, () => {
+  Deno.test(`type ramp ordering holds at fontScale ${fontScale}: hero, money >= display >= title >= headline`, () => {
     const display = effectiveFontSize('display', fontScale);
     const title = effectiveFontSize('title', fontScale);
     const headline = effectiveFontSize('headline', fontScale);
+    const hero = effectiveFontSize('hero', fontScale);
+    const money = effectiveFontSize('money', fontScale);
 
+    assertEquals(hero >= display, true, `hero (${hero}) should be >= display (${display})`);
+    assertEquals(money >= display, true, `money (${money}) should be >= display (${display})`);
     assertEquals(display >= title, true, `display (${display}) should be >= title (${title})`);
     assertEquals(title >= headline, true, `title (${title}) should be >= headline (${headline})`);
   });

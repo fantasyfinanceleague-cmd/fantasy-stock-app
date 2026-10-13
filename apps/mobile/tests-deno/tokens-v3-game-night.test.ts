@@ -104,7 +104,8 @@ const GAME_NIGHT_PAIRS: ReadonlyArray<[string, string, string | null, number]> =
   ['tileFin', 'surface', null, 3], ['tileHealth', 'surface', null, 3],
   ['text', 'moneyBg', null, 4.5], ['text2', 'moneyBg', null, 4.5], ['gain', 'moneyBg', null, 4.5], ['loss', 'moneyBg', null, 4.5],
   ['youText', 'youTint', 'surface', 4.5], ['onAccent', 'accent', null, 4.5], ['you', 'bg', null, 3],
-  ['liveText', 'accentTint', 'bg', 4.5],
+  ['liveText', 'accentTint', 'bg', 4.5], ['liveText', 'accentTint', 'surface', 4.5], ['live', 'accentTint', 'bg', 3],
+  ['text2', 'youTint', 'surface', 4.5], ['gain', 'youTint', 'surface', 4.5], ['loss', 'youTint', 'surface', 4.5],
 ];
 
 Deno.test('contrast: every Game Night pair is in PAIRS (sp-contrast.test.ts scores each in both themes)', () => {

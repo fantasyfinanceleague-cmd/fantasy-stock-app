@@ -140,6 +140,15 @@ export const PAIRS: readonly ContrastPair[] = [
   ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
   // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
   ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
-  // Chip (§9C: accentTint + liveText). On the page background in the header, so over `bg`.
+  // Chip (§9C: accentTint + liveText, the dot drawn). Not among §9C's named groups; added
+  // by W3 because the Chip renders text and a dot on that fill: on the page (the header)
+  // and on cards / sheets.
   ['liveText', 'accentTint', 'bg', 4.5, 'LIVE chip on the page background'],
+  ['liveText', 'accentTint', 'surface', 4.5, 'LIVE chip on a card or sheet'],
+  ['live', 'accentTint', 'bg', 3, 'Live dot inside the LIVE chip (graphic)'],
+  // ManagerRow (§9C): your Standings row is the you-tint over the tile's surface; its
+  // record and its season gain / movement sit on it. Also W3's, beyond §9C's groups.
+  ['text2', 'youTint', 'surface', 4.5, 'Your Standings row: the W–L record'],
+  ['gain', 'youTint', 'surface', 4.5, 'Your Standings row: season gain up, movement up'],
+  ['loss', 'youTint', 'surface', 4.5, 'Your Standings row: season gain down, movement down'],
 ];

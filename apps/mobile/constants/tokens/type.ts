@@ -18,6 +18,9 @@ export type TypeVariant =
   | 'hero'
   | 'money'
   | 'ticker'
+  | 'ticker.card'
+  | 'ticker.tile'
+  | 'score.sm'
   | 'score.xl'
   | 'score.lg'
   | 'score.md'
@@ -43,11 +46,9 @@ export interface TypeStyle {
    * that scales less (or not at all, like `display`, which callers often
    * render at a fixed size) can end up SMALLER on screen than one that
    * scales more, inverting the type ramp at accessibility sizes even though
-   * their base sizes are correctly ordered. score/display/title/headline
-   * caps are chosen so `display ≥ title ≥ headline` holds at every fontScale,
-   * and `score.xl ≥ display` at the base size (§9C: `score.md` is a row size
-   * now, so it leaves the ramp) — see `effectiveFontSize` and its test in
-   * tests-deno/sp-type.test.ts.
+   * their base sizes are correctly ordered. The caps are chosen to keep the
+   * type-ramp invariant (§9C, Design Lead ruling 2026-10-12), which is stated
+   * and checked in ONE place: tests-deno/sp-type.test.ts.
    */
   maxScale?: number;
 }
@@ -69,12 +70,17 @@ export const type: Record<TypeVariant, TypeStyle> = {
   hero: { fontFamily: FONT.extraBold, fontSize: 46, lineHeight: 48, letterSpacing: -0.69, tabularNums: true, maxScale: 1.2 },
   // §9C: the Portfolio value, regular weight (rule 5, Robinhood). 44/46, −0.015em.
   money: { fontFamily: FONT.medium, fontSize: 44, lineHeight: 46, letterSpacing: -0.66, tabularNums: true, maxScale: 1.2 },
-  // §9C: tickers on rows (16/20, +0.01em); the player card sets 26/28 itself.
+  // §9C: tickers on rows (16/20, +0.01em).
   ticker: { fontFamily: FONT.extraBold, fontSize: 16, lineHeight: 20, letterSpacing: 0.16 },
+  // §9C: the ticker at 26/28 on the player card, and 13/800 in a draft tile.
+  'ticker.card': { fontFamily: FONT.extraBold, fontSize: 26, lineHeight: 28, letterSpacing: 0.26, maxScale: 1.3 },
+  'ticker.tile': { fontFamily: FONT.extraBold, fontSize: 13, lineHeight: 16, maxScale: 1.2 },
   'score.xl': { fontFamily: FONT.extraBold, fontSize: 32, lineHeight: 36, tabularNums: true, maxScale: 1.2 },
   'score.lg': { fontFamily: FONT.extraBold, fontSize: 28, lineHeight: 30, tabularNums: true, maxScale: 1.2 },
-  // A row size now (roster week gain); standings' season gain sets 15/20 itself.
+  // A row size now (roster week gain).
   'score.md': { fontFamily: FONT.extraBold, fontSize: 17, lineHeight: 22, tabularNums: true, maxScale: 1.3 },
+  // §9C: standings' season gain at 15/20.
+  'score.sm': { fontFamily: FONT.extraBold, fontSize: 15, lineHeight: 20, tabularNums: true, maxScale: 1.3 },
   // The only uppercase in the app, and game surfaces only (§9). §9C: +0.06em.
   tag: {
     fontFamily: FONT.expandedExtraBold,
@@ -99,10 +105,8 @@ export const typeFontFamily = FONT;
 /**
  * The effective on-screen font size after RN applies Dynamic Type and this
  * variant's `maxScale` ceiling — pure math mirroring what
- * `maxFontSizeMultiplier` does natively, so the type-ramp ordering invariant
- * (display ≥ title ≥ headline at every fontScale; score.xl ≥ display at
- * the base size) is testable
- * without rendering an actual RN tree. Not used at render time itself; the
+ * `maxFontSizeMultiplier` does natively, so the type-ramp invariant
+ * (tests-deno/sp-type.test.ts) is testable without rendering an RN tree. Not used at render time itself; the
  * real cap is enforced by passing `maxScale` as `maxFontSizeMultiplier`.
  */
 export function effectiveFontSize(variant: TypeVariant, fontScale: number): number {

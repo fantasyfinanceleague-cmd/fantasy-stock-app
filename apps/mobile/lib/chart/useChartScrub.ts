@@ -11,7 +11,7 @@ import { runOnJS } from 'react-native-reanimated';
 import { Gesture } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
-import { nearestPointIndex, type ChartGeometry } from './chartGeometry';
+import { nearestPointIndex, type ChartPoint } from './chartGeometry';
 
 export interface UseChartScrubResult {
   scrubIndex: number | null;
@@ -23,7 +23,8 @@ export interface UseChartScrubResult {
 }
 
 export function useChartScrub(
-  geometry: ChartGeometry | null,
+  /** Anything with pixel-space points: chartGeometry's, or the Game Night Chart's line. */
+  geometry: { points: ChartPoint[] } | null,
   reduced: boolean,
   onIndexChange?: (index: number | null) => void,
 ): UseChartScrubResult {
