@@ -85,6 +85,9 @@ function labelBand(min: number | null, max: number | null): string {
   return `${price(min)}–${price(max)}`;
 }
 
+/** The same band label, for Matchup's GroupHead and the player card's slot pill (W4). */
+export const slotBandLabel = labelBand;
+
 /** The band in a refusal sentence, with "to": "$100 to $200", "up to $50", "$800 or more". */
 export function slotRangeText(min: number | null, max: number | null): string {
   if (min == null) return `up to ${price(max!)}`;

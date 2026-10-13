@@ -8,6 +8,7 @@
 import type { ThemeColors } from '../../../constants/tokens/color';
 import { formatMoney } from './money';
 import { ordinal } from '../../../lib/home/ordinal';
+import { COPY as MONEY_COPY } from '../../../lib/money/moneyCopy';
 
 // ── Scoreboard (Matchup) ─────────────────────────────────────────────────────────
 
@@ -194,10 +195,12 @@ export type PlayerAction =
 
 /** The one action for the state (§9C, Giorgio's review): your stock → Sell while the market
  * is open, disabled with the reason while it's closed, and NEVER Save; a stock you don't own
- * → Save / Saved. `opens` is the next open, e.g. "Mon 9:30 ET". */
-export function playerAction(owner: 'you' | 'other', marketOpen: boolean, saved: boolean, opens: string): PlayerAction {
+ * → Save / Saved. `opens` is the next open, e.g. "Mon 9:30 AM ET" (marketOpensLabel); when
+ * the next open isn't known the reason is the app's own "Trading is closed right now." */
+export function playerAction(owner: 'you' | 'other', marketOpen: boolean, saved: boolean, opens: string | null): PlayerAction {
   if (owner === 'other') return { kind: 'save', saved };
-  return marketOpen ? { kind: 'sell', enabled: true } : { kind: 'sell', enabled: false, note: `Market's closed. Opens ${opens}.` };
+  if (marketOpen) return { kind: 'sell', enabled: true };
+  return { kind: 'sell', enabled: false, note: opens ? `Market's closed. Opens ${opens}.` : MONEY_COPY.marketClosedNow };
 }
 
 export function actionLabel(a: PlayerAction): string {
@@ -208,4 +211,49 @@ export function actionLabel(a: PlayerAction): string {
 /** "How you got it" / "How they got it". */
 export function howTitle(owner: 'you' | 'other'): string {
   return owner === 'you' ? 'How you got it' : 'How they got it';
+}
+
+export interface PlayerCardOwnerInfo {
+  name: string;
+  avatarUri?: string | null;
+}
+
+/** Whose stock, and the one action that goes with it — typed so no button can render
+ * without its handler (the W3 gate, 2026-10-12):
+ *  - yours, held: Sell, and `onSell` is required (never Save);
+ *  - yours, sold this week (still on this week's roster): no action at all;
+ *  - theirs: Save / Saved through `save` — a REQUIRED key: pass `null` where the app has
+ *    no watchlist to save to, and Save is not drawn (never a dead star). */
+export type PlayerCardOwnership =
+  | { owner: 'you'; onSell: () => void; sold?: never }
+  | { owner: 'you'; sold: true; onSell?: never }
+  | { owner: PlayerCardOwnerInfo; save: { saved: boolean; onToggle: () => void } | null };
+
+export interface CardActionView {
+  label: string;
+  onPress: (() => void) | undefined;
+  disabled: boolean;
+  /** The reason beside a disabled button; never null when `disabled`. */
+  note: string | null;
+  /** The drawn star before Save (outline) / Saved (filled); null for Sell. */
+  star: 'star' | 'starFilled' | null;
+  saved: boolean | null;
+}
+
+/** The card's one action, from the ownership union: Sell (disabled with its reason while the
+ * market is closed), Save / Saved, or nothing. */
+export function cardAction(p: PlayerCardOwnership & { marketOpen: boolean; opens: string | null }): CardActionView | null {
+  if (p.owner === 'you') {
+    if (p.sold) return null;
+    const a = playerAction('you', p.marketOpen, false, p.opens);
+    if (a.kind !== 'sell') return null;
+    return a.enabled
+      ? { label: actionLabel(a), onPress: p.onSell, disabled: false, note: null, star: null, saved: null }
+      : { label: actionLabel(a), onPress: undefined, disabled: true, note: a.note, star: null, saved: null };
+  }
+  if (!p.save) return null;
+  const a = playerAction('other', p.marketOpen, p.save.saved, p.opens);
+  if (a.kind !== 'save') return null;
+  // Saved = the same star filled, the label "Saved"; nothing else changes (no accent fill).
+  return { label: actionLabel(a), onPress: p.save.onToggle, disabled: false, note: null, star: a.saved ? 'starFilled' : 'star', saved: a.saved };
 }

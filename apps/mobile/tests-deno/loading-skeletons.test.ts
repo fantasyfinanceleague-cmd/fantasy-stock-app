@@ -20,9 +20,9 @@ Deno.test('Home: a skeleton while loading, not null', () => {
 
 Deno.test('the skeletons are placeholders only, one busy "Loading" element each', () => {
   const s = SOURCES['components/game/LoadingSkeletons.tsx'];
-  // DraftRoom, Home, and (S-6) Matchup and All matchups: one per exported skeleton.
+  // DraftRoom, Home, and (S-6) Matchup and All matchups, and (W4) the roster's rows: one per exported skeleton.
   const exported = (s.match(/^export function \w+Skeleton\(/gm) ?? []).length;
-  assertEquals(exported, 4);
+  assertEquals(exported, 5);
   assertEquals((s.match(/accessibilityLabel=\{LOADING\} accessibilityState=\{\{ busy: true \}\}/g) ?? []).length, exported);
   assertEquals(/\$\d|\d+\.\d\d/.test(s.replace(/height=\{\d+\}|width=\{\d+\}/g, '')), false); // no numbers shown
 });

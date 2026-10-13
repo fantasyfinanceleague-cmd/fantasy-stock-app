@@ -70,5 +70,8 @@ export function useMatchup(leagueId: string | null) {
     names: (home.raw?.data.standings ?? []).map((st) => ({ user_id: st.user_id, display_name: st.display_name, is_bot: st.is_bot })),
     bars: home.raw?.bars ?? {},
     todayIso: todayEt(new Date()),
+    /** Home's raw inputs (ledgers, quotes, bars, calendar, the fetch's `now`): the W4 roster
+     * orders and the player card reads from them. Null while loading. */
+    raw: home.raw,
   };
 }

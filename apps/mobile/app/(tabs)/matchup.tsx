@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { matchupSegmentFromParam } from '@/lib/game/draftComplete';
 import { View, StyleSheet } from 'react-native';
@@ -11,9 +11,7 @@ import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
-import { MatchScoreboard } from '@/components/game/MatchScoreboard';
-import { Chyron } from '@/components/sp/game/Chyron';
-import { useLeadChyron } from '@/lib/game/useLeadChyron';
+import { GroupHead, PlayerCard, RosterRow, Scoreboard, type PlayerCardOwnership } from '@/components/sp/gn';
 import { useRevealOnce, type RevealState } from '@/lib/game/useRevealOnce';
 import { useAllMatchups } from '@/lib/game/useAllMatchups';
 import { useFinalLineups, type FinalLineupsState } from '@/lib/game/useFinalLineups';
@@ -23,40 +21,46 @@ import { FinalBanner } from '@/components/game/FinalBanner';
 import { buildFinalBanner } from '@/lib/game/finalBanner';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useMatchup, type MatchupDerived } from '@/lib/game/useMatchup';
-import { nameOf } from '@/lib/game/buildMatchupViewModel';
-import { buildMatchScoreboardModel } from '@/lib/game/matchScoreboardModel';
 import { COPY } from '@/lib/game/gameCopy';
 import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
-import { AllMatchupsSkeleton, MatchupSkeleton } from '@/components/game/LoadingSkeletons';
+import { AllMatchupsSkeleton, MatchupSkeleton, RosterRowsSkeleton } from '@/components/game/LoadingSkeletons';
 import { LoadFailure } from '@/components/money/LoadFailure';
-import { useLargeText } from '@/components/sp/useLargeText';
-import { formatMoney } from '@/components/sp/logic/money';
 import { unpricedNote } from '@/lib/plCoverage';
-import {
-  endsAtLabel,
-  preSeasonStartsLabel,
-  byeToRoundLabel,
-  eliminatedLabel,
-  playoffPendingLine,
-} from '@/lib/home/homeCopy';
+import { preSeasonStartsLabel, byeToRoundLabel, eliminatedLabel, playoffPendingLine } from '@/lib/home/homeCopy';
 import { useAuth } from '@/lib/useAuth';
 import type { LineupRow } from '@/lib/game/lineupLedger';
+import type { HomeRawInputs } from '@/lib/home/useHomeLeague';
+import { toLiveSnapshots, toLiveTrades } from '@/lib/home/buildHomeViewModel';
+import { resolveWeekWindow } from '@/lib/time/marketWeek';
+import { cardSlotPill, etDateOf, lastWeekClose, weekSessions } from '@/lib/game/matchupRoster';
+import { buildRosterView, type RosterSideInput } from '@/lib/game/matchupRosterView';
+import { useRosterData, type RosterData } from '@/lib/game/useRosterData';
+import { openingOf, playerCardData } from '@/lib/game/playerCardModel';
+import { fixtureSeasonBars } from '@/lib/game/matchupFixture';
+import { SEAM_ON } from '@/lib/game/devSeam';
+import { useStockChartData } from '@/lib/money/useStockChartData';
+import { useStockSheet } from '@/components/money/MoneyHost';
+import { decideTradeGate } from '@/lib/money/tradeGate';
+import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 
-// Matchup (3c, key screen 2). One MatchScoreboard for the score row (the
-// Design Lead's D9 ruling), Home's rules through the shared model. The lineups
-// show each stock's dollar contribution, and their rows sum to the score
-// exactly. A FINAL matchup shows no lineups: the server row carries the two
-// gains but not per-stock week-end prices, so a per-stock final would be a
-// guess (a follow-up).
+// Matchup (W4, Game Night). Giorgio, 2026-10-12: "a fantasy-football matchup, nothing
+// else" — the Scoreboard (names, avatars, the two totals, "{leader} leads by $X"; YOUR half
+// shaded, never the leader's), then the mirrored roster: your stocks left, theirs right,
+// best first by week gain (slotted leagues grouped under their slot, best first within),
+// the centre column empty, no row lit for its winner, no race chart. The ORDER reads each
+// stock's gain at the last market close and holds through the next day (matchupRoster.ts);
+// the numbers on the rows are live and sum to the score. Tapping any stock, yours or
+// theirs, opens its player card as a sheet. FINAL: the FinalBanner over the same rows, from
+// the posted week's own per-stock rows (shown only when they reconcile to the cent).
 export default function MatchupScreen() {
   const { activeLeagueId, activeLeague, refresh } = useLeagueContext();
   const { colors } = useTheme();
   const m = useMatchup(activeLeagueId);
-  const chyron = useLeadChyron(m.derived?.live ?? null, m.quote, m.bars, m.todayIso);
   // G3: the Friday reveal plays once per matchup-week, once the result is posted.
   const revealFinal = m.derived?.view.kind === 'final' && m.derived.final !== null;
   const reveal = useRevealOnce(activeLeagueId, m.derived?.week ?? null, revealFinal);
-  // "My matchup" / "All matchups" are the board's labels (key screen 2).
+  // "My matchup" / "All matchups" are the board's labels (key screen 2); the switch stays
+  // as navigation (Giorgio, 2026-10-12, item 9).
   const [segment, setSegment] = useState<'mine' | 'all'>('mine');
   // The draft's ending on a Week 1 bye opens All matchups (?segment=all). The tab
   // stays mounted, so the route param is applied when it changes, not only at mount.
@@ -73,11 +77,12 @@ export default function MatchupScreen() {
     ? { mine: user.id, theirs: fv.live.opp.userId, myGain: fv.final.me, theirGain: fv.final.opp, windowStart: fv.weekStart, windowEnd: fv.weekEnd }
     : null;
   const finalLines = useFinalLineups(activeLeagueId, fv?.week ?? null, finalSides, finalSides !== null);
+  const roster = useRosterData(activeLeagueId, user?.id ?? null, fv?.live.opp?.userId ?? null);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <ShellHeader title="Matchup" showAvatar />
-      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[6] }}>
+      <BarsRefresh onRefresh={refresh} contentContainerStyle={{ paddingHorizontal: space[6], paddingBottom: space[9], gap: space[5] }}>
         {m.derived ? (
           <SegmentedControl
             options={[{ label: 'My matchup', value: 'mine' }, { label: 'All matchups', value: 'all' }]}
@@ -86,18 +91,18 @@ export default function MatchupScreen() {
           />
         ) : null}
         {segment === 'all' ? (
-          <AllMatchupsList key={activeLeagueId ?? 'none'} state={all} week={m.derived?.week ?? 0} myUserId={user?.id ?? ''} />
+          <AllMatchupsList key={activeLeagueId ?? 'none'} state={all} myUserId={user?.id ?? ''} />
         ) : (
-          // S-4: keyed by league, so a league switch mounts a fresh scoreboard, tug and race
-          // instead of rolling league A's score into league B's (Home's H5, HomeLeagueTransition).
-          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} leagueName={activeLeague?.name ?? ''} chyron={chyron} reveal={reveal} finalLines={finalLines} />
+          // S-4: keyed by league, so a league switch mounts a fresh scoreboard and roster
+          // instead of rolling league A's into league B's (Home's H5, HomeLeagueTransition).
+          <MatchupBody key={activeLeagueId ?? 'none'} status={m.status} derived={m.derived} phase={m.phase} onRefresh={m.refresh} raw={m.raw} reveal={reveal} finalLines={finalLines} roster={roster} />
         )}
       </BarsRefresh>
     </View>
   );
 }
 
-function AllMatchupsList({ state, week, myUserId }: { state: { status: string; rows: AllMatchupRow[]; retry: () => void }; week: number; myUserId: string }) {
+function AllMatchupsList({ state, myUserId }: { state: { status: string; rows: AllMatchupRow[]; retry: () => void }; myUserId: string }) {
   // S-6: loading shows the games' shape (never a blank tab); a failed load says so and offers Try again.
   if (state.status === 'loading' || state.status === 'idle') return <AllMatchupsSkeleton />;
   if (state.status === 'error') {
@@ -105,29 +110,18 @@ function AllMatchupsList({ state, week, myUserId }: { state: { status: string; r
   }
   return (
     <View style={styles.stack}>
-      {state.rows.map((r, i) => {
-        const aIsYou = r.a.userId === myUserId;
-        const model = buildMatchScoreboardModel({
-          week,
-          live: !r.final,
-          me: { name: r.a.name, gain: r.a.gain, pct: r.a.pct },
-          opp: r.b ? { name: r.b.name, gain: r.b.gain, pct: r.b.pct } : null,
-          endsLabel: '',
-        });
-        return (
-          <MatchScoreboard
-            key={`${r.a.userId}-${i}`}
-            model={model}
-            mineGain={r.a.gain}
-            oppGain={r.b?.gain ?? 0}
-            size="compact"
-            youName={r.a.name}
-            oppName={r.b?.name ?? null}
-            statusLine={r.final ? 'Final' : `Week ${week}, live`}
-            aIsYou={aIsYou}
-          />
-        );
-      })}
+      {state.rows.map((r, i) => (
+        // Your game shades your half (you're side a, allMatchups puts you first); every
+        // other game is two plain halves — there's no "you" to shade.
+        <Scoreboard
+          key={`${r.a.userId}-${i}`}
+          size="compact"
+          mine={r.a.userId === myUserId}
+          final={r.final}
+          you={{ name: r.a.name, gain: r.a.gain }}
+          opponent={{ name: r.b?.name ?? '', gain: r.b?.gain ?? 0 }}
+        />
+      ))}
     </View>
   );
 }
@@ -137,27 +131,25 @@ interface BodyProps {
   derived: MatchupDerived | null;
   phase: import('@/lib/home/homePhase').PhaseResult | null;
   onRefresh: () => Promise<void>;
-  leagueName: string;
-  chyron: string | null;
+  raw: HomeRawInputs | null;
   /** The one-time reveal: the banner mounts only once it is decided (useRevealOnce). */
   reveal: RevealState;
   finalLines: FinalLineupsState;
+  roster: RosterData;
 }
 
-function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalLines }: BodyProps) {
+function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLines, roster }: BodyProps) {
   const { user } = useAuth();
-  // At the large text sizes the two lineups stack (side by side they ran into each other).
-  const largeText = useLargeText();
   if (status === 'error') {
     return (
       <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
     );
   }
   if (status === 'no-league') return null;
-  // S-6: the score row's and lineups' shape while loading, never a made-up number.
+  // S-6: the scoreboard's and roster's shape while loading, never a made-up number.
   if (status === 'loading' || !derived || !user) return <MatchupSkeleton />;
 
-  const { view, live, final, weekEnd, week } = derived;
+  const { view, live, final, week } = derived;
   const youName = live.me.name;
 
   if (view.kind === 'not_started') {
@@ -165,15 +157,11 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
   }
 
   if (view.kind === 'pre_season') {
-    const model = buildMatchScoreboardModel({
-      week, live: false, noLeader: true,
-      me: { name: youName, gain: 0, pct: null },
-      opp: live.opp ? { name: live.opp.name, gain: 0, pct: null } : null,
-      endsLabel: '',
-    });
+    // Before the season: the pairing with both totals at $0.00, and when it starts.
     return (
       <View style={styles.stack}>
-        <MatchScoreboard model={model} mineGain={0} oppGain={0} size="hero" youName={youName} oppName={live.opp?.name ?? null} statusLine={preSeasonStartsLabel(phase && phase.kind === 'pre_season' ? phase.seasonStartsAt : null)} />
+        <Scoreboard you={{ name: youName, gain: 0 }} opponent={{ name: live.opp?.name ?? '', gain: 0 }} showLine={false} />
+        <Text variant="callout" tone="secondary" style={styles.center}>{preSeasonStartsLabel(phase && phase.kind === 'pre_season' ? phase.seasonStartsAt : null)}</Text>
       </View>
     );
   }
@@ -200,18 +188,10 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
   const isFinal = view.kind === 'final';
   const mine = isFinal && final ? final.me : live.me.gain;
   const theirs = isFinal && final ? final.opp : live.opp?.gain ?? 0;
-  const model = buildMatchScoreboardModel({
-    week,
-    live: !isFinal,
-    me: { name: youName, gain: mine, pct: isFinal ? null : live.me.pct },
-    opp: live.opp ? { name: live.opp.name, gain: theirs, pct: isFinal ? null : live.opp.pct } : null,
-    endsLabel: weekEnd ? endsAtLabel(weekEnd) : '',
-  });
   const note = isFinal ? null : unpricedNote(live.me.unpriced.length);
 
   return (
     <View style={styles.stack}>
-      {!isFinal ? <Chyron message={chyron} /> : null}
       {/* Mounted only once the reveal is decided: FinalBanner takes its start pose on mount. */}
       {isFinal && final && reveal.decided ? (
         <FinalBanner
@@ -227,54 +207,194 @@ function MatchupBody({ status, derived, phase, onRefresh, chyron, reveal, finalL
           })}
         />
       ) : null}
-      <MatchScoreboard
-        model={model}
-        mineGain={mine}
-        oppGain={theirs}
-        size="hero"
-        youName={youName}
-        oppName={live.opp?.name ?? null}
-        statusLine={isFinal ? 'Final' : `Week ${week}, live`}
-      />
+      <Scoreboard you={{ name: youName, gain: mine }} opponent={{ name: live.opp?.name ?? '', gain: theirs }} final={isFinal} />
       {note ? <Text variant="caption" tone="secondary">{note}</Text> : null}
-      {isFinal ? (
-        finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows && live.opp ? (
-          <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
-            <Lineup title={youName} rows={finalLines.mine.rows} />
-            <Lineup title={live.opp.name} rows={finalLines.theirs.rows} />
-          </View>
-        ) : null
-      ) : live.opp ? (
-        <View style={[styles.lineups, largeText ? styles.lineupsStacked : null]}>
-          <Lineup title={youName} rows={live.me.lineup} />
-          <Lineup title={live.opp.name} rows={live.opp.lineup} />
-        </View>
+      {live.opp && raw ? (
+        isFinal ? (
+          finalLines.status === 'error' ? (
+            <LoadFailure title="Couldn't load this matchup" message={MONEY_COPY.loadRetryMessage} onRetry={finalLines.retry} />
+          ) : finalLines.status !== 'ready' ? (
+            <RosterRowsSkeleton />
+          ) : finalLines.mine?.ok && finalLines.theirs?.ok && finalLines.mine.rows && finalLines.theirs.rows ? (
+            <Roster derived={derived} raw={raw} roster={roster} myRows={finalLines.mine.rows} theirRows={finalLines.theirs.rows} final />
+          ) : null
+        ) : (
+          <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={live.opp.lineup} final={false} />
+        )
       ) : null}
     </View>
   );
 }
 
-function Lineup({ title, rows }: { title: string; rows: LineupRow[] }) {
+/** The roster and the player card it opens. */
+function Roster({ derived, raw, roster, myRows, theirRows, final }: {
+  derived: MatchupDerived;
+  raw: HomeRawInputs;
+  roster: RosterData;
+  myRows: LineupRow[];
+  theirRows: LineupRow[];
+  final: boolean;
+}) {
+  const { user } = useAuth();
+  const { market } = useLeagueContext();
+  const stockSheet = useStockSheet();
+  const opp = derived.live.opp!;
+  const me = user!.id;
+  const [selected, setSelected] = useState<{ side: 'me' | 'opp'; symbol: string } | null>(null);
+  // The card stays mounted while it leaves, with the stock it was showing.
+  const [shown, setShown] = useState<{ side: 'me' | 'opp'; symbol: string } | null>(null);
+  const pendingSell = useRef<{ symbol: string; name: string } | null>(null);
+  const seasonBars = useStockChartData(shown?.symbol ?? '', !!shown && !SEAM_ON);
+
+  const cw = raw.data.current_week;
+  const sides = useMemo(() => {
+    const mineIn: RosterSideInput = { userId: me, lineup: myRows, snapshots: toLiveSnapshots(cw.my_snapshots), trades: toLiveTrades(cw.my_trades) };
+    const theirIn: RosterSideInput = { userId: opp.userId, lineup: theirRows, snapshots: toLiveSnapshots(cw.opponent_snapshots), trades: toLiveTrades(cw.opponent_trades) };
+    return { me: mineIn, opp: theirIn };
+  }, [me, opp.userId, myRows, theirRows, cw]);
+
+  const now = raw.now;
+  const todayEt = etDateOf(now) ?? '';
+  const sessions = useMemo(() => {
+    const win = derived.weekEnd ? resolveWeekWindow(derived.weekEnd, raw.marketCalendar) : null;
+    return win ? weekSessions(win.weekStart, win.weekEnd, raw.marketCalendar) : [];
+  }, [derived.weekEnd, raw.marketCalendar]);
+  // The order's clock: the week's last CLOSE (null before Monday's close — the draft/slot
+  // order). A final week reads Friday's, the close it was scored at.
+  const close = useMemo(() => lastWeekClose(now, sessions), [now, sessions]);
+  // A row's percent: live, or at the week's close once final.
+  const closeOn = close?.date ?? '';
+  const rowPrice = (symbol: string) => (final ? raw.bars[symbol]?.find((b) => b.date === closeOn)?.close ?? raw.quote(symbol) : raw.quote(symbol));
+
+  const ready = roster.ledgerStatus === 'ready' && roster.slots.status === 'ready' && roster.ledger;
+  const groups = useMemo(() => {
+    if (!ready || !roster.ledger) return null;
+    return buildRosterView({
+      me: sides.me,
+      opp: sides.opp,
+      activity: roster.ledger.activity,
+      names: roster.ledger.symbol_names,
+      slots: roster.slots.slots,
+      slotOf: roster.slots.bySide,
+      close,
+      bars: raw.bars,
+      todayEt,
+      quote: raw.quote,
+      rowPrice,
+    });
+    // rowPrice reads raw + close, both listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, roster.ledger, roster.slots, sides, close, raw, todayEt, final]);
+
+  // The card's data for the stock it's showing (null: no opening event in the ledger).
+  const card = useMemo(() => {
+    if (!shown || !roster.ledger) return null;
+    const side = shown.side === 'me' ? sides.me : sides.opp;
+    const row = side.lineup.find((r) => r.symbol.toUpperCase() === shown.symbol);
+    const price = rowPrice(shown.symbol);
+    if (!row || price == null) return null;
+    const data = playerCardData({
+      symbol: shown.symbol,
+      company: roster.ledger.symbol_names[shown.symbol] ?? '',
+      userId: side.userId,
+      activity: roster.ledger.activity,
+      snapshots: side.snapshots,
+      trades: side.trades,
+      weekGain: row.cents / 100,
+      price,
+      bars: raw.bars[shown.symbol] ?? [],
+      seasonBars: SEAM_ON ? fixtureSeasonBars(shown.symbol) : seasonBars.status === 'ready' ? seasonBars.bars : null,
+      sessions,
+      now,
+    });
+    if (!data) return null;
+    const slotId = roster.slots.bySide[side.userId]?.[shown.symbol] ?? null;
+    const pill = cardSlotPill(roster.slots.slots.find((s) => s.id === slotId) ?? null);
+    return { data, pill };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, roster.ledger, roster.slots, sides, seasonBars, sessions, now, raw, final]);
+
+  // Sell is live only while the market is open (the trade gate fails closed); the capture
+  // seam plays the Home fixture's own market.
+  const gate = decideTradeGate(new Date(), market);
+  const marketOpen = SEAM_ON ? derived.view.kind === 'scoreboard' && !derived.view.closed : gate.open;
+  const opens = marketOpensLabel(market?.next_open_at ?? null);
+
+  if (roster.ledgerStatus === 'error' || roster.slots.status === 'error') {
+    return <LoadFailure title="Couldn't load this matchup" message={MONEY_COPY.loadRetryMessage} onRetry={roster.retry} />;
+  }
+  if (!groups) return <RosterRowsSkeleton />;
+
+  const open = (side: 'me' | 'opp', symbol: string) => {
+    setSelected({ side, symbol });
+    setShown({ side, symbol });
+  };
+  // A half opens the card only when the card can be whole (the ledger names how the stock
+  // was got, and it has a price); otherwise it isn't pressable at all — never a dead tap.
+  const activity = roster.ledger?.activity ?? [];
+  const openable = (side: 'me' | 'opp', symbol: string) =>
+    openingOf(side === 'me' ? me : opp.userId, symbol, activity) !== null && rowPrice(symbol) != null;
+  const half = (side: 'me' | 'opp', c: { symbol: string; company: string; weekGain: number; weekPct: number } | null) =>
+    c ? { ticker: c.symbol, company: c.company, weekGain: c.weekGain, weekPct: c.weekPct, onPress: openable(side, c.symbol) ? () => open(side, c.symbol) : undefined } : null;
+
+  let ownership: PlayerCardOwnership | null = null;
+  if (card && shown) {
+    if (shown.side === 'opp') {
+      // No watchlist exists in the app yet, so there's nothing to save to: Save is not drawn.
+      ownership = { owner: { name: opp.name }, save: null };
+    } else if (card.data.held > 0) {
+      ownership = {
+        owner: 'you',
+        onSell: () => {
+          // The stock sheet (Sell selected for a held stock) opens once the card has left.
+          pendingSell.current = { symbol: card.data.ticker, name: card.data.company };
+          setSelected(null);
+        },
+      };
+    } else {
+      ownership = { owner: 'you', sold: true };
+    }
+  }
+
   return (
-    <View style={styles.lineup}>
-      <Text variant="caption" tone="secondary">{title}</Text>
-      {rows.map((r) => (
-        <View key={r.symbol} style={styles.lineRow}>
-          <Text variant="callout" style={styles.symbol}>{r.symbol}</Text>
-          <Text variant="callout">{formatMoney(r.cents / 100, { sign: 'always' })}</Text>
-        </View>
+    <View style={styles.roster}>
+      {groups.map((g, gi) => (
+        <Fragment key={g.label ?? `group-${gi}`}>
+          {g.label ? <GroupHead label={g.label} /> : null}
+          {g.rows.map((r, ri) => (
+            <RosterRow
+              key={`${r.left?.symbol ?? '-'}|${r.right?.symbol ?? '-'}|${ri}`}
+              left={half('me', r.left)}
+              right={half('opp', r.right)}
+              opponentName={opp.name}
+            />
+          ))}
+        </Fragment>
       ))}
+      {card && ownership ? (
+        <PlayerCard
+          {...card.data}
+          {...ownership}
+          {...(card.pill ?? {})}
+          visible={selected !== null}
+          onClose={() => setSelected(null)}
+          onClosed={() => {
+            setShown(null);
+            const sell = pendingSell.current;
+            pendingSell.current = null;
+            if (sell) stockSheet.open(sell.symbol, { name: sell.name });
+          }}
+          marketOpen={marketOpen}
+          opens={opens}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: space[4] },
-  lineups: { flexDirection: 'row', gap: space[4] },
-  lineupsStacked: { flexDirection: 'column', gap: space[5] },
-  // minWidth 0: a flex column's minimum is otherwise its content's width, so the two
-  // lineups overflowed into each other instead of sharing the row.
-  lineup: { flex: 1, minWidth: 0, gap: space[2] },
-  lineRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[2] },
-  symbol: { fontWeight: '600' },
+  stack: { gap: space[5] },
+  // The board: rows 6pt apart (8 on the 4pt scale), separated by space, never a line.
+  roster: { gap: space[3] },
+  center: { textAlign: 'center' },
 });

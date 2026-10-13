@@ -29,8 +29,12 @@ Deno.test('Scoreboard: who leads is in the line — "{name} leads by {margin}" /
 
 Deno.test('Scoreboard: totals in score.xl, YOUR half always shaded (never the leader\'s), your avatar ringed, nothing else', () => {
   const src = strip(SOURCES['components/sp/gn/Scoreboard.tsx']);
-  assert(src.includes('variant="score.xl"'));
-  assert(src.includes('mirror ? null : { backgroundColor: colors.youTint }'));
+  // The Matchup header's totals are score.xl; All matchups' compact games score.lg.
+  assert(src.includes("variant={size === 'compact' ? 'score.lg' : 'score.xl'}"));
+  assert(src.includes('you ? { backgroundColor: colors.youTint } : null'));
+  // The shaded half is YOURS: "you" is the side, never whoever leads (All matchups' other
+  // games pass mine={false} and shade nothing).
+  assert(src.includes("<Half side={mine ? 'you' : 'opp'} team={you} mirror={false} size={size} />"));
   assert(!/leadWash|model\.leader ===/.test(src), 'no leader shading');
   assert(src.includes('tone="you" ring'));
   assert(src.includes('padding: AVATAR_RING + AVATAR_RING_GAP'), 'the opponent keeps the ring footprint so totals align');
@@ -50,8 +54,8 @@ Deno.test('RosterRow: no sparkline, no row rule, no winner lighting; your half b
   assert(src.includes('marginLeft: -gutter') && src.includes('marginRight: -gutter'));
   assert(src.includes('borderTopRightRadius: radius.row') && src.includes('borderTopLeftRadius: radius.row'));
   assert(src.includes('shaded ? { backgroundColor: colors.youTint } : null'));
-  assert(src.includes('<Half half={left} mirror={false} shaded gutter={gutter} />'));
-  assert(src.includes('<Half half={right} mirror shaded={false} gutter={gutter} />'));
+  assert(src.includes('<Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" />'));
+  assert(src.includes('<Half half={right} mirror shaded={false} gutter={gutter} whose={opponentName} />'));
   assert(!/colors\.lit\b|litSide|weekGain >/.test(src), 'no per-row winner lighting');
   assert(src.includes('variant="score.md"'));
 });
@@ -250,7 +254,7 @@ Deno.test('RangePills: the text tabs are 44pt targets too (§9B)', () => {
 
 Deno.test('PlayerCard: figure labels never shrink under the 11pt floor (12 × 0.92 ≥ 11); one "Since the draft"', () => {
   const src = strip(SOURCES['components/sp/gn/PlayerCard.tsx']);
-  assert(src.includes('minimumFontScale={0.92} style={styles.figureLabel}'));
+  assert(src.includes('minimumFontScale={0.92} style={styles.cardLabel}'));
   assert(12 * 0.92 >= 11);
   assert(!/draftLabel/.test(src) && !/draftLabel/.test(strip(SOURCES['components/sp/logic/gameNight.ts'])), 'no "Season gain" override left');
 });

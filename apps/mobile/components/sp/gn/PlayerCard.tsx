@@ -9,8 +9,10 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import {
-  acquisitionLine, actionLabel, howTitle, playerAction, sinceLabel, toneOf, type Acquisition, type Category,
+  acquisitionLine, cardAction, howTitle, sinceLabel, toneOf, type Acquisition, type Category, type PlayerCardOwnership,
 } from '@/components/sp/logic/gameNight';
+
+export type { PlayerCardOwnership, PlayerCardOwnerInfo } from '@/components/sp/logic/gameNight';
 import { Avatar } from '@/components/sp/Avatar';
 import { CategoryPill } from '@/components/sp/gn/CategoryPill';
 import type { AxisSpec } from '@/components/sp/logic/chartAxis';
@@ -34,13 +36,13 @@ import { Chart } from '@/components/sp/gn/Chart';
 // Giorgio, 2026-10-12: the owner's avatar (a 20pt `opp` disc, `onOpp` initials) sits in "Owned by …"; no game log.
 // No new copy: every string is the spec's or the app's own (moneyCopy).
 
-export interface PlayerCardProps {
+interface PlayerCardBase {
   visible: boolean;
   onClose: () => void;
+  /** After the sheet has fully left (Sheet's onClosed): where Sell opens the stock sheet. */
+  onClosed?: () => void;
   ticker: string;
   company: string;
-  /** 'you', or the owning manager (their avatar sits in the "Owned by …" pill). */
-  owner: 'you' | { name: string; avatarUri?: string | null };
   /** The slot pill in slotted leagues: a category league passes `category` (a coloured
    * CategoryPill), a price-tier league its tier as `slot` ("$100–$200"); omit both in
    * unslotted leagues. */
@@ -57,37 +59,35 @@ export interface PlayerCardProps {
   season: { points: LinePointIn[]; base: number; axis: Extract<AxisSpec, { kind: 'dated' }> };
   week: { points: LinePointIn[]; base: number };
   marketOpen: boolean;
-  /** The next open, for the closed note ("Mon 9:30 ET"). */
-  opens: string;
-  saved?: boolean;
-  onSell?: () => void;
-  onToggleSave?: () => void;
+  /** The next open, for the closed note ("Mon 9:30 AM ET"); null when it isn't known. */
+  opens: string | null;
 }
+
+export type PlayerCardProps = PlayerCardBase & PlayerCardOwnership;
 
 const SHEET_GUTTER = space[6];
 
 export function PlayerCard(props: PlayerCardProps) {
-  const { visible, onClose } = props;
+  const { visible, onClose, onClosed } = props;
   return (
-    <Sheet visible={visible} onClose={onClose}>
+    <Sheet visible={visible} onClose={onClose} onClosed={onClosed}>
       <PlayerCardBody {...props} />
     </Sheet>
   );
 }
 
 /** The card's content, without the sheet — the design gallery renders it inline. */
-export function PlayerCardBody({
-  onClose, ticker, company, owner, slot, category, price, todayPct, weekGain, weekPct, sinceGain, sincePct, acquisition,
-  season, week, marketOpen, opens, saved = false, onSell, onToggleSave,
-}: PlayerCardProps) {
+export function PlayerCardBody(props: PlayerCardProps) {
+  const {
+    onClose, ticker, company, owner, slot, category, price, todayPct, weekGain, weekPct, sinceGain, sincePct, acquisition,
+    season, week, marketOpen, opens,
+  } = props;
   const { colors } = useTheme();
-  const mine = owner === 'you';
-  const action = playerAction(mine ? 'you' : 'other', marketOpen, saved, opens);
-  const onAction = action.kind === 'sell' ? (action.enabled ? onSell : undefined) : onToggleSave;
-  const actionDisabled = !onAction;
+  const action = cardAction(props);
   const weekTone = colors[toneOf(weekGain)];
   const money = (n: number) => formatMoney(n, { sign: 'always' });
   const pct = (n: number) => formatPercent(n, { sign: 'always' });
+  const ownerLabel = owner === 'you' ? 'Yours' : MONEY_COPY.ownedBy(owner.name);
 
   return (
     <ScrollView contentContainerStyle={styles.body} accessibilityLabel={`${ticker}, player card`}>
@@ -105,10 +105,11 @@ export function PlayerCardBody({
         </Pressable>
       </View>
       <View style={styles.pills}>
-        {mine ? (
-          <View style={[styles.pill, { backgroundColor: colors.youTint }]}><Text variant="callout" color={colors.youText} style={styles.pillText}>Yours</Text></View>
+        {owner === 'you' ? (
+          <View style={[styles.pill, { backgroundColor: colors.youTint }]} accessible accessibilityLabel={ownerLabel}><Text variant="callout" color={colors.youText} style={styles.pillText}>Yours</Text></View>
         ) : (
-          <View style={[styles.pill, styles.ownerPill, { backgroundColor: colors.inset }]}>
+          // One stop for VoiceOver: "Owned by Gianluigi B." (not the avatar's name, then the line).
+          <View style={[styles.pill, styles.ownerPill, { backgroundColor: colors.inset }]} accessible accessibilityLabel={ownerLabel}>
             <Avatar name={owner.name} uri={owner.avatarUri} size={20} tone="opp" />
             <Text variant="callout" style={styles.pillText}>{MONEY_COPY.ownedBy(owner.name)}</Text>
           </View>
@@ -125,7 +126,11 @@ export function PlayerCardBody({
 
       {/* 3. The season line, dated axis, no acquisition marker */}
       <View style={styles.section}>
-        <Text variant="headline" style={styles.title}>Season</Text>
+        <View style={styles.titleRow}>
+          <Text variant="headline" style={styles.title}>Season</Text>
+          {/* The board's caption: the entry price per share → the price now. */}
+          <Text variant="caption" tone="secondary" style={styles.tabular} testID="player-card-season-caption">{`${formatMoney(acquisition.price)} → ${formatMoney(price)}`}</Text>
+        </View>
         <Chart points={season.points} base={season.base} axis={season.axis} height={128} bleed={SHEET_GUTTER} drawKey={`${ticker}-season`} formatValue={(v) => formatMoney(v)} accessibilityLabel={`${ticker} this season`} />
       </View>
 
@@ -138,27 +143,32 @@ export function PlayerCardBody({
         <Chart points={week.points} base={week.base} axis={{ kind: 'week' }} height={70} bleed={SHEET_GUTTER} live={marketOpen} drawKey={`${ticker}-week`} formatValue={(v) => formatMoney(v)} accessibilityLabel={`${ticker} this week`} />
       </View>
 
-      {/* 5. The one action */}
-      <View style={styles.actionWrap}>
-        <PressableScale
-          testID="player-card-action"
-          disabled={actionDisabled}
-          onPress={onAction}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: actionDisabled, selected: action.kind === 'save' ? action.saved : undefined }}
-          style={[styles.action, { borderColor: colors.borderStrong, opacity: actionDisabled ? 0.5 : 1 }]}
-        >
-          <Text variant="headline" style={styles.actionText}>{actionLabel(action)}</Text>
-        </PressableScale>
-        {action.kind === 'sell' && !action.enabled ? (
-          <Text variant="caption" tone="secondary" style={styles.center}>{action.note}</Text>
-        ) : null}
-      </View>
+      {/* 5. The one action (none for a stock you sold this week, or with no watchlist to save to) */}
+      {action ? (
+        <View style={styles.actionWrap}>
+          <PressableScale
+            testID="player-card-action"
+            disabled={action.disabled}
+            onPress={action.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={`${action.label}, ${ticker}`}
+            accessibilityHint={action.note ?? undefined}
+            accessibilityState={{ disabled: action.disabled, selected: action.saved ?? undefined }}
+            style={[styles.action, { borderColor: colors.borderStrong, opacity: action.disabled ? 0.5 : 1 }]}
+          >
+            {action.star ? <Icon name={action.star} size="body" tone="text" /> : null}
+            <Text variant="headline" style={styles.actionText}>{action.label}</Text>
+          </PressableScale>
+          {action.note ? (
+            <Text variant="caption" tone="secondary" style={styles.center}>{action.note}</Text>
+          ) : null}
+        </View>
+      ) : null}
 
-      {/* 6. How you got it — at the bottom */}
-      <View style={styles.how}>
-        <Text variant="headline" style={styles.title}>{howTitle(mine ? 'you' : 'other')}</Text>
-        <Text variant="body" style={styles.tabular}>{acquisitionLine(acquisition)}</Text>
+      {/* 6. How you got it — at the bottom, in its inset panel (the board: radius 14, 12 / 14) */}
+      <View style={[styles.how, { backgroundColor: colors.inset }]} accessible accessibilityLabel={`${howTitle(owner === 'you' ? 'you' : 'other')}: ${acquisitionLine(acquisition)}`}>
+        <CardLabel text={howTitle(owner === 'you' ? 'you' : 'other')} />
+        <Text variant="body" style={styles.howLine}>{acquisitionLine(acquisition)}</Text>
       </View>
 
       {/* 7. The Alpaca credit */}
@@ -170,11 +180,20 @@ export function PlayerCardBody({
 function Figure({ label, value, sub, valueColor, subColor }: { label: string; value: string; sub: string; valueColor?: string; subColor?: string }) {
   return (
     <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}, ${sub}`}>
-      {/* The board's figure label: uppercase at NORMAL width (not the Expanded tag face). */}
-      <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.92} style={styles.figureLabel}>{label.toUpperCase()}</Text>
+      <CardLabel text={label} />
       <Text variant="score.md" color={valueColor} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
       <Text variant="caption" color={subColor} style={styles.figureSub} numberOfLines={1}>{sub}</Text>
     </View>
+  );
+}
+
+/** The board's card label (the figure labels, "How you got it"): the tag's size and
+ * capitals at NORMAL width (not the Expanded tag face), `text2`. Uppercased in JS. */
+function CardLabel({ text }: { text: string }) {
+  return (
+    <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.92} style={styles.cardLabel}>
+      {text.toUpperCase()}
+    </Text>
   );
 }
 
@@ -182,7 +201,7 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: SHEET_GUTTER,
     paddingBottom: space[7],
-    gap: 14,
+    gap: space[5],
   },
   header: {
     flexDirection: 'row',
@@ -213,8 +232,8 @@ const styles = StyleSheet.create({
     gap: space[3],
   },
   pill: {
-    minHeight: 26,
-    paddingHorizontal: 10,
+    minHeight: 28,
+    paddingHorizontal: space[4],
     borderRadius: radius.pill,
     justifyContent: 'center',
   },
@@ -224,14 +243,14 @@ const styles = StyleSheet.create({
   ownerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingLeft: 3,
+    gap: space[3],
+    paddingLeft: space[2],
   },
   strip: {
     flexDirection: 'row',
     borderRadius: radius.lg,
     paddingVertical: space[4],
-    paddingHorizontal: 6,
+    paddingHorizontal: space[3],
   },
   figure: {
     flex: 1,
@@ -240,7 +259,7 @@ const styles = StyleSheet.create({
     gap: space[1],
   },
   // Uppercased in JS, not textTransform (iOS measures the source case and clips the capitals).
-  figureLabel: {
+  cardLabel: {
     fontWeight: '800',
     letterSpacing: 0.48,
   },
@@ -270,6 +289,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: radius.pill,
     borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: space[3],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -277,7 +298,15 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   how: {
-    gap: space[1],
+    gap: space[2],
+    borderRadius: radius.lg,
+    paddingVertical: space[4],
+    paddingHorizontal: 14,
+  },
+  // The board: 15/700, tabular.
+  howLine: {
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   tabular: {
     fontVariant: ['tabular-nums'],

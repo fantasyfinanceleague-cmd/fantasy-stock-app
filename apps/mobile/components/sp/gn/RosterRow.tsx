@@ -8,6 +8,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { toneOf } from '@/components/sp/logic/gameNight';
+import { useLargeText } from '@/components/sp/useLargeText';
 
 // Stockpile — <RosterRow> and <GroupHead>, Game Night (§9C; Giorgio's Matchup ruling: "it
 // lists your stocks as if they are like a football roster … and it stacks them up").
@@ -36,25 +37,36 @@ export interface RosterHalf {
 export interface RosterRowProps {
   left: RosterHalf | null;
   right: RosterHalf | null;
+  /** The opponent's name: VoiceOver says whose half it is ("Yours, NVDA …" /
+   * "Gianluigi B., NKE …"), since the shading that says it is visual only. */
+  opponentName: string;
   /** The screen gutter your shaded half bleeds past (20 on a phone screen). */
   gutter?: number;
 }
 
-/** The empty centre column. */
-const CENTRE_GAP = 10;
+/** The empty centre column (the 4pt scale). */
+const CENTRE_GAP = space[4];
 
-export function RosterRow({ left, right, gutter = space[6] }: RosterRowProps) {
+export function RosterRow({ left, right, opponentName, gutter = space[6] }: RosterRowProps) {
   return (
     <View style={styles.row}>
-      <Half half={left} mirror={false} shaded gutter={gutter} />
+      <Half half={left} mirror={false} shaded gutter={gutter} whose="Yours" />
       <View style={{ width: CENTRE_GAP }} />
-      <Half half={right} mirror shaded={false} gutter={gutter} />
+      <Half half={right} mirror shaded={false} gutter={gutter} whose={opponentName} />
     </View>
   );
 }
 
-function Half({ half, mirror, shaded, gutter }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number }) {
+/** VoiceOver's label for a half: whose it is first, then the stock and its week. */
+export function rosterHalfLabel(whose: string, half: Pick<RosterHalf, 'ticker' | 'company' | 'weekGain' | 'weekPct'>): string {
+  return `${whose}, ${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
+}
+
+function Half({ half, mirror, shaded, gutter, whose }: { half: RosterHalf | null; mirror: boolean; shaded: boolean; gutter: number; whose: string }) {
   const { colors } = useTheme();
+  // At the large text sizes a half stacks: the stock over its week (side by side, a long
+  // number left the ticker no room).
+  const stacked = useLargeText();
   const slab = [
     styles.half,
     // Off the OUTER edge: the half extends past the gutter, its padding keeps the text put.
@@ -73,24 +85,26 @@ function Half({ half, mirror, shaded, gutter }: { half: RosterHalf | null; mirro
     </View>
   );
   const num = (
-    <View style={mirror ? null : styles.alignEnd}>
-      <Text variant="score.md" color={toneColor}>{formatMoney(half.weekGain, { sign: 'always' })}</Text>
+    <View style={[styles.num, stacked ? (mirror ? styles.alignEnd : null) : mirror ? null : styles.alignEnd]}>
+      {/* A seven-figure week shrinks to fit its half, never under 11pt (17 × 0.7). */}
+      <Text variant="score.md" color={toneColor} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatMoney(half.weekGain, { sign: 'always' })}</Text>
       <Text variant="caption" color={toneColor} style={styles.pct}>{formatPercent(half.weekPct, { sign: 'always' })}</Text>
     </View>
   );
-  const a11y = `${half.ticker}, ${half.company}, ${formatMoney(half.weekGain, { sign: 'always' })} this week, ${formatPercent(half.weekPct, { sign: 'always' })}`;
-  const content = mirror ? [num, name] : [name, num];
+  const a11y = rosterHalfLabel(whose, half);
+  const content = stacked ? [name, num] : mirror ? [num, name] : [name, num];
+  const layout = stacked ? styles.contentStacked : styles.content;
 
   if (!half.onPress) {
     return (
-      <View testID={shaded ? 'roster-yours' : undefined} style={[slab, styles.content]} accessible accessibilityLabel={a11y}>
+      <View testID={shaded ? 'roster-yours' : undefined} style={[slab, layout]} accessible accessibilityLabel={a11y}>
         {content[0]}
         {content[1]}
       </View>
     );
   }
   return (
-    <PressableScale testID={shaded ? 'roster-yours' : undefined} style={[slab, styles.content]} onPress={half.onPress} accessibilityRole="button" accessibilityLabel={a11y}>
+    <PressableScale testID={shaded ? 'roster-yours' : undefined} style={[slab, layout]} onPress={half.onPress} accessibilityRole="button" accessibilityLabel={a11y}>
       {content[0]}
       {content[1]}
     </PressableScale>
@@ -131,6 +145,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[3],
   },
+  contentStacked: {
+    gap: space[2],
+  },
+  num: {
+    flexShrink: 1,
+    maxWidth: '64%',
+  },
   innerCornersLeft: {
     borderTopRightRadius: radius.row,
     borderBottomRightRadius: radius.row,
@@ -140,7 +161,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.row,
   },
   name: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     minWidth: 0,
     gap: space[1],
   },
@@ -159,6 +181,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: RIM_WIDTH,
     paddingHorizontal: space[4],
-    paddingVertical: 5,
+    paddingVertical: space[2],
   },
 });

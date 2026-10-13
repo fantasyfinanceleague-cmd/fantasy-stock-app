@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rowTabs: {
-    gap: 18,
+    gap: space[5],
   },
   rowPills: {
     gap: 6,
