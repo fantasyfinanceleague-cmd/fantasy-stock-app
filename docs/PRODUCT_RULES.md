@@ -96,6 +96,12 @@ building anything, and don't reopen a rule without him.
       have it do that for now." So the order is recomputed once at each market close and
       holds through the next trading day; nothing re-sorts live. (On Monday the order is
       the draft/slot order until the first close, since every week gain is $0.00.)
+    - **The exact moment** (2026-10-12, picked from three timelines: at the close, after
+      trading ends, next morning): **after trading ends.** A day's close counts for the
+      order only once that day's extended-hours trading is over, 8:00 PM ET (four hours
+      after the close, so 5:00 PM ET on a 1:00 PM early close), so after-hours prints can
+      never shuffle it again that evening. Until then the previous close's order holds.
+      The prices on the rows still move live all day; only the order waits.
 - **Giorgio's copy stays verbatim.** Propose changes; don't rewrite his words. A factual
   error goes to him as a decision.
 - **Generic scoring copy:** rules, marketing and onboarding say "best performance wins",
