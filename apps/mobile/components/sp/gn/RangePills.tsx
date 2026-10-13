@@ -73,7 +73,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // §9B: every option is a 44pt target, the text tabs too.
   tab: {
+    minWidth: 44,
     paddingTop: space[2],
   },
   pill: {

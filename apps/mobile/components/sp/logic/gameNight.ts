@@ -181,10 +181,10 @@ export function acquisitionLine(a: Acquisition): string {
   return `Bought · ${a.date} · ${price}`;
 }
 
-/** The third key figure's label: "Since the draft", or "Since {date}" for a stock bought or
- * claimed later. ("Season gain" vs "Since the draft" is still Giorgio's call: `draftLabel`.) */
-export function sinceLabel(a: Acquisition, draftLabel = 'Since the draft'): string {
-  return a.kind === 'drafted' ? draftLabel : `Since ${a.date}`;
+/** The third key figure's label: "Since the draft" (Giorgio, 2026-10-12), or "Since {date}"
+ * for a stock bought or claimed later. */
+export function sinceLabel(a: Acquisition): string {
+  return a.kind === 'drafted' ? 'Since the draft' : `Since ${a.date}`;
 }
 
 export type PlayerAction =

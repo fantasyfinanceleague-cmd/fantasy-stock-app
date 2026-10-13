@@ -10,9 +10,11 @@
 // either — those are the two independent causes of the same clipping bug.
 
 export const INITIAL_FONT_RATIO = 0.4;
+/** §9B's 11pt floor: a small disc (the player card's 20pt owner disc) still reads. */
+export const INITIAL_FONT_FLOOR = 11;
 
 export function initialFontSize(size: number): number {
-  return Math.round(size * INITIAL_FONT_RATIO);
+  return Math.max(INITIAL_FONT_FLOOR, Math.round(size * INITIAL_FONT_RATIO));
 }
 
 /**

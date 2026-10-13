@@ -13,7 +13,7 @@
  * this pins the proportional-sizing half of the fix).
  */
 import { assertEquals } from 'jsr:@std/assert';
-import { initialFontSize, INITIAL_FONT_RATIO } from '../components/sp/logic/avatar.ts';
+import { initialFontSize, INITIAL_FONT_FLOOR, INITIAL_FONT_RATIO } from '../components/sp/logic/avatar.ts';
 
 Deno.test('initialFontSize: scales with the circle, not a fixed value', () => {
   assertEquals(initialFontSize(36), Math.round(36 * INITIAL_FONT_RATIO));
@@ -67,4 +67,11 @@ Deno.test('avatarInitials: two letters still fit the smallest avatar (28 pt → 
   const size = 28;
   const twoLettersWidth = 2 * 0.62 * initialFontSize(size);
   assertEquals(twoLettersWidth <= size * 0.8, true);
+});
+
+Deno.test('initialFontSize: never under the 11pt floor (the player card\'s 20pt owner disc: 8pt → 11pt, two initials kept)', () => {
+  assertEquals(INITIAL_FONT_FLOOR, 11);
+  assertEquals(initialFontSize(20), 11);
+  assertEquals(initialFontSize(24), 11);
+  assertEquals(initialFontSize(36), 14); // the floor doesn't touch the usual sizes
 });

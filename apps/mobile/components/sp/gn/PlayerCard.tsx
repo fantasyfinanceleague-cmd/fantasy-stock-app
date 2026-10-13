@@ -54,8 +54,6 @@ export interface PlayerCardProps {
   sinceGain: number;
   sincePct: number;
   acquisition: Acquisition;
-  /** "Since the draft" (drawn) or "Season gain" — Giorgio's call, open. */
-  draftLabel?: string;
   season: { points: LinePointIn[]; base: number; axis: Extract<AxisSpec, { kind: 'dated' }> };
   week: { points: LinePointIn[]; base: number };
   marketOpen: boolean;
@@ -80,7 +78,7 @@ export function PlayerCard(props: PlayerCardProps) {
 /** The card's content, without the sheet — the design gallery renders it inline. */
 export function PlayerCardBody({
   onClose, ticker, company, owner, slot, category, price, todayPct, weekGain, weekPct, sinceGain, sincePct, acquisition,
-  draftLabel, season, week, marketOpen, opens, saved = false, onSell, onToggleSave,
+  season, week, marketOpen, opens, saved = false, onSell, onToggleSave,
 }: PlayerCardProps) {
   const { colors } = useTheme();
   const mine = owner === 'you';
@@ -122,7 +120,7 @@ export function PlayerCardBody({
       <View style={[styles.strip, { backgroundColor: colors.inset }]}>
         <Figure label="Price" value={formatMoney(price)} sub={`${pct(todayPct)} today`} subColor={colors[toneOf(todayPct)]} />
         <Figure label="Week gain" value={money(weekGain)} valueColor={weekTone} sub={pct(weekPct)} subColor={weekTone} />
-        <Figure label={sinceLabel(acquisition, draftLabel)} value={money(sinceGain)} valueColor={colors[toneOf(sinceGain)]} sub={pct(sincePct)} subColor={colors[toneOf(sinceGain)]} />
+        <Figure label={sinceLabel(acquisition)} value={money(sinceGain)} valueColor={colors[toneOf(sinceGain)]} sub={pct(sincePct)} subColor={colors[toneOf(sinceGain)]} />
       </View>
 
       {/* 3. The season line, dated axis, no acquisition marker */}
@@ -173,7 +171,7 @@ function Figure({ label, value, sub, valueColor, subColor }: { label: string; va
   return (
     <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}, ${sub}`}>
       {/* The board's figure label: uppercase at NORMAL width (not the Expanded tag face). */}
-      <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.figureLabel}>{label.toUpperCase()}</Text>
+      <Text variant="caption" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.92} style={styles.figureLabel}>{label.toUpperCase()}</Text>
       <Text variant="score.md" color={valueColor} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
       <Text variant="caption" color={subColor} style={styles.figureSub} numberOfLines={1}>{sub}</Text>
     </View>

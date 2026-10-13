@@ -104,6 +104,7 @@ const GAME_NIGHT_PAIRS: ReadonlyArray<[string, string, string | null, number]> =
   ['onClockCell', 'clockCell', null, 4.5], ['clockCellLive', 'clockCell', null, 4.5],
   ['text', 'moneyBg', null, 4.5], ['text2', 'moneyBg', null, 4.5], ['gain', 'moneyBg', null, 4.5], ['loss', 'moneyBg', null, 4.5],
   ['youText', 'youTint', 'surface', 4.5], ['onAccent', 'accent', null, 4.5], ['you', 'bg', null, 3],
+  ['opp', 'inset', null, 3],
   ...CAT_KEYS.map((k) => ['onCat', k, null, 4.5] as [string, string, null, number]),
   ...CAT_KEYS.map((k) => [k, 'surface', null, 3] as [string, string, null, number]),
   ...CAT_KEYS.map((k) => [k, 'inset', null, 3] as [string, string, null, number]),
@@ -113,7 +114,7 @@ const W3_CHIP_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
 ];
 
 Deno.test('contrast: every Game Night pair is in PAIRS (sp-contrast.test.ts scores each in both themes)', () => {
-  assertEquals(GAME_NIGHT_PAIRS.length, 49, '§9C v3.1: 49 new pairs');
+  assertEquals(GAME_NIGHT_PAIRS.length, 50, '§9C v3.1: 49 new pairs + the owner disc (DL gate)');
   for (const [fg, bg, over, min] of [...GAME_NIGHT_PAIRS, ...W3_CHIP_PAIRS]) {
     assert(PAIRS.some(([f, b, o, m]) => f === fg && b === bg && o === over && m === min), `${fg} on ${bg}${over ? ` over ${over}` : ''} >= ${min}`);
   }

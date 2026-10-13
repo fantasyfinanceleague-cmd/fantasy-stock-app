@@ -172,7 +172,6 @@ Deno.test('PlayerCard: "How you got it" lines in Giorgio\'s words; "Since the dr
   assertEquals(acquisitionLine({ kind: 'claimed', date: 'Oct 7', price: 187.2 }), 'Claimed off waivers · Oct 7 · $187.20');
   assertEquals(acquisitionLine({ kind: 'bought', date: 'Oct 2', price: 214.8 }), 'Bought · Oct 2 · $214.80');
   assertEquals(sinceLabel({ kind: 'drafted', pick: 1, date: 'Sep 29', price: 1 }), 'Since the draft');
-  assertEquals(sinceLabel({ kind: 'drafted', pick: 1, date: 'Sep 29', price: 1 }, 'Season gain'), 'Season gain');
   assertEquals(sinceLabel({ kind: 'bought', date: 'Oct 2', price: 1 }), 'Since Oct 2');
   assertEquals(howTitle('you'), 'How you got it');
   assertEquals(howTitle('other'), 'How they got it');
@@ -230,4 +229,28 @@ Deno.test('uppercase tags are uppercased in JS, not textTransform (iOS measured 
   assert(!/textTransform\s*:/.test(chip), 'PhaseChip draws its own capitals (no textTransform style)');
   assert(chip.includes('meta.label.toUpperCase()'));
   assert(!/textTransform\s*:/.test(strip(SOURCES['components/sp/gn/PlayerCard.tsx'])));
+});
+
+// ── Design Lead gate fixes (2026-10-12) ──────────────────────────────────────────
+
+Deno.test('Chart: Home places the W/L marks BETWEEN the plot and the two end dates (the board: marks h−22, dates h−3)', () => {
+  const src = strip(SOURCES['components/sp/gn/Chart.tsx']);
+  assert(src.includes("underPlacement?: 'beforeAxis' | 'afterAxis';"));
+  const before = src.indexOf("under && underPlacement === 'beforeAxis'");
+  const axis = src.indexOf('<View style={[styles.axis');
+  const after = src.indexOf("under && underPlacement === 'afterAxis'");
+  assert(before > 0 && axis > before && after > axis, 'beforeAxis renders above the axis row, afterAxis below');
+  assert(!/sit on top of the marks/.test(SOURCES['components/sp/gn/Chart.tsx']), 'no words put in Giorgio\'s mouth');
+  assert(SOURCES['app/design-gallery.tsx'].includes('underPlacement="beforeAxis"'));
+});
+
+Deno.test('RangePills: the text tabs are 44pt targets too (§9B)', () => {
+  assert(/tab: \{\s*minWidth: 44,/.test(SOURCES['components/sp/gn/RangePills.tsx']));
+});
+
+Deno.test('PlayerCard: figure labels never shrink under the 11pt floor (12 × 0.92 ≥ 11); one "Since the draft"', () => {
+  const src = strip(SOURCES['components/sp/gn/PlayerCard.tsx']);
+  assert(src.includes('minimumFontScale={0.92} style={styles.figureLabel}'));
+  assert(12 * 0.92 >= 11);
+  assert(!/draftLabel/.test(src) && !/draftLabel/.test(strip(SOURCES['components/sp/logic/gameNight.ts'])), 'no "Season gain" override left');
 });

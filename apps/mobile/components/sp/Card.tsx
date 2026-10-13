@@ -11,12 +11,12 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 //
 // The rim is an overlay drawn UNDER the children (like the board's `box-shadow: inset 0 0 0
 // 1px var(--d-rim)`, which paints above the background and below the content), so it adds
-// no layout: a child that fills to the card's edge (the Scoreboard's lit half) covers it, as
-// on the board. It follows the card's own radius (14 by default; a caller's borderRadius wins).
+// no layout: a child that fills to the card's edge (the Scoreboard's shaded half, yours)
+// covers it, as on the board. It follows the card's own radius (14 by default; a caller's borderRadius wins).
 //
 // `variant="scoreboard"` is kept for the screens that pass it (W4 moves them to the Game
-// Night Scoreboard); under §9C it draws the same card — the leader's half, not a wash on
-// the card, is what marks the scoreboard now.
+// Night Scoreboard); under §9C it draws the same card — your shaded half, not a wash on the
+// card, is what marks the scoreboard now.
 
 export type CardVariant = 'default' | 'scoreboard';
 

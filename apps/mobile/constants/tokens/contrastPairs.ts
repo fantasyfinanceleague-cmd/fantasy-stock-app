@@ -134,6 +134,8 @@ export const PAIRS: readonly ContrastPair[] = [
   ['onAccent', 'accent', null, 4.5, 'Filled accent pill: the money range pills, the Draft button'],
   // Your ring: the 2pt `you` ring sits across a 2pt `bg` gap, so it reads against the page.
   ['you', 'bg', null, 3, 'Your avatar ring across its bg gap (graphic)'],
+  // The owner's avatar disc in the player card's "Owned by" pill (Design Lead gate, 2026-10-12).
+  ['opp', 'inset', null, 3, 'Owner avatar disc in the "Owned by" pill (graphic)'],
   // The 11 category pills (text on the fill)...
   ['onCat', 'catTech', null, 4.5, 'Category pill: Tech'],
   ['onCat', 'catFinance', null, 4.5, 'Category pill: Finance'],

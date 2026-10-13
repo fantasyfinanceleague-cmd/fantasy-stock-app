@@ -53,9 +53,13 @@ export interface ChartProps {
   formatValue: (value: number) => string;
   /** What the chart is ("NVDA this week"); the range and the last value follow it. */
   accessibilityLabel: string;
-  /** A row under the axis labels: Home's W/L marks (Giorgio, 2026-10-12: the two end date
-   * labels — `axis.maxLabels: 2` — sit on top of the marks). The Chart doesn't own them. */
+  /** A row the Chart lays out but doesn't own: Home's W/L marks. */
   under?: ReactNode;
+  /** Where `under` sits. 'beforeAxis' puts it between the plot and the axis labels: Home's
+   * season chart as the board draws it (directions.jsx Line: the marks at h−22, the two end
+   * dates — `axis.maxLabels: 2` — at h−3, under the marks). 'afterAxis' (the default) puts
+   * it below the labels. */
+  underPlacement?: 'beforeAxis' | 'afterAxis';
 }
 
 const STROKE = 2.5;
@@ -67,7 +71,7 @@ const SCRUB_HALF = 40;
 // A centred label's box is widened this much on each side, so a wide glyph never truncates it.
 const LABEL_SLACK = 12;
 
-export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under }: ChartProps) {
+export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under, underPlacement = 'afterAxis' }: ChartProps) {
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const { fontScale } = useWindowDimensions();
@@ -156,7 +160,8 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
       ) : (
         <View style={{ height }} />
       )}
-      <View style={[styles.axis, { height: AXIS_LINE_HEIGHT * fontScale + 2 }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      {under && underPlacement === 'beforeAxis' ? <View testID="chart-under-before-axis" style={[styles.underBefore, { marginHorizontal: bleed }]}>{under}</View> : null}
+      <View style={[styles.axis, underPlacement === 'beforeAxis' && under ? styles.axisAfterUnder : null, { height: AXIS_LINE_HEIGHT * fontScale + 2 }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         {labels.map((l) => (
           // Anchored by the aligned edge, never given the estimated width, so a glyph wider
           // than the estimate can't truncate the label (the estimate only decides which fit).
@@ -176,7 +181,7 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
           </Text>
         ))}
       </View>
-      {under ? <View style={{ marginHorizontal: bleed }}>{under}</View> : null}
+      {under && underPlacement === 'afterAxis' ? <View style={{ marginHorizontal: bleed }}>{under}</View> : null}
     </View>
   );
 }
@@ -196,6 +201,14 @@ const styles = StyleSheet.create({
   // §9C: 6pt between the plot's lowest point (PAD.bottom above the SVG's bottom) and the labels.
   axis: {
     marginTop: AXIS_GAP - PAD.bottom,
+  },
+  // With the marks between the plot and the labels, the marks take the 6pt gap under the
+  // plot and the labels follow them directly.
+  underBefore: {
+    marginTop: AXIS_GAP - PAD.bottom,
+  },
+  axisAfterUnder: {
+    marginTop: 0,
   },
   label: {
     position: 'absolute',
