@@ -172,9 +172,12 @@ Deno.test('PlayerCard: your stock → Sell (disabled with the reason while close
 });
 
 Deno.test('PlayerCard: "How you got it" lines in Giorgio\'s words; "Since the draft" or "Since {date}"', () => {
-  assertEquals(acquisitionLine({ kind: 'drafted', pick: 2, date: 'Sep 29', price: 290.1 }), 'Drafted 2nd overall · Sep 29 · $290.10');
-  assertEquals(acquisitionLine({ kind: 'claimed', date: 'Oct 7', price: 187.2 }), 'Claimed off waivers · Oct 7 · $187.20');
-  assertEquals(acquisitionLine({ kind: 'bought', date: 'Oct 2', price: 214.8 }), 'Bought · Oct 2 · $214.80');
+  // Giorgio's words; the spaces that must not break (before each "·", inside the date) are
+  // non-breaking — read as plain spaces here.
+  const plain = (x: string) => x.replace(/\u00a0/g, ' ');
+  assertEquals(plain(acquisitionLine({ kind: 'drafted', pick: 2, date: 'Sep 29', price: 290.1 })), 'Drafted 2nd overall · Sep 29 · $290.10');
+  assertEquals(plain(acquisitionLine({ kind: 'claimed', date: 'Oct 7', price: 187.2 })), 'Claimed off waivers · Oct 7 · $187.20');
+  assertEquals(plain(acquisitionLine({ kind: 'bought', date: 'Oct 2', price: 214.8 })), 'Bought · Oct 2 · $214.80');
   assertEquals(sinceLabel({ kind: 'drafted', pick: 1, date: 'Sep 29', price: 1 }), 'Since the draft');
   assertEquals(sinceLabel({ kind: 'bought', date: 'Oct 2', price: 1 }), 'Since Oct 2');
   assertEquals(howTitle('you'), 'How you got it');
@@ -257,4 +260,21 @@ Deno.test('PlayerCard: figure labels never shrink under the 11pt floor (12 × 0.
   assert(src.includes('minimumFontScale={0.92} style={styles.cardLabel}'));
   assert(12 * 0.92 >= 11);
   assert(!/draftLabel/.test(src) && !/draftLabel/.test(strip(SOURCES['components/sp/logic/gameNight.ts'])), 'no "Season gain" override left');
+});
+
+Deno.test('PlayerCard: "How you got it" wraps only AFTER a "·" — never a line starting "· $281.50"', () => {
+  for (const line of [
+    acquisitionLine({ kind: 'drafted', pick: 35, date: 'Aug 31', price: 281.5 }),
+    acquisitionLine({ kind: 'claimed', date: 'Oct 7', price: 187.2 }),
+    acquisitionLine({ kind: 'bought', date: 'Sep 24', price: 412.3 }),
+  ]) {
+    // No breakable space directly before a dot (so no line can START with "·"), and the
+    // segment after a dot can still wrap to the next line (a plain space after it).
+    assert(!/ ·/.test(line), line);
+    assert([...line.matchAll(/·/g)].every((m) => line[m.index! + 1] === ' '), line);
+    // Before every dot: a non-breaking space.
+    assert([...line.matchAll(/·/g)].every((m) => line[m.index! - 1] === '\u00a0'), line);
+    // The date never splits.
+    assert(!/(Aug|Sep|Oct|Nov) \d/.test(line), line);
+  }
 });

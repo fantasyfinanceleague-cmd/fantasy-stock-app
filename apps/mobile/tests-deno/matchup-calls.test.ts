@@ -19,7 +19,7 @@ import { standardWeekSessions } from '../lib/time/marketWeek.ts';
 import { GIANLUIGI_HOLDINGS, ROBERTO_HOLDINGS, fixtureQty } from '../lib/home/homeFixtureData.ts';
 import { estimateMoneyWidth, fitScale } from '../components/sp/logic/fitScale.ts';
 import { buildLine } from '../components/sp/logic/lineChart.ts';
-import { estimateNameWidth, NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, rosterHalfLabel, rosterHalfParts } from '../components/sp/logic/gameNight.ts';
+import { estimateNameWidth, NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, rosterHalfLabel, rosterHalfParts, scoreboardNameCap, stackedNameCap } from '../components/sp/logic/gameNight.ts';
 import { COPY } from '../lib/game/gameCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -169,6 +169,25 @@ Deno.test('names: one line beside the avatar while it fits at 75%, else the stac
   assert(estimateNameWidth('MW', 15) > estimateNameWidth('il', 15));
   assert(SOURCES['components/sp/gn/Scoreboard.tsx'].includes('const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt, minScale);'));
   assert(15 * NAME_MIN_SCALE >= 11 && 13 * NAME_MIN_SCALE_COMPACT >= 11, 'names never shrink under the 11pt floor');
+  // Stacked at XL, a name caps at 1.3× — never larger than the total under it.
+  const sb = SOURCES['components/sp/gn/Scoreboard.tsx'];
+  assert(sb.includes('export const NAME_STACKED_MAX_SCALE = 1.3;'));
+  assert(sb.includes('maxFontSizeMultiplier={nameCap}'));
+  assert(sb.includes('const nameCap = scoreboardNameCap({\n    stacked,'), 'the Scoreboard passes its real stacked state');
+  const args = { totalText: '+$1,233,153.00', totalPt: 32 * 1.2, innerWidth: 143, namePt: 15 };
+  assertEquals(scoreboardNameCap({ ...args, stacked: false }), 1.6, 'beside the avatar: the name ceiling');
+  assert(scoreboardNameCap({ ...args, stacked: true }) < 1.3, 'stacked: held under the total');
+  assert(scoreboardNameCap({ ...args, totalText: '+$90.45', stacked: true }) <= 1.3);
+  // A seven-figure total on a 17e half (~143pt inside) at XL: shrunk, so the name stays ≤ it.
+  const big = stackedNameCap({ totalText: '+$1,233,153.00', totalPt: 32 * 1.2, innerWidth: 143, namePt: 15 });
+  const natural = (11 * 0.72 + 3 * 0.3) * 32 * 1.2; // 11 figures/signs, 3 separators
+  const fittedTotal = 32 * 1.2 * Math.min(1, 143 / natural); // iOS shrinks past its floor
+  assert(15 * big <= fittedTotal + 1e-9, `name ${15 * big}pt ≤ total ${fittedTotal}pt`);
+  assert(big < 1.3, 'the 7-figure total pulls the name cap under 1.3×');
+  // A short total leaves room: the full 1.3×.
+  assertEquals(stackedNameCap({ totalText: '+$90.45', totalPt: 32 * 1.2, innerWidth: 143, namePt: 15 }), 1.3);
+  // Never below the name's own size.
+  assertEquals(stackedNameCap({ totalText: '+$1,233,153,000,000.00', totalPt: 38.4, innerWidth: 60, namePt: 15 }), 1);
 });
 
 Deno.test('the splash-screen promise rejections are handled (the red toast over every reloaded screen)', () => {

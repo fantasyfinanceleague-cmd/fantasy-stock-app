@@ -185,6 +185,9 @@ export function chipLook(kind: ChipKind, c: ThemeColors): ChipLook {
 
 // ── PlayerCard ───────────────────────────────────────────────────────────────────
 
+/** A non-breaking space. */
+export const NBSP = '\u00a0';
+
 export type Acquisition =
   | { kind: 'drafted'; pick: number; date: string; price: number }
   | { kind: 'claimed'; date: string; price: number }
@@ -194,10 +197,16 @@ export type Acquisition =
  * "Bought · Oct 2 · $214.80" (Giorgio's words). `date` is already formatted ("Sep 29"). */
 export function acquisitionLine(a: Acquisition): string {
   const price = formatMoney(a.price);
-  if (a.kind === 'drafted') return `Drafted ${ordinal(a.pick)} overall · ${a.date} · ${price}`;
-  if (a.kind === 'claimed') return `Claimed off waivers · ${a.date} · ${price}`;
-  return `Bought · ${a.date} · ${price}`;
+  // A wrapped line (XL) breaks only AFTER a "·": the space before each dot is non-breaking,
+  // so a dot stays with the segment it ends, and a date ("Aug\u00a031") never splits. Never
+  // a line starting "· $281.50" (the W4 delta gate).
+  const date = a.date.replace(/ /g, NBSP);
+  const dot = `${NBSP}· `;
+  if (a.kind === 'drafted') return `Drafted ${ordinal(a.pick)} overall${dot}${date}${dot}${price}`;
+  if (a.kind === 'claimed') return `Claimed off waivers${dot}${date}${dot}${price}`;
+  return `Bought${dot}${date}${dot}${price}`;
 }
+
 
 /** The third key figure's label: "Since the draft" (Giorgio, 2026-10-12), or "Since {date}"
  * for a stock bought or claimed later. */
@@ -303,4 +312,26 @@ export function estimateNameWidth(name: string, fontPt: number): number {
  * less than NAME_MIN_SCALE of its size. */
 export function nameBesideAvatar(name: string, availablePt: number, fontPt: number, minScale = NAME_MIN_SCALE): boolean {
   return availablePt > 0 && estimateNameWidth(name, fontPt) * minScale <= availablePt;
+}
+
+/** Stacked Scoreboard names (XL): the name's Dynamic Type cap, so the name is never larger
+ * than the total under it. The total's fitted size is estimated conservatively — its natural
+ * width at `totalPt` (figures ≈ 0.72em, measured on the 17e: a seven-figure total drew at
+ * 16.2pt where this predicts 16.2pt) shrunk to `innerWidth` with NO floor, because iOS's
+ * adjustsFontSizeToFit goes below minimumFontScale when the text still doesn't fit. The name
+ * may grow to that size, at most 1.3× and at least 1× (never below its own base size). */
+export function stackedNameCap(opts: { totalText: string; totalPt: number; innerWidth: number; namePt: number }): number {
+  const { totalText, totalPt, innerWidth, namePt } = opts;
+  let em = 0;
+  for (const ch of totalText) em += ch === ',' || ch === '.' ? 0.3 : 0.72;
+  const natural = em * totalPt;
+  const fitted = natural > 0 && innerWidth > 0 ? totalPt * Math.min(1, innerWidth / natural) : totalPt;
+  return Math.max(1, Math.min(1.3, fitted / namePt));
+}
+
+/** The Scoreboard name's Dynamic Type cap: 1.6× beside the avatar; stacked (XL), never larger
+ * than the total under it (stackedNameCap), at most 1.3×. */
+export function scoreboardNameCap(opts: { stacked: boolean; totalText: string; totalPt: number; innerWidth: number; namePt: number }): number {
+  if (!opts.stacked) return 1.6;
+  return Math.min(1.3, stackedNameCap(opts));
 }

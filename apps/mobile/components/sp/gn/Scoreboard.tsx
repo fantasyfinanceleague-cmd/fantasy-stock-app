@@ -8,7 +8,7 @@ import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, scoreboardModel, type ScoreSide } from '@/components/sp/logic/gameNight';
+import { NAME_MIN_SCALE, NAME_MIN_SCALE_COMPACT, nameBesideAvatar, scoreboardNameCap, scoreboardModel, type ScoreSide } from '@/components/sp/logic/gameNight';
 import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 
 // Stockpile — <Scoreboard>, Game Night (§9C "Scoreboard"; Giorgio, 2026-10-12: "I like the
@@ -45,6 +45,12 @@ export interface GnScoreboardProps {
 const AVATAR = { hero: 44, compact: 32 } as const;
 /** The names' Dynamic Type ceiling (the headline's 1.6): beyond it two names can't share a card. */
 const NAME_MAX_SCALE = 1.6;
+/** Stacked (the name under its avatar, the total under it at XL): the name caps at 1.3× so a
+ * total is never smaller than its own name (the W4 delta gate). */
+export const NAME_STACKED_MAX_SCALE = 1.3;
+/** The totals: score.xl 32pt (compact score.lg 28pt), both capped at 1.2× (tokens/type.ts). */
+const TOTAL_PT = { hero: 32, compact: 28 } as const;
+const TOTAL_MAX_SCALE = 1.2;
 /** The name's size per variant (body 15, callout 13), the half's padding and the who gap. */
 const NAME_PT = { hero: 15, compact: 13 } as const;
 const HALF_PAD = space[5];
@@ -94,6 +100,12 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
   const besideRoom = halfWidth - 2 * HALF_PAD - (AVATAR[size] + 2 * (AVATAR_RING + AVATAR_RING_GAP)) - WHO_GAP;
   const minScale = size === 'compact' ? NAME_MIN_SCALE_COMPACT : NAME_MIN_SCALE;
   const stacked = halfWidth > 0 && !nameBesideAvatar(team.name, besideRoom, fontPt, minScale);
+  // Stacked, the name never outgrows the total under it (the W4 delta gate): its cap follows
+  // the total's fitted size, at most NAME_STACKED_MAX_SCALE.
+  const totalText = formatMoney(team.gain, { sign: 'always' });
+  const nameCap = scoreboardNameCap({
+    stacked, totalText, totalPt: TOTAL_PT[size] * Math.min(fontScale, TOTAL_MAX_SCALE), innerWidth: halfWidth - 2 * HALF_PAD, namePt: NAME_PT[size],
+  });
   return (
     <View
       testID={you ? 'scoreboard-you' : undefined}
@@ -115,7 +127,7 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
         )}
         {/* The board's 15pt name (a 17pt headline cut "Roberto B." to "Robert…" beside the 44pt
             avatar on a 17e); a long name wraps to a second line before it truncates. */}
-        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale} maxFontSizeMultiplier={NAME_MAX_SCALE} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
+        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale} maxFontSizeMultiplier={nameCap} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
           {team.name}
         </Text>
       </View>

@@ -2,47 +2,19 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a710e370abb4a68b580f89a706d255e404c79dbd",
-    "commitShort": "a710e370",
+    "commit": "8641eedfb0d8b40f176faa77872f59f5955e7f86",
+    "commitShort": "8641eedf",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/gn-w4-matchup",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/matchup.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/gn/RosterRow.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/sp/gn/Scoreboard.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/fitScale.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/sp/logic/gameNight.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/largeText.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/Text.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/matchupFixture.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useRosterData.ts"
       },
       {
         "code": "M",
@@ -51,17 +23,9 @@
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/matchup-calls.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/matchup-roster.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/player-card-model.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T08:22:39Z",
+    "timestamp": "2026-10-13T08:34:03Z",
     "sourceHash": "sha256:9dc794f1123dc586010694dfe2213ccf2011c63e3cff129839aaf49b8d371fa9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -69,7 +33,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 28.5,
+    "ageHours": 28.7,
     "ageDays": 1.2,
     "staleAfterDays": 14,
     "stale": false,
