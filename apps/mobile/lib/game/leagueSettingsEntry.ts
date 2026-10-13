@@ -7,6 +7,8 @@
  * can edit settings" screen. A missing user or commissioner id never matches
  * (unlike a bare `a === b`, where undefined === undefined).
  */
+import type { LeaveWindow } from './leaveLeague';
+
 export function showsLeagueSettingsRow(
   commissionerId: string | null | undefined,
   userId: string | null | undefined,
@@ -23,12 +25,13 @@ export function showsLeagueSettingsRow(
  * are locked in from an hour before the draft until the season ends."). */
 export const SETTINGS_LOCKED = 'Settings are locked once the draft starts.';
 
-/** The invite row's Share pill: shown for the commissioner and the member alike (W4 DL gate).
- * The ONE place the condition lives: whether Share hides while the league is locked is with
- * Giorgio (2026-10-13); his answer changes this function, and both views follow. */
-export function inviteShareShown(league: { locked: boolean }): boolean {
-  void league.locked; // Giorgio's ruling may hide Share while locked; today it always shows.
-  return true;
+/** The invite row's Share pill, for the commissioner and the member alike: the ONE place the
+ * condition lives. Giorgio, 2026-10-13 (B, board #call-share-locked): HIDDEN while teams are
+ * locked, from an hour before the draft until the season ends (the leave rule's locked
+ * windows); shown before the draft (a renewed Season 2 too) and after the season. The code
+ * itself always stays visible. */
+export function inviteShareShown(window: LeaveWindow): boolean {
+  return window !== 'locked_order_set' && window !== 'locked_season';
 }
 
 /** What Share sends (unchanged from the member's row). */

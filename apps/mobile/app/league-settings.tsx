@@ -25,7 +25,7 @@ import {
 import { seamSaveLeagueSlots, seamUpdateLeague } from '@/lib/game/seamCalls';
 import { settingsSaveOutcome } from '@/lib/game/settingsSave';
 import {
-  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates,
+  COMMISSIONER_ROW, COMMISSIONER_YOU, leaveLeagueEnabled, leaveRowView, leaveSheetCopy, leaveWindow, transferAllowed, transferCandidates, type LeaveWindow,
   transferUnknownLine,
 } from '@/lib/game/leaveLeague';
 import { useLeaveLeague } from '@/lib/game/useLeaveLeague';
@@ -293,7 +293,7 @@ export default function LeagueSettingsScreen() {
     return (
       <SetupScaffold back={{ label: 'Cancel', onPress: handleClose, modal: true }} title="League settings">
         <SetupCard>
-          <InviteRow code={code} locked={isLocked} />
+          <InviteRow code={code} window={membershipWindow} />
           <RowDivider />
           <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
         </SetupCard>
@@ -514,7 +514,7 @@ export default function LeagueSettingsScreen() {
           ) : null}
           <RowDivider />
           {/* The member's row and Share pill, under the one show condition (inviteShareShown). */}
-          <InviteRow code={league.invite_code} locked={isLocked} />
+          <InviteRow code={league.invite_code} window={membershipWindow} />
           {leaveOn ? (
             <>
               <RowDivider />
@@ -555,7 +555,7 @@ export default function LeagueSettingsScreen() {
 /** The invite code and its Share pill: ONE row for the commissioner and the member alike (W4
  * DL gate). Whether Share shows is decided in one place (inviteShareShown), so a ruling on
  * hiding it while the league is locked changes both views at once. */
-function InviteRow({ code, locked }: { code: string; locked: boolean }) {
+function InviteRow({ code, window }: { code: string; window: LeaveWindow }) {
   return (
     <View style={styles.inviteRow}>
       <View style={styles.grow}>
@@ -563,7 +563,7 @@ function InviteRow({ code, locked }: { code: string; locked: boolean }) {
         {/* §9C: the accent means live / your turn / selected; the code is plain text. */}
         <Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>
       </View>
-      {inviteShareShown({ locked }) ? (
+      {inviteShareShown(window) ? (
         <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: inviteShareMessage(code) })} />
       ) : null}
     </View>

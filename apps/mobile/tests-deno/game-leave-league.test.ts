@@ -265,7 +265,7 @@ Deno.test('a member\'s League settings: ONLY Invite code (with Share), the Commi
   assertEquals(start > 0, true);
   // What it has.
   // W4 DL gate: the invite code and Share are ONE row (InviteRow), shared with the commissioner.
-  assertEquals(member.includes('<InviteRow code={code} locked={isLocked} />'), true);
+  assertEquals(member.includes('<InviteRow code={code} window={membershipWindow} />'), true);
   const row = s.slice(s.indexOf('function InviteRow('));
   assertEquals(row.includes('>Invite code</Text>'), true);
   assertEquals(row.includes('<Button label="Share"'), true);

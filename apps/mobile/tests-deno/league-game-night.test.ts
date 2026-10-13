@@ -357,7 +357,20 @@ Deno.test('P3: the small fixes (bye indent, final head, week-1 ranks, error avat
   assert(!SOURCES['components/game/HistoryList.tsx'].includes('<Text variant="title">History</Text>'));
   const settings = SOURCES['app/league-settings.tsx'];
   assertEquals((settings.match(/<InviteRow code=/g) ?? []).length, 2, 'commissioner and member share the one row');
-  assert(settings.includes('{inviteShareShown({ locked }) ? ('));
-  assertEquals(inviteShareShown({ locked: true }), true);
-  assertEquals(inviteShareShown({ locked: false }), true);
+  assert(settings.includes('{inviteShareShown(window) ? ('));
+  // Both views pass the leave rule's window (the one place "locked" is decided).
+  assertEquals((settings.match(/window=\{membershipWindow\}/g) ?? []).length, 2);
+});
+
+Deno.test("Share hides while teams are locked (Giorgio, 2026-10-13, B, #call-share-locked); the code stays", () => {
+  // Locked: an hour before the draft until the season ends.
+  assertEquals(inviteShareShown('locked_order_set'), false);
+  assertEquals(inviteShareShown('locked_season'), false);
+  // Open: before the draft (a renewed Season 2 too) and after the season.
+  assertEquals(inviteShareShown('before_draft'), true);
+  assertEquals(inviteShareShown('after_season'), true);
+  // The code itself is always drawn; only the pill is conditional.
+  const row = SOURCES['app/league-settings.tsx'].slice(SOURCES['app/league-settings.tsx'].indexOf('function InviteRow('));
+  assert(row.indexOf('>Invite code</Text>') < row.indexOf('{inviteShareShown(window) ? ('));
+  assert(row.includes('<Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>'));
 });
