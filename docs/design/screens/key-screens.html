@@ -7966,6 +7966,7 @@ window.KS_REFS = {
   }
   /** This week (opens Matchup). Scores 28pt, the Tug, the lead line: the calm-Home card. */
   function ThisWeek({ d }) {
+    const amended = useContext(Amended);
     const y = SD(L.you), o = SD(L.opp);
     const frac = K.tugRatio(y.value, o.value);
     const scores = (
@@ -7999,9 +8000,23 @@ window.KS_REFS = {
       </div>
     );
     if (d === 'a') {
+      // Shading B (Giorgio, 2026-10-12: "when it's you versus someone, it shades it so that it's
+      // clear"): your half of This week is tinted, win or lose, as on Matchup (W4 Home gate).
+      const halves = amended ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', margin: '0 -16px' }}>
+          <div style={{ display: 'grid', gap: 10, padding: '12px 16px', background: 'var(--c-you-tint)' }}>
+            <span className="dr-call" style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}><Av init="RB" you size={24} />You</span>
+            <span className="dr-score" style={{ fontSize: 28, lineHeight: '30px' }}>{y.primary}</span>
+          </div>
+          <div style={{ display: 'grid', gap: 10, padding: '12px 16px', justifyItems: 'end' }}>
+            <span className="dr-call dr-muted" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>vs Gianluigi B.<Av init="GB" size={24} /></span>
+            <span className="dr-score" style={{ fontSize: 28, lineHeight: '30px' }}>{o.primary}</span>
+          </div>
+        </div>
+      ) : <>{names}{scores}</>;
       return (
         <div className="dr-a-card" style={{ padding: 16, display: 'grid', gap: 10 }}>
-          {top()}{names}{scores}{tug}{foot}
+          {top()}{halves}{tug}{foot}
         </div>
       );
     }
