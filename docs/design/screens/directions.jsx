@@ -1506,7 +1506,56 @@
       />
     );
   }
+  // The mid-season Share call (from the W4 League gate): League settings, a MEMBER mid-season
+  // (Stock Scudetto, Week 6; Paolo M. is commissioner). Copy is the shipped screen's, verbatim.
+  function SettingsSheet({ t, share }) {
+    const row = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 44 };
+    return (
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`}>
+        <Device noTabs full label={`League settings mid-season, ${share ? 'Share shown' : 'Share hidden'}, ${t}`}>
+          <div style={{ padding: `56px ${G}px 24px`, display: 'grid', gap: 16 }}>
+            <span className="dr-call dr-muted" style={{ fontSize: 15 }}>Cancel</span>
+            <span style={{ fontSize: 34, lineHeight: '40px', fontWeight: 800, color: 'var(--c-text)' }}>League settings</span>
+            <div className="dr-a-card" style={{ padding: '14px 16px', display: 'grid', gap: 12 }}>
+              <div style={row}>
+                <span style={{ display: 'grid', gap: 2 }}>
+                  <span className="dr-call" style={{ fontWeight: 700, fontSize: 15 }}>Invite code</span>
+                  <span className="dr-num" style={{ fontWeight: 800, fontSize: 15, letterSpacing: '.02em', color: 'var(--c-text)' }}>SCUD26</span>
+                </span>
+                {share ? <span className="dr-btn dr-btn--line" style={{ height: 40, padding: '0 18px', fontSize: 15, fontWeight: 600 }}>Share</span> : null}
+              </div>
+              <div style={row}>
+                <span className="dr-call" style={{ fontWeight: 700, fontSize: 15 }}>Commissioner</span>
+                <span className="dr-call dr-muted" style={{ fontSize: 15 }}>Paolo M.</span>
+              </div>
+            </div>
+            <div className="dr-a-card" style={{ padding: '14px 16px', display: 'grid', gap: 4 }}>
+              <span className="dr-call" style={{ fontWeight: 700, fontSize: 15, color: 'var(--c-text-3)' }}>Leave league</span>
+              <span className="dr-call dr-muted" style={{ fontSize: 14 }}>Teams are locked in from an hour before the draft until the season ends.</span>
+            </div>
+          </div>
+        </Device>
+      </div>
+    );
+  }
+  function CallShareLocked({ archived, decided, decidedNote }) {
+    return (
+      <MxCall
+        archived={archived} decided={decided} decidedNote={decidedNote}
+        id="call-share-locked" title="the invite code's Share while teams are locked"
+        intro={<>League settings shows the invite code with a Share button. Mid-season, the same screen says teams are locked ("Teams are locked in from an hour before the draft until the season ends."), so a friend who gets the code can't join until the league runs it back. The commissioner gets the same Share as everyone (decided at the gate); this call is only WHEN it shows. A member's settings, Week 6.</>}
+        a="Share always shown" b="Share hidden while teams are locked"
+        notes={<>
+          <li><b>A:</b> Share is always there. A friend can get the code now and use it when the next season opens (renewal, before its draft).</li>
+          <li><b>B:</b> while teams are locked (from an hour before the draft until the season ends), the code still shows but Share is hidden; it comes back at renewal and before the draft, when a code can actually be used. No new words either way.</li>
+        </>}
+        rec="B. A Share that sends a code nobody can use yet invites a confused friend; the code itself stays visible for anyone who wants it."
+        frame={(opt, t) => <SettingsSheet t={t} share={opt === 'A'} />}
+      />
+    );
+  }
   window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
+  window.KSShareLockedArchived = (decided, note) => () => <CallShareLocked archived decided={decided} decidedNote={note} />;
   window.KSDraftAutoArchived = () => <CallAuto archived />;
   window.KSMxCalls = {
     order: () => <CallOrder archived />,

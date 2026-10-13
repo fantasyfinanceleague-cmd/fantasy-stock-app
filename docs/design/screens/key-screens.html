@@ -9211,7 +9211,56 @@ window.KS_REFS = {
       />
     );
   }
+  // The mid-season Share call (from the W4 League gate): League settings, a MEMBER mid-season
+  // (Stock Scudetto, Week 6; Paolo M. is commissioner). Copy is the shipped screen's, verbatim.
+  function SettingsSheet({ t, share }) {
+    const row = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 44 };
+    return (
+      <div className={`dr dir-a${t === 'light' ? ' dir-a-light' : ''}`}>
+        <Device noTabs full label={`League settings mid-season, ${share ? 'Share shown' : 'Share hidden'}, ${t}`}>
+          <div style={{ padding: `56px ${G}px 24px`, display: 'grid', gap: 16 }}>
+            <span className="dr-call dr-muted" style={{ fontSize: 15 }}>Cancel</span>
+            <span style={{ fontSize: 34, lineHeight: '40px', fontWeight: 800, color: 'var(--c-text)' }}>League settings</span>
+            <div className="dr-a-card" style={{ padding: '14px 16px', display: 'grid', gap: 12 }}>
+              <div style={row}>
+                <span style={{ display: 'grid', gap: 2 }}>
+                  <span className="dr-call" style={{ fontWeight: 700, fontSize: 15 }}>Invite code</span>
+                  <span className="dr-num" style={{ fontWeight: 800, fontSize: 15, letterSpacing: '.02em', color: 'var(--c-text)' }}>SCUD26</span>
+                </span>
+                {share ? <span className="dr-btn dr-btn--line" style={{ height: 40, padding: '0 18px', fontSize: 15, fontWeight: 600 }}>Share</span> : null}
+              </div>
+              <div style={row}>
+                <span className="dr-call" style={{ fontWeight: 700, fontSize: 15 }}>Commissioner</span>
+                <span className="dr-call dr-muted" style={{ fontSize: 15 }}>Paolo M.</span>
+              </div>
+            </div>
+            <div className="dr-a-card" style={{ padding: '14px 16px', display: 'grid', gap: 4 }}>
+              <span className="dr-call" style={{ fontWeight: 700, fontSize: 15, color: 'var(--c-text-3)' }}>Leave league</span>
+              <span className="dr-call dr-muted" style={{ fontSize: 14 }}>Teams are locked in from an hour before the draft until the season ends.</span>
+            </div>
+          </div>
+        </Device>
+      </div>
+    );
+  }
+  function CallShareLocked({ archived, decided, decidedNote }) {
+    return (
+      <MxCall
+        archived={archived} decided={decided} decidedNote={decidedNote}
+        id="call-share-locked" title="the invite code's Share while teams are locked"
+        intro={<>League settings shows the invite code with a Share button. Mid-season, the same screen says teams are locked ("Teams are locked in from an hour before the draft until the season ends."), so a friend who gets the code can't join until the league runs it back. The commissioner gets the same Share as everyone (decided at the gate); this call is only WHEN it shows. A member's settings, Week 6.</>}
+        a="Share always shown" b="Share hidden while teams are locked"
+        notes={<>
+          <li><b>A:</b> Share is always there. A friend can get the code now and use it when the next season opens (renewal, before its draft).</li>
+          <li><b>B:</b> while teams are locked (from an hour before the draft until the season ends), the code still shows but Share is hidden; it comes back at renewal and before the draft, when a code can actually be used. No new words either way.</li>
+        </>}
+        rec="B. A Share that sends a code nobody can use yet invites a confused friend; the code itself stays visible for anyone who wants it."
+        frame={(opt, t) => <SettingsSheet t={t} share={opt === 'A'} />}
+      />
+    );
+  }
   window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
+  window.KSShareLockedArchived = (decided, note) => () => <CallShareLocked archived decided={decided} decidedNote={note} />;
   window.KSDraftAutoArchived = () => <CallAuto archived />;
   window.KSMxCalls = {
     order: () => <CallOrder archived />,
@@ -9392,8 +9441,13 @@ window.KS_REFS = {
     ['medal-bronze', 'you-tint', 'surface', 3, 'Medal disc, bronze, on the you-tint row (graphic)'],
     // Your turn (Design Lead, 2026-10-06; board #your-turn): the flash fills the clock card with
     // live gold, text in on-live; at rest the card is warn-tint with the title in liveText.
-    ['on-live', 'live', null, 4.5, 'Your-turn flash: text on the live gold fill'],
-    ['live-text', 'warn-tint', 'surface', 4.5, "Your-turn rest: \"You're on the clock\" on the warn-tint card"],
+    // W4 Draft (§9C, accent-tint = "your-turn card at rest"): the rest moved to the accent tint
+    // over the page; the title there is the LIVE chip row's pair (live-text on accent-tint over
+    // bg), and the round line, the captions and the last-10 s clock are these three.
+    ['on-live', 'live', null, 4.5, 'Your-turn flash: text on the live fill'],
+    ['text', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the round line and the clock on the accent-tint card'],
+    ['text-2', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the captions on the accent-tint card'],
+    ['loss', 'accent-tint', 'bg', 4.5, 'Your-turn rest: the clock in the last 10 seconds'],
 
     // ── Game Night, §9C v3.1 (2026-10-12): the 49 new scored pairs. §9C names them by group
     // (your side on the card surface and on the page, the clock cell, the money page, the
@@ -9604,6 +9658,7 @@ window.KS_REFS = {
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-share-locked', title: 'The invite code\'s Share while teams are locked', decision: 'B: Share is hidden while teams are locked (from an hour before the draft until the season ends); the code stays visible; Share is back at renewal and before the draft. The commissioner too.', date: '2026-10-13', rec: 'PRODUCT_RULES (on feat/gn-w4-league)', render: () => window.KSShareLockedArchived('B', <li><b>Decided by Giorgio (2026-10-13): B</b>, from this image: Share hidden while teams are locked, the code still shown, for the commissioner as for everyone.</li>) },
     { id: 'call-draft-auto', title: 'Marking an auto-pick on the draft board', decision: 'A, as built: no tag on an auto-picked square ("no auto tag"). The card, the pick log and VoiceOver still say it.', date: '2026-10-13', rec: 'PRODUCT_RULES (on feat/gn-w4-draft)', render: () => window.KSDraftAutoArchived },
     { id: 'call-mx-order', title: 'Saying why the Matchup rows are in this order', decision: 'B: one small line over the rows, "Ordered by Wednesday\'s close" (the last close whose trading has ended; "Thursday\'s close" from that evening).', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.order },
     { id: 'call-mx-empty', title: 'How an empty slot reads', decision: 'B: the empty half keeps its row, with a dashed edge and "Empty"; yours keeps your shade.', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.empty },
