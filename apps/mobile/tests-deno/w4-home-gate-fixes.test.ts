@@ -6,7 +6,7 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { SOURCES } from './sourceManifest.generated.ts';
-import { buttonRadius, PILL_RADIUS, CONTROL_RADIUS } from '../components/sp/logic/buttonStatus.ts';
+import { buttonRadius, PILL_RADIUS } from '../components/sp/logic/buttonStatus.ts';
 import { rangeTabWidth, tabLabelWidth, TAB_MIN, TAB_LABEL_PAD } from '../components/sp/logic/gameNight.ts';
 import { layoutWeekMarks, marksCollide } from '../lib/home/weekMarks.ts';
 import { clearOf } from '../constants/tokens/color.ts';
@@ -17,12 +17,13 @@ import { heroMetaLine } from '../lib/home/calmHome.ts';
 const code = (src: string) => src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l)).join('\n');
 
 // ── The primary button is a pill (§9C, the board's .dr-btn) ────────────────────
-Deno.test('the sp primary Button is a pill (radius 999); the other variants keep 10', () => {
-  assertEquals(buttonRadius('primary'), PILL_RADIUS);
-  assertEquals([buttonRadius('secondary'), buttonRadius('ghost'), buttonRadius('destructive')], [CONTROL_RADIUS, CONTROL_RADIUS, CONTROL_RADIUS]);
-  // The logic's numbers are the tokens'.
-  assertEquals([PILL_RADIUS, CONTROL_RADIUS], [radius.pill, radius.md]);
-  assert(SOURCES['components/sp/Button.tsx'].includes('borderRadius: buttonRadius(variant),'));
+Deno.test('every sp Button is a pill (radius 999): primary, secondary, ghost, destructive, the compact sm', () => {
+  for (const v of ['primary', 'secondary', 'ghost', 'destructive'] as const) assertEquals(buttonRadius(v), PILL_RADIUS, v);
+  assertEquals(PILL_RADIUS, radius.pill);
+  const btn = SOURCES['components/sp/Button.tsx'];
+  // One radius for every variant AND size (no size-keyed override of the shape).
+  assert(btn.includes('borderRadius: buttonRadius(variant),'));
+  assertEquals((btn.match(/borderRadius/g) ?? []).length, 1);
 });
 
 // ── 2. Equal-width range tabs, the underline the label's width ──────────────────
@@ -175,4 +176,43 @@ Deno.test("Home's Standings rows stack (name over the numbers) at large text, so
   assertEquals([excerptStacks(1), excerptStacks(1.35), excerptStacks(1.5), excerptStacks(2.35)], [false, false, true, true]);
   assert(src.includes('const stacked = excerpt && excerptStacks(fontScale);'));
   assert(src.includes('<Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>'));
+});
+
+// ── Pass-2 DL items (2026-10-13) ───────────────────────────────────────────────
+Deno.test('This week at XL: "vs {name}" stacks under its avatar on ONE line, shrink-to-fit, capped by the total', async () => {
+  const { nameBesideAvatar, stackedNameCap } = await import('../components/sp/logic/gameNight.ts');
+  // 17e XL: a half is ~175pt wide; less the pads (28) and the avatar footprint (32 + 8 gap) leaves ~107pt.
+  assertEquals(nameBesideAvatar('vs Gianluigi B.', 107, 13 * 2.35), false); // XL: stacks
+  assertEquals(nameBesideAvatar('vs Gianluigi B.', 107, 13), true); // Large: beside
+  // The cap never lets the name outgrow the total under it, and never below 1x.
+  assert(stackedNameCap({ totalText: '+$90.45', totalPt: 28 * 1.2, innerWidth: 147, namePt: 13 }) <= 1.3);
+  assertEquals(stackedNameCap({ totalText: '+$1,233,153,000.00', totalPt: 33.6, innerWidth: 60, namePt: 13 }), 1);
+  const card = SOURCES['components/home/ThisWeekCard.tsx'];
+  assert(card.includes('const oppStacked = halvesWidth > 0 && !nameBesideAvatar(oppLabel, besideRoom, NAME_PT * fontScale);'));
+  assert(card.includes('const oppNameCap = stackedNameCap({ totalText: oppText, totalPt: SCORE_PT * Math.min(fontScale, SCORE_MAX_SCALE), innerWidth: halfInner, namePt: NAME_PT });'));
+  assert(card.includes('numberOfLines={1} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE} maxFontSizeMultiplier={oppNameCap}'));
+  assert(card.includes('oppStacked ? styles.whoStackedMirror : styles.whoMirror'));
+  assert(card.includes('const oppLabel = vsOpponentLabel(opponentName);')); // "vs" kept
+});
+
+Deno.test('"Through Week N" is hidden while N = 0; the chevron and the card still open Standings', async () => {
+  const { throughWeekShown } = await import('../lib/home/calmHome.ts');
+  assertEquals([throughWeekShown(0), throughWeekShown(1), throughWeekShown(5)], [false, true, true]);
+  const card = SOURCES['components/home/StandingsCard.tsx'];
+  assert(card.includes('{throughWeekShown(throughWeek) ? ('));
+  // The chevron stays outside the condition, and the press still wraps the whole card.
+  assert(card.indexOf('{throughWeekShown(throughWeek) ? (') < card.indexOf('<Ionicons name="chevron-forward"'));
+  assert(card.includes('<PressableScale onPress={() => router.push(STANDINGS_HREF)}'));
+});
+
+Deno.test("Week 1 Monday's lone point: at the RIGHT end (now), centred on the base, never clipped", async () => {
+  const { buildLine } = await import('../components/sp/logic/lineChart.ts');
+  const box = { width: 390, height: 108, padLeft: 2, padRight: 12, padTop: 12, padBottom: 9 };
+  // The merged Monday: one point, the axis from Sep 21 to Sep 21 (a zero-length domain).
+  const up = buildLine([{ t: 0, value: 213.6 }], [0, 0], 0, box);
+  assertEquals(up.end!.x, box.width - box.padRight); // now: the right end
+  assertEquals(up.baseY, box.padTop + (box.height - box.padTop - box.padBottom) / 2); // base centred
+  assert(up.end!.y >= box.padTop && up.end!.y < up.baseY); // above the base by its move, inside the plot
+  const down = buildLine([{ t: 0, value: -50 }], [0, 0], 0, box);
+  assert(down.end!.y > down.baseY && down.end!.y <= box.height - box.padBottom); // below, inside
 });

@@ -102,6 +102,12 @@ export function preDraftChipShown(postponed: boolean): boolean {
   return postponed;
 }
 
+/** "Through Week N" names the last completed week; in Week 1 there is none yet (N = 0), so the
+ * label is hidden (no new copy); the chevron and the card still open Standings (W4 gate). */
+export function throughWeekShown(throughWeek: number): boolean {
+  return throughWeek > 0;
+}
+
 // ── The hero's meta line ───────────────────────────────────────────────────
 const NBSP = ' ';
 /** "2nd of 6 · 4–1 · Week 6 of 14", wrapping only BETWEEN segments at large text: each

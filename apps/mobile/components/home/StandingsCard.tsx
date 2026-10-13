@@ -12,7 +12,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { ManagerRow } from '@/components/sp/gn';
 import { useMotion } from '@/components/sp/motion';
 import { STANDINGS_CARD_TITLE, standingsThroughWeekCaption } from '@/lib/home/homeCopy';
-import { STANDINGS_HREF } from '@/lib/home/calmHome';
+import { STANDINGS_HREF, throughWeekShown } from '@/lib/home/calmHome';
 
 // Stockpile — <StandingsCard> (Phase 3b-2, board "Home"). Top 3 plus the
 // caller's own row if outside it. Rank/record/gain come STRAIGHT from
@@ -75,9 +75,11 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
         {/* The board's excerpt title: 17/800 (headline is 17/600). */}
         <Text variant="headline" style={styles.title}>{STANDINGS_CARD_TITLE}</Text>
         <View style={styles.headerRight}>
-          <Text variant="caption" tone="secondary" style={styles.headerCaption}>
-            {standingsThroughWeekCaption(throughWeek)}
-          </Text>
+          {throughWeekShown(throughWeek) ? (
+            <Text variant="caption" tone="secondary" style={styles.headerCaption}>
+              {standingsThroughWeekCaption(throughWeek)}
+            </Text>
+          ) : null}
           <Ionicons name="chevron-forward" size={16} color={colors.text2} />
         </View>
       </View>

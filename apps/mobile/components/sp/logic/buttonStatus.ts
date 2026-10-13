@@ -27,11 +27,11 @@ export function buttonStatusA11y(label: string, status: ButtonStatus, disabled: 
   }
 }
 
-/** §9C (Design Lead, W4 gate, 2026-10-13): the PRIMARY button is a pill (radius 999, the
- * board's `.dr-btn`), still full width where a screen asks for it; the other variants keep
- * the 10pt control radius. Values from constants/tokens/radius.ts (`pill`, `md`). */
+/** §9C (Design Lead, W4 gates, 2026-10-13): EVERY sp Button is a pill (radius 999) — primary,
+ * secondary, ghost, destructive, and the compact `sm` ("Share"). The board's `.dr-btn` and
+ * `.dr-btn--line` are both pills; shapes never mix. Full width where a screen asks for it.
+ * The value is constants/tokens/radius.ts's `pill`. */
 export const PILL_RADIUS = 999;
-export const CONTROL_RADIUS = 10;
-export function buttonRadius(variant: 'primary' | 'secondary' | 'ghost' | 'destructive'): number {
-  return variant === 'primary' ? PILL_RADIUS : CONTROL_RADIUS;
+export function buttonRadius(_variant: 'primary' | 'secondary' | 'ghost' | 'destructive'): number {
+  return PILL_RADIUS;
 }

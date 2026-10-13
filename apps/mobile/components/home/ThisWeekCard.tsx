@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,7 +14,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { formatMoney } from '@/components/sp/logic/money';
 import { leaderOf, type Leader } from '@/components/sp/logic/tug';
-import { chipLook } from '@/components/sp/logic/gameNight';
+import { chipLook, nameBesideAvatar, NAME_MIN_SCALE, stackedNameCap } from '@/components/sp/logic/gameNight';
 import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
 import { TugBar } from '@/components/sp/game/TugBar';
 import { LiveDot } from '@/components/sp/game/LiveDot';
@@ -94,6 +94,17 @@ export function ThisWeekCard({
   const youText = formatMoney(you.gain, { sign: 'always' });
   const oppText = formatMoney(opponent.gain, { sign: 'always' });
 
+  // XL (W4 gate, the gn Scoreboard's rule): the opponent's "vs {name}" sits beside its avatar
+  // while it fits on one line at ≥ 75% of its size; otherwise the avatar stacks over it and the
+  // name takes the half's width on ONE line, shrink-to-fit, never larger than the total under it.
+  const { fontScale } = useWindowDimensions();
+  const [halvesWidth, setHalvesWidth] = useState(0);
+  const oppLabel = vsOpponentLabel(opponentName);
+  const halfInner = halvesWidth / 2 - HALF_PAD_IN - HALF_PAD_OUT;
+  const besideRoom = halfInner - (AVATAR + 2 * (AVATAR_RING + AVATAR_RING_GAP)) - WHO_GAP;
+  const oppStacked = halvesWidth > 0 && !nameBesideAvatar(oppLabel, besideRoom, NAME_PT * fontScale);
+  const oppNameCap = stackedNameCap({ totalText: oppText, totalPt: SCORE_PT * Math.min(fontScale, SCORE_MAX_SCALE), innerWidth: halfInner, namePt: NAME_PT });
+
   // I12 (Design Lead ruling, 2026-09-29): one caption per side that has an
   // unpriced symbol, reusing plCoverage.ts's wording. Never shown during
   // `scoring`/`preSeason` -- there are no real numbers on screen yet (or,
@@ -159,7 +170,7 @@ export function ThisWeekCard({
           it's clear. Not whoever's winning"): YOUR half sits on `youTint`, win or lose, the
           same grammar as Matchup's scoreboard; who leads is said by the totals and the lead
           line. The opponent is the right half, marked by position, not colour. */}
-      <View style={styles.halves}>
+      <View style={styles.halves} onLayout={(e) => setHalvesWidth(e.nativeEvent.layout.width)}>
         <View testID="this-week-you" style={[styles.half, styles.halfYou, { backgroundColor: colors.youTint }]}>
           <View style={styles.who}>
             <Avatar name={youName} size={AVATAR} tone="you" ring />
@@ -174,13 +185,19 @@ export function ThisWeekCard({
         <View style={[styles.half, styles.halfOpp]}>
           {/* XXXL (XL check, 2026-10-05): a long opponent name wraps rather than running into
               your half; the avatar keeps the ringed avatar's footprint so the scores align. */}
-          <View style={[styles.who, styles.whoMirror]}>
+          <View testID={oppStacked ? 'this-week-opp-stacked' : undefined} style={[styles.who, oppStacked ? styles.whoStackedMirror : styles.whoMirror]}>
             <View style={styles.ringFootprint}>
               <Avatar name={opponentName} size={AVATAR} tone="opp" />
             </View>
-            <Text variant="callout" tone="secondary" numberOfLines={2} style={styles.oppName}>
-              {vsOpponentLabel(opponentName)}
-            </Text>
+            {oppStacked ? (
+              <Text variant="callout" tone="secondary" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE} maxFontSizeMultiplier={oppNameCap} style={styles.oppName}>
+                {oppLabel}
+              </Text>
+            ) : (
+              <Text variant="callout" tone="secondary" numberOfLines={2} style={styles.oppName}>
+                {oppLabel}
+              </Text>
+            )}
           </View>
           <View style={[styles.scoreCell, styles.scoreCellRight]}>
             {scoring ? <Skeleton width="70%" height={28} /> : <ScoreDigits text={oppText} variant="score.lg" color={scoreColor(opponent.gain, 'opp')} />}
@@ -230,6 +247,14 @@ export function ThisWeekCard({
 // The board's ThisWeek: 24pt avatars, a 6pt tug.
 const AVATAR = 24;
 const TUG_HEIGHT = 6;
+// The halves' geometry, for the XL stacking rule above (styles.halfOpp: 12 in, 16 out; who gap 8).
+const HALF_PAD_IN = space[4];
+const HALF_PAD_OUT = space[5];
+const WHO_GAP = space[3];
+// The name is callout (13pt); the score is score.lg (28pt, capped at 1.2x).
+const NAME_PT = 13;
+const SCORE_PT = 28;
+const SCORE_MAX_SCALE = 1.2;
 
 const styles = StyleSheet.create({
   // §9C Card: `surface` + the 1pt rim, radius 14. The halves run edge to edge, so the
@@ -298,6 +323,11 @@ const styles = StyleSheet.create({
   },
   whoMirror: {
     flexDirection: 'row-reverse',
+  },
+  // XL: the avatar over the name, both at the half's outer (right) edge.
+  whoStackedMirror: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
   },
   ringFootprint: {
     padding: AVATAR_RING + AVATAR_RING_GAP,
