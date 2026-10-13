@@ -3,16 +3,15 @@
  *
  *   cd apps/mobile/tests-deno && deno test .
  *
- * fixtures/tokens-v3-game-night.json is a byte-for-byte copy of the spec's
- * docs/design/tokens-v3-game-night.json (commit 092c37b0 on design/game-night-picked,
- * not yet on main when W3 was built). Once that file is on main, point the import there.
+ * Reads the spec's own machine-readable table, docs/design/tokens-v3-game-night.json (v3.1),
+ * so a spec edit that the port doesn't follow fails here.
  *
- * Pins: every spec key, both themes, at the spec's exact hex/rgba; the 14 new keys; the
+ * Pins: every spec key, both themes, at the spec's exact hex/rgba; the 18 new keys (v3.1); the
  * changes in meaning §9C lists so W3 doesn't "restore" them; the re-pointed and new
  * contrast rows; and the elevation rule (no shadow on Dark; in Light only the sheet's).
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
-import spec from './fixtures/tokens-v3-game-night.json' with { type: 'json' };
+import spec from '../../../docs/design/tokens-v3-game-night.json' with { type: 'json' };
 import { color, type ThemeColors } from '../constants/tokens/color.ts';
 import { PAIRS } from '../constants/tokens/contrastPairs.ts';
 import { parseColor } from '../components/sp/logic/contrast.ts';

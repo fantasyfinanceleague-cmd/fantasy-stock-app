@@ -34,7 +34,7 @@
 //
 // Naming: each key is the camelCase form of the board's `--c-<kebab-name>`
 // (e.g. `--c-text-2` -> `text2`); the v3 additions mirror the board's
-// `--d-*` names the same way (`--d-lead-wash` -> `leadWash`).
+// `--d-*` names the same way (`--d-on-cat` -> `onCat`).
 //
 // The board also defines `kbd-bg`, `kbd-key`, `kbd-key-2`, `chrome` and
 // `chrome-dot` — deliberately NOT ported here: they only render the board's
