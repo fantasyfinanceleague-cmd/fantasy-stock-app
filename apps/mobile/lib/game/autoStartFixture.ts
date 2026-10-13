@@ -32,6 +32,26 @@ export function scheduledFixtureStartMs(nowMs: number): number {
   return nowMs + 2 * 24 * HOUR + 6 * HOUR + 40 * MIN + 30_000;
 }
 
+/** Each start state's draft time (null: none). The ONE source for draftStartStatusFixture's
+ * starts_at and the seam's draft order (W4 Draft gate: the lobby's order line named a different
+ * day from its countdown), so finalize = draft − 1h holds in every capture. */
+export function fixtureStartsAtMs(state: StartState, nowMs: number): number | null {
+  switch (state) {
+    case 'no_date': return null;
+    case 'scheduled': return scheduledFixtureStartMs(nowMs); // "2d 06h 40m"
+    case 'at_risk': return nowMs + HOUR + 58 * MIN + 12_000; // the room opens in "58:12"
+    case 'room_open': return nowMs + 42 * MIN + 18_000; // "42:18"
+    case 'due': return nowMs - 3000;
+    case 'postponed': return null;
+    case 'started': return nowMs - 5 * MIN;
+  }
+}
+
+/** The draft order is set (finalized) once the room opens, an hour before the draft. */
+export function fixtureOrderSet(state: StartState): boolean {
+  return state === 'room_open' || state === 'due' || state === 'started';
+}
+
 export function draftStartStatusFixture(state: StartState, member: boolean, nowMs: number): Record<string, unknown> {
   // server_now: the DB clock the status was judged at (feat/draft-auto-start 3f0eb8d).
   const base = { ok: true, is_commissioner: !member, bots_allowed: false, bots_needed: 0, member_count: 7, min_members: 4, postponed: null, server_now: iso(nowMs) };
@@ -40,15 +60,15 @@ export function draftStartStatusFixture(state: StartState, member: boolean, nowM
     case 'no_date':
       return { ...base, can_start: false, start_state: 'no_date', starts_at: null, blockers: [{ code: 'no_draft_date' }] };
     case 'scheduled': {
-      const t = scheduledFixtureStartMs(nowMs); // "2d 06h 40m"
+      const t = fixtureStartsAtMs('scheduled', nowMs) as number;
       return { ...base, can_start: false, start_state: 'scheduled', starts_at: iso(t), blockers: [notReached(t)] };
     }
     case 'at_risk': {
-      const t = nowMs + HOUR + 58 * MIN + 12_000; // the room opens in "58:12"
+      const t = fixtureStartsAtMs('at_risk', nowMs) as number;
       return { ...base, can_start: false, start_state: 'at_risk', starts_at: iso(t), blockers: [SOFIA_LEFT, PLAYOFF_8_OF_7, notReached(t)] };
     }
     case 'room_open': {
-      const t = nowMs + 42 * MIN + 18_000; // "42:18"
+      const t = fixtureStartsAtMs('room_open', nowMs) as number;
       return { ...base, can_start: false, start_state: 'room_open', starts_at: iso(t), blockers: [notReached(t)] };
     }
     case 'due':

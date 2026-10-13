@@ -8,12 +8,9 @@ import type { PreDraftData } from '@/lib/home/usePreDraftData';
 import { countdownLabel, draftDateTimeLabel, orderWasSetLine } from '@/lib/home/draftCountdown';
 import { managersProgressCaption, orderWaitingLine, pickClockLine } from '@/lib/home/homeCopy';
 import { ordinal } from '@/lib/home/ordinal';
-import { mySnakePicks } from '@/lib/game/draftLobby';
+import { managersProgressShown, mySnakePicks, orderSetLine } from '@/lib/game/draftLobby';
 import { keepDots } from '@/lib/game/keepDots';
-import { yourNameStyle, youA11y } from '@/lib/game/managerRow';
-import { Avatar } from '@/components/sp/Avatar';
-import { MANAGER_ROW_GAP } from '@/components/sp/gn';
-import { YOU_RING } from '@/components/sp/logic/gameNight';
+import { MANAGER_ROW_GAP, ManagerRow } from '@/components/sp/gn';
 
 export interface DraftLobbyProps {
   data: PreDraftData;
@@ -52,16 +49,16 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
         <Card style={styles.card}>
           <Text variant="tag" tone="secondary">{keepDots('Draft order · waiting')}</Text>
           <Text variant="callout">{orderWaitingLine(data.minMembers)}</Text>
-          <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text>
+          {managersProgressShown(data.memberCount, data.minMembers) ? <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text> : null}
         </Card>
       ) : (
-        // Game Night (W4): the order is a list of manager tiles on the page (Standings'
-        // ManagerRow shape: `surface`, radius 12, 6pt apart, divided by space), your row on your
-        // tint with its 1.5pt ring and your name bold (shading B, S-10: no "(you)").
+        // Game Night (W4): the order is Standings' ManagerRow tiles on the page (`surface`, radius
+        // 12, 6pt apart, divided by space), your row tinted and ringed, your name bold (shading B,
+        // S-10: no "(you)").
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text variant="tag" tone="secondary">Draft order</Text>
-            {orderWasSetLine(data.finalizeAt) ? <Text variant="caption" tone="secondary">{orderWasSetLine(data.finalizeAt)}</Text> : null}
+            {orderSetLine(orderWasSetLine(data.finalizeAt), draftDate) ? <Text variant="caption" tone="secondary">{orderSetLine(orderWasSetLine(data.finalizeAt), draftDate)}</Text> : null}
             {seat > 0 ? (
               <Text variant="callout" style={{ color: colors.youText, fontWeight: '700' }}>
                 {`You pick ${ordinal(seat)}`}
@@ -70,17 +67,10 @@ export function DraftLobby({ data, myUserId, draftDate, pickSeconds, rounds, now
             ) : null}
           </View>
           <View style={styles.order}>
-            {order.map((id, i) => {
-              const you = id === myUserId;
-              return (
-                <View key={id} style={[styles.orderRow, { backgroundColor: colors.surface }]} accessible accessibilityLabel={`${i + 1}, ${nameOf(id)}${youA11y(you)}`}>
-                  {you ? <View testID="lobby-order-you" pointerEvents="none" style={[styles.youOverlay, { backgroundColor: colors.youTint, borderColor: colors.you }]} /> : null}
-                  <Text variant="score.sm" color={you ? colors.text : colors.text2} style={styles.seatNo}>{i + 1}</Text>
-                  <Avatar name={nameOf(id)} size={32} tone={you ? 'you' : 'neutral'} />
-                  <Text variant="body" numberOfLines={2} style={[styles.name, yourNameStyle(you)]}>{nameOf(id)}</Text>
-                </View>
-              );
-            })}
+            {/* Standings' ManagerRow itself, its order kind (the seat, the avatar, the name). */}
+            {order.map((id, i) => (
+              <ManagerRow key={id} kind="order" rank={i + 1} name={nameOf(id)} isYou={id === myUserId} />
+            ))}
           </View>
         </View>
       )}
@@ -97,9 +87,4 @@ const styles = StyleSheet.create({
   section: { gap: space[4] },
   sectionHead: { gap: space[2] },
   order: { gap: MANAGER_ROW_GAP },
-  // ManagerRow's tile (W4 Home's 4pt scale): 12 around, 56 tall, radius 12.
-  orderRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56, paddingVertical: space[4], paddingHorizontal: space[4], borderRadius: radius.row, overflow: 'hidden' },
-  youOverlay: { ...StyleSheet.absoluteFillObject, borderRadius: radius.row, borderWidth: YOU_RING },
-  seatNo: { width: 22, fontVariant: ['tabular-nums'] },
-  name: { flex: 1, minWidth: 0 },
 });

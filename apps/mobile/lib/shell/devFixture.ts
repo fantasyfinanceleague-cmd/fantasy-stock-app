@@ -166,6 +166,9 @@ export function fixtureLeagues(fixture: ShellFixture, renewalCaller: RenewalCall
       draft_date: member ? memberDraft : '2026-10-03T23:00:00Z', // the board's "Draft Sat 7:00 PM" (ET)
       league_start_date: null,
       current_week: 1,
+      // The board's at-risk sample (autoStartFixture PLAYOFF_8_OF_7: "8 playoff teams, but 7
+      // teams are in"): the lobby's stepper reads this, so it says 8 too (W4 Draft gate).
+      playoff_teams: 8,
       ...memberOver,
     }),
     league({

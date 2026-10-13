@@ -2,19 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "fd22943a98c1787c9167eefe959a8caaeccec578",
-    "commitShort": "fd22943a",
+    "commit": "7704861465b376c737d84684ac99f49c4b513be9",
+    "commitShort": "77048614",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/components/game/DraftBoard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/DraftLobby.tsx"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/components/game/DraftRoom.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/DraftTile.tsx"
+        "path": "apps/mobile/components/sp/gn/ManagerRow.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/autoStartFixture.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/draftBoardLayout.ts"
       },
       {
         "code": "M",
@@ -22,19 +38,35 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
+        "path": "apps/mobile/lib/game/draftLobby.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-your-turn-card.test.ts"
+        "path": "apps/mobile/lib/game/seamCalls.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamFixtures.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/seamRoom.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/shell/devFixture.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/gn-w4-draft.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/manager-row.test.ts"
       }
     ],
-    "timestamp": "2026-10-13T20:47:23Z",
-    "sourceHash": "sha256:14feccaefff71fe444d5577231a3709f62bd8153efdb116f1c996722db27a54e",
+    "timestamp": "2026-10-13T20:47:25Z",
+    "sourceHash": "sha256:9769ab49c2d7e3a15c540556c2adf68742c879d918b316c348cf2123adcdba6d",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -16054,9 +16086,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/components/game/DraftRoom.tsx:204",
-        "apps/mobile/components/game/DraftRoom.tsx:228",
-        "apps/mobile/components/game/DraftRoom.tsx:273"
+        "apps/mobile/components/game/DraftRoom.tsx:211",
+        "apps/mobile/components/game/DraftRoom.tsx:235",
+        "apps/mobile/components/game/DraftRoom.tsx:280"
       ],
       "via": [
         "seamInvoke"
@@ -19809,9 +19841,9 @@
       "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
       "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
       "apps/mobile/components/TradeModal.tsx:90 -> quote",
-      "apps/mobile/components/game/DraftRoom.tsx:204 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:228 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:273 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:211 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:235 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:280 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",

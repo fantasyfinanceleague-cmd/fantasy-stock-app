@@ -21,7 +21,7 @@ export async function seamRpc(name: string, args: Record<string, unknown>) {
   if (SEAM_ON) {
     // DRAFT_ROOM_FIXTURE=loading: the room's clock read never answers, so its skeleton stays up for the capture.
     if (name === 'get_draft_clock' && draftRoomClockRead(roomVariant) === 'pending') return new Promise<never>(() => {});
-    const f = fixtureFor(name, args, roomVariant);
+    const f = fixtureFor(name, args, roomVariant, process.env.EXPO_PUBLIC_DRAFT_START_FIXTURE);
     // A renewal adds Season 2 to the fixture league list, as the real list would.
     if (f && name === 'renew_league') markFixtureRenewed();
     // An answer moves the fixture roster's caller, as the real roster would.

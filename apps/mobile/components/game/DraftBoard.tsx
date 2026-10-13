@@ -10,7 +10,7 @@ import { useMotion } from '@/components/sp/motion';
 import { DraftTile } from '@/components/sp/gn';
 import type { Category } from '@/components/sp/logic/gameNight';
 import { pickRowView } from '@/lib/game/draftRoom';
-import { BOARD_GAP, COLUMN_PAD, boardColumns, boardFirstName, boardLayout, scrollXForColumn, tileHeight } from '@/lib/game/draftBoardLayout';
+import { BOARD_GAP, COLUMN_PAD, boardColumns, boardFirstName, boardLayout, headerNamePt, headerNameWidth, scrollXForColumn, tileHeight } from '@/lib/game/draftBoardLayout';
 
 // W4 Draft, Game Night (§9C; board #call-game-night, "Draft room, on the clock"). The snake
 // board: one column per manager (the seats), each headed by the manager's avatar and first
@@ -46,7 +46,8 @@ export function DraftBoard({ order, rounds, picks, onClockPick, clock, names, my
   // The gutters are the host's (20 on each side); onLayout replaces the estimate.
   const [width, setWidth] = useState(windowWidth - 2 * space[6]);
   // The outer columns' pads reach into the gutter, so the tiles' edges line up with the cards'.
-  const layout = boardLayout({ columns: order.length, available: width + 2 * COLUMN_PAD, fontScale });
+  const nameWidth = useMemo(() => headerNameWidth(order.map((m) => names[m]?.name ?? ''), fontScale), [order, names, fontScale]);
+  const layout = boardLayout({ columns: order.length, available: width + 2 * COLUMN_PAD, fontScale, nameWidth });
   const height = tileHeight(fontScale);
   const columns = useMemo(() => boardColumns(order, rounds, picks, onClockPick), [order, rounds, picks, onClockPick]);
   const onClockColumn = columns.findIndex((col) => col.some((c) => c.onClock));
@@ -82,12 +83,14 @@ export function DraftBoard({ order, rounds, picks, onClockPick, clock, names, my
                 <View style={styles.avatarBox}>
                   <Avatar name={name} size={AVATAR} tone={you ? 'you' : 'opp'} ring={you} />
                 </View>
+                {/* 11pt (the board frame's), sized here (headerNamePt: never under 11, then the
+                    ellipsis); already scaled, so the system doesn't scale it again. */}
                 <Text
                   variant="caption"
                   color={you ? colors.text : colors.text2}
                   numberOfLines={1}
-                  maxFontSizeMultiplier={1.2}
-                  style={[styles.name, you ? styles.yourName : null]}
+                  allowFontScaling={false}
+                  style={[styles.name, { fontSize: headerNamePt(name, layout.columnWidth, fontScale), lineHeight: Math.ceil(headerNamePt(name, layout.columnWidth, fontScale) * 1.3) }, you ? styles.yourName : null]}
                 >
                   {boardFirstName(name)}
                 </Text>
@@ -128,7 +131,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.tile + COLUMN_PAD,
   },
   avatarBox: { height: AVATAR + 2 * (AVATAR_RING + AVATAR_RING_GAP), alignItems: 'center', justifyContent: 'center' },
-  head: { alignItems: 'center', gap: 3, paddingTop: 2, paddingBottom: 2 },
+  // The name may use the column's full width (its pads included): -COLUMN_PAD each side.
+  head: { alignItems: 'center', gap: 3, paddingTop: 2, paddingBottom: 2, marginHorizontal: -COLUMN_PAD },
   name: { textAlign: 'center', alignSelf: 'stretch' },
   yourName: { fontWeight: '800' },
 });

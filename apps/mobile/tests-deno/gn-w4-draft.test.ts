@@ -181,14 +181,14 @@ Deno.test('the new seam variants parse and draw their states', () => {
   assertEquals(new Date(String(draftRoomClock('auto_picking', 0).deadline_at)).getTime() < 0, true);
 });
 
-Deno.test('the stress draft: 12 seats of 20-character names, your turn at pick 23', () => {
-  assertEquals(STRESS_SEATS.length, 12);
+Deno.test('the stress draft: 16 seats (max_teams) of 20-character names, your turn at pick 31', () => {
+  assertEquals(STRESS_SEATS.length, 16);
   for (const s of STRESS_SEATS) assertEquals(s.name.length, 20, s.name);
   const order = STRESS_SEATS.map((s) => s.id);
-  assertEquals(draftRoomPicks('stress').length, 22);
-  assertEquals(managerAtPick(23, order), '__me__');
-  assert(draftRoomPicks('stress').some((p) => p.symbol.length === 5));
-  assert(SOURCES['lib/game/seamFixtures.ts'].includes("case 'get_draft_order': return { data: fixtureDraftRoom(roomVariant).order, error: null };"));
+  assertEquals(draftRoomPicks('stress').length, 30);
+  assertEquals(managerAtPick(31, order), '__me__');
+  for (const t of ['GOOGL', 'CMCSA']) assert(draftRoomPicks('stress').some((p) => p.symbol === t), t);
+  assert(SOURCES['lib/game/seamFixtures.ts'].includes("case 'get_draft_order': return { data: fixtureDraftRoom(roomVariant, draftStartFixture).order, error: null };"));
 });
 
 // ── Nothing tappable does nothing ────────────────────────────────────────────────
@@ -257,7 +257,7 @@ Deno.test('keepDots: no line starts with "·"; short segments stay whole; long o
 
 Deno.test('every "·" line the draft surfaces draw goes through keepDots (source guard)', () => {
   const room = SOURCES['components/game/DraftRoom.tsx'];
-  for (const n of ['{keepDots(roundPickLine(', '{keepDots(afterPickLine(', 'caption={keepDots(caption)}', '{keepDots(`· ${row.label}`)}']) assert(room.includes(n), n);
+  for (const n of ['{keepDots(roundLine)}', '{keepDots(afterPickLine(', 'caption={keepDots(caption)}', '{keepDots(`· ${row.label}`)}']) assert(room.includes(n), n);
   assert(SOURCES['components/game/QueueEditor.tsx'].includes('{keepDots(`Your queue · ${queue.length} of ${QUEUE_MAX}`)}'));
   assert(SOURCES['components/game/DraftLobby.tsx'].includes("{keepDots('Draft order · waiting')}"));
   assert(SOURCES['components/game/DraftComplete.tsx'].includes('{keepDots(rosterPickCaption(r))}'));
@@ -294,4 +294,120 @@ Deno.test('the clock card\'s headline outranks its other lines at every text siz
   const lines = card.match(/<Text variant="(callout|caption)"[^>]*>/g) ?? [];
   assertEquals(lines.length, 6);
   for (const l of lines) assert(l.includes('maxFontSizeMultiplier={CARD_LINE_MAX_SCALE}'), l);
+});
+
+// ── W4 gate BLOCK pass (2026-10-13) ──────────────────────────────────────────────
+
+import { draftOffered } from '../lib/game/draftClockCard.ts';
+
+Deno.test('Draft and the search are offered only on YOUR running clock, never auto-picking or stalled (P1)', () => {
+  assertEquals(draftOffered('yours'), true);
+  assertEquals(draftOffered('auto_picking'), false);
+  assertEquals(draftOffered('stalled'), false);
+  assertEquals(draftOffered('theirs'), false);
+  const room = strip(SOURCES['components/game/DraftRoom.tsx']);
+  assert(room.includes('{draftOffered(kind) ? ('));
+  assert(!room.includes('{isMyTurn ? (\n        <Card style={[styles.card, styles.searchCard]}>'));
+  // A selection left over when the running clock ends is dropped, never a stale Draft later.
+  const at = room.indexOf('if (myTurnPick !== null) return;');
+  assert(at > 0);
+  assert(room.slice(at, at + 120).includes('setSelected(null);'));
+});
+
+Deno.test('"60-second picks" sits in the text column beside the ring, and VoiceOver reads every line', () => {
+  const room = SOURCES['components/game/DraftRoom.tsx'];
+  const col = room.slice(room.indexOf('<View style={[styles.clockText'), room.indexOf('{/* The board\'s "After the pick" state'));
+  assert(col.includes('{pickSecondsLine}</Text>'));
+  assert(room.includes('accessibilityLabel={[headline, clockLabel, roundLine, pickSecondsLine].filter(Boolean).join(\', \')}'));
+});
+
+import { HEADER_NAME_PT, headerNamePt, headerNameWidth } from '../lib/game/draftBoardLayout.ts';
+import { estimateNameWidth } from '../components/sp/logic/gameNight.ts';
+
+Deno.test('board header names: 11pt, shrunk never under 11, then the ellipsis; a scrolling board widens to its names', () => {
+  assertEquals(HEADER_NAME_PT, 11);
+  // Fits: its full size (and Dynamic Type to the tile's cap).
+  assertEquals(headerNamePt('Paolo M.', 60, 1), 11);
+  assertEquals(headerNamePt('Paolo M.', 200, 2), 11 * 1.2);
+  // Too wide: shrunk toward the column, never under 11.
+  assert(headerNamePt('Bartholomew Ashworth', 30, 1.2) >= 11);
+  assertEquals(headerNamePt('Bartholomew Ashworth', 30, 1), 11);
+  // 16 managers scroll anyway: the columns widen to the widest first name, so "Robertino" fits.
+  const names = STRESS_SEATS.map((s) => s.name);
+  const nameWidth = headerNameWidth(names, 1);
+  const l = boardLayout({ columns: 16, available: 354, fontScale: 1, nameWidth });
+  assertEquals(l.scrolls, true);
+  // Every first name fits its column at its FULL size (not just at the floor, which a cut name also hits).
+  assert(l.columnWidth >= nameWidth, `${l.columnWidth} < ${nameWidth}`);
+  for (const n of names) assert(estimateNameWidth(boardFirstName(n), 11) <= l.columnWidth, n);
+  // A board that fits keeps its width (names shrink/ellipsize there instead).
+  assertEquals(boardLayout({ columns: 6, available: 354, fontScale: 1, nameWidth: 400 }).columnWidth, 59);
+  const board = SOURCES['components/game/DraftBoard.tsx'];
+  assert(board.includes('fontSize: headerNamePt(name, layout.columnWidth, fontScale)'));
+  assert(board.includes('allowFontScaling={false}'));
+  assert(!board.includes('adjustsFontSizeToFit'));
+});
+
+import { fixtureDraftOrder } from '../lib/game/seamFixtures.ts';
+import { fixtureStartsAtMs } from '../lib/game/autoStartFixture.ts';
+
+Deno.test('the lobby fixtures agree: the order is set only once the room opens, at the draft time − 1h', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+  const now = Date.parse('2026-10-13T16:00:00Z');
+  const open = fixtureDraftOrder(ids, 'room_open', now);
+  assertEquals(open.state, 'finalized');
+  assertEquals(Date.parse(String(open.finalize_at)), (fixtureStartsAtMs('room_open', now) as number) - 3_600_000);
+  assertEquals(open.order?.length, 6);
+  for (const st of ['scheduled', 'at_risk', 'no_date', 'postponed']) {
+    const o = fixtureDraftOrder(ids, st, now);
+    assertEquals(o.state, 'open', st);
+    assertEquals(o.order, null, st);
+  }
+  // ≥ 4 managers: never "waiting for managers" in these.
+  assertEquals(open.waiting_for_members, false);
+  // The room's captures (no start fixture): the order is set.
+  assertEquals(fixtureDraftOrder(ids, null, now).state, 'finalized');
+  // The at-risk stepper agrees with "8 playoff teams, but 7 teams are in".
+  assert(SOURCES['lib/shell/devFixture.ts'].includes('playoff_teams: 8,'));
+});
+
+import { orderSetLine } from '../lib/game/draftLobby.ts';
+
+Deno.test('"Draft order set …, an hour before the draft" hides when there is no draft time (reachable after a postponement)', () => {
+  assertEquals(orderSetLine('Draft order set Tue 3:55 PM ET, an hour before the draft', '2026-10-13T20:55:00Z'), 'Draft order set Tue 3:55 PM ET, an hour before the draft');
+  assertEquals(orderSetLine('Draft order set Tue 3:55 PM ET, an hour before the draft', null), null);
+  assertEquals(orderSetLine(null, '2026-10-13T20:55:00Z'), null);
+  assert(SOURCES['components/game/DraftLobby.tsx'].includes('orderSetLine(orderWasSetLine(data.finalizeAt), draftDate)'));
+});
+
+Deno.test('the lobby order is ManagerRow itself (its order kind), not a hand copy', () => {
+  const lobby = SOURCES['components/game/DraftLobby.tsx'];
+  assert(lobby.includes('<ManagerRow key={id} kind="order" rank={i + 1} name={nameOf(id)} isYou={id === myUserId} />'));
+  assert(!lobby.includes('styles.orderRow'));
+  const row = SOURCES['components/sp/gn/ManagerRow.tsx'];
+  assert(row.includes("if (props.kind === 'order') {"));
+  assert(row.includes('<Text variant="score.md" color={colors.text2} style={styles.rank}>{rank}</Text>'));
+});
+
+Deno.test('someone else\'s last 10 s has a fixture: after your pick, Paolo at 8 s', () => {
+  assertEquals(parseDraftRoomVariant('theirs_last10'), 'theirs_last10');
+  assertEquals(draftRoomPicks('theirs_last10').length, 11);
+  assertEquals(new Date(String(draftRoomClock('theirs_last10', 0).deadline_at)).getTime(), 8_000);
+});
+
+import { managersProgressShown } from '../lib/game/draftLobby.ts';
+
+Deno.test('the waiting card counts managers only toward the minimum ("6 of 4 managers" is hidden)', () => {
+  assertEquals(managersProgressShown(3, 4), true);
+  assertEquals(managersProgressShown(4, 4), false);
+  assertEquals(managersProgressShown(6, 4), false);
+  assert(SOURCES['components/game/DraftLobby.tsx'].includes('{managersProgressShown(data.memberCount, data.minMembers) ? <Text variant="caption" tone="secondary">{managersProgressCaption(data.memberCount, data.minMembers)}</Text> : null}'));
+});
+
+Deno.test('the 90-second clock fixture: 88 s left of a 90 s pick', () => {
+  assertEquals(parseDraftRoomVariant('on_clock_90'), 'on_clock_90');
+  const c = draftRoomClock('on_clock_90', 0);
+  assertEquals(c.pick_seconds, 90);
+  assertEquals(new Date(String(c.deadline_at)).getTime(), 88_000);
+  assertEquals(draftRoomPicks('on_clock_90').length, 10);
 });

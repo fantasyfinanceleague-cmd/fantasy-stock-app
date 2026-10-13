@@ -21,7 +21,7 @@ import { yourTurnKey } from '@/lib/game/yourTurnPush';
 import { QueueEditor } from './QueueEditor';
 import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueueRead';
 import { managerAtPick } from '@/lib/game/draftBoard';
-import { CARD_LINE_MAX_SCALE, clockCardKind, clockRingTone } from '@/lib/game/draftClockCard';
+import { CARD_LINE_MAX_SCALE, clockCardKind, clockRingTone, draftOffered } from '@/lib/game/draftClockCard';
 import { useSymbolCategories } from '@/lib/game/useSymbolCategories';
 import { keepDots } from '@/lib/game/keepDots';
 import { DraftBoard } from '@/components/game/DraftBoard';
@@ -118,6 +118,13 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     return () => sub.remove();
   }, []);
   const myTurnPick = room.status === 'ready' && !draftDone && isMyTurn && (room.clock.kind === 'on_clock' || room.clock.kind === 'last10') ? onClockPick : null;
+  // When your running clock ends (auto-picking, stalled, a pick recorded), the search goes away
+  // with it; a stock left selected must not come back as a stale Draft on your next turn.
+  useEffect(() => {
+    if (myTurnPick !== null) return;
+    setSelected(null);
+    setSearch('');
+  }, [myTurnPick]);
   const turnSignal = useRef(TURN_SIGNAL_START);
   const flash = useSharedValue(0);
   // 1 while the card's text is on-live (navy on the gold). Set only on the UI thread, in
@@ -331,6 +338,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
   const onTheClock = kind === 'yours';
   const clockLabel = pickClockLabel(shownClock);
   const headline = stalled ? (stalled.label ?? '') : shownClock.kind === 'auto_picking' ? 'Auto-picking…' : isMyTurn ? "You're on the clock" : `${nameOf(onClockManager)} is up`;
+  const roundLine = roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks));
+  const pickSecondsLine = `${room.pickSeconds}-second picks`;
 
   return (
     <View style={styles.stack}>
@@ -354,13 +363,15 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
               textAnimatedStyle={onTheClock ? clockInk : undefined}
             />
           ) : null}
-          <View style={[styles.clockText, largeText ? styles.clockTextStacked : null]} accessible accessibilityLabel={[headline, clockLabel].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
+          <View style={[styles.clockText, largeText ? styles.clockTextStacked : null]} accessible accessibilityLabel={[headline, clockLabel, roundLine, pickSecondsLine].filter(Boolean).join(', ')} accessibilityRole={onTheClock ? 'header' : undefined}>
             {onTheClock ? (
               <Text variant="display" numberOfLines={2} style={styles.yourTurnTitle} color={titleRest} animatedStyle={titleInk}>{headline}</Text>
             ) : (
               <Text variant="headline" style={styles.headline}>{headline}</Text>
             )}
-            <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundPickLine(round, rounds, onClockPick, snakeThenPick(room.order, onClockPick, totalPicks)))}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone={isMyTurn ? undefined : 'secondary'} style={isMyTurn ? styles.bold : null} animatedStyle={onTheClock ? bodyInk : undefined}>{keepDots(roundLine)}</Text>
+            {/* In the text column, beside the ring (it sat under the ring on the 17e: W4 gate P3). */}
+            <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{pickSecondsLine}</Text>
           </View>
         </View>
         {/* The board's "After the pick" state (U-09): once you have a recorded pick and are waiting. */}
@@ -370,7 +381,6 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         {!isMyTurn && !lastMine && picksUntilYouLine(picksAway) ? (
           <Text variant="callout" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary">{picksUntilYouLine(picksAway)}</Text>
         ) : null}
-        <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{`${room.pickSeconds}-second picks`}</Text>
         {stalled?.line ? <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary">{stalled.line}</Text> : null}
         {waitingForPrices === onClockPick && !stalled ? <Text variant="caption" maxFontSizeMultiplier={CARD_LINE_MAX_SCALE} tone="secondary" animatedStyle={onTheClock ? captionInk : undefined}>{AUTO_PICK_WAITING_FOR_PRICES}</Text> : null}
       </Card>
@@ -386,7 +396,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
         categories={categories}
       />
 
-      {isMyTurn ? (
+      {/* Only on your RUNNING clock (draftOffered): never while auto-picking or stalled. */}
+      {draftOffered(kind) ? (
         <Card style={[styles.card, styles.searchCard]}>
           <SymbolSearchField
             value={search}

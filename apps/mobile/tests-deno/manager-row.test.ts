@@ -39,7 +39,8 @@ Deno.test('every manager list marks you with the shared row (source guards)', ()
   uses('components/sp/gn/ManagerRow.tsx', 'yourNameStyle(isYou)', 'backgroundColor: colors.youTint', '${youA11y(isYou)}');
   uses('components/game/HistoryList.tsx', "yourRowTint(st.user_id === myUserId, colors.youTint)", 'yourNameStyle(st.user_id === myUserId)', 'youA11y(st.user_id === myUserId)');
   // The lobby's order (W4 Draft) is ManagerRow's tile: your tint overlay and ring, bold name, "you" for VoiceOver.
-  uses('components/game/DraftLobby.tsx', 'backgroundColor: colors.youTint, borderColor: colors.you', 'yourNameStyle(you)', 'youA11y(you)');
+  uses('components/game/DraftLobby.tsx', '<ManagerRow key={id} kind="order" rank={i + 1} name={nameOf(id)} isYou={id === myUserId} />');
+  uses('components/sp/gn/ManagerRow.tsx', '`${rank}, ${name}${youA11y(isYou)}`');
   // Where bold already means something (the winner; "Running back"), the tint alone marks you.
   uses('components/game/BracketView.tsx', 'yourRowTint(mine, colors.youTint)', 'youA11y(mine)', "style={[styles.name, isWinner ? styles.bold : null]}");
   uses('components/game/RenewalRoster.tsx', 'yourRowTint(p.user_id === myUserId, colors.youTint)', 'youA11y(p.user_id === myUserId)');

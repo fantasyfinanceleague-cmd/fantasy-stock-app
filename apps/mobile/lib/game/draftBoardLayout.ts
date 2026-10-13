@@ -8,6 +8,7 @@
  * sideways, and it opens on the pick that's on the clock. Pure, so tests-deno pins it.
  */
 import { boardRows, type BoardCell } from './draftBoard';
+import { estimateNameWidth } from '../../components/sp/logic/gameNight';
 
 /** The space between tiles, both ways (the board's `gap: 4`). */
 export const BOARD_GAP = 4;
@@ -29,12 +30,42 @@ export interface BoardLayout {
   scrolls: boolean;
 }
 
-/** `available` is the width the columns may fill, their outer pads included. */
-export function boardLayout(opts: { columns: number; available: number; fontScale: number }): BoardLayout {
+/** The column header's name: the first name, as the board draws it ("Paolo"). */
+export function boardFirstName(name: string | null | undefined): string {
+  return (name ?? '').trim().split(/\s+/)[0] ?? '';
+}
+
+/** The header's first name: the board frame's 11pt, growing with Dynamic Type to the tile's cap. */
+export const HEADER_NAME_PT = 11;
+
+/** The widest header name's width at its full size (`estimateNameWidth`, conservative: bold
+ * Archivo, so a medium-weight name always fits where the estimate does). */
+export function headerNameWidth(names: readonly string[], fontScale: number): number {
+  const pt = HEADER_NAME_PT * Math.min(Math.max(fontScale, 1), TILE_MAX_SCALE);
+  return names.reduce((w, n) => Math.max(w, estimateNameWidth(boardFirstName(n), pt)), 0);
+}
+
+/** A header name's size in its column: its full size when it fits, else shrunk to fit, but
+ * never under 11pt (past that the ellipsis takes it). Computed here because iOS's
+ * adjustsFontSizeToFit goes BELOW minimumFontScale when the text still doesn't fit
+ * (gameNight.ts, stackedNameCap), so it can't hold a floor. */
+export function headerNamePt(name: string, columnWidth: number, fontScale: number): number {
+  const full = HEADER_NAME_PT * Math.min(Math.max(fontScale, 1), TILE_MAX_SCALE);
+  const w = estimateNameWidth(boardFirstName(name), full);
+  if (w <= columnWidth || w === 0) return full;
+  return Math.max(HEADER_NAME_PT, full * (columnWidth / w));
+}
+
+/** `available` is the width the columns may fill, their outer pads included. `nameWidth`
+ * (headerNameWidth): a board that scrolls anyway widens its columns to its widest first name,
+ * so no header is cut ("Robertino", not "Robert…"); a board that fits keeps its width and
+ * lets a long name shrink (to 11pt) and then ellipsize. */
+export function boardLayout(opts: { columns: number; available: number; fontScale: number; nameWidth?: number }): BoardLayout {
   const n = Math.max(1, Math.floor(opts.columns));
   const floor = TILE_MIN * Math.min(Math.max(opts.fontScale, 1), TILE_MAX_SCALE);
   const fit = opts.available / n - 2 * COLUMN_PAD;
-  const tileWidth = fit >= floor ? fit : floor;
+  const named = Math.max(floor, (opts.nameWidth ?? 0) - 2 * COLUMN_PAD);
+  const tileWidth = fit >= floor ? fit : named;
   const columnWidth = tileWidth + 2 * COLUMN_PAD;
   return { columnWidth, tileWidth, contentWidth: columnWidth * n, scrolls: fit < floor };
 }
@@ -66,9 +97,4 @@ export function scrollXForColumn(column: number, layout: BoardLayout, viewport: 
   if (!layout.scrolls || column < 0) return 0;
   const centre = column * layout.columnWidth + layout.columnWidth / 2 - viewport / 2;
   return Math.max(0, Math.min(centre, layout.contentWidth - viewport));
-}
-
-/** The column header's name: the first name, as the board draws it ("Paolo"). */
-export function boardFirstName(name: string | null | undefined): string {
-  return (name ?? '').trim().split(/\s+/)[0] ?? '';
 }

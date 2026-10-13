@@ -22,25 +22,44 @@ import { yourNameStyle, youA11y } from '@/lib/game/managerRow';
 export const MANAGER_ROW_GAP = 6;
 
 
-export interface ManagerRowProps {
+interface ManagerRowBase {
   rank: number;
   /** Places moved since last week (+ up, − down, 0/null unchanged). */
   delta?: number | null;
   name: string;
   avatarUri?: string | null;
   isYou?: boolean;
-  /** "4–2". */
-  record: string;
-  seasonGain: number;
   onPress?: () => void;
   /** Home's Standings excerpt (the board's StandingsExcerpt): no movement column ("movement
    * arrows on League only", S-10), a 24pt avatar and a shorter tile. Same row otherwise. */
   excerpt?: boolean;
 }
 
-export function ManagerRow({ rank, delta, name, avatarUri, isYou = false, record, seasonGain, onPress, excerpt = false }: ManagerRowProps) {
+/** A Standings row (the default) carries the record and the season gain; the draft lobby's
+ * ORDER row (`kind: 'order'`, W4 Draft gate: the same row, not a hand copy) is the seat, the
+ * avatar and the name, and nothing to rank by yet: no movement, record or gain. */
+export type ManagerRowProps = ManagerRowBase & (
+  | { kind?: 'standings'; /** "4–2". */ record: string; seasonGain: number }
+  | { kind: 'order'; record?: never; seasonGain?: never }
+);
+
+export function ManagerRow(props: ManagerRowProps) {
+  const { rank, delta, name, avatarUri, isYou = false, onPress, excerpt = false } = props;
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
+  if (props.kind === 'order') {
+    // The seat in text2 (seat 1 leads nothing), the 32pt avatar, the name; your row as ever.
+    const tile = [styles.tile, { backgroundColor: colors.surface }];
+    return (
+      <View style={tile} accessible accessibilityLabel={`${rank}, ${name}${youA11y(isYou)}`}>
+        {isYou ? <View testID="manager-row-you" pointerEvents="none" style={[styles.youOverlay, { backgroundColor: colors.youTint, borderColor: colors.you }]} /> : null}
+        <Text variant="score.md" color={colors.text2} style={styles.rank}>{rank}</Text>
+        <Avatar name={name} uri={avatarUri} size={32} tone={isYou ? 'you' : 'neutral'} />
+        <Text variant="body" numberOfLines={2} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
+      </View>
+    );
+  }
+  const { record, seasonGain } = props;
   const stacked = excerpt && excerptStacks(fontScale);
   const move = movement(delta);
   const gainText = formatMoney(seasonGain, { sign: 'always' });
