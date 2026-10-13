@@ -23,15 +23,19 @@ Deno.test('large text starts at the largest standard size; the medal disc grows 
 });
 
 Deno.test('each screen that broke stacks at large text (source guards)', () => {
+  // W4: Standings and History decide ONE shape per list (leagueView managerListStacks: the
+  // large sizes, or a ≥ $1M gain leaving the name no room) and the ManagerRow stacks on it.
   const standings = SOURCES['components/game/StandingsTable.tsx'];
-  assert(standings.includes('const stacked = isLargeText(fontScale);'));
-  assert(standings.includes('{stacked ? <View style={styles.statsLine}>{stats}</View> : null}'));
+  assert(standings.includes('const stacked = managerListStacks({ rowWidth, fontScale, move: showMove, rows: figures, leading: rankWidth });'));
+  assert(standings.includes('stacked={layout.stacked}'));
   // The medal disc grows with its numeral; one disc for Standings and History (MedalDisc, GS-8).
   assert(standings.includes('const disc = useMedalDiscSize();'));
   assert(SOURCES['components/game/MedalDisc.tsx'].includes('return scaledBadge(20, fontScale);'));
   const history = SOURCES['components/game/HistoryList.tsx'];
-  assert(history.includes('const largeText = useLargeText();'));
-  assert(history.includes('<View style={styles.statsLine}>'));
+  assert(history.includes('const layout = useStandingsLayout(figures, false, table.medals);'));
+  assert(history.includes('stacked={layout.stacked}'));
+  const row = SOURCES['components/sp/gn/ManagerRow.tsx'];
+  assert(row.includes('const leagueStacked = !excerpt && !!stackedProp;'));
   const schedule = SOURCES['components/game/ScheduleList.tsx'];
   assert(schedule.includes('largeText ? styles.rowWrap : null'));
   assert(schedule.includes("resultLine: { width: '100%' },"));

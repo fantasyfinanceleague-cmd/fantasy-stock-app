@@ -123,13 +123,16 @@ function Stepper({ label, value, min, max, onChange, unit, sub }: { label: strin
 }
 
 function Row({ label, value, sub, onPress }: { label: string; value: string; sub?: string; onPress?: () => void }) {
+  // GS-13: the sub-line goes under the LABEL, full width (it indented under the value column).
   const body = (
-    <View style={styles.row}>
-      <Text variant="callout">{label}</Text>
-      <View style={styles.value}>
-        <Text variant="callout" tone="secondary">{value}</Text>
-        {sub ? <Text variant="caption" tone="secondary">{sub}</Text> : null}
+    <View style={styles.rowStack}>
+      <View style={styles.row}>
+        <Text variant="callout">{label}</Text>
+        <View style={styles.value}>
+          <Text variant="callout" tone="secondary">{value}</Text>
+        </View>
       </View>
+      {sub ? <Text variant="caption" tone="secondary">{sub}</Text> : null}
     </View>
   );
   return onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}, ${value}. Change`} style={{ minHeight: 44, justifyContent: 'center' }}>{body}</Pressable> : body;
@@ -140,7 +143,8 @@ const styles = StyleSheet.create({
   // text sat flush on the card edge (final sweep S-1, seen in the capture pass).
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 44, paddingVertical: space[1] },
+  rowStack: { gap: space[1], paddingVertical: space[1] },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: space[3], minHeight: 36 },
   value: { alignItems: 'flex-end', flexShrink: 1 },
   picker: { gap: space[2], paddingVertical: space[2] },
   stepRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },

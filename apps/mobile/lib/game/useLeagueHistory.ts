@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { seamRpc } from './seamCalls';
+import { LEAGUE_FIXTURE_VARIANT } from './devSeam';
 import type { HistoryRow } from './history';
 
 export interface LeagueHistoryState {
@@ -12,14 +13,17 @@ export interface LeagueHistoryState {
   rows: HistoryRow[];
 }
 
-export function useLeagueHistory(leagueId: string | null, enabled: boolean): LeagueHistoryState {
+/** `reloadKey`: bump it to read again (History's Try again). */
+export function useLeagueHistory(leagueId: string | null, enabled: boolean, reloadKey = 0): LeagueHistoryState {
   const [state, setState] = useState<LeagueHistoryState>({ status: 'idle', rows: [] });
   useEffect(() => {
     if (!enabled || !leagueId) return;
     let cancelled = false;
     setState({ status: 'loading', rows: [] });
     (async () => {
-      const { data, error } = await seamRpc('get_league_history', { p_league_id: leagueId });
+      const { data, error } = LEAGUE_FIXTURE_VARIANT === 'history_error'
+        ? { data: null, error: { message: 'fixture: history read failed' } }
+        : await seamRpc('get_league_history', { p_league_id: leagueId });
       if (cancelled) return;
       if (error || !data) {
         console.warn('[game:history] get_league_history failed', error?.message);
@@ -31,6 +35,6 @@ export function useLeagueHistory(leagueId: string | null, enabled: boolean): Lea
     return () => {
       cancelled = true;
     };
-  }, [leagueId, enabled]);
+  }, [leagueId, enabled, reloadKey]);
   return state;
 }

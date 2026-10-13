@@ -84,7 +84,9 @@ Deno.test('the three screens read the one order (source guards)', () => {
   assert(league.includes('playoffs={seasonPlayoffs.status === \'ready\' ? seasonPlayoffs.byLeague : null}'));
   const history = SOURCES['components/game/HistoryList.tsx'];
   assert(history.includes('historyStandings(s, playoffs?.get(s.leagueId) ?? null)'));
-  assert(history.includes('<MedalDisc place={place} size={disc} />'));
+  // W4: History's rows are the one ManagerRow, its medal disc in the rank cell (MedalDisc).
+  assert(history.includes('medal={table.medals}'));
+  assert(SOURCES['components/sp/gn/ManagerRow.tsx'].includes('<MedalDisc place={rank} size={disc} />'));
   const card = SOURCES['components/home/SeasonCompleteCard.tsx'];
   assert(card.includes('const finalPlace = seasonCompletePlace({'));
   assert(!card.includes('placeLabel(finalRank)'), 'the headline no longer reads the regular-season rank');
@@ -95,10 +97,14 @@ Deno.test('the three screens read the one order (source guards)', () => {
 Deno.test('GS-8b: History labels the playoff order the way Standings does (source guard)', () => {
   const history = SOURCES['components/game/HistoryList.tsx'];
   // The same subtitle key as Standings' header, shown only when the playoffs ordered the season.
-  assert(history.includes('{s.table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}'));
-  // The podium tags under the name, in both the regular and the large-text layout.
-  assertEquals((history.match(/\{tag \? <Text variant="caption" tone="secondary">\{tag\}<\/Text> : null\}/g) ?? []).length, 2);
+  // (W4: inside each season's SeasonBlock, which takes the season's table as `table`.)
+  assert(history.includes('{table.medals ? <Text variant="caption" tone="secondary">{GAME_COPY.finalStandingsSubtitle}</Text> : null}'));
+  // The podium tags under the name (ManagerRow's `tag`), in both the one-line and the stacked layout.
+  assert(history.includes('tag={tag}'));
+  const row = SOURCES['components/sp/gn/ManagerRow.tsx'];
+  assert(row.includes('{tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}'));
+  assert(row.includes('{tag ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={textCap}>{tag}</Text> : null}'));
   // No new copy: History's only strings for this are Standings' keys and the lib's tags.
   assert(!history.includes("'After the playoffs'") && !history.includes('"After the playoffs"'));
-  assert(SOURCES['components/game/StandingsTable.tsx'].includes('{r.tag ? <Text variant="caption" tone="secondary">{r.tag}</Text> : null}'));
+  assert(SOURCES['components/game/StandingsTable.tsx'].includes("tag={r.tag ?? (r.isBot ? 'Bot' : null)}"));
 });

@@ -19,7 +19,8 @@ export interface SeasonPlayoffsState {
   byLeague: Map<string, PodiumGameRow[]>;
 }
 
-export function useSeasonPlayoffs(leagueId: string | null, enabled: boolean): SeasonPlayoffsState {
+/** `reloadKey`: bump it to read again (History's Try again re-reads both). */
+export function useSeasonPlayoffs(leagueId: string | null, enabled: boolean, reloadKey = 0): SeasonPlayoffsState {
   const [state, setState] = useState<SeasonPlayoffsState>({ status: 'idle', byLeague: new Map() });
   useEffect(() => {
     if (!enabled || !leagueId) return;
@@ -45,6 +46,6 @@ export function useSeasonPlayoffs(leagueId: string | null, enabled: boolean): Se
     return () => {
       cancelled = true;
     };
-  }, [leagueId, enabled]);
+  }, [leagueId, enabled, reloadKey]);
   return state;
 }

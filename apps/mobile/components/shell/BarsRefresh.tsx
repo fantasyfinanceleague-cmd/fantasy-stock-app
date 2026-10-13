@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Platform, RefreshControl, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { useFixtureScrollEnd } from '@/lib/shell/fixtureRoute';
 import { ScrollFoldContext, useScrollFoldSource } from './scrollFold';
 import Animated, {
   cancelAnimation,
@@ -110,6 +111,8 @@ function IosBarsRefresh({
   const armed = useSharedValue(false);
   const pulse = [useSharedValue(1), useSharedValue(1), useSharedValue(1)] as const;
   const scrollRef = useRef<Animated.ScrollView>(null);
+  // DEV captures only (lib/shell/fixtureRoute.ts).
+  useFixtureScrollEnd(scrollRef as never);
 
   const armHaptic = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 

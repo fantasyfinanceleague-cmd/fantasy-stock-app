@@ -1,17 +1,21 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useRef } from 'react';
-import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Card } from '@/components/sp/Card';
+import { useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 import { Text } from '@/components/sp/Text';
-import { Icon } from '@/components/sp/Icon';
-import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
-import { radius, space } from '@/constants/tokens';
-import { moveA11y, shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
+import { ManagerRow, MANAGER_ROW_GAP } from '@/components/sp/gn';
+import { space } from '@/constants/tokens';
+import { shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
-import { yourNameStyle, yourRowTint, youA11y } from '@/lib/game/managerRow';
-import { isLargeText } from '@/components/sp/logic/largeText';
-import { MEDAL, MedalDisc, useMedalDiscSize } from '@/components/game/MedalDisc';
+import { useMedalDiscSize } from '@/components/game/MedalDisc';
+import { MOVE_CELL, RANK_CELL, RECORD_PT, ROW_GAP, ROW_PAD, figureWidth, managerListStacks, stackedRowTextCap } from '@/lib/game/leagueView';
+
+// League › Standings in full on Game Night (§9C; the board's "League › Standings, in full";
+// Giorgio, on 1.2.0's table: "not even good like divide like dividing the columns and rows").
+// Each manager a `surface` tile (ManagerRow), 6pt apart, divided by space, never by rules;
+// your row tinted and ringed, your name bold, no "(you)" (S-10). Over the tiles, the
+// board's column head: "#", "Through Week N" (hidden at N = 0), "W–L", "Season gain".
+// The order is the server's (league_standings_ranked); nothing here re-sorts it.
 
 export interface StandingsTableProps {
   rows: StandingsRow[];
@@ -25,70 +29,65 @@ export interface StandingsTableProps {
   header?: { title: string; subtitle: string };
   /** The ▲/▼ column. Off for final standings: the board's frame has none (GS-4/GS-5). */
   showMove?: boolean;
+  /** The column head's "Through Week N", or null while nothing is scored (leagueView). */
+  throughLabel?: string | null;
+}
+
+/** The list's one shape (every row stacks or none does) and its caps, for the table and the
+ * pinned copy of your row alike. */
+export interface StandingsLayout {
+  stacked: boolean;
+  textCap: number;
+  recordWidth: number;
+  rankWidth: number;
+}
+
+export function useStandingsLayout(rows: readonly { record: string; seasonGain: number }[], showMove: boolean, medals: boolean): StandingsLayout {
+  const { width, fontScale } = useWindowDimensions();
+  const disc = useMedalDiscSize();
+  return useMemo(() => {
+    const rowWidth = width - space[6] * 2;
+    const rankWidth = medals ? Math.max(RANK_CELL, disc) : RANK_CELL;
+    const figures = rows.map((r) => ({ record: r.record, gainText: formatMoney(r.seasonGain, { sign: 'always' }) }));
+    const stacked = managerListStacks({ rowWidth, fontScale, move: showMove, rows: figures, leading: rankWidth });
+    // One cap for the list: the smallest row's fitted gain, so every name is the same size.
+    const textCap = Math.min(1.3, ...figures.map((f) => stackedRowTextCap({ gainText: f.gainText, fontScale, rowWidth, move: showMove, leading: rankWidth })));
+    const recordWidth = Math.ceil(Math.max(0, ...rows.map((r) => figureWidth(r.record, RECORD_PT * Math.max(1, fontScale)))));
+    return { stacked, textCap, recordWidth, rankWidth };
+  }, [rows, showMove, medals, width, fontScale, disc]);
 }
 
 /** One standings row (also the pinned copy of yours: the SAME component). */
-export function StandingsRowView({ r, seasonComplete, showMove = true }: { r: StandingsRow; seasonComplete: boolean; showMove?: boolean }) {
-  const { colors } = useTheme();
-  const { fontScale } = useWindowDimensions();
-  // Large text: the name gets the row's width and the record and gain go under it (one
-  // line, the name squeezed to a letter per line, capture pass 2026-10-08).
-  const stacked = isLargeText(fontScale);
-  const disc = useMedalDiscSize();
-  const medal = seasonComplete ? MEDAL[r.rank] : undefined;
-  const move = moveA11y(r.move);
-  const stats = (
-    <>
-      <Text variant="caption" tone="secondary" style={stacked ? null : styles.record}>{r.record}</Text>
-      <Text variant="callout" style={[stacked ? null : styles.gain, { color: r.seasonGain > 0 ? colors.gain : r.seasonGain < 0 ? colors.loss : colors.text }]}>{formatMoney(r.seasonGain, { sign: 'always' })}</Text>
-    </>
-  );
+export function StandingsRowView({ r, seasonComplete, showMove = true, layout }: { r: StandingsRow; seasonComplete: boolean; showMove?: boolean; layout: StandingsLayout }) {
+  // VoiceOver hears the move as the row's own label says it (ManagerRow: "up 2" / "down 3").
   return (
-    <View style={[styles.row, yourRowTint(r.isYou, colors.youTint, 0)]} accessible accessibilityLabel={`${medal ? `${medal.label}, ` : ''}${r.rank}, ${r.name}${youA11y(r.isYou)}${r.tag ? `, ${r.tag}` : ''}, ${r.record}, season gain ${formatMoney(r.seasonGain, { sign: 'always' })}${move ? `, ${move}` : ''}`}>
-      {/* G-6: one fixed-width rank cell, so medal rows 1–3 line up with 4 onwards. */}
-      <View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>
-        {medal ? (
-          <MedalDisc place={r.rank} size={disc} />
-        ) : (
-          <Text variant="callout" style={styles.rank}>{r.rank}</Text>
-        )}
-      </View>
-      {showMove ? <View style={styles.moveCell}>
-        {r.move === null ? null : r.move > 0 ? (
-          <View style={styles.moveRow}>
-            <Icon name="chevronUp" size="caption" tone="gain" />
-            <Text variant="caption" style={{ color: colors.gain }}>{r.move}</Text>
-          </View>
-        ) : r.move < 0 ? (
-          <View style={styles.moveRow}>
-            <Icon name="chevronDown" size="caption" tone="loss" />
-            <Text variant="caption" style={{ color: colors.loss }}>{Math.abs(r.move)}</Text>
-          </View>
-        ) : (
-          <Text variant="caption" tone="secondary">–</Text>
-        )}
-      </View> : null}
-      <View style={styles.name}>
-        <Text variant="callout" style={yourNameStyle(r.isYou)}>{r.name}</Text>
-        {r.tag ? <Text variant="caption" tone="secondary">{r.tag}</Text> : null}
-        {r.isBot ? <Text variant="caption" tone="secondary">Bot</Text> : null}
-        {stacked ? <View style={styles.statsLine}>{stats}</View> : null}
-      </View>
-      {stacked ? null : stats}
-    </View>
+    <ManagerRow
+      rank={r.rank}
+      delta={showMove ? r.move : null}
+      showMove={showMove}
+      name={r.name}
+      isYou={r.isYou}
+      record={r.record}
+      seasonGain={r.seasonGain}
+      medal={seasonComplete}
+      // GS-4's "Champion" / "Runner-up" under the name; "Bot" for a test bot (as before).
+      tag={r.tag ?? (r.isBot ? 'Bot' : null)}
+      stacked={layout.stacked}
+      textCap={layout.textCap}
+      recordWidth={layout.recordWidth}
+    />
   );
 }
 
-/** The broadcast table: rank, the move since last week, the name (+ Bot),
- * the record, and the season gain. A row with no known move shows no arrow.
- * UX rule 7: while your row is below the fold of the scroll view it sits in
- * (useScrollFold, from BarsRefresh) and the card is on screen, onPinChange gets
- * your row so the screen can pin a copy at the bottom; null when it shouldn't. */
-export function StandingsTable({ rows, caption, seasonComplete, onPinChange, header, showMove = true }: StandingsTableProps) {
+/** UX rule 7: while your row is below the fold of the scroll view it sits in
+ * (useScrollFold, from BarsRefresh) and the list is on screen, onPinChange gets your row so
+ * the screen can pin a copy at the bottom; null when it shouldn't. */
+export function StandingsTable({ rows, caption, seasonComplete, onPinChange, header, showMove = true, throughLabel = null }: StandingsTableProps) {
   const fold = useScrollFold();
   const cardRef = useRef<View>(null);
   const yourRef = useRef<View>(null);
   const pinned = useRef<boolean>(false);
+  const layout = useStandingsLayout(rows, showMove, seasonComplete);
   const you = rows.find((r) => r.isYou) ?? null;
   // The latest row for the callback; the effect re-subscribes only when your row changes.
   const youRef = useRef(you);
@@ -122,39 +121,66 @@ export function StandingsTable({ rows, caption, seasonComplete, onPinChange, hea
   }, [fold, onPinChange, youKey]);
 
   return (
-    <View ref={cardRef} collapsable={false}>
-      {/* G-12: the sp Card has no padding or radius of its own (as for the room's cards). */}
-      <Card style={styles.card}>
-        {header ? (
-          <View style={styles.header}>
-            <Text variant="headline" style={styles.headerTitle} accessibilityRole="header">{header.title}</Text>
-            <Text variant="caption" tone="secondary">{header.subtitle}</Text>
-          </View>
-        ) : null}
+    <View ref={cardRef} collapsable={false} style={styles.block}>
+      {header ? (
+        <View style={styles.header}>
+          <Text variant="headline" style={styles.headerTitle} accessibilityRole="header">{header.title}</Text>
+          <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6}>{header.subtitle}</Text>
+        </View>
+      ) : null}
+      {/* The board's column head, on the rows' own grid. Decorative for VoiceOver: each row
+          already reads its rank, record and season gain. */}
+      <View style={styles.head} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <HeadLabel text="#" style={[{ width: layout.rankWidth }, seasonComplete ? styles.headRank : null]} />
+        {showMove ? <View style={{ width: MOVE_CELL }} /> : null}
+        {/* The label starts over the avatar column, so "Through Week 14" fits beside the
+            W–L and Season gain heads (it truncated over the names alone, W4 capture). */}
+        <Text variant="caption" tone="secondary" numberOfLines={1} maxFontSizeMultiplier={HEAD_MAX_SCALE} style={styles.headLabel}>{throughLabel ?? ''}</Text>
+        {layout.stacked ? null : (
+          <>
+            <HeadLabel text="W–L" style={[styles.headRight, { minWidth: layout.recordWidth }]} />
+            <HeadLabel text="Season gain" style={[styles.headRight, styles.headGain]} />
+          </>
+        )}
+      </View>
+      <View style={styles.rows}>
         {rows.map((r) => (
           <View key={r.userId} ref={r.isYou ? yourRef : undefined} collapsable={false}>
-            <StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} />
+            <StandingsRowView r={r} seasonComplete={seasonComplete} showMove={showMove} layout={layout} />
           </View>
         ))}
-        <Text variant="caption" tone="secondary" style={styles.caption}>{caption}</Text>
-      </Card>
+      </View>
+      {/* Capped at 1.6× (19.2pt) so the line under the list never outgrows the rows' gains (19.5pt). */}
+      <Text variant="caption" tone="secondary" maxFontSizeMultiplier={1.6} style={styles.caption}>{caption}</Text>
     </View>
   );
 }
 
+/** The column head's caps: the board's `.dr-tag` at NORMAL width (not the Expanded `tag`
+ * face, which made "SEASON GAIN" wider than its column), the PlayerCard's label: caption
+ * 12/800, uppercased in the string (§9C: never textTransform), one line. */
+const HEAD_MAX_SCALE = 1.3;
+function HeadLabel({ text, style }: { text: string; style?: StyleProp<TextStyle> }) {
+  return (
+    <Text variant="caption" tone="secondary" numberOfLines={1} maxFontSizeMultiplier={HEAD_MAX_SCALE} style={[styles.headCaps, style]}>
+      {text.toUpperCase()}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, padding: space[5] },
+  block: { gap: space[3] },
   // The board's .ks-section-h: the title left, the caption right, on one baseline; wraps at large text.
-  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: space[3], marginBottom: space[2] },
+  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: space[3] },
   headerTitle: { fontWeight: '700' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingVertical: space[2] },
-  rankCell: { width: 28, alignItems: 'center' },
-  rank: { textAlign: 'center' },
-  moveCell: { minWidth: 30 },
-  moveRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  name: { flex: 1, minWidth: 0 },
-  statsLine: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: space[2] },
-  record: { minWidth: 56, textAlign: 'right' },
-  gain: { minWidth: 92, textAlign: 'right' },
-  caption: { marginTop: space[2] },
+  // The head sits on the tiles' grid: their 12pt padding and 8pt gaps.
+  head: { flexDirection: 'row', alignItems: 'flex-end', gap: ROW_GAP, paddingHorizontal: ROW_PAD },
+  headRank: { textAlign: 'center' },
+  headLabel: { flex: 1, minWidth: 0 },
+  headCaps: { fontWeight: '800', letterSpacing: 0.48 },
+  headRight: { textAlign: 'right' },
+  headGain: { minWidth: 86 },
+  // §9C ManagerRow: tiles 6pt apart.
+  rows: { gap: MANAGER_ROW_GAP },
+  caption: { marginTop: space[1] },
 });

@@ -59,6 +59,8 @@ export async function seamTable<T>(
     weekClosed: seamWeekClosed(process.env.EXPO_PUBLIC_HOME_FIXTURE),
     bye: process.env.EXPO_PUBLIC_HOME_FIXTURE === 'bye',
     lost: process.env.EXPO_PUBLIC_HOME_FIXTURE === 'scored' && process.env.EXPO_PUBLIC_SCORED_OUTCOME === 'lost',
+    // The League fixture's playoffs in progress: the Wild card scored, the Semifinals not yet.
+    playoffsLive: process.env.EXPO_PUBLIC_LEAGUE_FIXTURE === 'playoffs_live',
   });
   if (rows) return { data: rows as T[], error: null, count: rows.length };
   return real();

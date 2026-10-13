@@ -94,15 +94,19 @@ function RenewalChoice({ leagueId, current, onSaved, onSame }: {
     }
     onSaved(response);
   };
+  // The board draws two equal-width buttons (RibMemberPrompt; the P3 "compact pills" fix, W4).
   const choice = (response: RenewalAnswer, label: string, variant: 'primary' | 'secondary') => (
-    <Button
-      label={label}
-      variant={variant}
-      selected={response === current}
-      status={busy === response ? 'loading' : 'idle'}
-      disabled={busy !== null && busy !== response}
-      onPress={() => void answer(response)}
-    />
+    <View style={styles.choice}>
+      <Button
+        label={label}
+        variant={variant}
+        fullWidth
+        selected={response === current}
+        status={busy === response ? 'loading' : 'idle'}
+        disabled={busy !== null && busy !== response}
+        onPress={() => void answer(response)}
+      />
+    </View>
   );
   return (
     <>
@@ -130,7 +134,8 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   chip: { paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: 999 },
-  row: { flexDirection: 'row', gap: space[2], marginVertical: space[2] },
+  row: { flexDirection: 'row', gap: space[3], marginVertical: space[2] },
+  choice: { flex: 1 },
   refusal: { gap: space[2] },
   retry: { alignSelf: 'flex-start' },
 });

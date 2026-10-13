@@ -277,6 +277,10 @@ building anything, and don't reopen a rule without him.
 - **Regular-season byes = no result**: neither a win nor a loss, and not counted in games
   played. No explanation of byes, just a short notice when members/weeks produce uneven
   byes.
+- **League's two load failures** (2026-10-13, approved by Giorgio as written, relayed by the
+  Orchestrator during the W4 League build): History reads "Your league's history didn't
+  load." and Playoffs reads "The bracket didn't load.", each beside the existing "Try
+  again". (Before, a failed read left the segment blank.)
 
 ## Home and Portfolio
 

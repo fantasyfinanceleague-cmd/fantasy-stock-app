@@ -5,7 +5,7 @@ import { useAuth } from './useAuth';
 import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
-import { FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
+import { FIXTURE_ACTIVE_LEAGUE, FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
 import type { ShellFixture } from './shell/devFixture';
 import { SEAM_ON } from './game/devSeam';
 import { pickLeagueFixture } from './game/devSeamGate';
@@ -286,7 +286,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       // A normal Mon–Fri calendar for this week and the next two, so fixture captures
       // resolve week starts the real way (resolveWeekWindow), never the nominal time.
       setMarketCalendar([0, 7, 14].flatMap((d) => standardWeekSessions(new Date(Date.now() + d * 86_400_000).toISOString())));
-      const resolved = resolveActiveLeagueId(activeRef.current ?? stored, fixture.sheet);
+      const resolved = resolveActiveLeagueId(activeRef.current ?? FIXTURE_ACTIVE_LEAGUE ?? stored, fixture.sheet);
       if (resolved !== activeRef.current) setActiveLeagueId(resolved);
       setLoading(false);
       return;

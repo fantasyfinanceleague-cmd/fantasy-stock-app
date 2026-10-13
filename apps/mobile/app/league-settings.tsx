@@ -296,7 +296,8 @@ export default function LeagueSettingsScreen() {
           <View style={styles.inviteRow}>
             <View style={styles.grow}>
               <Text variant="callout" style={styles.key}>Invite code</Text>
-              <Text variant="callout" color={colors.accent} style={styles.bold}>{code}</Text>
+              {/* §9C: the accent means live / your turn / selected; the code is plain text. */}
+              <Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>
             </View>
             <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: `Join my league with code ${code}` })} />
           </View>
@@ -519,7 +520,7 @@ export default function LeagueSettingsScreen() {
             </>
           ) : null}
           <RowDivider />
-          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.accent} />
+          <SettingRow label="Invite code" value={league.invite_code} valueColor={colors.text} />
           {leaveOn ? (
             <>
               <RowDivider />

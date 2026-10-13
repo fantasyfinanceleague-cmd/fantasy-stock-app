@@ -8,6 +8,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { ShellTabBar } from '@/components/shell/ShellTabBar';
 import { useMotion } from '@/components/sp/motion';
 import { consumeSignInEntrance } from '@/lib/shell/signInTransition';
+import { useFixtureInitialRoute } from '@/lib/shell/fixtureRoute';
 
 // Phase 3b-1 — the four tabs (spec row 15): Home · Matchup · League ·
 // Portfolio, drawn by ShellTabBar from useTheme() tokens (this file used to
@@ -38,6 +39,8 @@ const styles = StyleSheet.create({
 const ENTRANCE_SCALE = 0.96;
 
 export default function TabLayout() {
+  // DEV captures only: open EXPO_PUBLIC_SHELL_INITIAL_ROUTE once (lib/shell/fixtureRoute.ts).
+  useFixtureInitialRoute();
   const { colors } = useTheme();
   const { reduced, duration, easing } = useMotion();
   const entrance = useRef(consumeSignInEntrance()).current;

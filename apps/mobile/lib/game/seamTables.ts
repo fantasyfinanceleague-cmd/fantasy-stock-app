@@ -108,9 +108,20 @@ function weekMatchups(weekClosed: boolean, bye = false, lost = false) {
  * Semifinals, Final), seeded from the same standings. You win it, as in Home's
  * 'complete' fixture: Luca and Chiara win the wild cards; Paolo (1) beats Chiara
  * (4) and you (2) beat Luca (3); you beat Paolo in the Final. */
-function playoffMatchups() {
+function playoffMatchups(live = false) {
   const game = (round: number, position: number, t1: string, t2: string, g1: number, g2: number) =>
     ({ playoff_round_number: round, bracket_position: position, team1_user_id: t1, team2_user_id: t2, team1_gain: g1, team2_gain: g2, winner_user_id: g1 > g2 ? t1 : t2 });
+  // In progress (EXPO_PUBLIC_LEAGUE_FIXTURE=playoffs_live): the Semifinals are this week, unscored.
+  const pending = (round: number, position: number, t1: string, t2: string) =>
+    ({ playoff_round_number: round, bracket_position: position, team1_user_id: t1, team2_user_id: t2, team1_gain: null, team2_gain: null, winner_user_id: null });
+  if (live) {
+    return [
+      game(1, 0, luca, gianluigi, 142.6, 88.15),
+      game(1, 1, chiara, marco, 61.4, -12.9),
+      pending(2, 0, paolo, chiara),
+      pending(2, 1, SEAM_ME, luca),
+    ];
+  }
   return [
     game(1, 0, luca, gianluigi, 142.6, 88.15),
     game(1, 1, chiara, marco, 61.4, -12.9),
@@ -121,7 +132,7 @@ function playoffMatchups() {
 }
 
 /** The fixture rows for a table read, or null when the seam is off (the real query stands). */
-export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock', opts: { weekClosed?: boolean; bye?: boolean; lost?: boolean } = {}): unknown[] | null {
+export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: DraftRoomVariant = 'on_clock', opts: { weekClosed?: boolean; bye?: boolean; lost?: boolean; playoffsLive?: boolean } = {}): unknown[] | null {
   if (!on) return null;
   switch (table) {
     case 'drafts':
@@ -143,7 +154,7 @@ export function seamTableRows(on: boolean, table: SeamTableName, roomVariant: Dr
     case 'matchups_week_one': return [
       { team1_user_id: SEAM_ME, team2_user_id: 'gianluigi', week_start: nextNominalTuesday(Date.now()) },
     ];
-    case 'matchups_playoff': return playoffMatchups();
+    case 'matchups_playoff': return playoffMatchups(opts.playoffsLive === true);
     case 'week_snapshots': return snapshotRows(opts.weekClosed === true, opts.lost === true);
     case 'trades': return [];
   }

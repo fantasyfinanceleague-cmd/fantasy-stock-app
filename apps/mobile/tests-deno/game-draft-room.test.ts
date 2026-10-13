@@ -411,21 +411,24 @@ Deno.test('the roster grid\'s tiles are a centred 44 pt row, no fixed ratio (sou
 // ── G-6 (pass-2 gate): the finished League tab ──
 
 Deno.test('standings: one fixed-width rank cell for disc and numeral; the Run it back strip is padded (source guard)', () => {
-  const table = SOURCES['components/game/StandingsTable.tsx'];
-  // The cell widens with the medal disc at large text (large-text-layouts.test.ts), never below 28.
-  assertEquals(table.includes('<View style={[styles.rankCell, { width: Math.max(28, disc + 8) }]}>'), true);
-  assertEquals(table.includes("rankCell: { width: 28, alignItems: 'center' },"), true);
-  assertEquals(table.includes("minWidth: 24, textAlign: 'right'"), false);
+  // W4: ManagerRow's rank cell is the disc's width in a list with medals, the numeral's too,
+  // so rows 1–3 line up with 4 onwards (and the column head's "#" with both).
+  const row = SOURCES['components/sp/gn/ManagerRow.tsx'];
+  assertEquals(row.includes('<View style={[styles.medalCell, { width: Math.max(22, disc) }]}>'), true);
+  assertEquals(row.includes("medal ? { width: Math.max(22, disc), textAlign: 'center' } : null"), true);
+  assertEquals(SOURCES['components/game/StandingsTable.tsx'].includes('const rankWidth = medals ? Math.max(RANK_CELL, disc) : RANK_CELL;'), true);
   const tab = SOURCES['app/(tabs)/league.tsx'];
   assertEquals(tab.includes('<Card style={styles.strip}>'), true);
   assertEquals(tab.includes('strip: { borderRadius: radius.lg, padding: space[5], gap: space[2] },'), true);
 });
 
-Deno.test('the League tab standings block is a padded card (G-12; source guard)', () => {
+Deno.test('the League tab standings are tiles on the page, never a grid in a card (W4, §9C; source guard)', () => {
+  // G-12's padded card is superseded by the board's Game Night frame: each manager a
+  // `surface` tile (ManagerRow) 6pt apart, the column head on the tiles' grid.
   const table = SOURCES['components/game/StandingsTable.tsx'];
-  assertEquals(table.includes('<Card style={styles.card}>'), true);
-  assertEquals(table.includes('card: { borderRadius: radius.lg, padding: space[5] },'), true);
-  assertEquals(table.includes('<Card>'), false);
+  assertEquals(table.includes('<Card'), false);
+  assertEquals(table.includes('rows: { gap: MANAGER_ROW_GAP },'), true);
+  assertEquals(table.includes("head: { flexDirection: 'row', alignItems: 'flex-end', gap: ROW_GAP, paddingHorizontal: ROW_PAD },"), true);
 });
 
 

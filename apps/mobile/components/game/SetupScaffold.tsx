@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { ReactNode } from 'react';
+import { ReactNode, useRef } from 'react';
+import { useFixtureScrollEnd } from '@/lib/shell/fixtureRoute';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,6 +33,9 @@ export interface SetupScaffoldProps {
 export function SetupScaffold({ back, step, title, subtitle, children, footer }: SetupScaffoldProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  // DEV captures only (lib/shell/fixtureRoute.ts).
+  useFixtureScrollEnd(scrollRef);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.fill, { backgroundColor: colors.bg }]}>
@@ -54,6 +58,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
         ) : null}
       </View>
       <ScrollView
+        ref={scrollRef}
         style={styles.fill}
         contentContainerStyle={[styles.body, { paddingBottom: footer ? space[5] : insets.bottom + space[8] }]}
         keyboardShouldPersistTaps="handled"
