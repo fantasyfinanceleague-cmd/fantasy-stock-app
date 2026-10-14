@@ -16,6 +16,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { useSession } from '@/lib/SessionProvider';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
+import { useFixtureInitialRoute } from '@/lib/shell/fixtureRoute';
 
 // Phase 3b-1 — Sign in (spec row 1, board "Sign in"). Strings verbatim from
 // the previous login.tsx, sentence case: "Welcome back", "Sign in to your
@@ -37,6 +38,8 @@ export default function SignInScreen() {
   const [status, setStatus] = useState<ButtonStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const passwordRef = useRef<TextInput>(null);
+  // DEV captures only: EXPO_PUBLIC_SHELL_INITIAL_ROUTE (e.g. /forgot-password) opens once.
+  useFixtureInitialRoute();
 
   async function handleSignIn() {
     if (status !== 'idle') return;
@@ -103,7 +106,6 @@ export default function SignInScreen() {
           onPress={() => router.push('/forgot-password')}
           accessibilityRole="link"
           style={styles.forgot}
-          hitSlop={8}
         >
           <Text variant="body" color={colors.accent} style={styles.bold}>
             Forgot password?
@@ -130,9 +132,10 @@ const styles = StyleSheet.create({
   fields: {
     gap: space[5],
   },
+  // A 44pt target (§9B), not a 32pt box with hit slop.
   forgot: {
     alignSelf: 'flex-end',
-    minHeight: 32,
+    minHeight: 44,
     justifyContent: 'center',
   },
   bold: {

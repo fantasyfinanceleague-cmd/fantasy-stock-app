@@ -1,29 +1,33 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
-import { radius, space, type } from '@/constants/tokens';
+import { space } from '@/constants/tokens';
 import { PhaseChip } from '@/components/sp/PhaseChip';
 import { Text } from '@/components/sp/Text';
-import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
-import { Chyron } from '@/components/sp/game/Chyron';
-import { ScoreDigits } from '@/components/sp/game/ScoreDigits';
-import { TugBar } from '@/components/sp/game/TugBar';
+import { DraftTile, Scoreboard } from '@/components/sp/gn';
 import { formatMoney } from '@/components/sp/logic/money';
-import { FINAL, ROSTER_PICKS, VERSUS } from '@/components/shell/onboarding/sampleData';
+import { lineUnderTotalsCap } from '@/components/sp/logic/gameNight';
+import { FINAL, ROSTER_PICKS, VERSUS, versusSides } from '@/components/shell/onboarding/sampleData';
 
 // Phase 3b-1 — S1's live vignettes: each onboarding card shows the product
 // working, on the board's three cards (Design Lead ruling D2):
 //   1. the roster filling round by round;
-//   2. versus: the tug bar swinging through a lead change as the scores
-//      roll, with the board's chyron;
+//   2. versus: a lead change on the scoreboard;
 //   3. the FINAL chip landing and "You win Week 6" rising.
 // Each plays ONCE when its card becomes the focused card (`active`) and
 // resets when it leaves, so it plays again on return — never a loop (§4).
 // The data never moves with the parallax; only decorative layers do
 // (OnboardingPager). Reduce Motion: each shows its final frame, still.
+//
+// Game Night (W4 Onboarding): the vignettes are built from the screens they preview, so the
+// first thing a new player sees is the app they'll get. The roster is the draft board's
+// DraftTile (`surface`, the 3pt category line at the bottom, never a fill); versus and the final
+// are Matchup's Scoreboard (your half shaded, the totals in `text`, the one line under the card).
+// The Game Day pieces they used before (tug bar, chyron, slammed digits, VS) are gone: Matchup
+// itself no longer has them ("no win %, bars … chart", Giorgio's Matchup ruling).
 
 export interface VignetteProps {
   active: boolean;
@@ -33,16 +37,15 @@ export interface VignetteProps {
 
 export function RosterVignette({ active }: VignetteProps) {
   return (
-    <View style={styles.grid} accessible accessibilityLabel={`A roster filling round by round: ${ROSTER_PICKS.join(', ')}`}>
-      {ROSTER_PICKS.map((ticker, i) => (
-        <RosterCell key={ticker} round={i + 1} ticker={ticker} index={i} active={active} />
+    <View style={styles.grid} accessible accessibilityLabel={`A roster filling round by round: ${ROSTER_PICKS.map((p) => p.ticker).join(', ')}`}>
+      {ROSTER_PICKS.map((p, i) => (
+        <RosterCell key={p.ticker} index={i} ticker={p.ticker} category={p.category} active={active} />
       ))}
     </View>
   );
 }
 
-function RosterCell({ round, ticker, index, active }: { round: number; ticker: string; index: number; active: boolean }) {
-  const { colors } = useTheme();
+function RosterCell({ index, ticker, category, active }: { index: number; ticker: string; category: (typeof ROSTER_PICKS)[number]['category']; active: boolean }) {
   const { reduced, duration, easing } = useMotion();
   const fill = useSharedValue(reduced ? 1 : 0);
 
@@ -58,13 +61,11 @@ function RosterCell({ round, ticker, index, active }: { round: number; ticker: s
   const filledStyle = useAnimatedStyle(() => ({ opacity: fill.value, transform: [{ scale: 0.92 + 0.08 * fill.value }] }));
 
   return (
-    <View style={[styles.cell, styles.cellEmpty, { borderColor: colors.borderStrong }]}>
-      {/* The filled cell sits over the dashed placeholder's border, not inside it. */}
-      <Animated.View style={[styles.cell, styles.cellFilled, { backgroundColor: colors.surface, borderColor: colors.line }, filledStyle]}>
-        <Text variant="caption" tone="secondary">{`Rd ${round}`}</Text>
-        <Text variant="headline" style={styles.ticker}>
-          {ticker}
-        </Text>
+    <View style={styles.cell} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+      {/* The empty cell (`sunken`, its pick number) until the pick lands over it. */}
+      <DraftTile pick={index + 1} state="empty" height={TILE_HEIGHT} />
+      <Animated.View style={[styles.filled, filledStyle]}>
+        <DraftTile pick={index + 1} state="picked" ticker={ticker} category={category} height={TILE_HEIGHT} />
       </Animated.View>
     </View>
   );
@@ -73,7 +74,6 @@ function RosterCell({ round, ticker, index, active }: { round: number; ticker: s
 // ── 2. Versus, with a lead change ───────────────────────────────────────
 
 export function VersusVignette({ active }: VignetteProps) {
-  const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const [flipped, setFlipped] = useState(reduced);
 
@@ -90,38 +90,10 @@ export function VersusVignette({ active }: VignetteProps) {
     return () => clearTimeout(t);
   }, [active, reduced, duration.slow, duration.base]);
 
-  const score = flipped ? VERSUS.after : VERSUS.before;
-
+  const { you, opponent } = versusSides(flipped ? 'after' : 'before');
   return (
-    <View style={styles.versus}>
-      <View style={styles.versusRow}>
-        <Badge initials={VERSUS.you.initials} fill={colors.you} ink={colors.onYou} label={VERSUS.you.name} />
-        <Text variant="score.lg" accessibilityElementsHidden importantForAccessibility="no">
-          VS
-        </Text>
-        <Badge initials={VERSUS.opp.initials} fill={colors.opp} ink={colors.onOpp} label={VERSUS.opp.name} />
-      </View>
-      <View style={styles.versusRow}>
-        <ScoreDigits text={formatMoney(score.you, { sign: 'always' })} variant="score.md" slam={flipped && !reduced} />
-        <ScoreDigits text={formatMoney(score.opp, { sign: 'always' })} variant="score.md" />
-      </View>
-      <TugBar you={score.you} opponent={score.opp} opponentName={VERSUS.opp.name} height={10} />
-      <Text variant="tag" tone="secondary" style={styles.center}>
-        {VERSUS.tag}
-      </Text>
-      <View style={styles.chyronSlot}>
-        <Chyron message={flipped ? VERSUS.chyron : null} durationMs={60_000} />
-      </View>
-    </View>
-  );
-}
-
-function Badge({ initials, fill, ink, label }: { initials: string; fill: string; ink: string; label: string }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: fill }]} accessible accessibilityLabel={label}>
-      <Text variant="headline" color={ink} maxFontSizeMultiplier={1}>
-        {initials}
-      </Text>
+    <View style={styles.fill}>
+      <Scoreboard you={you} opponent={opponent} />
     </View>
   );
 }
@@ -129,10 +101,19 @@ function Badge({ initials, fill, ink, label }: { initials: string; fill: string;
 // ── 3. The Friday final ──────────────────────────────────────────────────
 
 export function FinalVignette({ active }: VignetteProps) {
-  const { colors } = useTheme();
   const { reduced, duration, easing, spring, withSpring } = useMotion();
   const chip = useSharedValue(reduced ? 1 : 0);
   const winner = useSharedValue(reduced ? 1 : 0);
+  const { fontScale } = useWindowDimensions();
+  const [width, setWidth] = useState(0);
+  // The winner line never outranks the totals above it: capped from their FITTED size (the
+  // Scoreboard's score.xl, 32pt ≤ 1.2×, shrunk into each half's inner width: half − 2 × 20pt).
+  const winnerCap = lineUnderTotalsCap({
+    totals: [formatMoney(FINAL.you, { sign: 'always' }), formatMoney(FINAL.opp, { sign: 'always' })],
+    totalPt: TOTAL_PT * Math.min(fontScale, TOTAL_MAX_SCALE),
+    innerWidth: width / 2 - 2 * HALF_PAD,
+    linePt: WINNER_PT,
+  });
 
   useEffect(() => {
     if (reduced) {
@@ -151,24 +132,18 @@ export function FinalVignette({ active }: VignetteProps) {
 
   // The chip "lands": from slightly large and transparent onto its spot.
   const chipStyle = useAnimatedStyle(() => ({ opacity: chip.value, transform: [{ scale: 1.35 - 0.35 * chip.value }] }));
-  // The winner line rises into place.
+  // The winner line rises into place, where the scoreboard's own line would sit.
   const winnerStyle = useAnimatedStyle(() => ({ opacity: winner.value, transform: [{ translateY: 12 * (1 - winner.value) }] }));
 
   return (
-    <View style={styles.final}>
+    <View style={[styles.fill, styles.final]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Animated.View style={[styles.centerSelf, chipStyle]}>
         <PhaseChip phase="week_final" />
       </Animated.View>
-      <View style={styles.versusRow}>
-        <Text variant="score.lg" color={colors.gain}>
-          {formatMoney(FINAL.you, { sign: 'always' })}
-        </Text>
-        <Text variant="score.lg" color={colors.loss}>
-          {formatMoney(FINAL.opp, { sign: 'always' })}
-        </Text>
-      </View>
+      <Scoreboard you={{ name: VERSUS.you.name, gain: FINAL.you }} opponent={{ name: VERSUS.opp.name, gain: FINAL.opp }} final showLine={false} />
       <Animated.View style={winnerStyle}>
-        <Text variant="title" style={styles.center}>
+        {/* headline (17pt, bold): at 1× a title (22pt) already sat above the fitted totals. */}
+        <Text variant="headline" maxFontSizeMultiplier={winnerCap} style={[styles.center, styles.winner]}>
           {FINAL.winner}
         </Text>
       </Animated.View>
@@ -176,62 +151,43 @@ export function FinalVignette({ active }: VignetteProps) {
   );
 }
 
+/** The Scoreboard's totals (score.xl, capped 1.2×) and its half padding, for the winner-line cap. */
+const TOTAL_PT = 32;
+const TOTAL_MAX_SCALE = 1.2;
+const HALF_PAD = space[5];
+/** The winner line's base size (headline). */
+const WINNER_PT = 17;
+
+/** The draft board's tile, grown to fill a third of the art panel. */
+const TILE_HEIGHT = 64;
+
 const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: space[4],
+    gap: space[3],
     width: '100%',
   },
   cell: {
     flexBasis: '30%',
     flexGrow: 1,
-    height: 70,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    padding: space[4],
-    justifyContent: 'space-between',
   },
-  cellEmpty: {
-    borderStyle: 'dashed',
+  filled: {
+    ...StyleSheet.absoluteFillObject,
   },
-  cellFilled: {
-    position: 'absolute',
-    top: -1,
-    left: -1,
-    right: -1,
-    bottom: -1,
-  },
-  ticker: {
-    fontFamily: type.headline.fontFamily,
-  },
-  versus: {
+  fill: {
     width: '100%',
-    gap: space[5],
-  },
-  versusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  badge: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chyronSlot: {
-    minHeight: 40,
   },
   final: {
-    width: '100%',
-    gap: space[6],
+    gap: space[5],
   },
   centerSelf: {
     alignSelf: 'center',
   },
   center: {
     textAlign: 'center',
+  },
+  winner: {
+    fontWeight: '700',
   },
 });

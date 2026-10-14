@@ -2,14 +2,15 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { EmptyState } from '@/components/sp/EmptyState';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { supabase } from '@/lib/supabase';
 import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
@@ -75,7 +76,8 @@ export default function ForgotPasswordScreen() {
     setStatus('idle');
 
     if (resetError) {
-      setError(resetError.message);
+      // The shared mapper (lib/authErrors.ts), never the server's own words (W4 Onboarding).
+      setError(getAuthErrorMessage(resetError));
       return;
     }
 
@@ -88,7 +90,7 @@ export default function ForgotPasswordScreen() {
     return (
       <AuthScaffold back={{ label: 'Back to sign in', onPress: backToSignIn }}>
         <EmptyState
-          icon={(p) => <Ionicons name="mail-outline" {...p} />}
+          icon={() => <Icon name="mail" size="title" tone="text2" />}
           title="Check your email"
           message={`We sent a reset link to ${email}. It opens the app to set a new password.`}
           actionLabel="Back to sign in"

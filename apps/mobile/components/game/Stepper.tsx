@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { radius, space, typeFontFamily } from '@/constants/tokens';
+import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -30,6 +31,10 @@ export interface StepperProps {
 
 export function Stepper({ label, sub, value, unit, onStep, canDecrement, canIncrement, disabled = false, emphasis }: StepperProps) {
   const { colors } = useTheme();
+  // At accessibility sizes the box goes UNDER the label (W4 Onboarding, XL): beside it, the label's
+  // column was too narrow and "Managers" broke mid-word ("Manager / s").
+  const { fontScale } = useWindowDimensions();
+  const stacked = fontScale >= FULL_WIDTH_FONT_SCALE;
   const down = !disabled && canDecrement;
   const up = !disabled && canIncrement;
   const valueText = unit ? `${value} ${unit}` : String(value);
@@ -46,9 +51,9 @@ export function Stepper({ label, sub, value, unit, onStep, canDecrement, canIncr
         if (e.nativeEvent.actionName === 'increment' && up) onStep(1);
         if (e.nativeEvent.actionName === 'decrement' && down) onStep(-1);
       }}
-      style={[styles.row, disabled && styles.dim]}
+      style={[styles.row, stacked && styles.rowStacked, disabled && styles.dim]}
     >
-      <View style={styles.texts}>
+      <View style={stacked ? styles.textsStacked : styles.texts}>
         <Text variant="callout" style={styles.label}>
           {label}
         </Text>
@@ -83,8 +88,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: space[3],
   },
+  rowStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
   dim: {
     opacity: 0.5,
+  },
+  textsStacked: {
+    alignSelf: 'stretch',
+    gap: space[1],
   },
   texts: {
     flexGrow: 1,

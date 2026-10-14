@@ -2,9 +2,9 @@
 import { forwardRef, ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -32,8 +32,9 @@ export const AuthScaffold = forwardRef<ScrollView, AuthScaffoldProps>(function A
       <View style={{ height: insets.top }} />
       {back ? (
         <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
-          <Ionicons name="chevron-back" size={20} color={colors.text2} />
-          <Text variant="callout" tone="secondary">
+          <Icon name="chevronLeft" size="callout" tone="text2" />
+          {/* Capped (2×, 26pt) so the back row never outgrows a screen's heading (Profile's 35pt name). */}
+          <Text variant="callout" tone="secondary" maxFontSizeMultiplier={2}>
             {back.label}
           </Text>
         </Pressable>

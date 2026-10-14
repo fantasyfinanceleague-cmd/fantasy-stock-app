@@ -121,10 +121,13 @@ Deno.test('getAuthErrorMessage: network failure (new case, no code — never rea
   );
 });
 
-Deno.test('getAuthErrorMessage: unrecognized error falls back to its own message', () => {
+// W4 Onboarding gate (Design Lead, 2026-10-14): never the server's own words. An unrecognized
+// error used to fall back to its message (raw GoTrue English on Sign in / Create account /
+// Forgot password); it now reads the generic line.
+Deno.test('getAuthErrorMessage: an unrecognized error reads the generic line, never its own message', () => {
   assertEquals(
     getAuthErrorMessage({ message: 'Something wildly specific broke.' }),
-    'Something wildly specific broke.'
+    'Something went wrong. Please try again.'
   );
 });
 

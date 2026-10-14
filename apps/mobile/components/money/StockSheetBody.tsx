@@ -21,7 +21,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { Skeleton } from '@/components/Skeleton';
-import { WarnPanel } from '@/components/money/WarnPanel';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { TradeReviewPanel, type NextStep } from '@/components/money/TradeReviewPanel';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';

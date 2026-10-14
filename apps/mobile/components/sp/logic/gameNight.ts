@@ -364,6 +364,15 @@ export function nameBesideAvatar(name: string, availablePt: number, fontPt: numb
   return availablePt > 0 && estimateNameWidth(name, fontPt) * minScale <= availablePt;
 }
 
+/** A shrink-to-fit total's drawn size, estimated conservatively (stackedNameCap's estimate:
+ * figures ≈ 0.72em, "," "." ≈ 0.3em, shrunk to `innerWidth` with no floor). */
+export function fittedTotalPt(totalText: string, totalPt: number, innerWidth: number): number {
+  let em = 0;
+  for (const ch of totalText) em += ch === ',' || ch === '.' ? 0.3 : 0.72;
+  const natural = em * totalPt;
+  return natural > 0 && innerWidth > 0 ? totalPt * Math.min(1, innerWidth / natural) : totalPt;
+}
+
 /** Stacked Scoreboard names (XL): the name's Dynamic Type cap, so the name is never larger
  * than the total under it. The total's fitted size is estimated conservatively — its natural
  * width at `totalPt` (figures ≈ 0.72em, measured on the 17e: a seven-figure total drew at
@@ -372,11 +381,19 @@ export function nameBesideAvatar(name: string, availablePt: number, fontPt: numb
  * may grow to that size, at most 1.3× and at least 1× (never below its own base size). */
 export function stackedNameCap(opts: { totalText: string; totalPt: number; innerWidth: number; namePt: number }): number {
   const { totalText, totalPt, innerWidth, namePt } = opts;
-  let em = 0;
-  for (const ch of totalText) em += ch === ',' || ch === '.' ? 0.3 : 0.72;
-  const natural = em * totalPt;
-  const fitted = natural > 0 && innerWidth > 0 ? totalPt * Math.min(1, innerWidth / natural) : totalPt;
-  return Math.max(1, Math.min(1.3, fitted / namePt));
+  return Math.max(1, Math.min(1.3, fittedTotalPt(totalText, totalPt, innerWidth) / namePt));
+}
+
+/**
+ * A line under a Scoreboard ("You win Week 6" on onboarding card 3): its Dynamic Type cap from
+ * the totals' FITTED size, so it never outranks them (W4 Onboarding gate, Design Lead 2026-10-14:
+ * at XL the line drew 20.0pt over 19.3pt totals). The smaller of the two fitted totals, 90% of it
+ * (a margin for the estimate), over the line's own base size; at least 1× (RN ignores a smaller
+ * multiplier), at most 1.3×. The base size is the caller's to keep at or under the totals at 1×.
+ */
+export function lineUnderTotalsCap(opts: { totals: string[]; totalPt: number; innerWidth: number; linePt: number }): number {
+  const fitted = Math.min(...opts.totals.map((t) => fittedTotalPt(t, opts.totalPt, opts.innerWidth)));
+  return Math.max(1, Math.min(1.3, (0.9 * fitted) / opts.linePt));
 }
 
 /** The Scoreboard name's Dynamic Type cap: 1.6× beside the avatar; stacked (XL), never larger

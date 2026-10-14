@@ -51,7 +51,10 @@ export function Chip({ label, selected = false, onPress, disabled }: ChipProps) 
 }
 
 const styles = StyleSheet.create({
+  // A 44pt target (§9B): 12 + 18 + 12 = 42 at Large, so the floor is explicit.
   base: {
+    minHeight: 44,
+    justifyContent: 'center',
     paddingHorizontal: space[5],
     paddingVertical: space[3],
     borderRadius: radius.pill,

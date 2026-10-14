@@ -105,6 +105,14 @@ export interface UsernameView {
   rules: UsernameRuleCheck[];
   suggestions: string[];
   canContinue: boolean;
+  /**
+   * Whether Continue is on screen at all ("Nothing tappable does nothing", 2026-10-12: a
+   * control that can't act is hidden, or disabled with the reason beside it). Every disabled
+   * state has its reason under the field (the rules, the error, the checking spinner) except
+   * `unchanged` (Profile › Username, still the current name): there is nothing to save and no
+   * words to say so, so Continue is hidden until the name changes (W4 Onboarding). Cancel stays.
+   */
+  continueShown: boolean;
   busy: boolean;
 }
 
@@ -117,6 +125,7 @@ export function usernameView(state: UsernameState): UsernameView {
     rules: usernameRuleChecks(candidate),
     suggestions: [],
     canContinue: canSubmit(state),
+    continueShown: state.kind !== 'unchanged',
     busy: state.kind === 'submitting',
   };
   switch (state.kind) {

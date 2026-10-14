@@ -72,6 +72,17 @@ export function stakesStepError(stakeMode: string, slotCount: number, slotErrors
   return null;
 }
 
+/**
+ * Whether the footer's Next / Create league is disabled. "Nothing tappable does nothing"
+ * (2026-10-12): a disabled control needs its reason beside it. Only the Stakes step disables
+ * it, and only while a reason is on screen (stakesStepError's line under Roster slots or on the
+ * slot). An empty League name does NOT disable Next (it used to, silently): Next stays live
+ * and its press shows leagueNameError's "Enter a league name." under the field (W4 Onboarding).
+ */
+export function createNextDisabled(step: CreateStep, stakesError: string | null): boolean {
+  return step === 'stakes' && stakesError !== null;
+}
+
 // ── Season step ─────────────────────────────────────────────────────────
 
 /** League sizes create offers: DB CHECK leagues_num_participants_range (4..16),

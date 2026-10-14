@@ -83,8 +83,8 @@ export const PAIRS: readonly ContrastPair[] = [
   ['accent', 'tabbar', 'bg', 4.5, 'Active tab label'],
   ['text2', 'tabbar', 'bg', 4.5, 'Inactive tab labels'],
   ['warnText', 'warnTint', 'bg', 4.5, '"Your call" notes'],
-  ['text', 'warnTint', 'bg', 4.5, 'Sign-ups-paused banner'],
-  ['text', 'warnTint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
+  ['text', 'warnTint', 'bg', 4.5, 'Draft blockers card: title and lines (on the page)'],
+  ['text', 'warnTint', 'surface', 4.5, 'Text on the warn tint over a surface (no current use: the signups and bye notes read warnText since W4 Onboarding)'],
   // W4 Portfolio: the money sheet's warn panel (a refusal or a pre-review block) on the sheet's surface.
   ['warnText', 'warnTint', 'surface', 4.5, 'Money sheet warn panel (refusals, pre-review blocks)'],
   ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],

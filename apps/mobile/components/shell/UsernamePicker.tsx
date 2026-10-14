@@ -20,6 +20,7 @@ import {
   usernameSuggestions,
   usernameView,
 } from '@/lib/shell/usernameMachine';
+import { CAPTURE } from '@/lib/shell/captureDev';
 
 // Phase 3b-1 — Pick a username (spec row 8, board "Pick a username", S6).
 // Shared by the first-run gate (a NULL username, before the tabs) and
@@ -59,6 +60,13 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
   const emailLocal = email ? email.split('@')[0] : null;
   const latest = useRef(state);
   latest.current = state;
+
+  // DEV captures only: start with a name typed in (e.g. a taken one), as if the user had.
+  useEffect(() => {
+    if (CAPTURE.usernamePrefill && current === null) onChange(CAPTURE.usernamePrefill);
+    // Mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Ask the server once typing pauses.
   useEffect(() => {
@@ -164,12 +172,14 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
         </View>
       ) : null}
 
-      <Button
-        label="Continue"
-        status={buttonStatus}
-        onPress={onContinue}
-        disabled={!view.canContinue && buttonStatus === 'idle'}
-      />
+      {view.continueShown ? (
+        <Button
+          label="Continue"
+          status={buttonStatus}
+          onPress={onContinue}
+          disabled={!view.canContinue && buttonStatus === 'idle'}
+        />
+      ) : null}
     </>
   );
 }

@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { radius, space, type } from '@/constants/tokens';
+import { space, type } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { PASSWORD_REQUIREMENTS, PASSWORD_RULE_SENTENCE, checkPassword } from '@/constants/passwordRules';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { Field } from '@/components/shell/Field';
@@ -19,6 +20,7 @@ import { validateUsername } from '@/lib/contentModeration';
 import { useSession } from '@/lib/SessionProvider';
 import { firstFailingRule } from '@/lib/shell/usernameRules';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
+import { CAPTURE } from '@/lib/shell/captureDev';
 
 // Phase 3b-1 — Create account (spec rows 2–3; board "Create account" and
 // "Create account · sign-ups paused"). Split out of the old combined
@@ -33,7 +35,8 @@ import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransitio
 // - Every error is inline and appears INSTANTLY (§4).
 // - When the server's signup gate refuses, the form stays and a warn-tint
 //   banner carries Giorgio's final text verbatim through brand.name, with
-//   [Sign in instead] in place of the primary action.
+//   [Sign in instead] in place of the primary action. Game Night (W4 Onboarding): the banner
+//   is the shared WarnPanel, its text in the fill's own `warnText` ink (§9C rule 4).
 
 type UsernameError = string | null;
 
@@ -53,6 +56,24 @@ export default function CreateAccountScreen() {
   const passwordRef = useRef<TextInput>(null);
 
   const passwordRules = PASSWORD_REQUIREMENTS.map((r) => ({ label: r.label, ok: r.test(password) }));
+
+  /** The signups-paused refusal: the panel replaces the primary, the keyboard drops and the panel
+   * scrolls into view (a jump under Reduce Motion). */
+  function showPaused() {
+    setPaused(true);
+    Keyboard.dismiss();
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduced }), 0);
+  }
+
+  // DEV captures only (lib/shell/captureKnobs.ts): take the SAME refusal path once the form has
+  // laid out, so the capture shows what a real refusal shows (the panel scrolled into view).
+  useEffect(() => {
+    if (!CAPTURE.signupPaused) return;
+    const t = setTimeout(showPaused, 600);
+    return () => clearTimeout(t);
+    // Mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function checkUsername(value: string): UsernameError {
     const trimmed = value.trim();
@@ -88,11 +109,7 @@ export default function CreateAccountScreen() {
       clearSignInIntent();
       setStatus('idle');
       if (isSignupsPausedError(result.error)) {
-        setPaused(true);
-        // The banner sits under the form: drop the keyboard and bring it
-        // into view (a jump under Reduce Motion).
-        Keyboard.dismiss();
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduced }), 0);
+        showPaused();
         return;
       }
       setFormError(getAuthErrorMessage(result.error, PASSWORD_RULE_SENTENCE, brand.name));
@@ -189,15 +206,7 @@ export default function CreateAccountScreen() {
         />
       </View>
       {paused ? (
-        <View
-          accessibilityRole="alert"
-          accessibilityLiveRegion="assertive"
-          style={[styles.banner, { backgroundColor: colors.warnTint, borderColor: colors.warnLine }]}
-        >
-          <Text variant="body" style={styles.bold}>
-            {`${brand.name} is not open for new signups yet — check back soon. Existing accounts can still sign in.`}
-          </Text>
-        </View>
+        <WarnPanel text={`${brand.name} is not open for new signups yet — check back soon. Existing accounts can still sign in.`} />
       ) : null}
     </AuthScaffold>
   );
@@ -209,11 +218,6 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: space[5],
-  },
-  banner: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: space[5],
   },
   bold: {
     fontFamily: type.headline.fontFamily,

@@ -23,7 +23,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { COPY } from '@/lib/money/moneyCopy';
 import { setForegroundQuiet } from '@/lib/foregroundQuiet';
-import { WarnPanel } from '@/components/money/WarnPanel';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { radius, space } from '@/constants/tokens';
 import type { ReviewPresentation } from '@/lib/money/reviewPresentation';
 import type { TradeReview } from '@/lib/money/reviewModel';

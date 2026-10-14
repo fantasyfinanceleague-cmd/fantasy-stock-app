@@ -23,6 +23,7 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { ONBOARDING_CARDS } from '@/components/shell/onboarding/sampleData';
+import { CAPTURE } from '@/lib/shell/captureDev';
 import { FinalVignette, RosterVignette, VersusVignette, type VignetteProps } from '@/components/shell/onboarding/Vignettes';
 
 // Phase 3b-1 — Onboarding ×3 (spec row 6, S1). Giorgio's three lines,
@@ -34,10 +35,27 @@ import { FinalVignette, RosterVignette, VersusVignette, type VignetteProps } fro
 // the scroll. Each vignette plays once when its card settles.
 // Reduce Motion: one card at a time that crossfades (`quick`) on [Next] or
 // a swipe; no parallax; vignettes show their final frame.
+//
+// Game Night (W4 Onboarding): the art panel is the page's own `bg` inside a 1pt `rim` (the
+// vignettes inside it are real screen pieces, the draft tile and the Scoreboard, so they sit on
+// the page as they do in the app: tiles and cards one lightness step up, never on an `inset`
+// that would invert the depth). Each card's line is a heading (`display`, 800), wrapping at every
+// size and capped with the art panel shortened at accessibility sizes, so nothing truncates.
 
 const VIGNETTES: ComponentType<VignetteProps>[] = [RosterVignette, VersusVignette, FinalVignette];
 const LAST = ONBOARDING_CARDS.length - 1;
 const ART_HEIGHT = 340;
+/** At accessibility sizes the line grows, so the art's FLOOR drops; the art still grows to fit its
+ * vignette (a stacked Scoreboard at XXXL), never clipping it. */
+const ART_HEIGHT_LARGE_TEXT = 260;
+/** Skip's Dynamic Type ceiling. The card line keeps `display`'s own (1.6×): a LOWER explicit cap on
+ * a multi-line Text laid out at one size and drew at another at XXXL ("Friday's close wir", W4
+ * Onboarding), so the line is never capped below its variant. */
+const LINE_MAX_SCALE = 1.3;
+
+function artHeight(fontScale: number): number {
+  return fontScale >= 1.35 ? ART_HEIGHT_LARGE_TEXT : ART_HEIGHT;
+}
 
 export interface OnboardingPagerProps {
   /** [Get started] on the last card. */
@@ -50,13 +68,14 @@ export function OnboardingPager({ onFinish, onSkip }: OnboardingPagerProps) {
   const { colors } = useTheme();
   const { reduced } = useMotion();
   const insets = useSafeAreaInsets();
-  const [index, setIndex] = useState(0);
+  // DEV captures only (lib/shell/captureKnobs.ts): open on a given card.
+  const [index, setIndex] = useState(CAPTURE.onboardingCard ?? 0);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.bg, paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, space[5]) }]}>
       <View style={styles.header}>
-        <Pressable onPress={onSkip} accessibilityRole="button" hitSlop={10} style={styles.skip}>
-          <Text variant="body" tone="secondary">
+        <Pressable onPress={onSkip} accessibilityRole="button" style={styles.skip}>
+          <Text variant="body" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE}>
             Skip
           </Text>
         </Pressable>
@@ -82,7 +101,9 @@ function SlidingPager({ index, setIndex, onFinish }: PagerProps) {
   const { width } = useWindowDimensions();
   const { duration, easing } = useMotion();
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const scrollX = useSharedValue(0);
+  // Opens on `index` (0 except under a DEV capture knob).
+  const [startX] = useState(index * width);
+  const scrollX = useSharedValue(startX);
   const driven = useSharedValue(-1); // -1 = the user is in control
 
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -122,6 +143,7 @@ function SlidingPager({ index, setIndex, onFinish }: PagerProps) {
         showsHorizontalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        contentOffset={{ x: startX, y: 0 }}
         onMomentumScrollEnd={(e) => settle(Math.round(e.nativeEvent.contentOffset.x / width))}
         style={styles.pager}
       >
@@ -137,6 +159,7 @@ function SlidingPager({ index, setIndex, onFinish }: PagerProps) {
 function SlidingCard({ index, width, scrollX, line, active }: { index: number; width: number; scrollX: SharedValue<number>; line: string; active: boolean }) {
   const Vignette = VIGNETTES[index];
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
 
   // Distance of this card from centre, in cards (−1 … 1).
   const fadeStyle = useAnimatedStyle(() => {
@@ -149,12 +172,12 @@ function SlidingCard({ index, width, scrollX, line, active }: { index: number; w
 
   return (
     <Animated.View style={[styles.card, { width }, fadeStyle]} accessibilityLabel={`Card ${index + 1} of ${ONBOARDING_CARDS.length}`}>
-      <View style={[styles.art, { backgroundColor: colors.inset }]}>
+      <View style={[styles.art, { minHeight: artHeight(fontScale), backgroundColor: colors.bg, borderColor: colors.rim }]}>
         <Animated.View pointerEvents="none" style={[styles.decoFar, { backgroundColor: colors.accentWash }, far]} />
-        <Animated.View pointerEvents="none" style={[styles.decoNear, { borderColor: colors.line }, near]} />
+        <Animated.View pointerEvents="none" style={[styles.decoNear, { borderColor: colors.rim }, near]} />
         <Vignette active={active} />
       </View>
-      <Text variant="score.lg" numberOfLines={3} style={styles.line}>
+      <Text variant="display" numberOfLines={0} accessibilityRole="header">
         {line}
       </Text>
     </Animated.View>
@@ -164,7 +187,7 @@ function SlidingCard({ index, width, scrollX, line, active }: { index: number; w
 // ── Reduce Motion ────────────────────────────────────────────────────────
 
 function CrossfadePager({ index, setIndex, onFinish }: PagerProps) {
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const { colors } = useTheme();
   const { duration } = useMotion();
   const opacity = useSharedValue(1);
@@ -198,10 +221,10 @@ function CrossfadePager({ index, setIndex, onFinish }: PagerProps) {
     <>
       <GestureDetector gesture={swipe}>
         <Animated.View style={[styles.pager, styles.card, { width }, fade]} accessibilityLabel={`Card ${index + 1} of ${ONBOARDING_CARDS.length}`}>
-          <View style={[styles.art, { backgroundColor: colors.inset }]}>
+          <View style={[styles.art, { minHeight: artHeight(fontScale), backgroundColor: colors.bg, borderColor: colors.rim }]}>
             <Vignette active />
           </View>
-          <Text variant="score.lg" numberOfLines={3} style={styles.line}>
+          <Text variant="display" numberOfLines={0} accessibilityRole="header">
             {ONBOARDING_CARDS[index]}
           </Text>
         </Animated.View>
@@ -232,7 +255,7 @@ function Dot({ index, progress, width }: { index: number; progress: SharedValue<
     const closeness = Math.max(0, 1 - Math.abs(progress.value / width - index));
     return {
       width: 6 + 16 * closeness,
-      backgroundColor: interpolateColor(closeness, [0, 1], [colors.line, colors.text]),
+      backgroundColor: interpolateColor(closeness, [0, 1], [colors.borderStrong, colors.text]),
     };
   });
   return <Animated.View style={[styles.dot, style]} />;
@@ -251,6 +274,8 @@ const styles = StyleSheet.create({
   },
   skip: {
     minHeight: 44,
+    minWidth: 44,
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   pager: {
@@ -262,11 +287,11 @@ const styles = StyleSheet.create({
     gap: space[7],
   },
   art: {
-    height: ART_HEIGHT,
     borderRadius: radius.xl,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: space[6],
+    padding: space[4],
     overflow: 'hidden',
   },
   decoFar: {
@@ -283,11 +308,9 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 90,
     borderWidth: 18,
-    bottom: -70,
-    left: -60,
-  },
-  line: {
-    lineHeight: 42,
+    // Kept in the corner, clear of the vignette's own lines ("You win Week 6", the leads-by line).
+    bottom: -120,
+    left: -100,
   },
   footer: {
     paddingHorizontal: space[6],

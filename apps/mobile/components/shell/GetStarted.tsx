@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { ComponentProps } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space, type } from '@/constants/tokens';
+import { Card } from '@/components/sp/Card';
+import { Icon } from '@/components/sp/Icon';
+import type { IconName } from '@/components/sp/logic/icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -16,6 +17,11 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 // username) the app resumes straight into create-league / join-league.
 // "Already have an account? Sign in" is the existing string (D1).
 // The heading line and both descriptions are the board's new copy.
+//
+// Game Night (W4 Onboarding): each choice is the §9C Card (surface + rim, no shadow); its icon
+// sits on an `inset` tile in `text`, not the accent, because the accent means live, your turn
+// or selected (§9C rule 3) and neither choice is any of those. The one accent on the screen is
+// the "Sign in" link.
 
 export interface GetStartedProps {
   onCreate: () => void;
@@ -36,7 +42,7 @@ export function GetStarted({ onCreate, onJoin, onSignIn }: GetStartedProps) {
       </View>
       <View style={styles.choices}>
         <Choice icon="add" title="Create a league" description="Pick the rules, invite friends, set the draft." onPress={onCreate} />
-        <Choice icon="trophy-outline" title="Join with a code" description="Got a code from a friend? Enter it here." onPress={onJoin} />
+        <Choice icon="trophy" title="Join with a code" description="Got a code from a friend? Enter it here." onPress={onJoin} />
       </View>
       <Pressable onPress={onSignIn} accessibilityRole="link" style={styles.switch} hitSlop={8}>
         <Text variant="body" tone="secondary" style={styles.center}>
@@ -53,31 +59,28 @@ function Choice({
   description,
   onPress,
 }: {
-  icon: ComponentProps<typeof Ionicons>['name'];
+  icon: IconName;
   title: string;
   description: string;
   onPress: () => void;
 }) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   return (
-    <PressableScale
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${title}. ${description}`}
-      style={[styles.choice, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card]}
-    >
-      <View style={[styles.tile, { backgroundColor: colors.accentTint }]}>
-        <Ionicons name={icon} size={24} color={colors.accent} />
-      </View>
-      <View style={styles.choiceText}>
-        <Text variant="headline" style={styles.bold}>
-          {title}
-        </Text>
-        <Text variant="callout" tone="secondary">
-          {description}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.text2} />
+    <PressableScale onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${description}`}>
+      <Card style={styles.choice}>
+        <View style={[styles.tile, { backgroundColor: colors.inset }]}>
+          <Icon name={icon} size="title" tone="text" />
+        </View>
+        <View style={styles.choiceText}>
+          <Text variant="headline" style={styles.bold}>
+            {title}
+          </Text>
+          <Text variant="callout" tone="secondary">
+            {description}
+          </Text>
+        </View>
+        <Icon name="chevronRight" size="body" tone="text2" />
+      </Card>
     </PressableScale>
   );
 }
@@ -95,7 +98,6 @@ const styles = StyleSheet.create({
     gap: space[5],
     padding: space[6] - 2,
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   tile: {
     width: 48,

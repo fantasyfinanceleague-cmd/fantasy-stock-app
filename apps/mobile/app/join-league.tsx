@@ -1,22 +1,24 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
 
 import { radius, space, type } from '@/constants/tokens';
-import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { Button, FULL_WIDTH_FONT_SCALE, type ButtonStatus } from '@/components/sp/Button';
+import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
-import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { AlertCard } from '@/components/join/AlertCard';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
+import { CAPTURE } from '@/lib/shell/captureDev';
+import { keepDots } from '@/lib/game/keepDots';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
 } from '@/lib/join/joinFixtureGate';
@@ -38,8 +40,16 @@ import {
 // - Under the dev-only JOIN_FIXTURE flag (lib/join/devFixture.ts) the two invokes below are
 //   answered locally, so every state is reachable without a real code or join.
 //   The real parse/view code runs on top; nothing is written.
+//
+// Game Night (W4 Onboarding): the preview's rows sit in the §9C Card and divide by space,
+// never a line; a refusal is the WarnPanel (`warnTint`, its own `warnText` ink, no icon), as on
+// the money screens; Joined's medallion is the trade-done one (a check in `onYou` on `you`).
 
 type Step = 'code' | 'preview' | 'joined';
+
+/** The preview rows' Dynamic Type ceiling (callout 13 → 26pt), under the league name's display
+ * (51pt at its 1.6× cap), so the name stays the screen's loudest line. */
+const PREVIEW_ROW_MAX_SCALE = 2;
 
 /** The two server calls. Kept inline (not in a lib) so the architecture map's call-site anchors stay on this screen. */
 async function callPreview(code: string): Promise<{ data: unknown; error: unknown }> {
@@ -65,8 +75,11 @@ async function callJoin(code: string): Promise<{ data: unknown; error: unknown }
 }
 
 export default function JoinLeagueScreen() {
-  const { colors } = useTheme();
   const { refresh, setActiveLeagueId } = useLeagueContext();
+  // At accessibility sizes a preview row stacks (label over value), so a value never wraps a word
+  // at a time beside its label (W4 Onboarding, XXXL: "Sat, Oct / 10 · / 7:00 PM / ET").
+  const { fontScale } = useWindowDimensions();
+  const stackRows = fontScale >= FULL_WIDTH_FONT_SCALE;
 
   const [step, setStep] = useState<Step>('code');
   const [code, setCode] = useState(JOIN_FIXTURE ? fixturePrefill(JOIN_FIXTURE) : '');
@@ -200,6 +213,16 @@ export default function JoinLeagueScreen() {
     router.replace('/(tabs)');
   }
 
+  // DEV captures only (lib/shell/captureKnobs.ts): press Find league, then Join, by themselves,
+  // so each fixture's preview, refusal and the joined screen open on a cold launch.
+  useEffect(() => {
+    if (!JOIN_FIXTURE || !CAPTURE.joinAuto) return;
+    if (step === 'code' && findStatus === 'idle' && !fieldError && !league) void find();
+    if (step === 'preview' && CAPTURE.joinAuto === 'join' && block === null && actionStatus === 'idle') void join();
+    // Steps only: each fires once per state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   const view = league ? previewView(league, block) : null;
 
   if (step === 'joined' && league) {
@@ -220,25 +243,26 @@ export default function JoinLeagueScreen() {
           </Text>
           <ScreenTitle>{view.name}</ScreenTitle>
         </View>
-        <View style={[styles.rows, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {view.rows.map((row, i) => (
+        <Card style={styles.rows}>
+          {view.rows.map((row) => (
             <View
               key={row.label}
               accessible
               accessibilityLabel={`${row.label}, ${row.value}`}
-              style={[styles.row, i > 0 && { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth }]}
+              style={stackRows ? styles.rowStacked : styles.row}
             >
-              <Text variant="callout" tone="secondary">
+              <Text variant="callout" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE}>
                 {row.label}
               </Text>
-              <Text variant="callout" numberOfLines={0} style={styles.rowValue}>
-                {row.value}
+              {/* keepDots: wraps only between "·" segments, never inside "7:00 PM ET". */}
+              <Text variant="callout" numberOfLines={0} maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={stackRows ? styles.rowValueStacked : styles.rowValue}>
+                {keepDots(row.value)}
               </Text>
             </View>
           ))}
-        </View>
-        {view.message ? <AlertCard message={view.message} /> : null}
-        {actionError ? <AlertCard message={actionError} /> : null}
+        </Card>
+        {view.message ? <WarnPanel text={view.message} /> : null}
+        {actionError ? <WarnPanel text={actionError} /> : null}
         <Button
           label={primary.label}
           variant={view.action === 'another' ? 'secondary' : 'primary'}
@@ -300,7 +324,7 @@ function Joined({ name, draftDate, onContinue }: { name: string; draftDate: stri
       <Stack.Screen options={{ gestureEnabled: false }} />
       <View style={styles.center}>
         <Animated.View style={popStyle}>
-          <Icon name="check" size="medallion" tone="gain" discTone="gainTint" />
+          <Icon name="check" size="medallion" tone="onYou" discTone="you" />
         </Animated.View>
         <ScreenTitle style={styles.centerText}>{v.title}</ScreenTitle>
         <Text variant="body" tone="secondary" style={styles.centerText}>
@@ -318,10 +342,11 @@ const styles = StyleSheet.create({
   previewHead: {
     gap: space[1],
   },
+  // Rows divide by space (§9C rule 2): each row's own 12pt padding, plus the card's 8pt.
   rows: {
-    borderWidth: 1,
     borderRadius: radius.lg,
     paddingHorizontal: space[5],
+    paddingVertical: space[2],
   },
   row: {
     flexDirection: 'row',
@@ -331,10 +356,20 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: space[3],
   },
+  rowStacked: {
+    gap: space[1],
+    minHeight: 44,
+    paddingVertical: space[3],
+  },
+  rowValueStacked: {
+    fontFamily: type.headline.fontFamily,
+    fontVariant: ['tabular-nums'],
+  },
   rowValue: {
     flexShrink: 1,
     textAlign: 'right',
     fontFamily: type.headline.fontFamily,
+    fontVariant: ['tabular-nums'],
   },
   caption: {
     textAlign: 'center',
