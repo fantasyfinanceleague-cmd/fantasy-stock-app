@@ -318,3 +318,16 @@ Deno.test('fetchLeagues: every await is followed by the stale check, before any 
   assert(body.includes('errorSummary(memberError ?? leagueRead?.error)'));
   assert(!/console\.(error|warn)\([^)]*\b(memberError|leagueError|leagueRead\?\.error)\s*[,)]/.test(body.replace('errorSummary(memberError ?? leagueRead?.error)', '')));
 });
+
+Deno.test('NewPasswordForm (reset + change password): no autoFocus at large text, so the title is read first (DL P3)', async () => {
+  const { isLargeText } = await import('../components/sp/logic/largeText.ts');
+  // Large (1.0) and the standard sizes below 1.3 still open the keyboard; XL / XXXL don't.
+  for (const [scale, focus] of [[1, true], [1.235, true], [1.3, false], [2.35, false], [3.12, false]] as const) {
+    assertEquals(!isLargeText(scale), focus, String(scale));
+  }
+  const form = code(SOURCES['components/shell/NewPasswordForm.tsx']);
+  assert(form.includes('const largeText = useLargeText();'));
+  assert(form.includes('autoFocus={!largeText}'));
+  assert(!/autoFocus\s*\n/.test(form) && !/autoFocus\s*\/?>/.test(form), 'no bare autoFocus left');
+  assert(code(SOURCES['components/sp/useLargeText.ts']).includes('isLargeText('));
+});
