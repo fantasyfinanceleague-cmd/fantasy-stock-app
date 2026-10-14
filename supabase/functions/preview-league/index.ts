@@ -100,12 +100,14 @@ Deno.serve(async (req: Request) => {
 
     // joinable + reason. draft_started is now a HARD block (matches
     // join_league_by_code's refusal in 20260930000000) — a user should never
-    // be shown a Join button the RPC will then refuse.
+    // be shown a Join button the RPC will then refuse. Since 20261123000000 it
+    // also covers an open draft room (T-1h), from the same draft_date.
     const current = memberCount ?? 0;
     const { joinable, reason } = previewJoinReason({
       isExistingMember: !!existing,
       seasonStatus: league.season_status,
       draftStatus: league.draft_status,
+      draftDate: league.draft_date ?? null,
       invite: invite ? { status: invite.status, expiresAt: invite.expires_at } : null,
       currentMembers: current,
       numParticipants: league.num_participants,

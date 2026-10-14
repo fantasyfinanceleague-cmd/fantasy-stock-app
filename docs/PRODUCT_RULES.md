@@ -377,7 +377,8 @@ building anything, and don't reopen a rule without him.
 - **Draft order:** a league setting with two modes, Random or Manual, never an automatic
   commissioner-first. Both lock at T−1h. If Manual was never saved, the random order
   locks. The order is set at the later of T−1h and the league reaching 4 members. A
-  joiner after T−1h picks last.
+  joiner after T−1h picks last. (Since 2026-10-14 nobody can join after T−1h; see "Share hides
+  while teams are locked" under League lifecycle.)
 - **The draft starts by itself** (2026-10-06): "the draft is not something that is
   started manually. It should be something that starts at the minute that is selected by
   the commissioner. So if the commissioner sets it for noon tomorrow, the draft room will
@@ -528,6 +529,15 @@ building anything, and don't reopen a rule without him.
   code itself stays visible. Share is shown before the draft (a renewed season too), when a code
   can be used; hidden while locked and after the season, until a renewal (a completed season
   refuses a join: preview-league's 'season_completed'). No new copy.
+  **No joins once the room opens** (2026-10-14, Giorgio, relayed by the Orchestrator): "once
+  the draft room opens (an hour before) the league is considered started. no one can join and
+  the share link cannot work". The server now enforces it (20261123000000): from T−1h a code is
+  refused by join-league and by the preview, the same moment Share hides, with the
+  started-draft refusal ('draft_started'), so no new copy. Run it back answers lock at the same
+  moment (Giorgio, 2026-10-14; see Run it back). A league short of 4 managers when
+  its room would open is postponed then, at the T−1h gate, never left for the start (the
+  auto-start gate already did this; now pinned by test). A postponed draft has no time, so
+  its code works again and Share comes back.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens
@@ -536,6 +546,11 @@ building anything, and don't reopen a rule without him.
   new season.
   - Only the commissioner starts it.
   - Every Season 1 player answers "I'm in" / "I'm out" and can flip until the draft is set.
+    **Answers lock when the draft room opens** (2026-10-14, Giorgio, relayed by the
+    Orchestrator): from T−1h an "I'm in" or "I'm out" is refused ("The draft has started, so
+    answers are locked."), as joining is (see "Share hides while teams are locked"). This
+    SUPERSEDES the design's rev 3.1 "free flips until the draft starts". A postponed draft
+    takes answers again.
   - The commissioner sees each reply on "Who's running back". "Running back" is Giorgio's
     copy, with the name in bold.
   - The draft can't be set while replies are pending.
