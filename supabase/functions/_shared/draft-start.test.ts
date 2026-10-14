@@ -346,6 +346,37 @@ Deno.test('gate: blocked in the gate window -> POSTPONED (stage room_open); clea
   assertEquals([call(c, 'record_draft_watch').p_blocked, call(c, 'record_draft_watch').p_gate], [false, true]);
 });
 
+Deno.test('fewer than 4 teams: postponed at the room-open gate, never left to T (2026-10-14: no joins once the room opens)', async () => {
+  // Giorgio, 2026-10-14: "once the draft room opens (an hour before) the league is
+  // considered started. no one can join and the share link cannot work". A league
+  // short of managers when its room would open must not sit in a room nobody can
+  // join: it is postponed then (draft_date cleared, so the code works again).
+  const short = { members: ['c', 'm1', 'm2'] };
+  const gateOpen = -(ROOM_OPEN_LEAD_SECONDS + GATE_LEAD_SECONDS);
+  // A second before the gate: recorded blocked (the commissioner is warned), not postponed.
+  const early = fakeAdmin(world(short));
+  assertEquals((await watchLeague(early, L, at(gateOpen - 1))).outcome, 'recorded');
+  assertEquals(names(early).includes('postpone_league_draft'), false);
+  assertEquals(call(early, 'record_draft_watch').p_blocked, true);
+  // The gate's first instant, the room's first instant and mid-room (a late tick):
+  // postponed at stage room_open each time, never deferred to the start pass.
+  for (const s of [gateOpen, -ROOM_OPEN_LEAD_SECONDS, -30 * 60, -1]) {
+    const a = fakeAdmin(world(short));
+    assertEquals(await watchLeague(a, L, at(s)), { outcome: 'postponed', reason: 'not_enough_members' }, `at T${s}s`);
+    const args = call(a, 'postpone_league_draft');
+    assertEquals([args.p_stage, args.p_draft_date], ['room_open', T]);
+    assertEquals((args.p_blockers as unknown[])[0], { code: 'not_enough_members', have: 3, need: 4 });
+  }
+  // Partial cases at the gate: exactly 4 clears; 2 is short too; 4 with a leave
+  // still unconfirmed is postponed for the reconfirm (the same gate, its own reason).
+  const four = fakeAdmin(world());
+  await watchLeague(four, L, at(gateOpen));
+  assertEquals([call(four, 'record_draft_watch').p_blocked, call(four, 'record_draft_watch').p_gate], [false, true]);
+  assertEquals((await watchLeague(fakeAdmin(world({ members: ['c', 'm1'] })), L, at(gateOpen))).outcome, 'postponed');
+  const rc = fakeAdmin(world({ reconfirm: { departed: [{ user_id: 'u', name: 'Sofia F.' }], members_before: 5, choice: 'pending' } }));
+  assertEquals(await watchLeague(rc, L, at(gateOpen)), { outcome: 'postponed', reason: 'roster_reconfirm_required' });
+});
+
 Deno.test('gate: an UNKNOWN verdict never warns or postpones; at the room time it clears the gate (fail open for the notice)', async () => {
   const before = fakeAdmin(world({ pool: 'error' }));
   assertEquals((await watchLeague(before, L, IN_GATE_BEFORE_ROOM)).outcome, 'skipped');

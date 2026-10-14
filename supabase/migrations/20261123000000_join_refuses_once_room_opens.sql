@@ -36,6 +36,13 @@
 -- already started". It sits in the same place in the precedence, so
 -- already_member (the Open button) and season_completed are unchanged.
 --
+-- SHORT LEAGUES: a league short of 4 managers when its room would open is
+-- already postponed then, not at T: draft-autopick-sweep's watchLeague
+-- (_shared/draft-start.ts) treats not_enough_members as a real blocker in the
+-- gate window [T-1h-30s, T) and postpones at stage 'room_open', which clears
+-- draft_date, so this function lets the code work again at once. Nothing to
+-- move; pinned by draft-start.test.ts and this file's PGlite test.
+--
 -- LATE JOINERS (20261111000000's open_due_draft_rooms notice, #67's order
 -- re-sync on a member change): no longer reachable by a human join. Not dead
 -- code, and not touched: Run it back's respond_to_renewal ('I'm in' after the

@@ -284,6 +284,25 @@ Deno.test({
       assertEquals((await join('NOSUCHCODE')).reason, 'invalid_code');
     });
 
+    await t.step('fewer than 4 at the room: the gate postpones (stage room_open), and the code works again at once', async () => {
+      // _shared/draft-start.ts watchLeague postpones a short league in the gate
+      // window [T-1h-30s, T) (draft-start.test.ts pins the TS side); here, the
+      // SQL it calls, with the inputs it judged, on a league already in its room.
+      const L = await league({ minutes: 30, members: 3 });
+      assertEquals((await join(L.code)).reason, 'draft_started', 'short, but the room is open: refused');
+      const [{ j }] = await q(`select public._draft_start_inputs($1) j`, [L.id]);
+      await db.exec(`set role service_role`);
+      const [pp] = await q(`select public.postpone_league_draft(l.id, l.draft_date, 'room_open', 'not_enough_members',
+          '[{"code":"not_enough_members","have":3,"need":4}]'::jsonb, $2::jsonb) r from leagues l where l.id = $1`, [L.id, JSON.stringify(j)]);
+      await db.exec(`reset role`);
+      assertEquals(pp.r.status, 'postponed');
+      const [row] = await q(`select l.draft_date, p.stage from leagues l join draft_postponements p on p.league_id = l.id where l.id=$1`, [L.id]);
+      assertEquals([row.draft_date, row.stage], [null, 'room_open']);
+      assertEquals(await preview(L.id), null, 'Share and the preview come back with the postponement');
+      assertEquals((await join(L.code)).ok, true, 'the fourth manager can join');
+      assertEquals(await members(L.id), 4);
+    });
+
     await t.step('grants: service_role only, re-asserted over drift (proacl + has_function_privilege)', async () => {
       const [f] = await q(`select proacl::text acl, prosecdef, proconfig from pg_proc where proname = 'join_league_by_code'`);
       assertEquals(f.acl, '{postgres=X/postgres,service_role=X/postgres}');

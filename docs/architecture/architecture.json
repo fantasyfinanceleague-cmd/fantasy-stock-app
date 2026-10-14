@@ -2,30 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "8cac356344060cf464672a98ee27f8df6800a037",
-    "commitShort": "8cac3563",
+    "commit": "58c595d442db81e5e37ae1ec0e1752474fe86d28",
+    "commitShort": "58c595d4",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "fix/no-joins-after-room-opens",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/preview-league/index.ts"
+        "path": "supabase/functions/_shared/draft-start.test.ts"
       },
       {
         "code": "M",
-        "path": "supabase/functions/preview-league/reason.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/preview-league/reason.ts"
-      },
-      {
-        "code": "??",
         "path": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql"
       }
     ],
-    "timestamp": "2026-10-14T18:21:21Z",
+    "timestamp": "2026-10-14T18:27:48Z",
     "sourceHash": "sha256:b5e61b592d13781310e425b12a7e7db60310fc02b95228d0a8503e2ef56e6eb3",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -33,7 +25,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 18.1,
+    "ageHours": 18.2,
     "ageDays": 0.8,
     "staleAfterDays": 14,
     "stale": false,
@@ -4579,7 +4571,7 @@
           "supabase/migrations/20260716000000_preview_join_league_infra.sql:55",
           "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:33",
           "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:31",
-          "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:55"
+          "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:62"
         ],
         "latestDefinition": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql",
         "redefinitions": 4
@@ -4593,7 +4585,7 @@
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql",
-        "line": 55
+        "line": 62
       }
     },
     {
@@ -13353,7 +13345,7 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:66",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:44",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:42",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:66"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:73"
       ]
     },
     {
@@ -13369,7 +13361,7 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:91",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:119"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:126"
       ]
     },
     {
@@ -13388,8 +13380,8 @@
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:84",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:67",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:82",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:110",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:91"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:117",
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:98"
       ]
     },
     {
@@ -13405,7 +13397,7 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:87",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:115"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:122"
       ]
     },
     {
@@ -13419,7 +13411,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:95",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:123"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:130"
       ]
     },
     {
@@ -13433,7 +13425,7 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:95",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:123"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:130"
       ]
     },
     {
@@ -13455,9 +13447,9 @@
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:40",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:46",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:55",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:64",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:70",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:79"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:71",
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:77",
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:86"
       ]
     },
     {
@@ -18307,7 +18299,7 @@
             "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
             "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89",
             "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:87",
-            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:115"
+            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:122"
           ]
         },
         {
@@ -18318,7 +18310,7 @@
             "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
             "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93",
             "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:91",
-            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:119"
+            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:126"
           ]
         }
       ],
