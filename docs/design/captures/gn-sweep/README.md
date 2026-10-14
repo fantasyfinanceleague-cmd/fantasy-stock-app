@@ -4,6 +4,8 @@
 `62bb6ea6`** (both on `origin/main` `0fa519bf`). `62bb6ea6` changes one constant, `LEAGUES_LOAD_FAILED`,
 to Giorgio's approved "Your leagues didn't load."; it renders only in the failed state, so every other
 frame is pixel-identical on either build. The `a0*` set was re-shot in full on `62bb6ea6`.
+**The reset form at XL and XXXL (`b06-*-xl-*`, `b06-*-xxxl-*`) is on `178d1339`** (the DL's P3: no
+autoFocus at large text); its Large frames are unchanged (autoFocus stays on below 1.3×).
 The before-frames are `origin/main` `0fa519bf` itself, plus the same DEV-only capture plumbing
 patched into a throwaway checkout (the `type`/`typeq` search actions, `scrollto`, and the gallery's
 gn-sweep section), so each pair is driven the same way. Nothing else differs.
@@ -41,7 +43,7 @@ E 12:26 · Q 12:27 · C 12:28; before 12:37–12:41.
 | `b02-not-found-*` (Large, XL, XXXL) | **Item 3.** `+not-found` | The sp medallion (search in a `sunken` disc), "Nothing here", the line, **Go to Home**. At XXXL the title stays at least as large as the body. |
 | `b03-reset-invalid-*` (Large, XL, XXXL) | **Item 3.** reset-password, invalid (`?status=invalid`) | The sp alert in the disc, "This link didn't work", the line, **Request a new link** / Back to sign in. **XXXL: the message now caps at the title's size** (it was larger, see before). |
 | `b04-reset-verifying-*` (Large, XL, XXXL) | reset-password, verifying | Spinner in `accent`, "Checking your reset link…", Cancel. |
-| `b06-reset-form-*` (Large, XL, XXXL) | reset-password, valid (the form; `RESET_CAPTURE=form`) | "Set a new password", the rule line, the two fields (the first focused, keyboard up), the rules, Update password (disabled until both fields have text; the rules list sits beside it), Cancel. |
+| `b06-reset-form-*` (Large, XL, XXXL) | reset-password, valid (the form; `RESET_CAPTURE=form`) | "Set a new password", the rule line, the two fields, the rules, Update password (disabled until both fields have text; the rules list sits beside it), Cancel. Large: the first field focused, keyboard up. **XL / XXXL (`178d1339`): no autoFocus, so the title is read first and one tap opens the field** (DL P3). |
 | `b07-reset-success-*` (Large, XL, XXXL) | reset-password, success | sp `checkCircle` in the disc, "Password updated", the line, **Continue**. |
 | `b05-player-portfolio-*` | **Item 1.** Another manager's portfolio (`/player-portfolio?userId=gianluigi`) | `moneyBg`; the holdings divide by space at the 56pt rhythm; no rules. |
 | `c01-room-search-*` | **Item 1.** Draft room search, your running clock (`on_clock_90`, typed "A") | The results on the rimmed `surface` dropdown, divided by space; "Already owned" rows dimmed with the badge (now 11pt). |
@@ -97,7 +99,7 @@ switches are DEV-only) · Variety 4 (reads as the same system as W4's approved s
 |---|---|---|---|
 | Old-skin type in the search field (Inter 16/12/14, an outlined uppercase badge) | `c01`, `c02` | major → P2 | Move SymbolSearchField to sp/Text (`ticker`, `caption`) and a pill badge (W8; out of this sweep's scope, which was its rule lines) |
 | Their portfolio's rows are still 3e's anatomy; no close control; no route opens the screen | `b05` | major → P2 | Decide if the screen lives (nothing navigates to it); if so, the HoldingRow anatomy without the tap, and an X (W8) |
-| The reset form at XL/XXXL: the keyboard and the focused field push the title off-screen | `b06-…-xl/xxxl` | minor → P3 | Pre-existing (NewPasswordForm's `autoFocus`, shared with Change password); for the DL |
+| The reset form at XL/XXXL: the keyboard and the focused field pushed the title off-screen | `b06-…-xl/xxxl` | minor → P3 | **Fixed in `178d1339`** (DL P3): no autoFocus from `isLargeText` (≥ 1.3×); shared with Change password |
 | +not-found's total accent 5.0–5.2% | `b02` | minor → P3 | All of it is the one primary (without it: 0.02%), so it passes the rule as written |
 
 ## §4 Nothing tappable does nothing
@@ -192,16 +194,16 @@ Not tapped by a finger anywhere (no device grant); every handler named above is 
 | `b05-player-portfolio-17pro-light` | light | 0.00 | 0.00 | 0.00 | 0.00 |
 | `b06-reset-form-17e-dark` | dark | 0.48 | 0.01 | 0.00 | 0.00 |
 | `b06-reset-form-17e-light` | light | 0.47 | 0.00 | 0.00 | 0.00 |
-| `b06-reset-form-17e-xl-dark` | dark | 0.31 | 0.03 | 0.00 | 0.00 |
-| `b06-reset-form-17e-xl-light` | light | 0.31 | 0.03 | 0.00 | 0.00 |
-| `b06-reset-form-17e-xxxl-dark` | dark | 0.34 | 0.03 | 0.00 | 0.00 |
-| `b06-reset-form-17e-xxxl-light` | light | 0.34 | 0.03 | 0.00 | 0.00 |
+| `b06-reset-form-17e-xl-dark` | dark | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17e-xl-light` | light | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17e-xxxl-dark` | dark | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17e-xxxl-light` | light | 0.00 | 0.00 | 0.00 | 0.00 |
 | `b06-reset-form-17pro-dark` | dark | 0.46 | 0.01 | 0.00 | 0.00 |
 | `b06-reset-form-17pro-light` | light | 0.46 | 0.01 | 0.00 | 0.00 |
-| `b06-reset-form-17pro-xl-dark` | dark | 0.30 | 0.02 | 0.00 | 0.00 |
-| `b06-reset-form-17pro-xl-light` | light | 0.28 | 0.00 | 0.00 | 0.00 |
-| `b06-reset-form-17pro-xxxl-dark` | dark | 0.33 | 0.03 | 0.00 | 0.00 |
-| `b06-reset-form-17pro-xxxl-light` | light | 0.29 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17pro-xl-dark` | dark | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17pro-xl-light` | light | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17pro-xxxl-dark` | dark | 0.00 | 0.00 | 0.00 | 0.00 |
+| `b06-reset-form-17pro-xxxl-light` | light | 0.00 | 0.00 | 0.00 | 0.00 |
 | `b07-reset-success-17e-dark` | dark | 4.57 | 0.01 | 0.00 | 0.00 |
 | `b07-reset-success-17e-light` | light | 4.57 | 0.01 | 0.00 | 0.00 |
 | `b07-reset-success-17e-xl-dark` | dark | 4.40 | 0.02 | 0.00 | 0.00 |
