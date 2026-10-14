@@ -146,3 +146,11 @@ export function todayEtIso(now: Date = new Date()): string | null {
   if (!p) return null;
   return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
 }
+
+/** A row's amount: the ledger's total when it has one, else shares × price (the same number,
+ * derived — never shown as $0 when the price is unknown: null). */
+export function historyTotal(item: Pick<HistoryItem, 'total' | 'quantity' | 'price'>): number | null {
+  if (item.total != null) return item.total;
+  if (item.price == null) return null;
+  return Math.round(item.quantity * item.price * 100) / 100;
+}

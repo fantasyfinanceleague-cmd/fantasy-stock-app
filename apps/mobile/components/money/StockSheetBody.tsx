@@ -53,7 +53,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { reviewPresentation } from '@/lib/money/reviewPresentation';
 import { canDismiss } from '@/lib/money/reviewMachine';
 import { decideTradeGate } from '@/lib/money/tradeGate';
-import { stockSheetModel } from '@/lib/money/stockSheetModel';
+import { companyLine, stockSheetModel } from '@/lib/money/stockSheetModel';
 import { buyBody, previewBody, sellBody } from '@/lib/money/tradeBodies';
 import { useStockSheetData } from '@/lib/money/useStockSheetData';
 import { usePortfolioLedger } from '@/lib/money/usePortfolioLedger';
@@ -69,6 +69,8 @@ import { weekSessions } from '@/lib/game/matchupRoster';
 import { mondayOf } from '@/lib/money/portfolioChart';
 import { HOME_FIXTURE } from '@/lib/home/devFixture';
 import { useCaptureAction } from '@/lib/money/captureScript';
+import { openingOf } from '@/lib/game/playerCardModel';
+import { acquisitionLine } from '@/components/sp/logic/gameNight';
 
 /** The sheet's gutter (§9C: the card's and the sheet's 20pt). */
 const SHEET_GUTTER = space[6];
@@ -168,6 +170,12 @@ export function StockSheetBody({
     if (sheetLeague.stake_mode !== 'budget_cap' && sheetLeague.stake_mode !== 'price_tiers') return false;
     return myHoldingsFromLedger(ledgerState.ledger, userId).length >= sheetLeague.num_rounds;
   }, [sheetLeague, ledgerState.ledger, userId]);
+  // How you got it, in the player card's words (one string on the card and the sheet).
+  const acquisition = useMemo(() => {
+    if (!ledgerState.ledger || !userId) return null;
+    const o = openingOf(userId, symbol, ledgerState.ledger.activity);
+    return o ? acquisitionLine(o.acquisition) : null;
+  }, [ledgerState.ledger, userId, symbol]);
   // This week's sessions: the chart's 1W axis.
   const chartNow = SEAM_ON ? seamChartNow() : now;
   const todayEt = etDateOf(chartNow) ?? '';
@@ -397,6 +405,7 @@ export function StockSheetBody({
     gate: { open: gate.open, opensLabel },
     leagueName: data.leagueName ?? '',
     lastCloseLabel: null,
+    acquisition,
     budgetLeft,
     rosterFull,
   });
@@ -487,7 +496,8 @@ export function StockSheetBody({
 
   return (
     <View accessibilityRole="summary" style={styles.body}>
-      <SheetHeader symbol={symbol} company={model.name || cleanCompanyName(data.companyName) || symbol} onClose={onDone} />
+      {/* The company line, or none: never the ticker repeated under itself. */}
+      <SheetHeader symbol={symbol} company={companyLine(model.name || cleanCompanyName(data.companyName), symbol)} onClose={onDone} />
 
       {/* The price: the sheet's standout, in `money` (44/500, §9C rule 5), and today. */}
       <View style={styles.priceBlock}>
@@ -540,6 +550,7 @@ export function StockSheetBody({
 
       {held ? (
         <SegmentedControl
+          shape="pill"
           options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
           value={selected}
           onChange={(v) => setChoice(v as 'buy' | 'sell')}
@@ -564,6 +575,11 @@ export function StockSheetBody({
           onPress={() => openReview(selected)}
           testID="stock-sheet-review"
         />
+        {/* The review refusal's own next step (refusals.ts over_budget → pick_stock), here
+            before the review: the sheet closes back to search. */}
+        {selected === 'buy' && model.buy.blockedBy === 'budget' ? (
+          <Button label={COPY.pickAnotherStock} variant="secondary" fullWidth onPress={() => handleNextStep('pick_stock')} testID="stock-sheet-pick-another" />
+        ) : null}
         {!warnBlock && action.reason ? (
           <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center} accessibilityLiveRegion="polite">
             {action.reason}

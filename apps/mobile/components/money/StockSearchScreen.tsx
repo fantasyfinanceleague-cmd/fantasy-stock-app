@@ -137,8 +137,9 @@ export function StockSearchScreen() {
         {error ? (
           <LoadFailure title={COPY.stockSearchLoadTitle} message={COPY.loadRetryMessage} onRetry={retry} />
         ) : query.length === 0 ? (
-          // The board's empty state: focused, keyboard up, a hint says what to type.
-          <Text variant="callout" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} tone="secondary">{COPY.searchHint}</Text>
+          // Empty: the focused field and its placeholder say what to type (the hint repeated it:
+          // dropped at the W4 DL gate).
+          null
         ) : loading && results.length === 0 ? (
           // E-2: skeleton rows, never a blank screen, while the first results load.
           <View style={styles.results} accessible accessibilityLabel="Loading results" accessibilityState={{ busy: true }}>
@@ -171,6 +172,10 @@ export function StockSearchScreen() {
             })}
           </View>
         )}
+        {/* The Alpaca credit on every price surface (PRODUCT_RULES), under the results. */}
+        {results.length > 0 && !error ? (
+          <Text variant="caption" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -184,7 +189,7 @@ function SearchRow({ item, status, onPress }: { item: ShapedSearchResult; status
   const label = [item.symbol, item.name, status.text, item.price != null ? formatMoney(item.price) : null].filter(Boolean).join(', ');
   const content = (
     <>
-      <View style={[styles.disc, { backgroundColor: colors.inset }]}>
+      <View style={[styles.disc, off ? styles.dim : null, { backgroundColor: colors.inset }]}>
         <Text variant="ticker.tile" allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{item.symbol}</Text>
       </View>
       <View style={styles.lead}>
@@ -204,14 +209,16 @@ function SearchRow({ item, status, onPress }: { item: ShapedSearchResult; status
         <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1}>{item.name}</Text>
       </View>
       {item.price != null ? (
-        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.price}>{formatMoney(item.price)}</Text>
+        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.price, styles.bold, off ? styles.dim : null]}>{formatMoney(item.price)}</Text>
       ) : null}
       {off ? <View style={styles.chevronSpace} /> : <Icon name="chevronRight" size="callout" tone="text2" />}
     </>
   );
   if (off) {
     return (
-      <View style={[styles.row, styles.disabled]} accessible accessibilityLabel={label} accessibilityState={{ disabled: true }}>
+      // Not a button. Only the disc and the price dim (W4 DL gate): the reason stays in `text2`
+      // at full opacity (dimmed, it fell to 2.44:1 / 2.04:1).
+      <View style={styles.row} accessible accessibilityLabel={label} accessibilityState={{ disabled: true }} testID={`search-row-off-${item.symbol}`}>
         {content}
       </View>
     );
@@ -235,7 +242,7 @@ const styles = StyleSheet.create({
   lead: { flex: 1, minWidth: 0, gap: space[1] },
   price: { flexShrink: 0 },
   chevronSpace: { width: 16 },
-  disabled: { opacity: 0.45 },
+  dim: { opacity: 0.45 },
   empty: { paddingVertical: space[7], gap: space[2], alignItems: 'center' },
   skeletonRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: space[4], paddingVertical: space[3] },
   skeletonLines: { flex: 1, gap: space[2] },

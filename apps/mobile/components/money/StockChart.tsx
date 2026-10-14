@@ -59,6 +59,7 @@ export function StockChart({ symbol, price, live, now = new Date(), sessions, bl
         drawKey={`${symbol}-${range}`}
         formatValue={(v) => formatMoney(v)}
         accessibilityLabel={`${symbol} price`}
+        captureScrubAction="stockscrub"
       />
       <RangePills options={CHART_RANGES} value={range} onChange={setRange} variant="pills" />
     </View>

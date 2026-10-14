@@ -31,3 +31,8 @@ export const CAPTURE_FAIL: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_
 /** Capture only: record-trade's refusal for the review's refusal captures (EXPO_PUBLIC_CAPTURE_REFUSAL,
  * e.g. trade_conflict, market_closed). Unset: the seam's submit succeeds (and never writes). */
 export const CAPTURE_REFUSAL: string | null = SEAM_ON ? process.env.EXPO_PUBLIC_CAPTURE_REFUSAL || null : null;
+/** Capture only: your draft happened today (Thu 6 PM ET, after the close) — Portfolio's one-point
+ * Season line (EXPO_PUBLIC_CAPTURE_DRAFT_TODAY=1). */
+export const CAPTURE_DRAFT_TODAY: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_DRAFT_TODAY === '1';
+/** Capture only: every price mirrored below its draft price — the loss stress (EXPO_PUBLIC_CAPTURE_LOSS=1). */
+export const CAPTURE_LOSS: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_LOSS === '1';

@@ -170,10 +170,13 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
         <Button label={NEXT_LABEL[nextStep]} variant="primary" fullWidth onPress={() => onNextStep(nextStep)} />
       ) : null}
       {p.footer === 'try_again' ? (
-        <Button label={COPY.tryAgain} variant="secondary" fullWidth onPress={onRetry} />
+        // The refusal's one step (trade_conflict, a 503): the primary (W4 DL gate).
+        <Button label={COPY.tryAgain} variant="primary" fullWidth onPress={onRetry} testID="trade-review-try-again" />
       ) : null}
 
       <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{review.caption}</Text>
+      {/* The Alpaca credit on every price surface (PRODUCT_RULES), the review and its confirmation too. */}
+      <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
     </View>
   );
 }

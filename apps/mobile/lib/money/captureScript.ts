@@ -54,7 +54,7 @@ export function useCaptureAction(action: string, handler: (arg: string | null) =
   const ref = useRef(handler);
   ref.current = handler;
   useEffect(() => {
-    if (STEPS.length === 0) return;
+    if (STEPS.length === 0 || !action) return;
     const fn = (arg: string | null) => ref.current(arg);
     handlers.set(action, fn);
     start();

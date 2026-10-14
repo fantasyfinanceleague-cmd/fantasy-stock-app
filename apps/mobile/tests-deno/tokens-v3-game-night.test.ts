@@ -117,13 +117,17 @@ const W3_CHIP_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
 const W4_DRAFT_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
   ['text', 'accentTint', 'bg', 4.5], ['text2', 'accentTint', 'bg', 4.5], ['loss', 'accentTint', 'bg', 4.5],
 ];
+// W4 Portfolio: the money sheet's warn panel (warnText on warnTint) sits on the sheet's surface.
+const W4_PORTFOLIO_PAIRS: ReadonlyArray<[string, string, string | null, number]> = [
+  ['warnText', 'warnTint', 'surface', 4.5],
+];
 
 Deno.test('contrast: every Game Night pair is in PAIRS (sp-contrast.test.ts scores each in both themes)', () => {
   assertEquals(GAME_NIGHT_PAIRS.length, 50, '§9C v3.1: 50 new pairs');
-  for (const [fg, bg, over, min] of [...GAME_NIGHT_PAIRS, ...W3_CHIP_PAIRS, ...W4_DRAFT_PAIRS]) {
+  for (const [fg, bg, over, min] of [...GAME_NIGHT_PAIRS, ...W3_CHIP_PAIRS, ...W4_DRAFT_PAIRS, ...W4_PORTFOLIO_PAIRS]) {
     assert(PAIRS.some(([f, b, o, m]) => f === fg && b === bg && o === over && m === min), `${fg} on ${bg}${over ? ` over ${over}` : ''} >= ${min}`);
   }
-  assertEquals(PAIRS.length, 40 - 1 + GAME_NIGHT_PAIRS.length + W3_CHIP_PAIRS.length + W4_DRAFT_PAIRS.length);
+  assertEquals(PAIRS.length, 40 - 1 + GAME_NIGHT_PAIRS.length + W3_CHIP_PAIRS.length + W4_DRAFT_PAIRS.length + W4_PORTFOLIO_PAIRS.length);
 });
 
 Deno.test('every category has its pair: a pill (onCat) AND a line on the tile and on an inset', () => {

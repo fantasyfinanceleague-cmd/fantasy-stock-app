@@ -193,7 +193,10 @@ export function portfolioSeries(input: {
   const points = series.map((d) => ({ t: dayOffset(axisStart, d.date), value: d.value }));
   return {
     points,
-    base: points[0]?.value ?? liveValue ?? 0,
+    // The base is the value the range STARTS from (the stake on the draft day, or the value
+    // entering the window) — kept even when today's live point replaces that day's own point
+    // (a season drafted today: one live dot over the stake's dashed line, §5 "Lines").
+    base: first[0]?.value ?? points[0]?.value ?? liveValue ?? 0,
     axis: { kind: 'dated', start: axisStart, end: todayEt < axisStart ? axisStart : todayEt },
   };
 }

@@ -7,7 +7,8 @@
  *  - "since the draft" is value minus the stake: deliberately NOT Home's "season
  *    gain" (D1, Concept A). The two labels never swap.
  *  - "today" needs EVERY held position to have both a price and a previous
- *    close. One missing quote hides the line; it never shows as $0.
+ *    close. One missing quote hides the line; it never shows as $0. Its percent is of the
+ *    whole account at the last close (holdings + cash), the value the header shows.
  *  - rows are sorted by value, largest first. A row with no live price shows its
  *    cost and is counted in the caption, never shown as $0.
  */
@@ -113,7 +114,10 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
   const held = i.holdings;
   if (held.length > 0 && held.every((h) => h.price != null && h.prevClose != null && h.prevClose > 0)) {
     const change = held.reduce((a, h) => a + h.quantity * (h.price! - h.prevClose!), 0);
-    const base = held.reduce((a, h) => a + h.quantity * h.prevClose!, 0);
+    // The whole account's previous close (W4 DL gate): the holdings at their last close PLUS the
+    // cash, so "+$X · +Y% today" is a percent of the value the header shows (cash earns nothing
+    // today but is part of what the percent is of).
+    const base = held.reduce((a, h) => a + h.quantity * h.prevClose!, 0) + Math.max(0, i.cash);
     const pct = base > 0 ? (change / base) * 100 : 0;
     todayMoneyText = formatMoney(cents(change), { sign: 'always' });
     todayPctText = formatPercent(pct, { sign: 'always' });

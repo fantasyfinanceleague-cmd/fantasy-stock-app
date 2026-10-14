@@ -89,9 +89,12 @@ Deno.test('1M: the line enters at the value on the window\'s first day', () => {
   assertEquals(s.base, 160);
 });
 
-Deno.test('a season drafted today is one point: the stake, on its full axis', () => {
-  const s = portfolioSeries({ range: 'Season', daily: [{ date: '2026-10-13', value: 150 }], liveValue: 150, todayEt: '2026-10-13', now: new Date(), sessions: [], draftAt: null });
-  assertEquals(s.points, [{ t: 0, value: 150 }]);
+Deno.test('a season drafted today is one point: the live value over the stake\'s base', () => {
+  const s = portfolioSeries({ range: 'Season', daily: [{ date: '2026-10-13', value: 150 }], liveValue: 151.4, todayEt: '2026-10-13', now: new Date(), sessions: [], draftAt: null });
+  assertEquals(s.points, [{ t: 0, value: 151.4 }]);
+  // The dashed base stays the stake, so the one dot sits above it by its move (§5 "Lines").
+  assertEquals(s.base, 150);
+  assertEquals(s.axis, { kind: 'dated', start: '2026-10-13', end: '2026-10-13' });
 });
 
 Deno.test('mondayOf: weekdays to their Monday; the weekend belongs to the week just ended', () => {

@@ -29,7 +29,8 @@ import { FIXTURE_LEAGUE_ID, fixtureLeague } from './fixtureMode';
 import { budgetLeftOf, effectiveBudgetCap, userCashSpentFromLedger } from './budgetFigures';
 import { draftDateOf, type ChartActivityRow, type ChartStake } from './portfolioChart';
 import { seamBars, seamOpenSales, seamPortfolioLeague, seamQuote } from './portfolioSeam';
-import { MATCHUP_FIXTURE_VARIANT, PORTFOLIO_STAKE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { CAPTURE_LOSS, MATCHUP_FIXTURE_VARIANT, PORTFOLIO_STAKE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { HOME_FIXTURE } from '../home/devFixture';
 import type { DailyBar } from './prevClose';
 import type { BuyRowInput } from './buyRowLine';
 
@@ -160,12 +161,12 @@ export function usePortfolioData(): PortfolioData {
       } else if (SEAM_ON) {
         // The capture seam: the Matchup fixture's quotes and daily paths, no network.
         for (const sym of everHeld) {
-          const q = seamQuote(sym, MATCHUP_FIXTURE_VARIANT);
+          const q = seamQuote(sym, MATCHUP_FIXTURE_VARIANT, { homeFixture: HOME_FIXTURE, loss: CAPTURE_LOSS });
           if (q) {
             prices[sym] = q.price;
             prevCloses[sym] = q.prevClose;
           }
-          bars[sym] = seamBars(sym, MATCHUP_FIXTURE_VARIANT);
+          bars[sym] = seamBars(sym, MATCHUP_FIXTURE_VARIANT, { loss: CAPTURE_LOSS });
         }
       } else {
         // priceReads.readPriceMarks: the same quote + daily-bars read the stock sheet uses

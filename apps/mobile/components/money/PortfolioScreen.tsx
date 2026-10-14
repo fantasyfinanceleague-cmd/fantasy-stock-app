@@ -51,6 +51,8 @@ import { decideTradeGate } from '@/lib/money/tradeGate';
 import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 import { resolveWeekWindow, standardWeekSessions } from '@/lib/time/marketWeek';
 import { useCaptureAction } from '@/lib/money/captureScript';
+import { preDraftPortfolio } from '@/lib/money/preDraftPortfolio';
+import { Button } from '@/components/sp/Button';
 
 /** gain/loss/zero -> its theme colour (C-6: the same mapping Home's hero uses). */
 function toneColor(colors: ThemeColors, tone: 'gain' | 'loss' | 'zero' | null): string {
@@ -77,7 +79,7 @@ export function PortfolioScreen() {
   const stockSheet = useStockSheet();
   const router = useRouter();
   const { user } = useSession();
-  const { activeLeague, activeLeagueId, market } = useLeagueContext();
+  const { activeLeague, activeLeagueId, market, setActiveLeagueId } = useLeagueContext();
   const leagueId = activeLeague?.id ?? (MONEY_FIXTURE ? FIXTURE_LEAGUE_ID : null);
   const ledgerState = usePortfolioLedger(leagueId);
   // The player card's week (Matchup's own read: the week's snapshots, trades and bars) and
@@ -177,17 +179,28 @@ export function PortfolioScreen() {
   useCaptureAction('close', () => setSelected(null));
   useCaptureAction('sheet', (sym) => { if (sym) stockSheet.open(sym, { name: ledgerState.ledger?.symbol_names[sym] ?? null }); });
   useCaptureAction('search', () => router.push('/stock-search'));
+  useCaptureAction('league', (id) => { if (id) setActiveLeagueId(id); });
   useCaptureAction('scroll', (y) => scrollRef.current?.scrollTo({ y: Number(y) || 0, animated: false }));
 
   let body: React.ReactNode;
-  if (activeLeague && activeLeague.draft_status !== 'completed') {
-    // Before the draft there is nothing to hold or trade yet: the app's own line for it.
+  const preDraft = activeLeague ? preDraftPortfolio(activeLeague.draft_status, activeLeague.draft_date) : null;
+  if (preDraft) {
+    // Before the draft is done: the app's line, and Home's own hook (W4 DL gate: never a dead
+    // end) — the draft room during the draft, the draft's date and time before it.
     body = (
-      <View style={styles.empty} accessible accessibilityLabel={COPY.draftNotCompleted}>
+      <View style={styles.empty} accessible={preDraft.hook?.kind !== 'room'} accessibilityLabel={[preDraft.line, preDraft.hook?.label].filter(Boolean).join(' ')}>
         <View style={[styles.emptyDisc, { backgroundColor: colors.inset }]}>
           <Icon name="lock" size="title" tone="text2" />
         </View>
-        <Text variant="headline" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.extraBold, styles.center]}>{COPY.draftNotCompleted}</Text>
+        <Text variant="headline" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.extraBold, styles.center]}>{preDraft.line}</Text>
+        {preDraft.hook?.kind === 'date' ? (
+          <Text variant="callout" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.bold, styles.center]} testID="portfolio-pre-draft-date">{preDraft.hook.label}</Text>
+        ) : null}
+        {preDraft.hook?.kind === 'room' ? (
+          <View style={styles.emptyAction}>
+            <Button label={preDraft.hook.label} variant="primary" fullWidth onPress={() => router.push('/(tabs)/league')} testID="portfolio-go-to-draft-room" />
+          </View>
+        ) : null}
       </View>
     );
   } else if (data.status === 'loading') {
@@ -241,6 +254,7 @@ export function PortfolioScreen() {
               drawKey={range}
               formatValue={(n) => formatMoney(n)}
               accessibilityLabel="Portfolio value"
+              captureScrubAction="scrub"
             />
           ) : null}
           {/* Measured from pixels (W4 capture): the pills' own 6pt target margins put them 21pt under
@@ -258,7 +272,7 @@ export function PortfolioScreen() {
             {v.cashValueText ? (
               <View style={styles.factRow} accessible accessibilityLabel={`${COPY.cashFromSales}, ${v.cashValueText}`}>
                 <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{COPY.cashFromSales}</Text>
-                <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{v.cashValueText}</Text>
+                <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.bold}>{v.cashValueText}</Text>
               </View>
             ) : null}
             {v.slotsText ? (
@@ -401,4 +415,5 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   empty: { alignItems: 'center', gap: space[4], paddingTop: space[10] },
   emptyDisc: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  emptyAction: { alignSelf: 'stretch', paddingTop: space[3] },
 });

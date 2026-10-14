@@ -20,6 +20,7 @@ import type { HoldingRow as HoldingRowData } from '@/lib/money/portfolioView';
 
 /** The row's small text never outgrows the ticker beside it, nor the value: 1.3× at most. */
 export const ROW_TEXT_MAX_SCALE = 1.3;
+const NBSP = '\u00a0';
 /** The disc's ticker floors at 11pt (13 × 0.85), never smaller (§9B). */
 const DISC_MIN_SCALE = 0.85;
 
@@ -57,12 +58,19 @@ export const HoldingRow = forwardRef<View, HoldingRowProps>(function HoldingRow(
               </View>
             ) : null}
           </View>
-          <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.tabular}>
-            {`${row.name} · ${row.quantityText} sh`}
-          </Text>
+          {/* Two Texts (W4 DL gate): the company truncates, " · N sh" never does. */}
+          <View style={styles.subLine}>
+            <Text testID="holding-row-company" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.company}>
+              {row.name}
+            </Text>
+            <Text testID="holding-row-shares" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.shares}>
+              {`${NBSP}· ${row.quantityText}${NBSP}sh`}
+            </Text>
+          </View>
         </View>
         <View style={styles.trail}>
-          <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{row.valueText}</Text>
+          {/* A money number: 700 (800 is for game numbers, §9C rule 5). */}
+          <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.money}>{row.valueText}</Text>
           {row.todayText ? (
             <Text variant="caption" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} color={tone} style={[styles.bold, styles.tabular]}>{row.todayText}</Text>
           ) : null}
@@ -111,6 +119,22 @@ const styles = StyleSheet.create({
     gap: space[1],
     flexShrink: 0,
     maxWidth: '45%',
+  },
+  subLine: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    minWidth: 0,
+  },
+  company: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  shares: {
+    flexShrink: 0,
+    fontVariant: ['tabular-nums'],
+  },
+  money: {
+    fontWeight: '700',
   },
   bold: {
     fontWeight: '700',

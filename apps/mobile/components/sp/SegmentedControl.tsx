@@ -25,9 +25,13 @@ export interface SegmentedControlProps {
   options: SegmentedOption[];
   value: string;
   onChange: (value: string) => void;
+  /** 'pill' (money screens, W4 Portfolio DL gate): the track and the indicator are pills
+   * (radius 999), the selected segment stays neutral (`surface` on `sunken`, never an accent
+   * fill). The default keeps the §9A rounded rectangle the game screens use. */
+  shape?: 'rounded' | 'pill';
 }
 
-export function SegmentedControl({ options, value, onChange }: SegmentedControlProps) {
+export function SegmentedControl({ options, value, onChange, shape = 'rounded' }: SegmentedControlProps) {
   const { colors } = useTheme();
   const { duration, easing, withTiming } = useMotion();
 
@@ -74,9 +78,9 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
     // 8 pt clear above and below, so each segment's hit slop never overlaps
     // another target (§9B). The visual height is unchanged.
     <View accessibilityRole="tablist" style={styles.wrap}>
-    <View style={[styles.track, { backgroundColor: trackColor }]} onLayout={handleLayout}>
+    <View style={[styles.track, shape === 'pill' ? styles.pill : null, { backgroundColor: trackColor }]} onLayout={handleLayout}>
       {segmentWidth > 0 ? (
-        <Animated.View style={[styles.indicator, { backgroundColor: indicatorColor }, indicatorStyle]} />
+        <Animated.View style={[styles.indicator, shape === 'pill' ? styles.pill : null, { backgroundColor: indicatorColor }, indicatorStyle]} />
       ) : null}
       {options.map((option) => {
         const selected = option.value === value;
@@ -119,6 +123,7 @@ const TRACK_PADDING = 2;
 
 const styles = StyleSheet.create({
   wrap: { marginVertical: space[2] },
+  pill: { borderRadius: radius.pill },
   track: {
     flexDirection: 'row',
     borderRadius: radius.md,
