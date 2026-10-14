@@ -130,3 +130,9 @@ Deno.test('stock 1Y: month labels; no price: the line stops at the last close (n
   assertEquals(s.axis.kind === 'dated' && s.axis.months, true);
   assertEquals(s.points[s.points.length - 1].value, 104);
 });
+
+Deno.test('stock 1W after today\'s close (no bar yet): the session ends at its day\'s end on the price', () => {
+  const now = new Date('2026-09-25T00:00:00Z'); // Thu 8 PM ET
+  const s = stockLineSeries({ range: '1W', bars: STOCK_BARS, price: 106, todayEt: '2026-09-24', now, sessions: standardWeekSessions('2026-09-24T16:00:00Z') });
+  assertEquals(s.points[s.points.length - 1], { t: 4, value: 106 });
+});

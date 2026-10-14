@@ -150,6 +150,8 @@ const SEARCH_SAMPLE = [
   { symbol: 'ADBE', name: 'Adobe Inc.', price: 512.3 },
   { symbol: 'ABNB', name: 'Airbnb Inc.', price: 133.8 },
   { symbol: 'CRM', name: 'Salesforce Inc.', price: 274.1 },
+  // W4 Portfolio's sell-from-search capture: your own NVDA (the Home fixture's live price).
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 318.37 },
   { symbol: 'COST', name: 'Costco Wholesale', price: 912.3 },
   { symbol: 'V', name: 'Visa Inc.', price: 291.4 },
 ];

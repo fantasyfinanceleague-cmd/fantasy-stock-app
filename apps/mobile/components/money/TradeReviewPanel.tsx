@@ -38,6 +38,9 @@ const NEXT_LABEL: Record<NextStep, string> = {
   sign_in: COPY.signIn,
 };
 
+/** The review's text follows Dynamic Type to 1.6× (the sheet's ceiling). */
+const REVIEW_TEXT_MAX_SCALE = 1.6;
+
 export interface TradeReviewPanelProps {
   review: TradeReview;
   presentation: ReviewPresentation;
@@ -85,7 +88,8 @@ function DoneCheck() {
   }));
   return (
     <Animated.View style={style} accessible={false}>
-      <Icon name="check" size="medallion" tone="text" />
+      {/* Your trade: the `you` disc with its own `onYou` ink (§9C rule 4; a contrastPairs row). */}
+      <Icon name="check" size="medallion" tone="onYou" discTone="you" />
     </Animated.View>
   );
 }
@@ -111,7 +115,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
     <View style={styles.stack}>
       {canEdit && !done ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={onBack} hitSlop={4} style={styles.back}>
-          <Text variant="callout" color={colors.accent} style={styles.bold}>Edit</Text>
+          <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>Edit</Text>
         </Pressable>
       ) : null}
 
@@ -123,7 +127,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
         </View>
       ) : (
         <>
-          <Text variant="headline" accessibilityRole="header" style={styles.title}>{review.title}</Text>
+          <Text variant="headline" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} accessibilityRole="header" style={styles.title}>{review.title}</Text>
           {review.headline ? <Text variant="title" style={styles.title}>{review.headline}</Text> : null}
         </>
       )}
@@ -131,11 +135,11 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
       <View style={[styles.panel, { backgroundColor: colors.inset }]}>
         {review.lines.map((l) => (
           <View key={l.label} style={styles.row} accessible accessibilityLabel={`${l.label}, ${l.value}`}>
-            <Text variant="callout" tone="secondary" style={styles.rowLabel}>{l.label}</Text>
-            <Text variant="callout" tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{l.value}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.rowLabel}>{l.label}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{l.value}</Text>
           </View>
         ))}
-        {review.card ? <Text variant="callout" style={styles.bold}>{review.card}</Text> : null}
+        {review.card ? <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} style={styles.bold}>{review.card}</Text> : null}
       </View>
 
       {p.message && !done ? (
@@ -143,7 +147,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
           // The warn panel, NO icon (the Design Lead's ruling for refusals and blockers).
           <WarnPanel text={p.message} />
         ) : (
-          <Text variant="callout" tone="secondary" accessibilityRole="alert">{p.message}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" accessibilityRole="alert">{p.message}</Text>
         )
       ) : null}
 
@@ -169,7 +173,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
         <Button label={COPY.tryAgain} variant="secondary" fullWidth onPress={onRetry} />
       ) : null}
 
-      <Text variant="caption" tone="secondary" style={styles.center}>{review.caption}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{review.caption}</Text>
     </View>
   );
 }

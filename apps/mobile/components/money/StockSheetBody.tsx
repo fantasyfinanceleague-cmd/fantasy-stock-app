@@ -68,9 +68,14 @@ import { resolveWeekWindow, standardWeekSessions, type MarketCalendarSession } f
 import { weekSessions } from '@/lib/game/matchupRoster';
 import { mondayOf } from '@/lib/money/portfolioChart';
 import { HOME_FIXTURE } from '@/lib/home/devFixture';
+import { useCaptureAction } from '@/lib/money/captureScript';
 
 /** The sheet's gutter (§9C: the card's and the sheet's 20pt). */
 const SHEET_GUTTER = space[6];
+
+/** The sheet's small text follows Dynamic Type to 1.6× (the player card's ceiling), so the price
+ * stays the sheet's loudest text at XXXL. */
+const SHEET_TEXT_MAX_SCALE = 1.6;
 
 /** The capture seam's market: the Home fixture's (open on its live Thursday; after the close on
  * live_closed, reopening Friday 9:30 AM ET, as the player card says). */
@@ -178,6 +183,10 @@ export function StockSheetBody({
   const [picking, setPicking] = useState<{ sources: PreviewSource[]; chosen: string | null } | null>(null);
   const trade = useTradeSubmit();
   const lastData = useRef<unknown>(null);
+  // DEV capture only: the latest openReview / submit / selected choice, for captureScript.
+  const openReviewRef = useRef<((kind: ReviewKind) => Promise<void>) | null>(null);
+  const submitRef = useRef<(() => Promise<void>) | null>(null);
+  const choiceRef = useRef<ReviewKind>('buy');
 
   const gate = decideTradeGate(now, market);
   const opensLabel = market?.next_open_at ? marketOpensLabel(market.next_open_at) : null;
@@ -294,6 +303,14 @@ export function StockSheetBody({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, trade.state.kind]);
 
+  // DEV capture only (captureScript): the same handlers a tap runs. Hooks, so above the returns;
+  // they read the latest render's functions through captureScript's ref.
+  useCaptureAction('choice', (c) => { if (c === 'buy' || c === 'sell') setChoice(c); });
+  useCaptureAction('review', () => { void openReviewRef.current?.(choiceRef.current); });
+  useCaptureAction('submit', () => { void submitRef.current?.(); });
+  useCaptureAction('edit', () => setOpen(null));
+  useCaptureAction('done', () => { setOpen(null); onDone(); });
+
   if (data.status === 'loading') {
     return (
       <View style={styles.body} accessible accessibilityLabel={`${symbol}, loading`} accessibilityState={{ busy: true }}>
@@ -364,6 +381,10 @@ export function StockSheetBody({
     trade.retry();
     data.refresh();
   }
+  // DEV capture only: this render's openReview / submit (they close over `open`), set before
+  // any early return below so a scripted Submit sees the open review.
+  openReviewRef.current = (kind) => openReview(kind);
+  submitRef.current = submitNow;
 
   const model = stockSheetModel({
     symbol,
@@ -401,7 +422,7 @@ export function StockSheetBody({
     if (open.loading) {
       return (
         <View style={styles.body}>
-          <Text variant="callout" tone="secondary" accessibilityLiveRegion="polite">{COPY.preparingReview}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" accessibilityLiveRegion="polite">{COPY.preparingReview}</Text>
         </View>
       );
     }
@@ -431,7 +452,7 @@ export function StockSheetBody({
           // A blocker before the review (a tier refusal, defect (a)'s budget): the warn panel, its own ink.
           <WarnPanel text={open.error ?? COPY.cantReach} />
         ) : (
-          <Text variant="callout" tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
         )}
         {/* C-5 (Design Lead gate, U-33): no_price/invalid_price get a Try again,
             not just Edit -- the price itself is what failed, so re-reading it
@@ -452,6 +473,7 @@ export function StockSheetBody({
   // through once the sheet is showing something you don't hold.
   const held = data.facts.held != null;
   const selected = held ? (choice ?? model.selected) : 'buy';
+  choiceRef.current = selected;
   const action = selected === 'buy' ? model.buy : model.sell;
   const canReview = selected === 'sell' ? model.sell.enabled : model.buy.enabled;
   const reviewLabel = selected === 'sell' ? COPY.reviewSell : COPY.reviewBuy;
@@ -476,16 +498,16 @@ export function StockSheetBody({
         ) : (
           // C-5 (Design Lead gate, U-33): a way to retry, same as calendar_unavailable's.
           <View style={styles.noPrice}>
-            <Text variant="callout" tone="secondary">{COPY.noPrice} </Text>
+            <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{COPY.noPrice} </Text>
             <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8} style={styles.textButton}>
-              <Text variant="callout" color={colors.accent} style={styles.bold}>{COPY.tryAgain}</Text>
+              <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>{COPY.tryAgain}</Text>
             </Pressable>
           </View>
         )}
         {model.todayChange ? (
-          <Text variant="callout" color={todayTone} style={styles.bold}>
+          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={todayTone} style={styles.bold}>
             {`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })}`}
-            <Text variant="callout" tone="secondary" style={styles.regular}> today</Text>
+            <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.regular}> today</Text>
           </Text>
         ) : null}
       </View>
@@ -498,8 +520,8 @@ export function StockSheetBody({
         // figure a sell decision rests on (UX-audit rule 4). An `inset` panel (§9C).
         <View style={[styles.panel, { backgroundColor: colors.inset }]}>
           <View style={styles.panelHead}>
-            <Text variant="headline" style={styles.extraBold}>Your position</Text>
-            <Text variant="caption" tone="secondary" style={styles.panelCaption}>{ownerLine}</Text>
+            <Text variant="headline" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={styles.extraBold}>Your position</Text>
+            <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.panelCaption}>{ownerLine}</Text>
           </View>
           <View style={styles.figures}>
             <Figure label="Shares" value={formatShares(position.quantity)} />
@@ -513,7 +535,7 @@ export function StockSheetBody({
           </View>
         </View>
       ) : (
-        <Text variant="callout" tone="secondary">{ownerLine}</Text>
+        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{ownerLine}</Text>
       )}
 
       {held ? (
@@ -525,7 +547,7 @@ export function StockSheetBody({
       ) : null}
 
       {selected === 'sell' && model.sell.summary ? (
-        <Text variant="callout" style={[styles.bold, styles.tabular]}>{model.sell.summary}</Text>
+        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={[styles.bold, styles.tabular]}>{model.sell.summary}</Text>
       ) : null}
 
       {/* E-3 (3e UX audit): a buy the server would refuse is named BEFORE the review, in the
@@ -543,14 +565,14 @@ export function StockSheetBody({
           testID="stock-sheet-review"
         />
         {!warnBlock && action.reason ? (
-          <Text variant="caption" tone="secondary" style={styles.center} accessibilityLiveRegion="polite">
+          <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center} accessibilityLiveRegion="polite">
             {action.reason}
           </Text>
         ) : null}
-        {model.marketNote ? <Text variant="caption" tone="secondary" style={styles.center}>{model.marketNote}</Text> : null}
+        {model.marketNote ? <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{model.marketNote}</Text> : null}
       </View>
 
-      <Text variant="caption" tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
     </View>
   );
 }
@@ -585,8 +607,8 @@ function SheetHeader({ symbol, company, onClose }: { symbol: string; company: st
 function Figure({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}`}>
-      <Text variant="caption" tone="secondary">{label}</Text>
-      <Text variant="callout" color={color} style={[styles.extraBold, styles.tabular]}>{value}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{label}</Text>
+      <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={color} style={[styles.extraBold, styles.tabular]}>{value}</Text>
     </View>
   );
 }

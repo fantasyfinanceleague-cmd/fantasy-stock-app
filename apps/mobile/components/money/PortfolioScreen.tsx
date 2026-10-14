@@ -50,6 +50,7 @@ import { SEAM_ON } from '@/lib/game/devSeam';
 import { decideTradeGate } from '@/lib/money/tradeGate';
 import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 import { resolveWeekWindow, standardWeekSessions } from '@/lib/time/marketWeek';
+import { useCaptureAction } from '@/lib/money/captureScript';
 
 /** gain/loss/zero -> its theme colour (C-6: the same mapping Home's hero uses). */
 function toneColor(colors: ThemeColors, tone: 'gain' | 'loss' | 'zero' | null): string {
@@ -58,10 +59,16 @@ function toneColor(colors: ThemeColors, tone: 'gain' | 'loss' | 'zero' | null): 
   return colors.zero;
 }
 
+/** Capture seam only: the fixture path, then Home's bars after its last day. */
+function seamCardBars(path: readonly { date: string; close: number }[], home: readonly { date: string; close: number }[]) {
+  const last = path.length ? path[path.length - 1].date : '';
+  return [...path, ...home.filter((b) => b.date > last)];
+}
+
 /** The value line's plot height (the board's amended Portfolio frame: 168). */
 const CHART_HEIGHT = 168;
-/** The hero's label and caption follow Dynamic Type to 1.3×, so the value stays the standout.
- * (The gain and today lines follow it in full, like Home's: callout stays far under `money`.) */
+/** The hero's label, caption and sub-lines follow Dynamic Type to 1.3×, so the value stays the
+ * standout (at XXXL an uncapped "+$3,518,517.00" rivalled the fitted value). */
 const HERO_LINE_MAX_SCALE = 1.3;
 
 export function PortfolioScreen() {
@@ -127,7 +134,9 @@ export function PortfolioScreen() {
       trades,
       weekGain: stockWeek(shown, snapshots, trades, price).gain,
       price,
-      bars: raw.bars[shown] ?? chart?.bars[shown] ?? [],
+      // The capture seam: the fixture's own daily path through Wednesday, then Home's bars
+      // after it (as Matchup's card reads it), so the week moves every day.
+      bars: SEAM_ON ? seamCardBars(chart?.bars[shown] ?? [], raw.bars[shown] ?? []) : raw.bars[shown] ?? chart?.bars[shown] ?? [],
       seasonBars: chart?.bars[shown] ?? null,
       sessions,
       now,
@@ -156,8 +165,32 @@ export function PortfolioScreen() {
     stockSheet.open(symbol, { name, originRef: symbol });
   }
 
+  // DEV capture only (captureScript): the same handlers a tap runs.
+  const scrollRef = useRef<ScrollView>(null);
+  useCaptureAction('range', (r) => { if (r === '1W' || r === '1M' || r === 'Season') setRange(r); });
+  useCaptureAction('card', (sym) => { if (sym) openRow(sym, ledgerState.ledger?.symbol_names[sym] ?? sym); });
+  useCaptureAction('sell', () => {
+    if (!card || card.data.held <= 0) return;
+    pendingSell.current = { symbol: card.data.ticker, name: card.data.company };
+    setSelected(null);
+  });
+  useCaptureAction('close', () => setSelected(null));
+  useCaptureAction('sheet', (sym) => { if (sym) stockSheet.open(sym, { name: ledgerState.ledger?.symbol_names[sym] ?? null }); });
+  useCaptureAction('search', () => router.push('/stock-search'));
+  useCaptureAction('scroll', (y) => scrollRef.current?.scrollTo({ y: Number(y) || 0, animated: false }));
+
   let body: React.ReactNode;
-  if (data.status === 'loading') {
+  if (activeLeague && activeLeague.draft_status !== 'completed') {
+    // Before the draft there is nothing to hold or trade yet: the app's own line for it.
+    body = (
+      <View style={styles.empty} accessible accessibilityLabel={COPY.draftNotCompleted}>
+        <View style={[styles.emptyDisc, { backgroundColor: colors.inset }]}>
+          <Icon name="lock" size="title" tone="text2" />
+        </View>
+        <Text variant="headline" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.extraBold, styles.center]}>{COPY.draftNotCompleted}</Text>
+      </View>
+    );
+  } else if (data.status === 'loading') {
     body = <PortfolioSkeleton />;
   } else if (data.status === 'error' || !data.view) {
     body = <LoadFailure title={COPY.portfolioLoadTitle} message={COPY.loadRetryMessage} onRetry={data.refresh} />;
@@ -176,21 +209,24 @@ export function PortfolioScreen() {
               <RollingMoney text={v.valueText} size="money" rollKey={rollKey} />
             </View>
             {v.gainMoneyText && v.gainPctText ? (
-              <View accessible accessibilityLabel={`${v.gainText} ${v.sinceDraftLabel}`} style={styles.rollRow}>
-                {/* C-6/M3: money and percent roll as two units (one string misaligns mid-roll). */}
-                <RollingMoney text={v.gainMoneyText} size="callout" fontWeight="700" color={toneColor(colors, v.gainTone)} rollKey={rollKey} />
-                <Text variant="callout" color={toneColor(colors, v.gainTone)} style={styles.bold}> · </Text>
-                <RollingMoney text={v.gainPctText} size="callout" fontWeight="700" color={toneColor(colors, v.gainTone)} rollKey={rollKey} />
-                <Text variant="callout" tone="secondary">{` ${v.sinceDraftLabel}`}</Text>
-              </View>
+              <HeroLine
+                label={`${v.gainText} ${v.sinceDraftLabel}`}
+                money={v.gainMoneyText}
+                pct={v.gainPctText}
+                words={v.sinceDraftLabel}
+                color={toneColor(colors, v.gainTone)}
+                rollKey={rollKey}
+              />
             ) : null}
             {v.todayMoneyText && v.todayPctText ? (
-              <View accessible accessibilityLabel={`${v.todayText} today`} style={styles.rollRow}>
-                <RollingMoney text={v.todayMoneyText} size="callout" fontWeight="700" color={toneColor(colors, v.todayTone)} rollKey={rollKey} />
-                <Text variant="callout" color={toneColor(colors, v.todayTone)} style={styles.bold}> · </Text>
-                <RollingMoney text={v.todayPctText} size="callout" fontWeight="700" color={toneColor(colors, v.todayTone)} rollKey={rollKey} />
-                <Text variant="callout" tone="secondary"> today</Text>
-              </View>
+              <HeroLine
+                label={`${v.todayText} today`}
+                money={v.todayMoneyText}
+                pct={v.todayPctText}
+                words="today"
+                color={toneColor(colors, v.todayTone)}
+                rollKey={rollKey}
+              />
             ) : null}
             {v.unpricedNote ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={HERO_LINE_MAX_SCALE}>{v.unpricedNote}</Text> : null}
           </View>
@@ -275,7 +311,7 @@ export function PortfolioScreen() {
           </Pressable>
         </Card>
 
-        <Text variant="caption" tone="secondary" style={styles.center}>{v.creditText}</Text>
+        <Text variant="caption" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{v.creditText}</Text>
       </View>
     );
   }
@@ -297,7 +333,7 @@ export function PortfolioScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.moneyBg }]}>
       <ShellHeader title="Portfolio" showPhase />
-      <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>{body}</ScrollView>
       {card && ownership ? (
         <PlayerCard
           {...card.data}
@@ -319,6 +355,25 @@ export function PortfolioScreen() {
   );
 }
 
+/** A hero sub-line: "+$X · +Y% since the draft". The money and the percent roll as two units
+ * (C-6/M3: one string misaligns mid-roll), each "·" stays glued to the figure before it, so a
+ * wrapped line never starts with "·" (§5 "Wrapping at XL"), and everything caps at 1.3× so the
+ * value stays the screen's loudest text at XL (§5 "The standout stays loudest"). */
+function HeroLine({ label, money, pct, words, color, rollKey }: { label: string; money: string; pct: string; words: string; color: string; rollKey: string }) {
+  return (
+    <View accessible accessibilityLabel={label} style={styles.rollRow}>
+      <View style={styles.nowrap}>
+        <RollingMoney text={money} size="callout" fontWeight="700" color={color} rollKey={rollKey} maxScale={HERO_LINE_MAX_SCALE} />
+        <Text variant="callout" color={color} maxFontSizeMultiplier={HERO_LINE_MAX_SCALE} style={styles.bold}>{' · '}</Text>
+      </View>
+      <View style={styles.nowrap}>
+        <RollingMoney text={pct} size="callout" fontWeight="700" color={color} rollKey={rollKey} maxScale={HERO_LINE_MAX_SCALE} />
+        <Text variant="callout" tone="secondary" maxFontSizeMultiplier={HERO_LINE_MAX_SCALE}>{`\u00a0${words}`}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: space[6], paddingTop: space[2], paddingBottom: space[9] },
@@ -327,6 +382,7 @@ const styles = StyleSheet.create({
   hero: { gap: space[4] },
   heroText: { gap: space[1] },
   rollRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
+  nowrap: { flexDirection: 'row', alignItems: 'baseline' },
   facts: { gap: space[3] },
   factRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: space[3] },
   linkRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: space[4], paddingHorizontal: space[5], paddingVertical: space[4] },
@@ -336,4 +392,6 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '700' },
   extraBold: { fontWeight: '800' },
   center: { textAlign: 'center' },
+  empty: { alignItems: 'center', gap: space[4], paddingTop: space[10] },
+  emptyDisc: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
 });

@@ -17,7 +17,7 @@
  * the price at 800, tabular), no rule lines between them and no sparklines.
  */
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { radius, space } from '@/constants/tokens';
@@ -46,6 +46,10 @@ import { STRESS_CALLER } from '@/lib/money/stressFixture';
 import { seamPortfolioLeague } from '@/lib/money/portfolioSeam';
 import { MATCHUP_FIXTURE_VARIANT, PORTFOLIO_STAKE_VARIANT, SEAM_ON } from '@/lib/game/devSeam';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
+import { useCaptureAction } from '@/lib/money/captureScript';
+
+/** Search's text follows Dynamic Type to 1.6× (the sheet's ceiling); rows keep their 1.3×. */
+const SEARCH_TEXT_MAX_SCALE = 1.6;
 
 export function StockSearchScreen() {
   const { colors } = useTheme();
@@ -79,6 +83,14 @@ export function StockSearchScreen() {
     return ownershipSuffix(facts.owner, facts.conflict, roomless);
   }
 
+  // DEV capture only (captureScript): type a query, pick a result, as a tap would.
+  useCaptureAction('query', (q) => setQuery(q ?? ''));
+  useCaptureAction('pick', (sym) => {
+    const item = results.find((r) => r.symbol === sym);
+    if (item) handleSelect(item);
+  });
+  useCaptureAction('blur', () => Keyboard.dismiss());
+
   function handleSelect(item: ShapedSearchResult) {
     if (!item.selectable) return;
     open(item.symbol, { name: item.name, originRef: 'stock-search' });
@@ -97,7 +109,7 @@ export function StockSearchScreen() {
             a league is active, so the screen's own title goes right below it. */}
         <Pressable accessibilityRole="button" accessibilityLabel="Portfolio" onPress={() => router.back()} hitSlop={4} style={styles.back}>
           <Icon name="chevronLeft" size="callout" tone="accent" />
-          <Text variant="callout" color={colors.accent} style={styles.bold}>Portfolio</Text>
+          <Text variant="callout" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>Portfolio</Text>
         </Pressable>
         {/* C-9 (Design Lead gate): the board's page-title size, not headline. */}
         <Text variant="title">{COPY.stockSearchTitle}</Text>
@@ -126,7 +138,7 @@ export function StockSearchScreen() {
           <LoadFailure title={COPY.stockSearchLoadTitle} message={COPY.loadRetryMessage} onRetry={retry} />
         ) : query.length === 0 ? (
           // The board's empty state: focused, keyboard up, a hint says what to type.
-          <Text variant="callout" tone="secondary">{COPY.searchHint}</Text>
+          <Text variant="callout" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} tone="secondary">{COPY.searchHint}</Text>
         ) : loading && results.length === 0 ? (
           // E-2: skeleton rows, never a blank screen, while the first results load.
           <View style={styles.results} accessible accessibilityLabel="Loading results" accessibilityState={{ busy: true }}>
@@ -144,8 +156,8 @@ export function StockSearchScreen() {
         ) : !loading && results.length === 0 ? (
           // E-7: names what was searched and what to try, whole sentences.
           <View style={styles.empty}>
-            <Text variant="headline" style={[styles.center, styles.extraBold]}>{COPY.noStockMatches(query)}</Text>
-            <Text variant="callout" tone="secondary" style={styles.center}>{COPY.tryTickerOrName}</Text>
+            <Text variant="headline" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} style={[styles.center, styles.extraBold]}>{COPY.noStockMatches(query)}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={SEARCH_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.tryTickerOrName}</Text>
           </View>
         ) : (
           <View style={styles.results}>

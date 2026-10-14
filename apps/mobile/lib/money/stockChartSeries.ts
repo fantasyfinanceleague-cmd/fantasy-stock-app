@@ -185,6 +185,9 @@ export function stockLineSeries(input: {
     const monday = mondayOfIso(todayEt);
     const before = bars.filter((b) => b.date < monday);
     const week = bars.filter((b) => b.date >= monday);
+    // Today's session, once closed, has no daily bar yet: its close is the price now (as
+    // Portfolio's own week line reads it).
+    if (price != null && !week.some((b) => b.date === todayEt)) week.push({ date: todayEt, close: price });
     const startValue = before.length ? before[before.length - 1].close : week[0]?.close ?? price;
     if (startValue == null) return { points: [], base: 0, axis: { kind: 'week' } };
     const line = weekLine({ sessions, start: { t: 0, value: startValue }, bars: week, price, now });

@@ -103,7 +103,12 @@ export function usePortfolioData(): PortfolioData {
       setState({ ...EMPTY, status: 'error', leagueName });
       return;
     }
-    if (ledgerState.status === 'loading') return;
+    // Still loading: say so. (Without this, an earlier render's 'error' — the session's user
+    // not read yet — stuck on screen as "didn't load" for as long as the ledger took.)
+    if (ledgerState.status === 'loading') {
+      setState((cur) => (cur.status === 'loading' ? cur : { ...EMPTY, status: 'loading', leagueName }));
+      return;
+    }
     if (ledgerState.status === 'error' || !ledgerState.ledger) {
       setState({ ...EMPTY, status: 'error', leagueName });
       return;

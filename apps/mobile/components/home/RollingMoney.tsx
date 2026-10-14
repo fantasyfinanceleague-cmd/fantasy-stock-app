@@ -110,9 +110,12 @@ export interface RollingMoneyProps {
   /** A weight other than the variant's own (Home's sub-line: the gains at 700 on a 500
    * callout), resolved to the matching Archivo face as the sp Text does. */
   fontWeight?: '500' | '600' | '700' | '800';
+  /** A Dynamic Type ceiling under the variant's own (W4 Portfolio: the hero's sub-lines cap at
+   * 1.3× so the value stays the standout at XL). */
+  maxScale?: number;
 }
 
-export function RollingMoney({ text, size, color, rollKey, align = 'left', fontWeight }: RollingMoneyProps) {
+export function RollingMoney({ text, size, color, rollKey, align = 'left', fontWeight, maxScale }: RollingMoneyProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
   const prevTextRef = useRef(text);
@@ -151,7 +154,7 @@ export function RollingMoney({ text, size, color, rollKey, align = 'left', fontW
             duration={duration.base}
             easing={easing.settle}
             withTiming={withTiming}
-            maxFontSizeMultiplier={typeStyle.maxScale}
+            maxFontSizeMultiplier={maxScale ?? typeStyle.maxScale}
           />
         ))}
       </Animated.View>

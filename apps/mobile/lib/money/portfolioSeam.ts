@@ -6,11 +6,12 @@
  * tests-deno can pin it. Production never reaches it (usePortfolioData gates on SEAM_ON).
  */
 import { fixtureSeasonBars, matchupWeekExtras, MSFT_BUY, seamSheetQuote, type MatchupFixtureVariant } from '../game/matchupFixture';
-import { fixtureQty, ROBERTO_HOLDINGS, XL_MILLION_ROBERTO_HOLDINGS } from '../home/homeFixtureData';
+import { fixtureQty, ROBERTO_HOLDINGS, XL_MILLION_ROBERTO_HOLDINGS, XL_ROBERTO_HOLDINGS } from '../home/homeFixtureData';
+import { fixtureLedger } from '../game/matchupFixture';
 import type { PortfolioLedger } from './portfolioLedger';
 import { seamSearchPrice } from '../game/seamFixtures';
 
-export type SeamStake = 'fixed_notional' | 'budget_cap' | 'price_tiers';
+export type SeamStake = 'fixed_notional' | 'budget_cap' | 'budget_null' | 'price_tiers';
 
 /** The budget a budget-cap capture league leaves after its draft: enough for a cheap stock,
  * not for a $300 one, so the sheet's "costs more than your budget left" is reachable. */
@@ -19,13 +20,15 @@ export const SEAM_BUDGET_HEADROOM = 250;
 /** The league Portfolio plays under the seam: the Matchup fixture's own (fixed_notional,
  * $2,000 × 6), or the same roster read as a budget cap / price tiers. */
 export function seamPortfolioLeague(stake: SeamStake, variant: MatchupFixtureVariant): {
-  stake_mode: SeamStake;
+  stake_mode: 'fixed_notional' | 'budget_cap' | 'price_tiers';
   notional_per_slot: number | null;
   budget_amount: number | null;
   num_rounds: number;
 } {
   const rows = variant === 'stress' ? XL_MILLION_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
   const qtyScale = matchupWeekExtras(variant).qtyScale;
+  // A budget cap whose budget_amount is NULL: the server's $0 cap (defect (d)).
+  if (stake === 'budget_null') return { stake_mode: 'budget_cap', notional_per_slot: null, budget_amount: null, num_rounds: rows.length };
   if (stake === 'budget_cap') {
     const draftCost = rows.reduce((a, h) => a + h.draft * fixtureQty(h) * qtyScale, 0);
     return { stake_mode: 'budget_cap', notional_per_slot: null, budget_amount: Math.round((draftCost + SEAM_BUDGET_HEADROOM) * 100) / 100, num_rounds: rows.length };
@@ -33,7 +36,7 @@ export function seamPortfolioLeague(stake: SeamStake, variant: MatchupFixtureVar
   if (stake === 'price_tiers') return { stake_mode: 'price_tiers', notional_per_slot: null, budget_amount: null, num_rounds: rows.length };
   // Each slot's notional is what the fixture drafted into it ($2,000; the stress league's own).
   const perSlot = rows.reduce((a, h) => a + h.draft * fixtureQty(h) * qtyScale, 0) / rows.length;
-  return { stake_mode: 'fixed_notional', notional_per_slot: Math.round(perSlot * 100) / 100, budget_amount: null, num_rounds: rows.length };
+  return { stake_mode: 'fixed_notional', notional_per_slot: perSlot, budget_amount: null, num_rounds: rows.length };
 }
 
 /** A seam stock's live price and previous close: the stock sheet's own seam quote, or the
@@ -92,4 +95,17 @@ export function seamOpenSales(ledger: PortfolioLedger, userId: string): { symbol
   return mine
     .filter((s) => s.action === 'sell' && !mine.some((b) => b.action === 'buy' && b.occurred_at > s.occurred_at))
     .map((s) => ({ symbol: s.symbol, amount: Math.round(s.quantity * (s.price ?? 0) * 100) / 100 }));
+}
+
+/** The ledger Portfolio, its sheet and search read under the seam: the Matchup fixture's
+ * league ledger with YOUR rows scoped to the roster the Home fixture actually holds (the
+ * shared fixture also carries the XL leagues' extra stocks, which would read as a 7th and 8th
+ * holding in a 6-slot league). Everyone else's rows are kept (owners in search). */
+export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string): PortfolioLedger {
+  const ledger = fixtureLedger(variant, me, opp);
+  const roster = variant === 'stress'
+    ? XL_MILLION_ROBERTO_HOLDINGS
+    : homeFixture && homeFixture.startsWith('xl') ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
+  const keep = new Set([...roster.map((h) => h.symbol), 'MSFT']);
+  return { ...ledger, activity: ledger.activity.filter((a) => a.user_id !== me || keep.has(a.symbol.toUpperCase())) };
 }

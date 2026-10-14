@@ -14,7 +14,7 @@ export function WarnPanel({ text }: { text: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.warn, { backgroundColor: colors.warnTint, borderColor: colors.warnLine }]}>
-      <Text variant="callout" color={colors.warnText} accessibilityRole="alert" style={styles.text}>{text}</Text>
+      <Text variant="callout" maxFontSizeMultiplier={1.6} color={colors.warnText} accessibilityRole="alert" style={styles.text}>{text}</Text>
     </View>
   );
 }
