@@ -377,12 +377,12 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
-    ['call-ob-cards', 'The three onboarding cards\' scenes (A/B)'],
-    ['call-ob-username', 'The suggested username\'s style (A/B/C)'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-ob-cards', title: 'The three onboarding cards\' scenes', decision: 'B: the real screens (the draft squares, the Matchup scoreboard with the lead changing, FINAL with the real scoreboard). The titles stay as approved on 2026-09-29.', date: '2026-10-14', rec: 'PRODUCT_RULES (Onboarding)', render: () => window.KSObCardsArchived },
+    { id: 'call-ob-username', title: 'The suggested username\'s style', decision: 'None of the three drawn: an Xbox-style gamertag, an adjective or word + an animal + digits ("HelpfulHornet151"), never a first name or anything from Apple, Google or the email. "You can change it later in Profile." approved.', date: '2026-10-14', rec: 'PRODUCT_RULES (Onboarding)', render: () => window.KSObUsernameArchived },
     { id: 'call-share-locked', title: 'The invite code\'s Share while teams are locked', decision: 'B: Share is hidden while teams are locked (from an hour before the draft until the season ends); the code stays visible; Share is back at renewal and before the draft. The commissioner too.', date: '2026-10-13', rec: 'PRODUCT_RULES (on feat/gn-w4-league)', render: () => window.KSShareLockedArchived('B', <li><b>Decided by Giorgio (2026-10-13): B</b>, from this image: Share hidden while teams are locked, the code still shown, for the commissioner as for everyone.</li>) },
     { id: 'call-draft-auto', title: 'Marking an auto-pick on the draft board', decision: 'A, as built: no tag on an auto-picked square ("no auto tag"). The card, the pick log and VoiceOver still say it.', date: '2026-10-13', rec: 'PRODUCT_RULES (on feat/gn-w4-draft)', render: () => window.KSDraftAutoArchived },
     { id: 'call-mx-order', title: 'Saying why the Matchup rows are in this order', decision: 'B: one small line over the rows, "Ordered by Wednesday\'s close" (the last close whose trading has ended; "Thursday\'s close" from that evening).', date: '2026-10-13', rec: 'PRODUCT_RULES (Matchup: four states)', render: () => window.KSMxCalls.order },

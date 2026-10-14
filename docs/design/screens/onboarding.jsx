@@ -125,7 +125,7 @@
           <div style={{ padding: `0 ${G}px 24px`, display: 'grid', gap: 16 }}>
             <div className="dr-a-card" style={{ padding: '12px 8px 12px 14px', display: 'grid', gridTemplateColumns: '22px 1fr 44px', gap: 10, alignItems: 'center' }}>
               <span style={{ color: 'var(--c-accent)', display: 'flex' }}><Icon d={ICON.info} size={20} /></span>
-              <span className="dr-call" style={{ fontSize: 15, lineHeight: '21px', color: 'var(--c-text)' }}>Your week runs Monday's open to Friday's close. Best dollar gain wins.</span>
+              <span className="dr-call" style={{ fontSize: 15, lineHeight: '21px', color: 'var(--c-text)' }}>Your week runs Monday's open to Friday's close. Best performance wins.</span>
               <span className="dr-muted" style={{ display: 'grid', placeItems: 'center', height: 44 }} aria-label="Dismiss"><Icon d={ICON.close} size={18} /></span>
             </div>
             <div className="dr-a-card" style={{ padding: 18, display: 'grid', gap: 8 }}>
@@ -362,14 +362,15 @@
   const Grid = ({ children }) => <div className="b-concepts b-concepts--three">{children}</div>;
 
   // ── Giorgio's two calls ──
-  function CallCards() {
+  function CallCards({ archived }) {
     return (
-      <Sec id="call-ob-cards" n="1.3" title="Your call: the three cards' scenes"
+      <Sec id="call-ob-cards" n="1.3" title={archived ? "Decided: B, the three cards' scenes" : "Your call: the three cards' scenes"}
         intro={<>The cards show only on a cold install (your "B, cards only for cold installs"), with your titles, unchanged since 2026-09-29. What changes is the picture above each title. A is the scene you approved on 2026-09-29; B is the scene the W4 build drew from the approved Game Night pieces. Both are drawn in Game Night colours, so only the content differs.</>}
         notes={<>
           <li><b>A · the 2026-09-29 scenes:</b> six "Rd 1…6" squares; your avatar vs Gianluigi's with "VS" and a tug bar, "Week 6 · Mon–Fri"; FINAL with the two scores and "You win Week 6".</li>
           <li><b>B · the Game Night scenes:</b> the real draft squares (category line, 3-letter code); the real Matchup scoreboard, your half shaded, where the lead changes as the card opens ("Gianluigi B. leads by $37.66" turns into "Roberto B. leads by $123.16"); FINAL with the real scoreboard and "You win Week 6". No VS, no tug bar.</li>
           <li><b>Recommended: B.</b> Each card shows the screen you'll actually see a minute later, so the first run teaches the app instead of a poster of it.</li>
+          {archived ? <li><b>Decided by Giorgio (2026-10-14): B</b>, the real screens.</li> : null}
         </>}>
         {['dark', 'light'].map((t) => ['A', 'B'].map((v) => (
           <div key={t + v} style={{ marginBottom: 20 }}>
@@ -380,16 +381,19 @@
       </Sec>
     );
   }
+  // Giorgio's style (2026-10-14): {adjective or word}{Animal}{digits}; 3–20 letters/digits, never a name.
+  const GAMERTAGS = ['HelpfulHornet151', 'BoldBadger27', 'SwiftOtter904'];
   const NAMES = [['A', 'Roberto26', 'your first name + two digits (the app\'s suggestions already work this way)'], ['B', 'RobertoB', 'your first name + your last initial'], ['C', 'BullMarket47', 'a game-style name, no name of yours']];
-  function CallUsername() {
+  function CallUsername({ archived }) {
     return (
-      <Sec id="call-ob-username" n="1.3" title="Your call: the suggested username's style"
+      <Sec id="call-ob-username" n="1.3" title={archived ? "Decided: none of the three; a gamertag (adjective + animal + digits)" : "Your call: the suggested username's style"}
         intro={<>After any sign-in, one screen offers a ready-made username with one tap to keep it (your "a pre-set username that they can just go with and they can change later"). Which style should the suggestion be? Roberto signed in with Apple or Google, which gave his first name.</>}
         notes={<>
           {NAMES.map(([k, v, d]) => <li key={k}><b>{k} · {v}:</b> {d}.</li>)}
           <li><b>When there's no first name</b> (email sign-up, or Apple's "Hide My Email" with no name), A and B can't be built, so the suggestion falls back to C's style.</li>
           <li><b>Recommended: A.</b> In a league of friends, a name people recognise beats a clever one, and the app's "taken" suggestions already use this pattern ("Roberto" → "Roberto26").</li>
           <li><NEW /> "You can change it later in Profile." under the field. "Keep" and "Change" are the plan's words.</li>
+          {archived ? <li><b>Decided by Giorgio (2026-10-14): none of these.</b> An Xbox-style gamertag, an adjective or word, then an animal, then digits ("helpedhornet151"), and never the first name: "we don't know if users want to keep their name visible. So let's not expose their first names". The helper line is approved. The new samples are frame 2 of the onboarding frames.</li> : null}
         </>}>
         {['dark', 'light'].map((t) => (
           <div key={t} style={{ marginBottom: 20 }}>
@@ -405,31 +409,32 @@
   function Frames() {
     return (
       <Sec id="onboarding-w1" n="1.3" title="Onboarding, as planned (2026-10-14): the frames"
-        intro={<>The plan's board brief, frames 1 to 10, in Game Night, Light and Dark. The flow: an invited friend taps the link, lands on the invite, signs in with one tap, keeps the suggested username, and is in the league; then the notifications ask. A cold install sees the cards and Get started. The two picks above (cards, username) are the only open choices.</>}
+        intro={<>The plan's board brief, frames 1 to 10, in Game Night, Light and Dark. The flow: an invited friend taps the link, lands on the invite, signs in with one tap, keeps the suggested username, and is in the league; then the notifications ask. A cold install sees the cards and Get started. Giorgio picked the cards (B) and the username style (a gamertag, never a name) on 2026-10-14; both calls are in the Archive.</>}
         notes={<>
           <li><b>Copy:</b> "{'{inviter}'} invited you to {'{league}'}", "Continue with Apple / Google", "Use email", "Keep / Change", "You're in {'{league}'}. Get the app to draft and play.", the notifications line, the week-window line and "How it works" are the approved plan's words. Everything else is shipped copy except what's marked NEW.</li>
-          <li><NEW /> "Not now" under the notifications ask (the plan says a user who declines there is not asked again, so the screen needs a way to decline).</li>
-          <li><NEW /> "We sent a link to {'{email}'}. Tap it to finish joining {'{league}'}." on Check your email after sign-up (the reset-password version exists), and the "Email confirmed" chip on the return.</li>
-          <li><b>For you to check (copy vs a rule):</b> the plan's tip says "Best dollar gain wins." Your 2026-09-29 rule says onboarding copy says "best performance wins", never "biggest dollar gain". The plan also says the tip teaches "dollars decide", which is true in every stake mode. Drawn as the plan wrote it; say if it should read "Best performance by Friday's close wins." instead.</li>
+          <li><NEW /> <b>Pending (with Giorgio via the Planner):</b> "Not now" under the notifications ask (the plan says a user who declines there is not asked again, so the screen needs a way to decline).</li>
+          <li><NEW /> <b>Pending (with Giorgio via the Planner):</b> "We sent a link to {'{email}'}. Tap it to finish joining {'{league}'}." on Check your email after sign-up (the reset-password version exists), and the "Email confirmed" chip on the return.</li>
+          <li><b>The week-window tip</b> follows PRODUCT_RULES "Generic scoring copy" (onboarding says "best performance wins", never "biggest dollar gain"): "Your week runs Monday's open to Friday's close. Best performance wins." The plan's draft line ("Best dollar gain wins.") is not used.</li>
           <li><b>The "started" refusal on the web page:</b> since your 2026-10-14 rule ("once the draft room opens… the league is considered started"), the refusal for an open room reuses the shipped "is drafting right now" line, which is only exactly true once picks begin. Drawn as shipped; one line to settle at the build.</li>
           <li><b>Reference:</b> the plan names Yahoo's "Marvin has invited you…" screen; I don't have that screenshot, so frame 1 stands without its reference. Send it and I'll pair them.</li>
         </>}>
         <h3 className="b-sub">1 · Invite arrival, in the app (the inviter's name only; nobody else)</h3>
         <Grid>{pair('a1', 'Invite arrival', Arrival)}</Grid>
-        <h3 className="b-sub">2 · Pick a username, pre-filled (sample A; the style is your call above)</h3>
-        <Grid>{pair('u1', 'Username', (p) => <Username {...p} value="Roberto26" />)}</Grid>
+        <h3 className="b-sub">2 · Pick a username, pre-filled with a gamertag (Giorgio, 2026-10-14): an adjective or word, an animal, digits; never the first name</h3>
+        {['dark', 'light'].map((t) => <Grid key={t}>{GAMERTAGS.map((g) => fig(`u${t}${g}`, `${g} · ${t === 'dark' ? 'Dark' : 'Light'}`, <Username t={t} value={g} />))}</Grid>)}
         <h3 className="b-sub">3 · You're in, then the pre-draft Home with the week-window tip (once, dismissable)</h3>
         <Grid>{pair('y1', "You're in", YoureIn)}</Grid>
         <Grid>{pair('h1', 'Pre-draft Home, the tip', PreDraftTip)}</Grid>
         <h3 className="b-sub">4 · The notifications ask (after joining or creating a league), then the iOS sheet</h3>
         <Grid>{pair('p1', 'The ask', Push)}</Grid>
         <Grid>{pair('p2', 'The iOS sheet', (p) => <Push {...p} ios />)}</Grid>
-        <h3 className="b-sub">5 · The cards: see "Your call: the three cards' scenes" above</h3>
+        <h3 className="b-sub">5 · The cards, B (Giorgio, 2026-10-14): the real screens, cold install only</h3>
+        {['dark', 'light'].map((t) => <Grid key={t}>{[0, 1, 2].map((i) => fig(`c${t}${i}`, `Card ${i + 1} · ${t === 'dark' ? 'Dark' : 'Light'}`, <Card t={t} i={i} v="B" />))}</Grid>)}
         <h3 className="b-sub">6 · Get started (cold install only)</h3>
         <Grid>{pair('g1', 'Get started', GetStarted)}</Grid>
         <h3 className="b-sub">7 · The web invite page: phone width (arrival, username, You're in + Get the app, three refusals) and desktop</h3>
         <Grid>{pair('w1', 'Web · arrival', (p) => <Arrival {...p} web />)}</Grid>
-        <Grid>{pair('w2', 'Web · username', (p) => <Username {...p} web value="Roberto26" />)}</Grid>
+        <Grid>{pair('w2', 'Web · username', (p) => <Username {...p} web value="HelpfulHornet151" />)}</Grid>
         <Grid>{pair('w3', "Web · You're in + Get the app", (p) => <YoureIn {...p} web />)}</Grid>
         <Grid>{pair('w4', 'Web · refusal: drafting', (p) => <Arrival {...p} web block="started" />)}</Grid>
         <Grid>{pair('w5', 'Web · refusal: full', (p) => <Arrival {...p} web block="full" />)}</Grid>
@@ -442,12 +447,14 @@
         <Grid>{pair('f2', 'How it works', (p) => <Profile {...p} sheet />)}</Grid>
         <h3 className="b-sub">9 · The email path: check your inbox, then the link brings you back exactly here</h3>
         <Grid>{pair('e1', 'Check your email', CheckEmail)}</Grid>
-        <Grid>{pair('e2', 'The return: username', (p) => <Username {...p} value="Roberto26" confirmed />)}</Grid>
+        <Grid>{pair('e2', 'The return: username', (p) => <Username {...p} value="HelpfulHornet151" confirmed />)}</Grid>
         <h3 className="b-sub">10 · No leagues: the same state on Home, Matchup, League and Portfolio</h3>
         <Grid>{pair('n1', 'No leagues (same on every tab)', NoLeague)}</Grid>
       </Sec>
     );
   }
 
-  window.KSOnboarding = () => <><CallCards /><CallUsername /><Frames /></>;
+  window.KSOnboarding = () => <Frames />; // both calls decided (2026-10-14), archived in board.jsx
+  window.KSObCardsArchived = () => <CallCards archived />;
+  window.KSObUsernameArchived = () => <CallUsername archived />;
 })();
