@@ -543,6 +543,55 @@ building anything, and don't reopen a rule without him.
   - It's always a NEW draft (no keepers), and settings carry over.
   - Ships switched ON in 1.2.0 (Giorgio, 2026-10-11: "run it back on 1.2.0 ON").
 
+## Onboarding
+
+All 2026-10-14, in the Planner session. Plan: [`plans/2026-10-14-onboarding.md`](plans/2026-10-14-onboarding.md).
+Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/reviews/onboarding-best-practices-2026-10-14.md).
+
+- **Plan before build:** "that onboarding is going to be very important when a when a user
+  first downloads the app. And I don't want it to be done without our clear plan implemented."
+- **The first-time user is the invited friend:** "this app would mainly be shared through like
+  invited friends. One person finds it, thinks of the idea, and they share it with their group
+  of friends to join. I think that's going to be the main way in which users are like discover
+  the app and join."
+- **The invite is a link, not a code:** "just sending a text code isn't going to do anything if
+  they don't have the app downloaded. So it should be a link that then would... do like one of
+  two things. If they already have the app downloaded, it'll automatically like bring them to
+  the app. And then from there, once they make their account and onboard, it'll automatically
+  have them join that league. Or if they don't have the app, it'll redirect them to like the
+  web page version just on a browser. And the same thing, if they make, once they make an
+  account, they join the league. And then there's going to obviously be something on that web
+  page that prompts them to download the app." The join from a link is automatic (no extra
+  tap); the web page does one job (join) then "You're in {league}. Get the app to draft and
+  play."
+- **Three sign-in options:** "we should absolutely give the option. So there should be three
+  options. One is just like email and password. Then we absolutely need to add sign in with
+  Apple and Google. Because I feel like most users are going to just want to click that and
+  then have their thing linked."
+- **A pre-generated username:** "when they get to that, like creating their username screen, I
+  feel like one good practice is to, when possible, give like a pre-generated thing so they
+  don't have to type out something long… we're already going to have like a pre-set username
+  that they can just go with and they can change later." One username screen after ANY sign-in,
+  pre-filled, one tap to keep; the email form has no username field; changeable in Profile.
+- **The three cards show only on a cold install** (no invite): "B, cards only for cold
+  installs." Skip is remembered forever; link arrivals never see them; "How it works" lives in
+  Profile. The card titles stay as approved on 2026-09-29; the redrawn Game Night scenes go to
+  Giorgio as an A/B.
+- **Email confirmation:** "Apple and Google sign-ins are already verified, but if you just do
+  email and password, you have to confirm your email. I think that way we can block fake
+  addresses. I think it's still good for security's sake." The confirmation link must bring an
+  invited friend straight back into the join.
+- **Push permission** is asked right after joining or creating a league, with one line of why,
+  never during sign-up (recommendation taken).
+- **The inviter's name** shows on the invite page and the link-arrival preview ("{Roberto}
+  invited you to {Stock Scudetto}"); the inviter only, nobody else (recommendation taken;
+  amends the 2026-10-11 "no commissioner name" rule for link arrivals only).
+- **No theme choice in onboarding** (System by default, Profile › Appearance), and the game's
+  unfamiliar ideas (the week window, dollars decide) are taught in place, one line, once, on
+  the first pre-draft Home and in the first draft room, never on a launch card.
+- **One no-league empty state on every tab** (Home, Matchup, League, Portfolio): Create a
+  league / Join with a code (recommendation taken).
+
 ## How decisions get made
 
 - Every product/design choice goes to Giorgio as side-by-side mockups ("Your call" on the
