@@ -593,10 +593,24 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   don't have to type out something long… we're already going to have like a pre-set username
   that they can just go with and they can change later." One username screen after ANY sign-in,
   pre-filled, one tap to keep; the email form has no username field; changeable in Profile.
+  **The suggestion is a gamertag, never a name** (2026-10-14, board `#call-ob-username`: none of
+  the three drawn styles): "I want the username to be generated not by putting someone's first
+  name and then two digits, but doing it in the style that kind of like Xbox does for their gamer
+  tags. So when you first log in, make an account, it gives you like typically some sort of
+  adjective or word and then like a animal. So it'll be like helpedhornet151 or something like
+  that. Something kind of playful and also unique that way. I mean, if there's a bunch of signups
+  and it's all like Bob 11, Bob 12, Bob 13, I feel like that's just kind of that. And also, we
+  don't know if users want to keep their name visible. So let's not expose their first names if
+  maybe that's something they don't want." So the generator is always {adjective or word}
+  {animal}{digits} (e.g. "HelpfulHornet151"), and it never uses a first name or anything else
+  from Apple, Google or the email address: a privacy rule as well as a style. The line under the
+  field, "You can change it later in Profile.", is approved.
 - **The three cards show only on a cold install** (no invite): "B, cards only for cold
   installs." Skip is remembered forever; link arrivals never see them; "How it works" lives in
-  Profile. The card titles stay as approved on 2026-09-29; the redrawn Game Night scenes go to
-  Giorgio as an A/B.
+  Profile. The card titles stay as approved on 2026-09-29. **The scenes are B, the real
+  screens** (2026-10-14, board `#call-ob-cards`): the draft squares with their category lines,
+  the Matchup scoreboard with the lead changing, and FINAL with the real scoreboard; not the
+  2026-09-29 "VS" and tug-bar scenes.
 - **Email confirmation:** "Apple and Google sign-ins are already verified, but if you just do
   email and password, you have to confirm your email. I think that way we can block fake
   addresses. I think it's still good for security's sake." The confirmation link must bring an
