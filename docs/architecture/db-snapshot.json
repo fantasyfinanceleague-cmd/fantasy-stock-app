@@ -553,16 +553,6 @@
             "name": "league_members",
             "policies": [
                 {
-                    "name": "league_members_insert_bot",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": null,
-                    "command": "INSERT",
-                    "withCheck": "((user_id ~~ 'bot-%'::text) AND is_member(league_id))",
-                    "permissive": true
-                },
-                {
                     "name": "league_members_insert_self",
                     "roles": [
                         "authenticated"
@@ -814,16 +804,6 @@
                     "using": "is_commissioner(id)",
                     "command": "UPDATE",
                     "withCheck": "is_commissioner(id)",
-                    "permissive": true
-                },
-                {
-                    "name": "leagues_update_member_draft_complete",
-                    "roles": [
-                        "authenticated"
-                    ],
-                    "using": "(is_member(id) AND (draft_status = 'in_progress'::text))",
-                    "command": "UPDATE",
-                    "withCheck": "(is_member(id) AND (draft_status = 'completed'::text))",
                     "permissive": true
                 }
             ],
@@ -2489,6 +2469,21 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_pick_number integer, p_picker_id text",
+            "name": "note_draft_bounded",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "authenticated=X/postgres"
             ],
             "args": "p_league_id uuid, p_user_id text",
@@ -2574,6 +2569,21 @@
             "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_symbols text[], p_prices numeric[]",
+            "name": "record_live_prices",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
         },
         {
             "acl": [
@@ -2761,20 +2771,6 @@
         },
         {
             "acl": [
-                "postgres=X/postgres"
-            ],
-            "args": "p_league_id uuid",
-            "name": "start_new_league_season",
-            "owner": "postgres",
-            "proconfig": [
-                "search_path=public"
-            ],
-            "searchPath": "public",
-            "volatility": "volatile",
-            "securityDefiner": true
-        },
-        {
-            "acl": [
                 "postgres=X/postgres",
                 "authenticated=X/postgres"
             ],
@@ -2936,7 +2932,7 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-10-12T03:50:03Z",
+    "capturedAt": "2026-10-14T00:15:55Z",
     "publications": [
         {
             "table": "drafts",
@@ -3072,74 +3068,6 @@
             "publication": "supabase_realtime"
         },
         {
-            "table": "messages_2026_10_06",
-            "schema": "realtime",
-            "columns": [
-                "topic",
-                "extension",
-                "payload",
-                "event",
-                "private",
-                "updated_at",
-                "inserted_at",
-                "id",
-                "binary_payload",
-                "skip_broadcast"
-            ],
-            "publication": "supabase_realtime_messages_publication"
-        },
-        {
-            "table": "messages_2026_10_07",
-            "schema": "realtime",
-            "columns": [
-                "topic",
-                "extension",
-                "payload",
-                "event",
-                "private",
-                "updated_at",
-                "inserted_at",
-                "id",
-                "binary_payload",
-                "skip_broadcast"
-            ],
-            "publication": "supabase_realtime_messages_publication"
-        },
-        {
-            "table": "messages_2026_10_08",
-            "schema": "realtime",
-            "columns": [
-                "topic",
-                "extension",
-                "payload",
-                "event",
-                "private",
-                "updated_at",
-                "inserted_at",
-                "id",
-                "binary_payload",
-                "skip_broadcast"
-            ],
-            "publication": "supabase_realtime_messages_publication"
-        },
-        {
-            "table": "messages_2026_10_09",
-            "schema": "realtime",
-            "columns": [
-                "topic",
-                "extension",
-                "payload",
-                "event",
-                "private",
-                "updated_at",
-                "inserted_at",
-                "id",
-                "binary_payload",
-                "skip_broadcast"
-            ],
-            "publication": "supabase_realtime_messages_publication"
-        },
-        {
             "table": "messages_2026_10_10",
             "schema": "realtime",
             "columns": [
@@ -3175,6 +3103,74 @@
         },
         {
             "table": "messages_2026_10_12",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_13",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_14",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_15",
+            "schema": "realtime",
+            "columns": [
+                "topic",
+                "extension",
+                "payload",
+                "event",
+                "private",
+                "updated_at",
+                "inserted_at",
+                "id",
+                "binary_payload",
+                "skip_broadcast"
+            ],
+            "publication": "supabase_realtime_messages_publication"
+        },
+        {
+            "table": "messages_2026_10_16",
             "schema": "realtime",
             "columns": [
                 "topic",

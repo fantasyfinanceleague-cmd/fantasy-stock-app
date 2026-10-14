@@ -2,38 +2,38 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "47abe4371aeebd7970d74eebb0caecf589196e38",
-    "commitShort": "47abe437",
+    "commit": "da4d1d89dd9ada2a8de639879a72beb1c511f6e2",
+    "commitShort": "da4d1d89",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "docs/db-snapshot-2026-10-14",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/LeagueRenewal.tsx"
+        "path": "docs/architecture/annotations.json"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/league-game-night.test.ts"
+        "path": "docs/architecture/db-snapshot.json"
       }
     ],
-    "timestamp": "2026-10-13T23:12:50Z",
-    "sourceHash": "sha256:0edd848200010f50017d28b4a4ffc5a1431493ae25e63956f78f48d0413d6840",
+    "timestamp": "2026-10-14T00:17:17Z",
+    "sourceHash": "sha256:c72b5e65e3b49c226cc30acd371d174b4b637831e9450a357be31a1242f8599a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-10-12T03:50:03Z",
-    "ageHours": 43.4,
-    "ageDays": 1.8,
+    "capturedAt": "2026-10-14T00:15:55Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505",
+    "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 103,
+      "functions": 104,
       "tables": 36,
       "cronJobs": 13
     }
@@ -4930,7 +4930,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261122000002_draft_note_bounded.sql:37"
@@ -4938,20 +4963,12 @@
         "latestDefinition": "supabase/migrations/20261122000002_draft_note_bounded.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.note_draft_bounded",
-      "label": "note_draft_bounded()",
-      "sublabel": "not in snapshot",
+      "label": "note_draft_bounded(p_league_id uuid, p_pick_number integer, p_picker_id text)",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261122000002_draft_note_bounded.sql",
@@ -5242,7 +5259,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261122000000_symbols_last_price_at.sql:69"
@@ -5250,20 +5292,12 @@
         "latestDefinition": "supabase/migrations/20261122000000_symbols_last_price_at.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.record_live_prices",
-      "label": "record_live_prices()",
-      "sublabel": "not in snapshot",
+      "label": "record_live_prices(p_symbols text[], p_prices numeric[])",
+      "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261122000000_symbols_last_price_at.sql",
@@ -5873,48 +5907,6 @@
       "source": {
         "path": "supabase/migrations/20261012000001_start_league_playoffs_flexible.sql",
         "line": 57
-      }
-    },
-    {
-      "layer": "db",
-      "facts": {},
-      "db": {
-        "securityDefiner": true,
-        "searchPath": "public",
-        "grants": [
-          {
-            "role": "postgres",
-            "privileges": [
-              "EXECUTE"
-            ]
-          }
-        ],
-        "grantsRaw": [
-          "postgres=X/postgres"
-        ],
-        "anonCallable": false,
-        "authenticatedCallable": false,
-        "owner": "postgres",
-        "volatility": "volatile"
-      },
-      "declared": {
-        "definedIn": [
-          "supabase/migrations/20260125000000_add_league_seasons.sql:119",
-          "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:35"
-        ],
-        "latestDefinition": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql",
-        "redefinitions": 2
-      },
-      "drift": [],
-      "annotation": "Destructive (deletes and recreates season state) and broken by design: it deletes the season's matchups but creates no draft and no schedule, so the league is stuck (STATUS §4 item 9). LOCKED by 20261023000000: EXECUTE revoked from PUBLIC, anon, authenticated and service_role (owner-only). Until that migration is applied and db-snapshot.json is re-captured, the grants panel still shows the prod ACL from the snapshot (authenticated + service_role). The DROP is held in deferred/20261115000008; the replacement is Run it back (docs/migrations/RUN_IT_BACK_DESIGN.md).",
-      "verified": true,
-      "id": "pg.start_new_league_season",
-      "label": "start_new_league_season(p_league_id uuid)",
-      "sublabel": "SECURITY DEFINER · owner only",
-      "kind": "pg-function",
-      "source": {
-        "path": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql",
-        "line": 35
       }
     },
     {
@@ -7207,16 +7199,6 @@
         "rlsForced": false,
         "policies": [
           {
-            "name": "league_members_insert_bot",
-            "roles": [
-              "authenticated"
-            ],
-            "using": null,
-            "command": "INSERT",
-            "withCheck": "((user_id ~~ 'bot-%'::text) AND is_member(league_id))",
-            "permissive": true
-          },
-          {
             "name": "league_members_insert_self",
             "roles": [
               "authenticated"
@@ -7252,7 +7234,7 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "1 of 3 policies target PUBLIC; those 1 are gated on caller identity",
+          "live": "1 of 2 policies target PUBLIC; those 1 are gated on caller identity",
           "severity": "low",
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
@@ -7261,7 +7243,7 @@
       "verified": true,
       "id": "tbl.league_members",
       "label": "league_members",
-      "sublabel": "RLS · 3 policies",
+      "sublabel": "RLS · 2 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20250818225829_create_leagues.sql",
@@ -7511,16 +7493,6 @@
             "command": "UPDATE",
             "withCheck": "is_commissioner(id)",
             "permissive": true
-          },
-          {
-            "name": "leagues_update_member_draft_complete",
-            "roles": [
-              "authenticated"
-            ],
-            "using": "(is_member(id) AND (draft_status = 'in_progress'::text))",
-            "command": "UPDATE",
-            "withCheck": "(is_member(id) AND (draft_status = 'completed'::text))",
-            "permissive": true
           }
         ]
       },
@@ -7549,7 +7521,7 @@
           "field": "policy_roles",
           "groupKey": "public-role-policies-gated",
           "declared": "n/a",
-          "live": "1 of 5 policies target PUBLIC; those 1 are gated on caller identity",
+          "live": "1 of 4 policies target PUBLIC; those 1 are gated on caller identity",
           "severity": "low",
           "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
         }
@@ -7558,7 +7530,7 @@
       "verified": true,
       "id": "tbl.leagues",
       "label": "leagues",
-      "sublabel": "RLS · 5 policies",
+      "sublabel": "RLS · 4 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20250818225829_create_leagues.sql",
@@ -14943,105 +14915,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.league_seasons",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.league_seasons",
-      "protocol": "plpgsql-select",
-      "payload": "SELECT league_seasons (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:135",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:65"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.league_seasons#insert",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.league_seasons",
-      "protocol": "plpgsql-insert",
-      "payload": "INSERT league_seasons (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:139",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:69"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.league_standings#update",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.league_standings",
-      "protocol": "plpgsql-update",
-      "payload": "UPDATE league_standings (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:144",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:74"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.leagues",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.leagues",
-      "protocol": "plpgsql-select",
-      "payload": "SELECT leagues (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:127",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:48",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:57"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.leagues#update",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.leagues",
-      "protocol": "plpgsql-update",
-      "payload": "UPDATE leagues (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:152",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:82"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.matchups",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.matchups",
-      "protocol": "plpgsql-select",
-      "payload": "SELECT matchups (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:149",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:79"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.pg.start_new_league_season->tbl.matchups#delete",
-      "from": "pg.start_new_league_season",
-      "to": "tbl.matchups",
-      "protocol": "plpgsql-delete",
-      "payload": "DELETE matchups (inside function body)",
-      "derivedFrom": "sql-body",
-      "callSites": [
-        "supabase/migrations/20260125000000_add_league_seasons.sql:149",
-        "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:79"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.pg.start_renewed_season->tbl.league_draft_slots",
       "from": "pg.start_renewed_season",
       "to": "tbl.league_draft_slots",
@@ -15597,10 +15470,9 @@
       "from": "tbl.league_members",
       "to": "pg.is_member",
       "protocol": "rls-predicate",
-      "payload": "called by policy league_members_insert_bot",
+      "payload": "called by policy league_members_select_members",
       "derivedFrom": "db-snapshot",
       "callSites": [
-        "db-snapshot.json · policy league_members_insert_bot",
         "db-snapshot.json · policy league_members_select_members"
       ]
     },
@@ -15876,8 +15748,7 @@
       "payload": "called by policy leagues_select_member_or_commissioner",
       "derivedFrom": "db-snapshot",
       "callSites": [
-        "db-snapshot.json · policy leagues_select_member_or_commissioner",
-        "db-snapshot.json · policy leagues_update_member_draft_complete"
+        "db-snapshot.json · policy leagues_select_member_or_commissioner"
       ]
     },
     {
@@ -18895,26 +18766,6 @@
   ],
   "drift": [
     {
-      "node": "pg.note_draft_bounded",
-      "label": "note_draft_bounded()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.record_live_prices",
-      "label": "record_live_prices()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
       "node": "tbl.categories",
       "label": "categories",
       "groupKey": "authenticated-role-policies-ungated",
@@ -19120,7 +18971,7 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "1 of 3 policies target PUBLIC; those 1 are gated on caller identity",
+      "live": "1 of 2 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -19150,7 +19001,7 @@
       "groupKey": "public-role-policies-gated",
       "field": "policy_roles",
       "declared": "n/a",
-      "live": "1 of 5 policies target PUBLIC; those 1 are gated on caller identity",
+      "live": "1 of 4 policies target PUBLIC; those 1 are gated on caller identity",
       "severity": "low",
       "note": "These PUBLIC-role policies (PUBLIC includes anon) each reference auth.uid()/auth.jwt()/auth.role()/is_member/is_commissioner, so anon matches no rows through them. Cosmetic inconsistency with the newer `TO authenticated` style — worth normalising. This row says nothing about any non-PUBLIC policy on the same table; those are graded separately."
     },
@@ -19463,7 +19314,7 @@
     },
     {
       "node": "pg.note_draft_bounded",
-      "label": "note_draft_bounded()",
+      "label": "note_draft_bounded(p_league_id uuid, p_pick_number integer, p_picker_id text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261122000002_draft_note_bounded.sql:37",
       "outbound": [
@@ -19516,7 +19367,7 @@
     },
     {
       "node": "pg.record_live_prices",
-      "label": "record_live_prices()",
+      "label": "record_live_prices(p_symbols text[], p_prices numeric[])",
       "kind": "pg-function",
       "source": "supabase/migrations/20261122000000_symbols_last_price_at.sql:69",
       "outbound": [
@@ -19566,22 +19417,6 @@
         "tbl.league_notifications",
         "tbl.leagues",
         "tbl.leagues"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.start_new_league_season",
-      "label": "start_new_league_season(p_league_id uuid)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20260718000000_lockdown_start_new_league_season.sql:35",
-      "outbound": [
-        "tbl.league_seasons",
-        "tbl.league_seasons",
-        "tbl.league_standings",
-        "tbl.leagues",
-        "tbl.leagues",
-        "tbl.matchups",
-        "tbl.matchups"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -19793,18 +19628,6 @@
   },
   "unverified": [
     {
-      "scope": "pg.record_live_prices",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.note_draft_bounded",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -19885,13 +19708,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 264,
-    "edges": 646,
+    "nodes": 263,
+    "edges": 639,
     "flows": 7,
-    "drift": 31,
-    "driftHigh": 2,
-    "deadCode": 44,
-    "unverified": 15
+    "drift": 29,
+    "driftHigh": 0,
+    "deadCode": 43,
+    "unverified": 13
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -20479,6 +20302,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:0143bad6d164ae996e83e424253c78c7f723043d6e2a5ec8b8ff9e9ffb5bb505"
+    "dbSnapshot": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2"
   }
 }
