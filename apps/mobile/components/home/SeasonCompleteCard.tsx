@@ -232,7 +232,7 @@ export function SeasonCompleteCard({
         </>
       ) : null}
 
-      <ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} divider={false} />
+      <ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} />
       {/* B4 (Design Lead gate, 2026-10-05): no "Start next season" here. The
        * start_new_league_season path is revoked, so a button for it is dead;
        * the "Run it back?" card (3c) owns the primary. */}

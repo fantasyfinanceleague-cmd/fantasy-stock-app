@@ -12,6 +12,8 @@ import {
 const NAMES: IconName[] = [
   'chevronRight', 'chevronLeft', 'chevronDown', 'chevronUp', 'check', 'circle', 'info',
   'close', 'search', 'add', 'remove', 'share', 'trophy', 'lock', 'mail', 'alert', 'star', 'starFilled',
+  'checkCircle', 'pending',
+  'tabHome', 'tabHomeSelected', 'tabMatchup', 'tabMatchupSelected', 'tabLeague', 'tabLeagueSelected', 'tabPortfolio', 'tabPortfolioSelected',
 ];
 
 Deno.test('the name map is exhaustive and matches the spec table', () => {
@@ -38,7 +40,7 @@ Deno.test('outline by default: no glyph is a filled variant (filled is only for 
 });
 
 Deno.test('size by role: 14 / 16 / 18 / 20 / 24 pt', () => {
-  assertEquals(ICON_SIZE, { caption: 14, callout: 16, body: 18, headline: 20, title: 24, medallion: 36 });
+  assertEquals(ICON_SIZE, { caption: 14, callout: 16, body: 18, headline: 20, title: 24, medallion: 36, tab: 24 });
 });
 
 Deno.test('the icon scales with Dynamic Type, never below its size, capped at the role', () => {

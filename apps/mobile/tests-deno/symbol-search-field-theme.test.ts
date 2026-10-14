@@ -16,11 +16,13 @@ Deno.test('the search field never imports the legacy light-only Colors (or its s
   assertEquals(field.includes('const { colors, elevation } = useTheme();'), true);
 });
 
-Deno.test('the ruled tokens: field inset / text / text2 placeholder; results surface with line dividers', () => {
+Deno.test('the ruled tokens: field inset / text / text2 placeholder; results on a rimmed surface, no rule lines (§9C rule 2)', () => {
   assertEquals(field.includes('{ backgroundColor: colors.inset, color: colors.text, borderColor: colors.border }'), true);
   assertEquals(field.includes('placeholderTextColor={colors.text2}'), true);
-  assertEquals(field.includes('{ backgroundColor: colors.surface, borderColor: colors.line }, elevation.card'), true);
-  assertEquals(field.includes('{ borderBottomColor: colors.line }'), true);
+  // The results, "no matches" and "didn't load" panels: surface + the card rim (elevation.card).
+  assertEquals((field.match(/\{ backgroundColor: colors\.surface \}, elevation\.card/g) ?? []).length, 3);
+  // gn-sweep: rows divide by space, never a line (no bottom border, no line token, no hairline).
+  assertEquals(/borderBottomWidth|borderBottomColor|colors\.line|hairlineWidth/.test(field), false);
 });
 
 Deno.test("no caller on main passes its own colours into the field", () => {

@@ -5,7 +5,8 @@ import { useAuth } from './useAuth';
 import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
-import { FIXTURE_ACTIVE_LEAGUE, FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues } from './shell/devFixture';
+import { classifyLeagueRead, needsLeaguesRead } from './shell/leagueRead';
+import { FIXTURE_ACTIVE_LEAGUE, FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues, fixtureReadFails } from './shell/devFixture';
 import type { ShellFixture } from './shell/devFixture';
 import { SEAM_ON } from './game/devSeam';
 import { pickLeagueFixture } from './game/devSeamGate';
@@ -78,6 +79,11 @@ export interface FinalStanding {
 interface LeagueContextType {
   leagues: League[];
   loading: boolean;
+  /** The last league-list read FAILED (gn-sweep). Distinct from an empty list: "No leagues
+   * yet" is only for a successful read with zero memberships (lib/shell/leagueRead.ts). On a
+   * failure the lists are emptied (never another account's, never half a read), so a screen
+   * with no leagues checks this before it says "No leagues yet". Cleared when a read starts. */
+  loadFailed: boolean;
   activeLeagueId: string | null;
   setActiveLeagueId: (id: string | null) => void;
   activeLeague: League | null;
@@ -252,10 +258,13 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   const [market, setMarket] = useState<MarketRow | null>(null);
   const [marketCalendar, setMarketCalendar] = useState<MarketCalendarSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeLeagueId, setActiveLeagueIdState] = useState<string | null>(null);
   // The latest choice, readable from inside an in-flight fetch (a pick made
   // while refresh() is awaiting must not be overwritten by its result).
   const activeRef = useRef<string | null>(null);
+  // DEV fixture only: how many fixture reads have run (fixtureReadFails).
+  const fixtureAttempt = useRef(0);
   const userId = user?.id ?? null;
 
   // Spec gate 6: the active league persists across relaunch, per user.
@@ -274,11 +283,17 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
 
     setLoading(true);
+    setLoadFailed(false);
 
     if (LEAGUE_FIXTURE) {
       // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
       // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
       await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
+      if (fixtureReadFails(LEAGUE_FIXTURE, fixtureAttempt.current++)) {
+        setLoadFailed(true);
+        setLoading(false);
+        return;
+      }
       const fixture = fixtureLeagues(LEAGUE_FIXTURE);
       const stored = await readStoredActiveLeague(userId);
       setLeagues(fixture.leagues);
@@ -299,32 +314,35 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       .select('league_id')
       .eq('user_id', userId)
       .is('hidden_at', null);
+    const membershipRead = { error: memberError, rows: memberships };
 
-    if (memberError || !memberships || memberships.length === 0) {
+    // A successful read with zero memberships is "no leagues"; a FAILED read is its own
+    // state (gn-sweep). Either way the lists are emptied, never left half-written.
+    let leagueRead: { error: unknown; rows: League[] | null } | null = null;
+    if (needsLeaguesRead(membershipRead)) {
+      const { data: leagueData, error: leagueError } = await supabase
+        .from('leagues')
+        .select('*')
+        .in('id', (memberships ?? []).map((m) => m.league_id))
+        .order('created_at', { ascending: false });
+      leagueRead = { error: leagueError, rows: (leagueData as League[] | null) ?? null };
+    }
+
+    const read = classifyLeagueRead<League>({ memberships: membershipRead, leagues: leagueRead });
+    if (read.kind !== 'ok') {
+      if (read.kind === 'failed') console.error('[leagues] league list read failed:', read.reason, memberError ?? leagueRead?.error ?? '');
       setLeagues([]);
       setSheetLeagues([]);
       setHomeSummaryByLeague(new Map());
       setMarket(null);
       setMarketCalendar([]);
+      setLoadFailed(read.kind === 'failed');
       setLoading(false);
       return;
     }
+    if (read.missing > 0) console.warn(`[leagues] ${read.missing} of your leagues didn't come back from the read`);
 
-    const leagueIds = memberships.map((m) => m.league_id);
-
-    const { data: leagueData, error: leagueError } = await supabase
-      .from('leagues')
-      .select('*')
-      .in('id', leagueIds)
-      .order('created_at', { ascending: false });
-
-    if (leagueError) {
-      console.error('Error fetching leagues:', leagueError);
-      setLoading(false);
-      return;
-    }
-
-    const list = (leagueData || []) as League[];
+    const list = read.leagues;
     const [facts, stored] = await Promise.all([fetchSheetFacts(userId, list), readStoredActiveLeague(userId)]);
     const { sheet } = facts;
 
@@ -350,6 +368,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       setHomeSummaryByLeague(new Map());
       setMarket(null);
       setMarketCalendar([]);
+      setLoadFailed(false);
       activeRef.current = null;
       setActiveLeagueIdState(null);
       setLoading(false);
@@ -366,6 +385,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       value={{
         leagues,
         loading,
+        loadFailed,
         activeLeagueId,
         setActiveLeagueId,
         activeLeague,

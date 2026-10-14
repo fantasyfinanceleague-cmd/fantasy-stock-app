@@ -3,10 +3,14 @@
  * paid from one sale's proceeds; this lists the server's sources, one radio row
  * each, and commits the chosen one. Rows come from salePicker.pickerRows; this
  * file only lays them out.
+ *
+ * Game Night (gn-sweep, §9C rules 1–2): the rows sit on an `inset` panel on the sheet's
+ * `surface` (a lightness step), with no hairline edge and no line between rows.
  */
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { radius } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { formatMoney } from '@/components/sp/logic/money';
@@ -29,20 +33,20 @@ const styles = StyleSheet.create({
   stack: { gap: 12, paddingHorizontal: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   close: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
-  card: { borderRadius: 12, overflow: 'hidden' },
+  card: { borderRadius: radius.lg, overflow: 'hidden' },
   row: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
   radio: { width: 20, height: 20, borderRadius: 10 },
   rowLead: { flex: 1 },
 });
 
-/** The radio: a filled ring when chosen, a hairline ring otherwise. */
+/** The radio: a filled ring when chosen, a 2pt control ring (borderStrong, ≥ 3:1) otherwise. */
 function Radio({ selected }: { selected: boolean }) {
   const { colors } = useTheme();
   return (
     <View
       style={[
         styles.radio,
-        { borderWidth: selected ? 6 : 2, borderColor: selected ? colors.accent : colors.border },
+        { borderWidth: selected ? 6 : 2, borderColor: selected ? colors.accent : colors.borderStrong },
       ]}
     />
   );
@@ -64,7 +68,7 @@ export function SalePicker({ sources, chosenId, symbol, onChoose, onUse, onClose
 
       <Text variant="callout" tone="secondary">{COPY.pickerCaption}</Text>
 
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: StyleSheet.hairlineWidth }]}>
+      <View style={[styles.card, { backgroundColor: colors.inset }]}>
         {rows.map((r) => (
           <Pressable
             key={r.tradeId}

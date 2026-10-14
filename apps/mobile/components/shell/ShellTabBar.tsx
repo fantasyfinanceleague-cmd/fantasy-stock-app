@@ -104,7 +104,7 @@ export function ShellTabBar({ state, navigation }: BottomTabBarProps) {
               label={tab.label}
               icon={tab.icon}
               focused={focused}
-              color={focused ? colors.accent : colors.text2}
+              tone={focused ? 'accent' : 'text2'}
               onPress={onPress}
               onLongPress={onLongPress}
             />
@@ -123,12 +123,15 @@ interface TabItemProps {
   label: string;
   icon: TabIconName;
   focused: boolean;
-  color: string;
+  /** The label's and the icon's theme token (accent when selected, text2 when not). */
+  tone: 'accent' | 'text2';
   onPress: () => void;
   onLongPress: () => void;
 }
 
-function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemProps) {
+function TabItem({ label, icon, focused, tone, onPress, onLongPress }: TabItemProps) {
+  const { colors } = useTheme();
+  const color = colors[tone];
   const { reduced, duration, easing } = useMotion();
   const scale = useSharedValue(1);
 
@@ -150,7 +153,7 @@ function TabItem({ label, icon, focused, color, onPress, onLongPress }: TabItemP
       style={styles.tab}
     >
       <Animated.View style={iconStyle}>
-        <TabIcon name={icon} color={color} focused={focused} />
+        <TabIcon name={icon} tone={tone} focused={focused} />
       </Animated.View>
       {/* Labels scale within their 3b-1 cap (LABEL_MAX_SCALE). Hiding them at
           large sizes was reverted (Design Lead, F1): the cap keeps every label

@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { radius, space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
+import { Icon } from '@/components/sp/Icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -80,7 +80,7 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
               {standingsThroughWeekCaption(throughWeek)}
             </Text>
           ) : null}
-          <Ionicons name="chevron-forward" size={16} color={colors.text2} />
+          <Icon name="chevronRight" size="callout" tone="text2" />
         </View>
       </View>
       <View style={styles.rows}>

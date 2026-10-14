@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { radius, space } from '@/constants/tokens';
 import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
+import { Icon } from '@/components/sp/Icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -162,7 +162,7 @@ export function ThisWeekCard({
               {liveChipLabel ?? LIVE_CHIP}
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.text2} />
+          <Icon name="chevronRight" size="callout" tone="text2" />
         </View>
       </View>
 

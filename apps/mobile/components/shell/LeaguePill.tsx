@@ -3,11 +3,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space } from '@/constants/tokens';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
@@ -76,7 +76,7 @@ export function LeaguePill({ name, totalLeagues }: LeaguePillProps) {
           </Text>
         </Animated.View>
       ) : null}
-      <Ionicons name="chevron-down" size={14} color={colors.text2} />
+      <Icon name="chevronDown" size="caption" tone="text2" />
     </PressableScale>
   );
 }

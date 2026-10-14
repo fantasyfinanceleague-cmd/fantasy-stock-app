@@ -2,12 +2,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { PASSWORD_RULE_SENTENCE } from '@/constants/passwordRules';
 import { EmptyState } from '@/components/sp/EmptyState';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -94,7 +94,7 @@ export default function ResetPasswordScreen() {
     return (
       <AuthScaffold>
         <EmptyState
-          icon={(p) => <Ionicons name="checkmark-circle-outline" {...p} />}
+          icon={() => <Icon name="checkCircle" size="title" tone="text2" />}
           title="Password updated"
           message="You're signed in with your new password."
           actionLabel="Continue"
@@ -126,7 +126,7 @@ export default function ResetPasswordScreen() {
     return (
       <AuthScaffold>
         <EmptyState
-          icon={(p) => <Ionicons name="alert-circle-outline" {...p} />}
+          icon={() => <Icon name="alert" size="title" tone="text2" />}
           title="This link didn't work"
           message="It may have expired, been used already, or been opened on a different device than the one that asked for it. Request a new link to continue."
           actionLabel="Request a new link"

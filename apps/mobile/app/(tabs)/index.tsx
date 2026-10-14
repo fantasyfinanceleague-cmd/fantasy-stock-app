@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactElement } from 'react';
 import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { Icon } from '@/components/sp/Icon';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import type { League } from '@/lib/LeagueContext';
+import { LEAGUES_LOAD_FAILED, leagueFallback } from '@/lib/game/leagueView';
+import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
 import { useHomeLeague } from '@/lib/home/useHomeLeague';
 import { HomeHero } from '@/components/home/HomeHero';
 import { ThisWeekCard } from '@/components/home/ThisWeekCard';
@@ -123,7 +125,7 @@ function HomeBody({
     return (
       <PhasePlaceholder
         title="Home"
-        icon={(p) => <Ionicons name="alert-circle-outline" {...p} />}
+        icon={() => <Icon name="alert" size="title" tone="text2" />}
         heading="Couldn't load this league"
         message="Pull down to try again."
         onRefresh={onRefresh}
@@ -205,7 +207,7 @@ function HomeBody({
     // Shouldn't reach here (every remaining phase.kind builds the money
     // views), but never render nothing silently if it ever does.
     return (
-      <PhasePlaceholder title="Home" icon={(p) => <Ionicons name="hourglass-outline" {...p} />} heading="One moment" message="" onRefresh={onRefresh} />
+      <PhasePlaceholder title="Home" icon={() => <Icon name="pending" size="title" tone="text2" />} heading="One moment" message="" onRefresh={onRefresh} />
     );
   }
 
@@ -405,7 +407,7 @@ function HomeBody({
 // wrapping the league name at Accessibility XL) simply pushes the body
 // down, by ordinary layout, with no extra code and no jump.
 export default function HomeScreen() {
-  const { leagues, loading, refresh, activeLeagueId, activeLeague } = useLeagueContext();
+  const { leagues, loading, loadFailed, refresh, activeLeagueId, activeLeague } = useLeagueContext();
   const { colors } = useTheme();
   const { status, viewModel } = useHomeLeague(activeLeagueId);
 
@@ -425,9 +427,12 @@ export default function HomeScreen() {
     if (activeLeagueId && viewModel) hasOpenedRef.current = true;
   }, [activeLeagueId, viewModel]);
 
+  // No league in hand: leagueFallback decides (the same rule League uses).
+  const fallback = leagues.length === 0 ? leagueFallback({ loading, leagueCount: 0, loadFailed }) : null;
+
   // First load (e.g. just signed in): just the header, so neither state
   // flashes and then swaps for the other.
-  if (loading && leagues.length === 0) {
+  if (fallback === 'pending') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ShellHeader title="Home" showAvatar />
@@ -435,12 +440,30 @@ export default function HomeScreen() {
     );
   }
 
-  if (!loading && leagues.length === 0) {
+  // The league list didn't load (gn-sweep): its own state, with Try again — never "No
+  // leagues yet" to someone whose read failed.
+  if (fallback === 'failed') {
     return (
       <PhasePlaceholder
         title="Home"
         showAvatar
-        icon={(p) => <Ionicons name="trophy-outline" {...p} />}
+        icon={() => <Icon name="alert" size="title" tone="text2" />}
+        heading={LEAGUES_LOAD_FAILED}
+        message={MONEY_COPY.loadRetryMessage}
+        actionLabel={MONEY_COPY.tryAgain}
+        onAction={refresh}
+        onRefresh={refresh}
+      />
+    );
+  }
+
+  // A read that SUCCEEDED with no leagues.
+  if (fallback === 'empty') {
+    return (
+      <PhasePlaceholder
+        title="Home"
+        showAvatar
+        icon={() => <Icon name="trophy" size="title" tone="text2" />}
         heading="No leagues yet"
         message="Create or join a league to get started."
         actionLabel="Create a league"

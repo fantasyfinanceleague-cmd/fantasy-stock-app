@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
+import type { ThemeColors } from '@/constants/tokens/color';
+import { Icon } from '@/components/sp/Icon';
 import { PressableScale, PressableScaleProps } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -77,31 +78,33 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
   const checkStyle = useAnimatedStyle(() => ({ opacity: Math.max(0, layer.value - 1) }));
 
   let backgroundColor: string | undefined;
-  let textColor: string;
+  // The label's ink as a theme token, so the check (sp/Icon) reads the same token.
+  let textTone: keyof ThemeColors;
   let borderColor: string | undefined;
   let borderWidth = 0;
 
   switch (variant) {
     case 'primary':
       backgroundColor = colors.primaryBg;
-      textColor = colors.primaryFg;
+      textTone = 'primaryFg';
       break;
     case 'destructive':
       backgroundColor = colors.lossFill;
-      textColor = colors.onYou;
+      textTone = 'onYou';
       break;
     case 'secondary':
       backgroundColor = colors.secondaryBg === 'transparent' ? undefined : colors.secondaryBg;
       borderColor = colors.secondaryBorder;
-      textColor = colors.secondaryFg;
+      textTone = 'secondaryFg';
       borderWidth = 1;
       break;
     case 'ghost':
     default:
       backgroundColor = undefined;
-      textColor = colors.text;
+      textTone = 'text';
       break;
   }
+  const textColor = colors[textTone];
   if (selected) {
     borderWidth = 2;
     borderColor = colors.text;
@@ -130,7 +133,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
       {...rest}
     >
       <Animated.View style={[styles.content, labelStyle]}>
-        {selected ? <Ionicons name="checkmark" size={16} color={textColor} style={styles.check} /> : null}
+        {selected ? <View style={styles.check}><Icon name="check" size="callout" tone={textTone} /></View> : null}
         <Text
           variant={size === 'md' ? 'headline' : 'callout'}
           color={textColor}
@@ -147,7 +150,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
             <ActivityIndicator color={textColor} />
           </Animated.View>
           <Animated.View pointerEvents="none" style={[styles.overlay, checkStyle]}>
-            <Ionicons name="checkmark" size={22} color={textColor} />
+            <Icon name="check" size="headline" tone={textTone} />
           </Animated.View>
         </>
       ) : null}
