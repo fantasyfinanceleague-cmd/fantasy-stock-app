@@ -533,7 +533,8 @@ building anything, and don't reopen a rule without him.
   the draft room opens (an hour before) the league is considered started. no one can join and
   the share link cannot work". The server now enforces it (20261123000000): from T−1h a code is
   refused by join-league and by the preview, the same moment Share hides, with the
-  started-draft refusal ('draft_started'), so no new copy. A league short of 4 managers when
+  started-draft refusal ('draft_started'), so no new copy. Run it back answers lock at the same
+  moment (Giorgio, 2026-10-14; see Run it back). A league short of 4 managers when
   its room would open is postponed then, at the T−1h gate, never left for the start (the
   auto-start gate already did this; now pinned by test). A postponed draft has no time, so
   its code works again and Share comes back.
@@ -545,6 +546,11 @@ building anything, and don't reopen a rule without him.
   new season.
   - Only the commissioner starts it.
   - Every Season 1 player answers "I'm in" / "I'm out" and can flip until the draft is set.
+    **Answers lock when the draft room opens** (2026-10-14, Giorgio, relayed by the
+    Orchestrator): from T−1h an "I'm in" or "I'm out" is refused ("The draft has started, so
+    answers are locked."), as joining is (see "Share hides while teams are locked"). This
+    SUPERSEDES the design's rev 3.1 "free flips until the draft starts". A postponed draft
+    takes answers again.
   - The commissioner sees each reply on "Who's running back". "Running back" is Giorgio's
     copy, with the name in bold.
   - The draft can't be set while replies are pending.

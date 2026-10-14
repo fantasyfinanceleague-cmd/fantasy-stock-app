@@ -1,5 +1,6 @@
 -- ============================================================================
--- No joins once the draft room opens
+-- No joins once the draft room opens (join_league_by_code), and Run it back
+-- answers lock then too (respond_to_renewal)
 -- ============================================================================
 -- Giorgio, 2026-10-14: "once the draft room opens (an hour before) the league
 -- is considered started. no one can join and the share link cannot work"
@@ -43,11 +44,16 @@
 -- draft_date, so this function lets the code work again at once. Nothing to
 -- move; pinned by draft-start.test.ts and this file's PGlite test.
 --
--- LATE JOINERS (20261111000000's open_due_draft_rooms notice, #67's order
--- re-sync on a member change): no longer reachable by a human join. Not dead
--- code, and not touched: Run it back's respond_to_renewal ('I'm in' after the
--- draft is set) and the test-only add_bots still write member rows after T-1h,
--- and that machinery is what keeps their order and notices right.
+-- LATE JOINERS (20261111000000's open_due_draft_rooms late-joiner notice,
+-- #67's order re-sync on a member change): with this file, NO human can become
+-- a member after T-1h: not by a code (join_league_by_code below) and not by a
+-- Run it back "I'm in" (respond_to_renewal, at the end of this file). Only the
+-- test-only add_bots still writes member rows then, and bots get no notices.
+-- So the late-joiner NOTICE pass is unreachable for humans; the order re-sync
+-- serves bots only. Kept on purpose, not deleted (Orchestrator, 2026-10-14):
+-- the notice pass is a per-participant completeness check ("every human in
+-- the order has this opening's notice") inside a cron-critical function, and
+-- re-creating that function to remove a backstop buys nothing.
 --
 -- The function below is 20261107000005's body VERBATIM plus the conjunct
 -- marked "20261123000000". CREATE OR REPLACE keeps the ACL; the grants are
@@ -167,3 +173,112 @@ revoke all on function join_league_by_code(text, text) from public;
 revoke all on function join_league_by_code(text, text) from anon;
 revoke all on function join_league_by_code(text, text) from authenticated;
 grant execute on function join_league_by_code(text, text) to service_role;
+
+-- ============================================================================
+-- Run it back answers lock when the room opens (Giorgio, 2026-10-14)
+-- ============================================================================
+-- respond_to_renewal let an invitee flip "I'm in" / "I'm out" until the draft
+-- STARTED (rev 3.1: "free flips until the draft starts"), so inside the room's
+-- hour an "I'm in" was a join and an "I'm out" a leave, against the ruling
+-- above and the T-1h leave lock. Giorgio ruled (2026-10-14, relayed by the
+-- Orchestrator): answers lock at room open. Same clock as join_league_by_code
+-- (_draft_order_is_due), same refusal ('draft_started'), which the app already
+-- words "The draft has started, so answers are locked." A postponed draft
+-- (draft_date NULL) takes answers again.
+--
+-- remove_renewal_invitee is NOT changed: it only removes a PENDING invitee, and
+-- a pending reply blocks setting a draft time (trg_leagues_renewal_gate), so it
+-- cannot run inside an open room.
+--
+-- The function below is 20261115000003's body VERBATIM plus the conjunct marked
+-- "20261123000000". The grants are re-asserted verbatim from 20261115000003
+-- (authenticated only: the caller is auth.uid()).
+--
+-- POST-PUSH EFFECT CHECK:
+--   SELECT proacl, position('_draft_order_is_due' in prosrc) > 0 AS locks_at_room
+--     FROM pg_proc WHERE proname = 'respond_to_renewal';
+--   -- {postgres=X/postgres,authenticated=X/postgres}, t
+-- ============================================================================
+
+create or replace function public.respond_to_renewal(p_league_id uuid, p_response text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_caller text := auth.uid()::text;
+  v_l      public.leagues%rowtype;
+  v_r      public.league_renewal_responses%rowtype;
+  v_c      record;
+begin
+  if v_caller is null then
+    raise exception 'not authenticated' using errcode = '42501';
+  end if;
+  if p_response is null or p_response not in ('in', 'out') then
+    raise exception 'invalid_response' using errcode = '22023';
+  end if;
+
+  -- Lock the league first: every reply and the gate serialize on this row.
+  select * into v_l from public.leagues where id = p_league_id for update;
+  -- Uniform for anyone who is not an invitee (no existence or state oracle):
+  -- an unknown league, a league that is not a renewal, and a stranger all get
+  -- not_invited, BEFORE any draft-state reason is revealed.
+  select * into v_r from public.league_renewal_responses
+   where league_id = p_league_id and user_id = v_caller for update;
+  if not found or v_l.id is null or v_l.previous_league_id is null then
+    return jsonb_build_object('status', 'refused', 'reason', 'not_invited');
+  end if;
+  -- 20261123000000: answers lock when the draft room opens (T-1h), the same
+  -- clock as join_league_by_code above. A postponed draft has no draft_date.
+  if coalesce(v_l.draft_status, 'not_started') <> 'not_started'
+     or public._draft_order_is_due(v_l.draft_date) then
+    return jsonb_build_object('status', 'refused', 'reason', 'draft_started');
+  end if;
+  if v_r.decided_by = 'commissioner' and v_r.status = 'out' then
+    return jsonb_build_object('status', 'refused', 'reason', 'removed');
+  end if;
+  if v_l.commissioner_id = v_caller and p_response = 'out' then
+    return jsonb_build_object('status', 'refused', 'reason', 'commissioner_cannot_opt_out');
+  end if;
+  if v_r.status = p_response then
+    return jsonb_build_object('status', 'unchanged', 'response', p_response);
+  end if;
+
+  -- The seat cap (num_participants = 16 until the draft), checked BEFORE any
+  -- write so a refusal writes nothing. Newcomers and bots share the seats, so
+  -- this refusal is reachable; it is loud, never a silent over-cap member.
+  if p_response = 'in'
+     and (select count(*) from public.league_members where league_id = p_league_id) >= v_l.num_participants then
+    return jsonb_build_object('status', 'refused', 'reason', 'league_full');
+  end if;
+
+  update public.league_renewal_responses
+     set status = p_response, decided_by = 'player', responded_at = now()
+   where league_id = p_league_id and user_id = v_caller;
+
+  if p_response = 'in' then
+    insert into public.league_members (league_id, user_id, role)
+    values (p_league_id, v_caller, 'member')
+    on conflict (league_id, user_id) do nothing;
+  else
+    delete from public.league_members where league_id = p_league_id and user_id = v_caller;
+  end if;
+
+  select * into v_c from public._renewal_counts(p_league_id);
+  insert into public.league_notifications (league_id, user_id, kind, subject_user_id, detail)
+  values (p_league_id, v_l.commissioner_id, 'renewal_reply', v_caller, jsonb_build_object(
+    'response', p_response,
+    'subject_name', public.participant_display_name(v_caller),
+    'season_number', v_l.season_number,
+    'in', v_c.n_in + v_c.n_new,
+    'out', v_c.n_out,
+    'pending', v_c.n_pending));
+
+  return jsonb_build_object('status', 'replied', 'response', p_response,
+    'in', v_c.n_in + v_c.n_new, 'out', v_c.n_out, 'pending', v_c.n_pending);
+end;
+$$;
+
+revoke all on function public.respond_to_renewal(uuid, text)                 from public, anon, service_role;
+grant execute on function public.respond_to_renewal(uuid, text)              to authenticated;

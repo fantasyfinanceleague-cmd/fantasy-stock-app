@@ -17,6 +17,9 @@
  *
  * Every RPC answer is also checked against preview-league's reason.ts on the
  * same facts, so the preview never offers a Join the RPC refuses.
+ *
+ * Also: Run it back answers lock at room open (respond_to_renewal, same file),
+ * on Run it back 1-5 loaded verbatim, and both functions' grants.
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
@@ -47,6 +50,13 @@ const CHAIN = [   // prod (timestamp) order
   '20261110000002_notify_due_ignores_transfer_notice.sql',
   '20261111000000_draft_auto_start.sql',
   '20261111000001_draft_status_server_only.sql',
+  // Run it back 1-5 (#94): respond_to_renewal, its reply record, the renewal
+  // and membership gates it meets.
+  '20261115000000_run_it_back_lineage.sql',
+  '20261115000001_run_it_back_notifications.sql',
+  '20261115000002_run_it_back_responses.sql',
+  '20261115000003_run_it_back_rpcs.sql',
+  '20261115000004_run_it_back_gate.sql',
 ].map((f) => new URL(`supabase/migrations/${f}`, ROOT));
 
 const SCHEMA_PRE = `
@@ -69,6 +79,16 @@ create table league_invites (id uuid primary key default gen_random_uuid(),
   league_id uuid references leagues(id) on delete cascade, code text, status text default 'pending',
   expires_at timestamptz, inviter_id text);
 create table user_profiles (id uuid primary key, username text);
+create table league_seasons (id uuid primary key default gen_random_uuid(),
+  league_id uuid not null references leagues(id) on delete cascade, season_number int not null default 1,
+  started_at timestamptz not null default now(), completed_at timestamptz,
+  champion_user_id text, runner_up_user_id text, final_standings jsonb,
+  created_at timestamptz not null default now(), unique (league_id, season_number));
+create table matchups (id uuid primary key default gen_random_uuid(),
+  league_id uuid not null references leagues(id) on delete cascade, week_number int not null,
+  team1_user_id text, team2_user_id text, team1_gain numeric(12,2), team2_gain numeric(12,2),
+  winner_user_id text, week_start timestamptz, week_end timestamptz,
+  is_playoff boolean default false, playoff_round_number smallint, bracket_position smallint);
 create table categories (id uuid primary key default gen_random_uuid(), slug text unique, name text);
 create table drafts (id serial primary key, league_id uuid not null references leagues(id) on delete cascade,
   user_id text, symbol text, entry_price numeric, quantity numeric, round int, pick_number int,
@@ -107,6 +127,7 @@ async function leaguesColumnDdl(): Promise<string[]> {
 
 const COMMISH = '11111111-1111-4111-8111-111111111111';
 const JOINER = '33333333-3333-4333-8333-333333333333';
+const RUNNER = '44444444-4444-4444-8444-444444444444'; // a Season 1 player who answered "I'm in"
 
 // deno-lint-ignore no-explicit-any
 type Row = any;
@@ -124,8 +145,12 @@ Deno.test({
     for (const m of CHAIN) await db.exec(await Deno.readTextFile(m));
 
     // Drift that the file's own grants must undo: CREATE OR REPLACE keeps an ACL,
-    // so a stray client grant would survive a file that forgot to re-assert them.
+    // so a stray grant would survive (and a lost one stay lost) in a file that
+    // forgot to re-assert them. Both directions, for both functions.
     await db.exec(`grant execute on function join_league_by_code(text, text) to public, anon, authenticated`);
+    await db.exec(`revoke execute on function join_league_by_code(text, text) from service_role`);
+    await db.exec(`grant execute on function public.respond_to_renewal(uuid, text) to public, anon, service_role`);
+    await db.exec(`revoke execute on function public.respond_to_renewal(uuid, text) from authenticated`);
     await db.exec(await Deno.readTextFile(UNDER_TEST));
 
     // ---- helpers ----------------------------------------------------------
@@ -301,6 +326,93 @@ Deno.test({
       assertEquals(await preview(L.id), null, 'Share and the preview come back with the postponement');
       assertEquals((await join(L.code)).ok, true, 'the fourth manager can join');
       assertEquals(await members(L.id), 4);
+    });
+
+    // ---- Run it back answers lock at room open (Giorgio, 2026-10-14) ----------
+    /** A renewed Season 2 as the owner: the commissioner + RUNNER in (members),
+     * JOINER answered "I'm out"; nobody pending, so a draft time can be set. */
+    async function renewed() {
+      const S1 = await league({ minutes: null, extra: { season_status: 'completed', draft_status: 'completed' } });
+      const L = await league({ minutes: null, members: 1, extra: { previous_league_id: S1.id, num_participants: 16 } });
+      await q(`insert into league_renewal_responses (league_id, user_id, status, decided_by, responded_at)
+        values ($1, $2, 'in', 'player', now())`, [L.id, COMMISH]);
+      for (const u of [RUNNER, JOINER]) await q(`insert into league_renewal_responses (league_id, user_id, status) values ($1, $2, 'pending')`, [L.id, u]);
+      await q(`update league_renewal_responses set status = 'in', decided_by = 'player', responded_at = now() where league_id = $1 and user_id = $2`, [L.id, RUNNER]);
+      await q(`insert into league_members (league_id, user_id) values ($1, $2)`, [L.id, RUNNER]);
+      await q(`update league_renewal_responses set status = 'out', decided_by = 'player', responded_at = now() where league_id = $1 and user_id = $2`, [L.id, JOINER]);
+      return L.id;
+    }
+    /** respond_to_renewal as `uid`, after `setup` (owner SQL), in ONE transaction (same now()). */
+    async function answer(L: string, uid: string, response: 'in' | 'out', setup: string | null = null): Promise<Row> {
+      return await db.transaction(async (tx) => {
+        if (setup) await tx.query(setup, [L]);
+        await tx.query(`set local role authenticated`);
+        await tx.query(`select set_config('request.jwt.claim.sub', $1, true)`, [uid]);
+        return (await tx.query<{ r: Row }>(`select public.respond_to_renewal($1, $2) r`, [L, response])).rows[0].r;
+      });
+    }
+    const isMember = async (L: string, u: string) =>
+      (await q(`select exists (select 1 from league_members where league_id=$1 and user_id=$2) m`, [L, u]))[0].m;
+    const reply = async (L: string, u: string) =>
+      (await q(`select status from league_renewal_responses where league_id=$1 and user_id=$2`, [L, u]))[0].status;
+    const setT = (secs: string) => `update leagues set draft_date = now() + ${secs} where id = $1`;
+
+    await t.step('Run it back: an answer a second before the room opens is taken (flip in, flip out)', async () => {
+      const L = await renewed();
+      const r = await answer(L, JOINER, 'in', setT(`make_interval(secs => ${ROOM_OPEN_LEAD_SECONDS} + 1)`));
+      assertEquals([r.status, r.response], ['replied', 'in'], JSON.stringify(r));
+      assertEquals([await isMember(L, JOINER), await reply(L, JOINER)], [true, 'in']);
+      const out = await answer(L, RUNNER, 'out');
+      assertEquals(out.status, 'replied', 'still before the room');
+      assertEquals(await isMember(L, RUNNER), false);
+    });
+
+    await t.step('Run it back: from T-1h (exactly, same now()) answers are locked: "I\'m in" and "I\'m out" refused, nothing written', async () => {
+      const L = await renewed();
+      const r = await answer(L, JOINER, 'in', setT(`make_interval(secs => ${ROOM_OPEN_LEAD_SECONDS})`));
+      assertEquals([r.status, r.reason], ['refused', 'draft_started'], JSON.stringify(r));
+      assertEquals([await isMember(L, JOINER), await reply(L, JOINER)], [false, 'out'], 'no join through a renewal answer');
+      for (const m of [30, 1]) {
+        await q(setT(`interval '${m} minutes'`), [L]);
+        const o = await answer(L, RUNNER, 'out');
+        assertEquals([o.status, o.reason], ['refused', 'draft_started'], `T-${m}m`);
+        assertEquals([await isMember(L, RUNNER), await reply(L, RUNNER)], [true, 'in'], 'no leave through a renewal answer');
+      }
+      const notices = await q(`select 1 from league_notifications where league_id=$1 and kind='renewal_reply'`, [L]);
+      assertEquals(notices.length, 0, 'a refused answer tells the commissioner nothing');
+    });
+
+    await t.step('Run it back: a postponed draft (draft_date cleared) takes answers again', async () => {
+      const L = await renewed();
+      await q(setT(`interval '20 minutes'`), [L]);
+      assertEquals((await answer(L, JOINER, 'in')).reason, 'draft_started', 'room open first');
+      await db.exec(`set role service_role`);
+      const [pp] = await q(`select public.postpone_league_draft(l.id, l.draft_date, 'room_open', 'not_enough_members', '[]'::jsonb, null) r
+        from leagues l where l.id = $1`, [L]);
+      await db.exec(`reset role`);
+      assertEquals(pp.r.status, 'postponed');
+      const r = await answer(L, JOINER, 'in');
+      assertEquals([r.status, r.response], ['replied', 'in'], JSON.stringify(r));
+      assertEquals(await isMember(L, JOINER), true);
+    });
+
+    await t.step('Run it back: unchanged refusals keep their order (a stranger is not_invited, even in the room)', async () => {
+      const L = await renewed();
+      await q(setT(`interval '10 minutes'`), [L]);
+      const r = await answer(L, '55555555-5555-4555-8555-555555555555', 'in');
+      assertEquals([r.status, r.reason], ['refused', 'not_invited'], 'no state oracle for a stranger');
+    });
+
+    await t.step('grants: respond_to_renewal is authenticated only, re-asserted over drift', async () => {
+      const [f] = await q(`select proacl::text acl, prosecdef, proconfig from pg_proc where proname = 'respond_to_renewal'`);
+      assertEquals(f.acl, '{postgres=X/postgres,authenticated=X/postgres}');
+      assertEquals([f.prosecdef, f.proconfig], [true, ['search_path=public, pg_temp']]);
+      const [p] = await q(`select
+          has_function_privilege('anon', 'public.respond_to_renewal(uuid, text)', 'execute') anon,
+          has_function_privilege('authenticated', 'public.respond_to_renewal(uuid, text)', 'execute') authed,
+          has_function_privilege('service_role', 'public.respond_to_renewal(uuid, text)', 'execute') svc`);
+      assertEquals([p.anon, p.authed, p.svc], [false, true, false]);
+      assertEquals((await q(`select count(*)::int n from pg_proc where proname = 'respond_to_renewal'`))[0].n, 1);
     });
 
     await t.step('grants: service_role only, re-asserted over drift (proacl + has_function_privilege)', async () => {
