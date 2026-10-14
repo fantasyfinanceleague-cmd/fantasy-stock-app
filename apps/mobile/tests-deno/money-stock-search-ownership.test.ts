@@ -34,9 +34,34 @@ Deno.test('a ledger conflict (more than one owner): no suffix, never a guess', (
 // same pattern used elsewhere in this suite (e.g. the C-1 quiet-wiring test).
 Deno.test('wiring: the search row never rejoins the ownership text onto the company name', () => {
   assertEquals(searchScreenSrc.includes('${item.name} · ${suffix}'), false);
-  assertEquals(searchScreenSrc.includes('subtitle2'), true);
+  // W4 (Game Night row): the status is its own <Text> line, between the ticker and the company.
+  assertEquals(searchScreenSrc.includes('testID="search-row-status"'), true);
 });
 
 Deno.test("wiring: the search row colours 'You own this' with the mine flag, not a fixed tone", () => {
-  assertEquals(searchScreenSrc.includes('suffix.mine ? colors.youText'), true);
+  assertEquals(searchScreenSrc.includes('status.mine ? colors.youText'), true);
+});
+
+Deno.test('W4: a free stock when every slot is held reads "No free slot"; owners still win', () => {
+  assertEquals(ownershipSuffix(null, false, true), { text: 'No free slot', mine: false });
+  assertEquals(ownershipSuffix(null, false, false), { text: null, mine: false });
+  assertEquals(ownershipSuffix({ kind: 'me' }, false, true), { text: 'You own this', mine: true });
+  assertEquals(ownershipSuffix({ kind: 'other', name: 'Paolo M.', isBot: false }, false, true).text, 'Owned by Paolo M.');
+  // A ledger conflict says nothing, roomless or not (never a guess).
+  assertEquals(ownershipSuffix(null, true, true), { text: null, mine: false });
+});
+
+// W4 DL gate: "Not in this league's list" — the row isn't a button; only the disc and the price
+// dim, the reason stays in text2 at FULL opacity (dimmed, it read 2.44:1 / 2.04:1).
+Deno.test('wiring: a not-in-list row dims only its disc and price, never its reason', () => {
+  const row = searchScreenSrc.slice(searchScreenSrc.indexOf('function SearchRow'));
+  assertEquals(row.includes('styles.disc, off ? styles.dim : null'), true);
+  assertEquals(row.includes('off ? styles.dim : null]}>{formatMoney(item.price)}'), true);
+  // The whole-row opacity is gone, and the status Text carries no dim.
+  assertEquals(row.includes('styles.row, styles.disabled'), false);
+  const status = row.slice(row.indexOf('testID="search-row-status"'), row.indexOf('</Text>', row.indexOf('testID="search-row-status"')));
+  assertEquals(status.includes('dim'), false);
+  // Still not a button: a plain View with the disabled state, and no chevron.
+  assertEquals(row.includes("accessibilityState={{ disabled: true }} testID={`search-row-off-"), true);
+  assertEquals(row.includes('{off ? <View style={styles.chevronSpace} /> : <Icon name="chevronRight"'), true);
 });

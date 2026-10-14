@@ -7,9 +7,16 @@
  *   free and the market open   → Buy is selected and enabled.
  *   owned by another manager   → Buy disabled, "Owned by {name}" (+ Bot badge).
  *   already held by you        → Buy disabled ("You already hold this stock.").
- *   market closed              → both actions disabled with the open time; the
+ *   market closed              → both actions disabled with the card's own note ("Market's
+ *                                closed. Opens Fri 9:30 AM ET."); the
  *                                sheet still informs (previews stay allowed).
  *   price unknown              → the action is disabled; never a $0 figure.
+ *   roster full (budget/tier)  → Buy disabled ("Your roster is full. Sell a holding first.").
+ *   price over the budget left → Buy disabled ("{SYMBOL} costs more than your budget left."),
+ *                                BEFORE the review (W4 defect (a)): the preview's would_fill
+ *                                ignores the budget, so the review used to offer a buy the
+ *                                server then refused as over_budget, showing "Budget left
+ *                                after −$X" on the way.
  *
  * A stock is owned by at most one manager in a league (symbol_owned), so the
  * owner is either the caller, another manager, or nobody.
@@ -34,6 +41,13 @@ export interface StockSheetInput {
   leagueName: string;
   /** e.g. "Friday's close", for the closed-market note. */
   lastCloseLabel: string | null;
+  /** How you got a held stock, in the player card's words ("Drafted 2nd overall · Aug 31 ·
+   * $290.10", gameNight.acquisitionLine): one string for it on the card and the sheet. */
+  acquisition?: string | null;
+  /** budget_cap only: the server's cap minus cash spent (budgetFigures); null elsewhere or unread. */
+  budgetLeft?: number | null;
+  /** budget_cap / price_tiers: every slot is held, so a buy has nowhere to go. */
+  rosterFull?: boolean;
 }
 
 export interface ActionState {
@@ -47,7 +61,7 @@ export interface StockSheetModel {
   /** blockedBy names WHY buy is disabled, so the sheet can show the right
    * pre-review block (E-3, 3e UX audit): 'owned' gets a warn card and a
    * visible disabled Review buy, the others keep the plain caption. */
-  buy: ActionState & { blockedBy: 'closed' | 'price' | 'owned' | 'held' | null };
+  buy: ActionState & { blockedBy: 'closed' | 'price' | 'owned' | 'held' | 'full' | 'budget' | null };
   sell: ActionState & { summary: string | null };
   ownershipLine: string;
   ownerBadge: 'Bot' | null;
@@ -66,7 +80,7 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
   const closedReason = input.gate.open
     ? null
     : input.gate.opensLabel
-      ? COPY.tradingOpens(input.gate.opensLabel)
+      ? COPY.marketClosedOpens(input.gate.opensLabel)
       : COPY.tradingHoursUnavailable;
 
   const priceReason = priced ? null : COPY.noPrice;
@@ -81,6 +95,16 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
   if (buyReason === null && held) {
     buyReason = COPY.alreadyHeld;
     buyBlockedBy = 'held';
+  }
+  if (buyReason === null && input.rosterFull) {
+    buyReason = COPY.rosterFull;
+    buyBlockedBy = 'full';
+  }
+  // One share per buy in a budget league: the share's price must fit the budget left, the
+  // server's own check (spent + price > cap → over_budget). A cent of float slack, as there.
+  if (buyReason === null && input.budgetLeft != null && priced && input.price! > input.budgetLeft + 1e-9) {
+    buyReason = COPY.costsMoreThanBudget(input.symbol.toUpperCase());
+    buyBlockedBy = 'budget';
   }
 
   // Sell: only a holding can be sold, and it needs the market and a price.
@@ -98,9 +122,8 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
 
   let ownershipLine: string;
   if (held) {
-    ownershipLine = input.draft
-      ? COPY.draftedByYou(input.draft.round, input.draft.inRoundPick)
-      : COPY.heldByYou;
+    ownershipLine = input.acquisition
+      ?? (input.draft ? COPY.draftedByYou(input.draft.round, input.draft.inRoundPick) : COPY.heldByYou);
   } else if (otherOwned) {
     ownershipLine = COPY.ownedBy((other!.name ?? 'another manager'));
   } else {
@@ -124,4 +147,10 @@ export function stockSheetModel(input: StockSheetInput): StockSheetModel {
     marketNote,
     todayChange,
   };
+}
+
+/** The sheet header's company line (W4 DL gate): the name, or nothing when all that's known is
+ * the ticker itself — never "AMD" printed under "AMD". */
+export function companyLine(name: string | null | undefined, symbol: string): string {
+  return name && name.trim().toUpperCase() !== symbol.trim().toUpperCase() ? name : '';
 }

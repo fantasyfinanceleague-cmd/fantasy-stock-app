@@ -25,3 +25,25 @@ Deno.test('cash spent: draft costs plus buys, minus sale proceeds, for the calle
   // 290.10 (draft) - 300 (sale) + 104.20 (buy) = 94.30
   assertEquals(userCashSpentFromLedger(ledger, 'me'), 94.3);
 });
+
+// ── W4 defect (d): the client's cap is the server's (`Number(rules.budgetAmount) || 0`) ──
+import { budgetLeftOf, effectiveBudgetCap } from '../lib/money/budgetFigures.ts';
+
+Deno.test('effectiveBudgetCap: a NULL or unparseable budget_amount in budget_cap is a $0 cap, as on the server', () => {
+  assertEquals(effectiveBudgetCap('budget_cap', null), 0);
+  assertEquals(effectiveBudgetCap('budget_cap', undefined), 0);
+  assertEquals(effectiveBudgetCap('budget_cap', 'abc'), 0);
+  assertEquals(effectiveBudgetCap('budget_cap', '2500'), 2500);
+  assertEquals(effectiveBudgetCap('budget_cap', 2500), 2500);
+});
+
+Deno.test('effectiveBudgetCap: no other stake mode has a budget', () => {
+  assertEquals(effectiveBudgetCap('price_tiers', 2500), null);
+  assertEquals(effectiveBudgetCap('fixed_notional', null), null);
+  assertEquals(effectiveBudgetCap(null, 2500), null);
+});
+
+Deno.test('budgetLeftOf: cap minus spent, to the cent, negative when over', () => {
+  assertEquals(budgetLeftOf(2500, 2251.644), 248.36);
+  assertEquals(budgetLeftOf(0, 120.5), -120.5);
+});

@@ -14,6 +14,8 @@
  *               stock): Roberto sold V on Tuesday and bought MSFT on Thursday morning (a
  *               1-point season line; its week line starts at the buy). Gianluigi's NKE was
  *               bought Sep 8.
+ *  - 'sold'     unslotted, Roberto sold V on Tuesday and has NOT bought yet: the sale's cash
+ *               waits (W4 Portfolio's "cash from a sale" state).
  *  - 'stress'   unslotted, the longest company names in the universe's style (§9B's stress
  *               fixture; pair with EXPO_PUBLIC_HOME_FIXTURE=xl_million for ≥ $1,000,000).
  */
@@ -25,10 +27,10 @@ import type { LedgerActivityRow, PortfolioLedger } from '../money/portfolioLedge
 import type { Category } from '../../components/sp/logic/gameNight';
 import type { SlotRow } from './matchupRoster';
 
-export type MatchupFixtureVariant = 'unslotted' | 'category' | 'tiers' | 'bought' | 'stress';
+export type MatchupFixtureVariant = 'unslotted' | 'category' | 'tiers' | 'bought' | 'sold' | 'stress';
 
 export function parseMatchupFixture(raw: string | undefined): MatchupFixtureVariant {
-  return raw === 'category' || raw === 'tiers' || raw === 'bought' || raw === 'stress' ? raw : 'unslotted';
+  return raw === 'category' || raw === 'tiers' || raw === 'bought' || raw === 'sold' || raw === 'stress' ? raw : 'unslotted';
 }
 
 const NAMES: Record<string, string> = {
@@ -72,7 +74,8 @@ const V_SELL = { at: '2026-09-22T15:10:00.000Z', price: 286.1 };
 /** Thursday 10:05 AM ET: MSFT bought with the proceeds at $412.30; live $418.92 at 1:37 PM. */
 export const MSFT_BUY = { at: '2026-09-24T14:05:00.000Z', price: 412.3, live: 418.92, prevClose: 409.64 };
 
-/** The 'bought' week's trades (sell V, buy MSFT), as get_home_league returns my_trades. */
+/** The 'bought' week's trades (sell V, buy MSFT), as get_home_league returns my_trades ('sold'
+ * keeps the sale only). */
 export function boughtWeekTrades(): { symbol: string; action: 'buy' | 'sell'; quantity: number; price: number; created_at: string }[] {
   const vQty = fixtureQty(V_ROW);
   const msftQty = Math.round(((vQty * V_SELL.price) / MSFT_BUY.price) * 1e4) / 1e4;
@@ -102,8 +105,8 @@ export function fixtureLedger(variant: MatchupFixtureVariant, me: string, opp: s
   const theirs = variant === 'stress' ? XL_MILLION_GIANLUIGI_HOLDINGS : withXl(GIANLUIGI_HOLDINGS, XL_GIANLUIGI_HOLDINGS);
   for (const h of mine) add(me, h);
   for (const h of theirs) add(opp, h);
-  if (variant === 'bought') {
-    for (const t of boughtWeekTrades()) {
+  if (variant === 'bought' || variant === 'sold') {
+    for (const t of boughtWeekTrades().filter((x) => variant === 'bought' || x.action === 'sell')) {
       rows.push({ kind: 'trade', user_id: me, symbol: t.symbol, action: t.action, quantity: t.quantity, round: null, pick_number: null, occurred_at: t.created_at, total_value: null, price: t.price });
     }
   }
@@ -228,6 +231,7 @@ export function matchupWeekExtras(variant: MatchupFixtureVariant): {
   qtyScale: number;
 } {
   if (variant === 'stress') return { trades: [], quotes: {}, bars: {}, qtyScale: STRESS_QTY_SCALE };
+  if (variant === 'sold') return { trades: boughtWeekTrades().filter((t) => t.action === 'sell'), quotes: {}, bars: {}, qtyScale: 1 };
   if (variant !== 'bought') return { trades: [], quotes: {}, bars: {}, qtyScale: 1 };
   return {
     qtyScale: 1,

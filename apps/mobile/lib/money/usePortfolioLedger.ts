@@ -11,9 +11,10 @@ import { supabase } from '@/lib/supabase';
 import { parsePortfolioLedger, type PortfolioLedger } from './portfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { buildStressMarket } from './stressFixture';
-import { MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { CAPTURE_DELAY_MS, CAPTURE_DRAFT_TODAY, CAPTURE_FAIL, MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
 import { SEAM_LEAGUE, SEAM_ME } from '../game/seamTables';
-import { fixtureLedger } from '../game/matchupFixture';
+import { SEAM_DRAFT_TODAY_AT, seamPortfolioLedger } from './portfolioSeam';
+import { HOME_FIXTURE } from '../home/devFixture';
 
 const loaded = new Map<string, PortfolioLedger>();
 const inFlight = new Map<string, Promise<PortfolioLedger | null>>();
@@ -24,7 +25,8 @@ export function loadPortfolioLedger(leagueId: string): Promise<PortfolioLedger |
   // The game capture seam (EXPO_PUBLIC_GAME_SEAM): the Matchup fixture's league ledger, so the
   // stock sheet Sell opens from the player card is the real sheet over fixture data.
   if (SEAM_ON) {
-    return Promise.resolve(fixtureLedger(MATCHUP_FIXTURE_VARIANT, SEAM_ME, SEAM_LEAGUE.gianluigi));
+    const ledger = CAPTURE_FAIL ? null : seamPortfolioLedger(MATCHUP_FIXTURE_VARIANT, HOME_FIXTURE, SEAM_ME, SEAM_LEAGUE.gianluigi, CAPTURE_DRAFT_TODAY ? SEAM_DRAFT_TODAY_AT : null);
+    return CAPTURE_DELAY_MS > 0 ? new Promise((r) => setTimeout(() => r(ledger), CAPTURE_DELAY_MS)) : Promise.resolve(ledger);
   }
   if (MONEY_FIXTURE_CONFIG) {
     // The load_fail scenario is the LoadFailure state; every other scenario reads the stress ledger.
@@ -64,24 +66,25 @@ export interface PortfolioLedgerState {
 }
 
 export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerState {
-  const [state, setState] = useState<Omit<PortfolioLedgerState, 'refresh'>>({ status: 'loading', ledger: null, fetchedNow: false });
+  const [state, setState] = useState<Omit<PortfolioLedgerState, 'refresh'> & { forLeague: string | null }>({ status: 'loading', ledger: null, fetchedNow: false, forLeague: leagueId });
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (!leagueId) {
-      setState({ status: 'error', ledger: null, fetchedNow: false });
+      setState({ status: 'error', ledger: null, fetchedNow: false, forLeague: leagueId });
       return;
     }
     let cancelled = false;
     const wasCached = loaded.has(leagueId);
-    setState({ status: 'loading', ledger: loaded.get(leagueId) ?? null, fetchedNow: false });
+    setState({ status: 'loading', ledger: loaded.get(leagueId) ?? null, fetchedNow: false, forLeague: leagueId });
     loadPortfolioLedger(leagueId).then((ledger) => {
       if (cancelled) return;
       setState({
         status: ledger ? 'ready' : 'error',
         ledger,
         fetchedNow: !wasCached,
+        forLeague: leagueId,
       });
     });
     return () => {
@@ -90,5 +93,9 @@ export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerStat
     // `tick` re-runs the load after an error.
   }, [leagueId, tick]);
 
-  return { ...state, refresh };
+  // The state belongs to the league it was loaded for: for the one render after the league id
+  // changes (before the effect resets it), report loading, never the previous league's result
+  // (a "didn't load" flashed at launch while the id arrived — W4 Portfolio capture).
+  if (state.forLeague !== leagueId) return { status: 'loading', ledger: null, fetchedNow: false, refresh };
+  return { status: state.status, ledger: state.ledger, fetchedNow: state.fetchedNow, refresh };
 }

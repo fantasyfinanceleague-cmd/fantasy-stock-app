@@ -11,6 +11,7 @@ import { LiveDot } from '@/components/sp/game/LiveDot';
 import { partialLinePath } from '@/lib/chart/chartGeometry';
 import { useChartScrub } from '@/lib/chart/useChartScrub';
 import { useDrawIn } from '@/lib/chart/useDrawIn';
+import { useCaptureAction } from '@/lib/money/captureScript';
 import { buildLine, lineTone, type LinePointIn } from '@/components/sp/logic/lineChart';
 import {
   AXIS_GAP, AXIS_LINE_HEIGHT, axisDomain, axisRangeLabel, estimateLabelWidth, layoutAxis, pointName, type AxisSpec,
@@ -70,6 +71,10 @@ export interface ChartProps {
   skipEntrance?: boolean;
   /** The scrubbed point's index (null when the scrub ends), for a caller's own marks. */
   onScrubIndex?: (index: number | null) => void;
+  /** DEV capture only (lib/money/captureScript): the script action that moves the scrub to a
+   * point index ("end" lifts it), through the same setScrubIndex VoiceOver's adjust uses. A
+   * no-op unless the capture seam and a script are both on. */
+  captureScrubAction?: string;
 }
 
 /** What a function `under` is handed (see ChartProps.under). */
@@ -94,7 +99,7 @@ const LABEL_SLACK = 12;
  * (Design Lead, W4 gate, 2026-10-13: uncapped, XL dates outgrew everything around them). */
 export const AXIS_MAX_SCALE = 1.3;
 
-export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under, underPlacement = 'afterAxis', underHeight, skipEntrance = false, onScrubIndex }: ChartProps) {
+export function Chart({ points, base, axis, height = 124, bleed = 0, live = false, drawKey = 'chart', formatValue, accessibilityLabel, under, underPlacement = 'afterAxis', underHeight, skipEntrance = false, onScrubIndex, captureScrubAction }: ChartProps) {
   const { colors } = useTheme();
   const { reduced, duration } = useMotion();
   const { fontScale: deviceScale } = useWindowDimensions();
@@ -111,6 +116,11 @@ export function Chart({ points, base, axis, height = 124, bleed = 0, live = fals
   const path = progress >= 1 || geometry.length === 0 ? geometry.path : partialLinePath(geometry.points, progress, geometry.length);
 
   const { scrubIndex, pan, setScrubIndex } = useChartScrub(width > 0 ? geometry : null, reduced, onScrubIndex);
+  useCaptureAction(captureScrubAction ?? '', (arg) => {
+    if (!captureScrubAction) return;
+    const i = Number(arg);
+    setScrubIndex(arg === 'end' || !Number.isFinite(i) ? null : Math.max(0, Math.min(points.length - 1, Math.round(i < 0 ? points.length + i : i))));
+  });
   const scrubbed = scrubIndex != null ? points[scrubIndex] : null;
   const scrubPx = scrubIndex != null ? geometry.points[scrubIndex] : null;
   const scrubText = scrubbed ? `${pointName(axis, scrubbed.t)} · ${formatValue(scrubbed.value)}` : null;

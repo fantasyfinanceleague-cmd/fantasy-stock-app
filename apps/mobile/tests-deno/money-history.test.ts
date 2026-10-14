@@ -94,3 +94,13 @@ Deno.test('the rows: one header per section, then its items, and no item lost', 
   }
   assertEquals(headers.length, new Set(headers.map((h) => (h as { key: string }).key)).size);
 });
+
+// W4 (Game Night history): a row's amount is the ledger's total, else shares × price; an
+// unpriced row shows no amount (never $0).
+import { historyTotal } from '../lib/money/tradeHistory.ts';
+
+Deno.test('historyTotal: the total, else shares × price to the cent, else none', () => {
+  assertEquals(historyTotal({ total: 2194.91, quantity: 6.8942, price: 318.37 }), 2194.91);
+  assertEquals(historyTotal({ total: null, quantity: 6.8942, price: 290.1 }), 2000.01);
+  assertEquals(historyTotal({ total: null, quantity: 3, price: null }), null);
+});

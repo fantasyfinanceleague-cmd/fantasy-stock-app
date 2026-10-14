@@ -276,7 +276,7 @@ export type PlayerAction =
 export function playerAction(owner: 'you' | 'other', marketOpen: boolean, saved: boolean, opens: string | null): PlayerAction {
   if (owner === 'other') return { kind: 'save', saved };
   if (marketOpen) return { kind: 'sell', enabled: true };
-  return { kind: 'sell', enabled: false, note: opens ? `Market's closed. Opens ${opens}.` : MONEY_COPY.marketClosedNow };
+  return { kind: 'sell', enabled: false, note: opens ? MONEY_COPY.marketClosedOpens(opens) : MONEY_COPY.marketClosedNow };
 }
 
 export function actionLabel(a: PlayerAction): string {

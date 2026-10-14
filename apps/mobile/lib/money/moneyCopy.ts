@@ -103,6 +103,8 @@ export const COPY = {
   // sheet's pre-review block -- distinct sentences from ownedBy / symbol_owned's refusal
   // copy, each the exact wording for its own moment.
   youOwnThis: 'You own this',
+  // W4 (board verbatim): the watchlist's "No free slot" (#call-watchlist C).
+  noFreeSlot: 'No free slot',
   notInLeagueList: "Not in this league's list",
   ownerBlocksBuy: (name: string, symbol: string) => `${name} owns ${symbol}. A stock has one owner per league.`,
   sellAll: (qty: string, value: string) => `Sell all ${qty} sh ≈ ${value}`,
@@ -135,6 +137,9 @@ export const COPY = {
   includesDraftPicks: 'Includes your draft picks',
   // Board pattern, verbatim: "Trading opens Mon 9:30 AM ET."
   tradingOpens: (when: string) => `Trading opens ${when}.`,
+  // The player card's closed-market note (W4 Matchup gate), ONE string for the closed state on
+  // the card, the stock sheet and its review (W4 Portfolio DL gate: "one string per state").
+  marketClosedOpens: (when: string) => `Market's closed. Opens ${when}.`,
   // E-4 (3e UX audit, board #buy-a-stock, Design Lead verbatim, 2026-10-06): the
   // "Buy a stock" row's second line -- per sale/slot, never a total, since one buy
   // spends exactly one sale's cash or fills exactly one slot.

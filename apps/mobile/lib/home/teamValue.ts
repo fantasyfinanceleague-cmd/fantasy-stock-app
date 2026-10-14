@@ -5,41 +5,36 @@
  *
  * value = current holdings, priced live (unpriced counts at cost, never
  *         $0 — plCoverage's existing convention) + cash
- * cash   = (stake - draftCost) + all sell proceeds since the draft -
- *          all buy cost since the draft
  *
- * STAKE, per mode (Orchestrator ruling):
- *   fixed_notional            notionalPerSlot * numRounds — a SKIPPED slot
- *                             is never drafted, so it never reduces
- *                             draftCost, and shows up as pure cash.
- *   price_tiers | budget_cap  the drafted roster's cost basis (Σ draft
- *                             price * qty), NOT budgetAmount — a cap is a
- *                             spending LIMIT, not an investment. Both
- *                             modes fill exactly one share per pick
- *                             (fillQuantity, _shared/draft-validation.ts),
- *                             so qty is always 1 there.
- *   null (legacy)             treated like price_tiers/budget_cap
- *                             (one-share, draft-cost stake) — flagged in
- *                             the worker's DONE report as ambiguous.
+ * STAKE AND CASH, per mode:
+ *   fixed_notional            stake = notionalPerSlot * numRounds; cash =
+ *                             (stake - draftCost) + sells - buys. A SKIPPED
+ *                             slot is never drafted, so it shows as cash; the
+ *                             proceeds-reinvest rule (record-trade) keeps it
+ *                             >= 0.
+ *   price_tiers | budget_cap  (and null, legacy) one share per pick, so the
+ *                             starting stake is the drafted roster's cost
+ *                             basis (Σ draft price * qty), NOT budgetAmount —
+ *                             a cap is a spending LIMIT, not an investment.
+ *                             After the draft, net = sells - buys:
+ *                               net >= 0 → it is "Cash from sales": cash = net,
+ *                                          stake = draftCost;
+ *                               net <  0 → the buys spent money no sale paid
+ *                                          for (a budget cap's headroom, or a
+ *                                          tier league with no budget at all).
+ *                                          That is MORE CAPITAL PUT IN, never
+ *                                          negative cash: cash = 0, stake =
+ *                                          draftCost + (buys - sells).
  *
- * WHY CASH CAN GO NEGATIVE, AND WHY THAT'S NOT CLAMPED (Orchestrator
- * ruling: "if cash can go negative or the identity breaks in a mode, flag
- * it in the report rather than smoothing it"):
- *   - price_tiers has NO spending constraint at all (no over_budget check
- *     in draft-validation.ts): a user can buy without ever selling, so
- *     cash is unbounded below.
- *   - budget_cap's own limit (userCashSpent <= budgetAmount,
- *     _shared/draft-validation.ts:251-267,553-558) is checked against
- *     budgetAmount, NOT against this helper's draft-cost stake. Whenever
- *     budgetAmount > draftCost, the server legally lets the team spend
- *     that extra headroom on further buys with no matching sell — which
- *     this helper (deliberately using draft-cost as stake, per the
- *     ruling above) then shows as negative cash. That is a real, honest
- *     signal — the team spent capital this helper doesn't count as part
- *     of their stake — not a bug to hide.
- *   - fixed_notional's proceeds-reinvest rule (record-trade; see
- *     20261006000000_trades_funded_by_trade_id.sql) should keep cash >= 0
- *     always; a negative value there would itself be worth flagging.
+ * WHY (W4 Portfolio, defect (b) of the auto-pick review): the old formula
+ * kept stake = draftCost and let cash go negative, so any post-draft net buy
+ * inside the budget read "Cash from sales −$X" on Portfolio and pulled the
+ * team value down by money the manager had legally invested. The gain is
+ * the same either way (value − stake = holdings − every dollar put in);
+ * only the split between "cash" and "stake" changes, so "since the draft"
+ * never moves. Cash can no longer go negative in any mode, so
+ * `cashWentNegative` now only ever flags a fixed_notional ledger that broke
+ * its own reinvest rule.
  */
 
 export type StakeMode = 'fixed_notional' | 'price_tiers' | 'budget_cap' | null;
@@ -84,17 +79,22 @@ function cents(v: number): number {
 
 export function teamValue(input: TeamValueInput): TeamValueResult {
   const draftCost = input.drafts.reduce((sum, d) => sum + d.entryPrice * d.quantity, 0);
-  const stake =
-    input.stakeMode === 'fixed_notional'
-      ? (input.notionalPerSlot ?? 0) * (input.numRounds ?? 0)
-      : draftCost;
-
-  let cash = stake - draftCost;
+  let net = 0; // sells − buys since the draft
   for (const t of input.trades) {
     const notional = t.price * t.quantity;
-    cash += t.action === 'sell' ? notional : -notional;
+    net += t.action === 'sell' ? notional : -notional;
   }
-  cash = cents(cash);
+
+  let stake: number;
+  let cash: number;
+  if (input.stakeMode === 'fixed_notional') {
+    stake = (input.notionalPerSlot ?? 0) * (input.numRounds ?? 0);
+    cash = cents(stake - draftCost + net);
+  } else {
+    // A net buy is capital put in, not negative cash (see the header).
+    cash = cents(Math.max(0, net));
+    stake = draftCost + Math.max(0, -net);
+  }
 
   // Current net holdings, average-cost basis — the same accounting the
   // rest of the app uses for "an unpriced holding counts at cost, not $0"

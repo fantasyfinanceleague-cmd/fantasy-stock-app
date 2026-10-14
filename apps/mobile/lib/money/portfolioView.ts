@@ -7,7 +7,8 @@
  *  - "since the draft" is value minus the stake: deliberately NOT Home's "season
  *    gain" (D1, Concept A). The two labels never swap.
  *  - "today" needs EVERY held position to have both a price and a previous
- *    close. One missing quote hides the line; it never shows as $0.
+ *    close. One missing quote hides the line; it never shows as $0. Its percent is of the
+ *    whole account at the last close (holdings + cash), the value the header shows.
  *  - rows are sorted by value, largest first. A row with no live price shows its
  *    cost and is counted in the caption, never shown as $0.
  */
@@ -77,6 +78,8 @@ export interface PortfolioView {
   slotsText: string | null;
   perSlotText: string | null;
   cashText: string | null;
+  /** cashText's two halves, for the row layout: "Cash from sales" · "$1,234.56". */
+  cashValueText: string | null;
   buyRowText: string | null;
   unpricedNote: string | null;
   rows: HoldingRow[];
@@ -111,7 +114,10 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
   const held = i.holdings;
   if (held.length > 0 && held.every((h) => h.price != null && h.prevClose != null && h.prevClose > 0)) {
     const change = held.reduce((a, h) => a + h.quantity * (h.price! - h.prevClose!), 0);
-    const base = held.reduce((a, h) => a + h.quantity * h.prevClose!, 0);
+    // The whole account's previous close (W4 DL gate): the holdings at their last close PLUS the
+    // cash, so "+$X · +Y% today" is a percent of the value the header shows (cash earns nothing
+    // today but is part of what the percent is of).
+    const base = held.reduce((a, h) => a + h.quantity * h.prevClose!, 0) + Math.max(0, i.cash);
     const pct = base > 0 ? (change / base) * 100 : 0;
     todayMoneyText = formatMoney(cents(change), { sign: 'always' });
     todayPctText = formatPercent(pct, { sign: 'always' });
@@ -154,6 +160,7 @@ export function buildPortfolioView(i: PortfolioViewInput): PortfolioView {
     slotsText: fixed ? COPY.slotsInvested(held.length, i.numRounds) : null,
     perSlotText: fixed && i.perSlotNotional != null ? COPY.perSlotAtDraft(formatMoney(i.perSlotNotional)) : null,
     cashText: !fixed && Math.abs(i.cash) >= 0.005 ? `${COPY.cashFromSales} ${formatMoney(i.cash)}` : null,
+    cashValueText: !fixed && Math.abs(i.cash) >= 0.005 ? formatMoney(i.cash) : null,
     buyRowText: i.buyRow ? buyRowLine(i.buyRow)?.text ?? null : null,
     unpricedNote: unpricedNote(held.filter((h) => h.price == null).length),
     rows,

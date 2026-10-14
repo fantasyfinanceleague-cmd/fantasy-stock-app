@@ -150,16 +150,30 @@ const SEARCH_SAMPLE = [
   { symbol: 'ADBE', name: 'Adobe Inc.', price: 512.3 },
   { symbol: 'ABNB', name: 'Airbnb Inc.', price: 133.8 },
   { symbol: 'CRM', name: 'Salesforce Inc.', price: 274.1 },
+  // W4 Portfolio's sell-from-search capture: your own NVDA (the Home fixture's live price).
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 318.37 },
   { symbol: 'COST', name: 'Costco Wholesale', price: 912.3 },
   { symbol: 'V', name: 'Visa Inc.', price: 291.4 },
+  // W4 Portfolio: a stock outside the league's list (an ETF), for the dimmed search row.
+  { symbol: 'SPY', name: 'SPDR S&P 500 ETF Trust', price: 571.2, is_draftable: false },
 ];
+/** A search sample's company name, for a sheet opened without one under the seam. */
+export function seamSearchName(symbol: string): string | null {
+  return SEARCH_SAMPLE.find((s) => s.symbol === symbol.toUpperCase())?.name ?? null;
+}
+
+/** A search sample's price, for the stock sheet under the seam (a stock nobody holds). */
+export function seamSearchPrice(symbol: string): number | null {
+  return SEARCH_SAMPLE.find((s) => s.symbol === symbol.toUpperCase())?.price ?? null;
+}
+
 export function symbolsSearchFixture(body: Record<string, unknown>): { items: { symbol: string; name: string; price: number; is_draftable: boolean }[] } {
   const q = String(body.q ?? '').trim().toUpperCase();
   const limit = typeof body.limit === 'number' ? body.limit : 8;
   const items = SEARCH_SAMPLE
     .filter((s) => q !== '' && (s.symbol.startsWith(q) || s.name.toUpperCase().startsWith(q)))
     .slice(0, limit)
-    .map((s) => ({ ...s, is_draftable: true }));
+    .map((s) => ({ symbol: s.symbol, name: s.name, price: s.price, is_draftable: (s as { is_draftable?: boolean }).is_draftable !== false }));
   return { items };
 }
 

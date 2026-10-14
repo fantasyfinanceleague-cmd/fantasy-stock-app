@@ -59,7 +59,7 @@ export function reviewPresentation(
     }
     case 'closed':
       return {
-        message: state.opensLabel ? COPY.tradingOpens(state.opensLabel) : COPY.marketClosedNow,
+        message: state.opensLabel ? COPY.marketClosedOpens(state.opensLabel) : COPY.marketClosedNow,
         messageTone: 'warn',
         button: { label: review.buttonLabel, enabled: false, progress: false },
         footer: null,

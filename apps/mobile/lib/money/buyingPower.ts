@@ -5,13 +5,16 @@
  *   fixed_notional   what record-trade's preview says: sale proceeds, else a
  *                    none (a pick is never unused, so no unfilled-slot funding). The league's
  *                    legacy budget_mode / budget_amount are NEVER read here.
- *   budget_cap       budget_amount minus cash spent (mirrors userCashSpent).
+ *   budget_cap       budget_amount minus cash spent (mirrors userCashSpent); a NULL
+ *                    budget_amount is the server's $0 cap (effectiveBudgetCap).
  *   price_tiers      the open slot's tier label, supplied by the caller.
  *   null (legacy)    one share, unconstrained.
  *
  * Anything it cannot prove is 'unknown', never a guessed number (no preview
  * means no cash shown as available).
  */
+import { effectiveBudgetCap } from './budgetFigures';
+
 export interface PreviewSource {
   trade_id: string;
   symbol: string;
@@ -70,10 +73,10 @@ export function buyingPower(input: BuyingPowerInput): BuyingPower {
   }
 
   if (mode === 'budget_cap') {
-    // Number(null) is 0: a missing budget must read as unknown, never a $0 budget.
-    const raw = input.league.budget_amount;
-    const budget = raw == null ? NaN : Number(raw);
-    if (!Number.isFinite(budget) || input.cashSpent == null) return { kind: 'unknown' };
+    // The server's own cap (budgetFigures.effectiveBudgetCap): a NULL budget_amount is a $0
+    // cap there, so it is a $0 cap here too (W4 defect (d)), never "unknown".
+    const budget = effectiveBudgetCap(mode, input.league.budget_amount) ?? 0;
+    if (input.cashSpent == null) return { kind: 'unknown' };
     const spent = cents(input.cashSpent);
     return { kind: 'budget', budget, spent, left: cents(budget - spent) };
   }

@@ -10,9 +10,10 @@ import { assertEquals } from 'jsr:@std/assert';
 import portfolioScreenSrc from '../components/money/PortfolioScreen.tsx' with { type: 'text' };
 
 Deno.test('wiring: the gain and today lines roll (money and percent, each their own RollingMoney)', () => {
-  const rollingMoneyCount = (portfolioScreenSrc.match(/<RollingMoney/g) ?? []).length;
-  // valueText, gainMoneyText, gainPctText, todayMoneyText, todayPctText.
-  assertEquals(rollingMoneyCount >= 5, true);
+  // W4: the value, then HeroLine's two units (money, percent) used for both lines.
+  const heroLine = portfolioScreenSrc.slice(portfolioScreenSrc.indexOf('function HeroLine'));
+  assertEquals((heroLine.match(/<RollingMoney text=\{(money|pct)\}/g) ?? []).length, 2);
+  assertEquals(portfolioScreenSrc.includes('<RollingMoney text={v.valueText}'), true);
   assertEquals(portfolioScreenSrc.includes('v.gainMoneyText'), true);
   assertEquals(portfolioScreenSrc.includes('v.gainPctText'), true);
   assertEquals(portfolioScreenSrc.includes('v.todayMoneyText'), true);
@@ -20,6 +21,8 @@ Deno.test('wiring: the gain and today lines roll (money and percent, each their 
 });
 
 Deno.test('wiring: the gain/today rows are each one accessible element, not loose rolling digits', () => {
-  assertEquals(portfolioScreenSrc.includes('accessible accessibilityLabel={`${v.gainText}'), true);
-  assertEquals(portfolioScreenSrc.includes('accessible accessibilityLabel={`${v.todayText}'), true);
+  // W4: HeroLine is one accessible element labelled with the whole sentence.
+  assertEquals(portfolioScreenSrc.includes('<View accessible accessibilityLabel={label} style={styles.rollRow}>'), true);
+  assertEquals(portfolioScreenSrc.includes('label={`${v.gainText} ${v.sinceDraftLabel}`}'), true);
+  assertEquals(portfolioScreenSrc.includes('label={`${v.todayText} today`}'), true);
 });

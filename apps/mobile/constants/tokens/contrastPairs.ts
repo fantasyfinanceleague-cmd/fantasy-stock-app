@@ -85,6 +85,8 @@ export const PAIRS: readonly ContrastPair[] = [
   ['warnText', 'warnTint', 'bg', 4.5, '"Your call" notes'],
   ['text', 'warnTint', 'bg', 4.5, 'Sign-ups-paused banner'],
   ['text', 'warnTint', 'surface', 4.5, 'Uneven-bye heads-up (inside a card)'],
+  // W4 Portfolio: the money sheet's warn panel (a refusal or a pre-review block) on the sheet's surface.
+  ['warnText', 'warnTint', 'surface', 4.5, 'Money sheet warn panel (refusals, pre-review blocks)'],
   ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
   ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
   ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],

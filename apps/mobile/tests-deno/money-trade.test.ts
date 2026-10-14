@@ -160,9 +160,15 @@ Deno.test('buying power: budget_cap reads the budget, minus cash spent (mirrors 
   assertEquals(power, { kind: 'budget', budget: 2500, spent: 2251.64, left: 248.36 });
 });
 
-Deno.test('buying power: budget_cap without a finite budget is unknown', () => {
+Deno.test('buying power: a NULL budget_amount is the server\'s $0 cap, never unknown (W4 defect d)', () => {
+  // record-trade reads Number(rules.budgetAmount) || 0: NULL is $0 there, so every buy is over budget.
   const league = { stake_mode: 'budget_cap', budget_amount: null };
-  assertEquals(buyingPower({ league, preview: null, cashSpent: 0, openTierLabel: null }).kind, 'unknown');
+  assertEquals(buyingPower({ league, preview: null, cashSpent: 0, openTierLabel: null }), { kind: 'budget', budget: 0, spent: 0, left: 0 });
+  assertEquals(buyingPower({ league, preview: null, cashSpent: 120.5, openTierLabel: null }), { kind: 'budget', budget: 0, spent: 120.5, left: -120.5 });
+  // Unparseable is $0 too, exactly like the server's `|| 0`.
+  assertEquals(buyingPower({ league: { stake_mode: 'budget_cap', budget_amount: 'abc' as unknown as number }, preview: null, cashSpent: 0, openTierLabel: null }).kind, 'budget');
+  // Only a missing cash-spent read stays unknown.
+  assertEquals(buyingPower({ league, preview: null, cashSpent: null, openTierLabel: null }).kind, 'unknown');
 });
 
 Deno.test('buying power: price_tiers shows the open slot’s tier, or unknown when none is open', () => {

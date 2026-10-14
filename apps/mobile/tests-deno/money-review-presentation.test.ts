@@ -49,7 +49,7 @@ Deno.test('proceeds_unavailable sends the user back to the picker', () => {
 
 Deno.test('closed: the open time, the button disabled, the numbers kept by the caller', () => {
   const r = p({ kind: 'closed', opensLabel: 'Mon 9:30 AM ET' });
-  assertEquals(r.message, 'Trading opens Mon 9:30 AM ET.');
+  assertEquals(r.message, "Market's closed. Opens Mon 9:30 AM ET.");
   assertEquals(r.messageTone, 'warn');
   assertEquals(r.button, { label: 'Sell JPM', enabled: false, progress: false });
 });

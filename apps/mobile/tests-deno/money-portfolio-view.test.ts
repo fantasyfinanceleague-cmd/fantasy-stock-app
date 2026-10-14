@@ -124,3 +124,18 @@ Deno.test('a missing prevClose: todayText and its split parts are all null toget
   assertEquals(v.todayMoneyText, null);
   assertEquals(v.todayPctText, null);
 });
+
+// W4 DL gate: "today"'s percent is of the WHOLE account at the last close (holdings + cash), so
+// it agrees with the value the header shows. Cash earns nothing today but is in the base.
+Deno.test('today %: the base is the account at the last close, cash included', () => {
+  const cash = 2032.68;
+  const v = view({ cash, stakeMode: 'budget_cap', value: summary.value + cash });
+  const change = holdings.reduce((a, h) => a + h.quantity * (h.price! - h.prevClose!), 0);
+  const base = holdings.reduce((a, h) => a + h.quantity * h.prevClose!, 0) + cash;
+  assertEquals(v.todayPctText, `+${((change / base) * 100).toFixed(2)}%`);
+  // Without cash the holdings alone are the base (unchanged).
+  const noCash = view();
+  const base0 = holdings.reduce((a, h) => a + h.quantity * h.prevClose!, 0);
+  assertEquals(noCash.todayPctText, `+${((change / base0) * 100).toFixed(2)}%`);
+  assert(v.todayPctText !== noCash.todayPctText, 'cash must lower the percent');
+});

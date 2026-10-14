@@ -69,8 +69,8 @@ Deno.test('market closed: both actions disabled, with the opening time, and the 
   const m = stockSheetModel({ ...BASE, held: { quantity: 2 }, owner: { kind: 'me' }, gate: { open: false, opensLabel: 'Mon 9:30 AM ET' } });
   assertEquals(m.buy.enabled, false);
   assertEquals(m.sell.enabled, false);
-  assertEquals(m.buy.reason, 'Trading opens Mon 9:30 AM ET.');
-  assertEquals(m.sell.reason, 'Trading opens Mon 9:30 AM ET.');
+  assertEquals(m.buy.reason, "Market's closed. Opens Mon 9:30 AM ET.");
+  assertEquals(m.sell.reason, "Market's closed. Opens Mon 9:30 AM ET.");
   assertEquals(m.marketNote, "Prices show Friday's close.");
 });
 
@@ -100,4 +100,56 @@ Deno.test('today change: per-share move and percent; null without a prior close'
   assertEquals(today?.perShare.toFixed(2), '11.69');
   assertEquals(today?.pct.toFixed(2), '3.81');
   assertEquals(stockSheetModel({ ...BASE, prevClose: null }).todayChange, null);
+});
+
+// ── W4 defect (a): the buy review could offer a buy the server refused as over_budget ──
+// record-trade's preview `would_fill` ignores the budget (commit.ts slotPreview: "minus the
+// budget/roster checks (the client shows those itself)"), so the CLIENT must refuse first.
+
+Deno.test('budget: a share that costs more than the budget left is refused BEFORE the review', () => {
+  const m = stockSheetModel({ ...BASE, budgetLeft: 318.36 });
+  assertEquals(m.buy, { enabled: false, reason: 'NVDA costs more than your budget left.', blockedBy: 'budget' });
+});
+
+Deno.test('budget: exactly the budget left is a legal buy (the server refuses only spent + price > cap)', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 318.37 }).buy.enabled, true);
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 5000 }).buy.enabled, true);
+});
+
+Deno.test('budget: a $0 cap (NULL budget_amount, defect d) refuses every buy; no budget (other modes) refuses none', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 0 }).buy.blockedBy, 'budget');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: -12.5 }).buy.blockedBy, 'budget');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: null }).buy.enabled, true);
+});
+
+Deno.test('budget: an earlier rule still names the block (owned beats budget; unpriced never compares)', () => {
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 1, owner: { kind: 'other', name: 'Paolo M.', isBot: false } }).buy.blockedBy, 'owned');
+  assertEquals(stockSheetModel({ ...BASE, budgetLeft: 1, price: null }).buy.blockedBy, 'price');
+});
+
+Deno.test('roster full: Buy disabled with the roster reason, ahead of the budget', () => {
+  const m = stockSheetModel({ ...BASE, rosterFull: true, budgetLeft: 1 });
+  assertEquals(m.buy, { enabled: false, reason: 'Your roster is full. Sell a holding first.', blockedBy: 'full' });
+});
+
+// W4 DL gate: one string per state — the sheet speaks the player card's words.
+Deno.test('closed: the card\'s note, word for word (one string for the closed state)', () => {
+  const m = stockSheetModel({ ...BASE, held: { quantity: 1 }, gate: { open: false, opensLabel: 'Fri 9:30 AM ET' } });
+  assertEquals(m.sell.reason, "Market's closed. Opens Fri 9:30 AM ET.");
+});
+
+Deno.test('held: the acquisition is the card\'s line when known, the round/pick line only as a fallback', () => {
+  const card = 'Drafted 2nd overall · Aug 31 · $290.10';
+  const m = stockSheetModel({ ...BASE, held: { quantity: 1 }, owner: { kind: 'me' }, draft: { round: 1, inRoundPick: 2 }, acquisition: card });
+  assertEquals(m.ownershipLine, card);
+  const fallback = stockSheetModel({ ...BASE, held: { quantity: 1 }, owner: { kind: 'me' }, draft: { round: 1, inRoundPick: 2 } });
+  assertEquals(fallback.ownershipLine, 'Drafted by you · Round 1, pick 2');
+});
+
+import { companyLine } from '../lib/money/stockSheetModel.ts';
+
+Deno.test('the header never repeats the ticker as its company line', () => {
+  assertEquals(companyLine('AMD', 'AMD'), '');
+  assertEquals(companyLine(null, 'AMD'), '');
+  assertEquals(companyLine('Advanced Micro Devices', 'AMD'), 'Advanced Micro Devices');
 });

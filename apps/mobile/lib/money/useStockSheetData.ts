@@ -20,8 +20,10 @@ import { usePortfolioLedger } from './usePortfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { STRESS_CALLER, buildStressMarket } from './stressFixture';
 import { FIXTURE_LEAGUE_ID } from './fixtureMode';
-import { SEAM_ON } from '../game/devSeam';
-import { seamSheetQuote } from '../game/matchupFixture';
+import { CAPTURE_LOSS, MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { HOME_FIXTURE } from '../home/devFixture';
+import { seamQuote } from './portfolioSeam';
+import { seamSearchName } from '../game/seamFixtures';
 
 /** A quote is fresh for two minutes, the same window as useStockPrices. */
 const QUOTE_TTL_MS = 120_000;
@@ -106,12 +108,13 @@ export function useStockSheetData(symbol: string, knownName: string | null = nul
 
       // The game capture seam: the Matchup fixture's quote and the ledger's name; no network.
       if (SEAM_ON) {
-        const q = seamSheetQuote(sym);
+        const q = seamQuote(sym, MATCHUP_FIXTURE_VARIANT, { homeFixture: HOME_FIXTURE, loss: CAPTURE_LOSS });
         setState({
           status: 'ready',
           price: q?.price ?? null,
           prevClose: q?.prevClose ?? null,
-          companyName: ledger.symbol_names[sym] ?? knownName ?? null,
+          // A sheet opened without a name falls back to the search sample's (never "AMD" over "AMD").
+          companyName: ledger.symbol_names[sym] ?? knownName ?? seamSearchName(sym),
           facts,
           leagueName,
           requestCase: facts.held ? 'held' : facts.owner?.kind === 'other' ? 'owned-by-other' : 'free',
