@@ -21,6 +21,10 @@ import { addNotificationListeners } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
 import { parseRecoveryLink } from '@/lib/recoveryLink';
+import { decideConfirmLink, parseConfirmLink, type ConfirmLinkResult } from '@/lib/auth/confirmLink';
+import { verifyAndConsumeConfirmNonce } from '@/lib/auth/confirmNonce';
+import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
+import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
@@ -139,10 +143,38 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     }
   }, [shownPhase]);
 
-  // Handle deep links for password reset
+  // Handle deep links for password reset (and, onboarding W2, the email-confirmation return)
   useEffect(() => {
+    // The email-confirmation return link (lib/auth/confirmLink.ts). +native-intent has already
+    // sent the router to sign-in; this decides whether the link's session may be used: only when
+    // nobody is signed in AND the link carries the nonce this device stored at sign-up (single
+    // use, fail closed). Otherwise nothing happens: the address is confirmed server-side either
+    // way, so the person signs in with their password. A successful sign-in flips the auth phase
+    // and the root guard continues the flow (pick-username, then any pending route).
+    const handleConfirmLink = async (parsed: ConfirmLinkResult) => {
+      if (SHELL_FIXTURE || parsed.kind !== 'tokens') return;
+      const { data } = await supabase.auth.getSession();
+      const hasSession = !!data.session;
+      // Never consume the nonce for a link that can't be used anyway.
+      const nonceOk = hasSession ? false : await verifyAndConsumeConfirmNonce(parsed.nonce);
+      const action = decideConfirmLink(parsed, nonceOk, hasSession);
+      if (action.kind !== 'signIn') return;
+      const { error } = await supabase.auth.setSession({
+        access_token: action.accessToken,
+        refresh_token: action.refreshToken,
+      });
+      if (error) console.warn('[auth] confirmation link could not sign in', error.code ?? '');
+      else setEmailJustConfirmed(true); // W4's Pick a username draws "✓ EMAIL CONFIRMED"
+    };
+
     // Handle URL when app is opened from a link
     const handleDeepLink = async (event: { url: string }) => {
+      const confirm = parseConfirmLink(event.url);
+      if (confirm.kind !== 'none') {
+        await handleConfirmLink(confirm);
+        return;
+      }
+
       const parsed = parseRecoveryLink(event.url);
 
       if (parsed.kind === 'none') {

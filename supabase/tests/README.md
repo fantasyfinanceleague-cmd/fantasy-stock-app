@@ -860,3 +860,23 @@ removed from the closed set on 2026-10-06, is refused exactly like an unknown ty
 push is server-side now (`_shared/draft-write.ts` notifyNextPicker), and a callerless
 entry would be a "your turn" spam template any leaguemate could fire. Hermetic:
 `deno test --allow-read --allow-env supabase/tests/send_notification_types.test.ts`.
+
+## social_signup.pglite.test.ts
+
+Onboarding W2 (plan 2026-10-14): Sign in with Apple / Google meets the two server pieces every
+new account passes. Loads `20260815000000_signup_gate` (`restrict_new_signups`) and
+`20261005000001_signup_username_trigger` (`handle_new_user_profile`) verbatim; neither has been
+redefined since.
+- Apple- and Google-shaped `raw_user_meta_data` (provider claims, no `username` key, even a
+  username-shaped `given_name`) and an email sign-up without a username all get a profile row
+  with a NULL username, which is what puts the app's pick-username gate in front.
+- The hook, called with the event GoTrue builds for an external signup (its id_token grant runs
+  the Before User Created hook when it is about to create a user: `internal/api/token_oidc.go`),
+  refuses while paused unless the provider email is allow-listed, with the message the app's
+  own `isSignupsPausedError` / `getAuthErrorMessage` (imported from `apps/mobile/lib/authErrors.ts`)
+  turn into Giorgio's text. Apple's Hide My Email relay address is refused unless that relay
+  address itself is allow-listed.
+- Cannot prove that prod's GoTrue calls the hook on this path (the dashboard toggle + GoTrue's
+  code, read, not tested).
+
+Run: `deno test --allow-read --allow-env supabase/tests/social_signup.pglite.test.ts`

@@ -3,6 +3,11 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
 import { setRecoverySession } from './recoveryNonce';
+import { setEmailJustConfirmed } from './auth/emailConfirmed';
+import { buildConfirmRedirect } from './auth/confirmLink';
+import { clearConfirmNonce, getOrCreateConfirmNonce } from './auth/confirmNonce';
+import { signInWithApple as nativeAppleSignIn, signInWithGoogle as nativeGoogleSignIn, signOutOfGoogle } from './auth/socialSignIn';
+import type { SocialSignInResult } from './auth/socialOutcome';
 import type { AuthPhase } from './shell/pendingRoute';
 import {
   FIXTURE_EMAIL,
@@ -26,9 +31,10 @@ export interface AuthResult {
 export type SignUpResult = AuthResult & {
   /** true when the account exists but must confirm its email before signing in. */
   needsConfirmation: boolean;
-  /** true when the username was refused as taken (the profile's unique index). */
-  usernameTaken: boolean;
 };
+
+/** The device could not store the confirmation nonce: no email was sent (see confirmNonce.ts). */
+export const CONFIRM_NONCE_UNAVAILABLE = 'confirm_nonce_unavailable';
 
 // Phase 3b-1 — the ONE auth subscription for the whole app.
 //
@@ -58,7 +64,12 @@ export interface SessionContextValue {
   setUsernameLocal: (username: string) => void;
   refreshProfile: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string, username: string) => Promise<SignUpResult>;
+  /** Email + password sign-up. No username: the pick-username gate asks for it (onboarding W2). */
+  signUp: (email: string, password: string) => Promise<SignUpResult>;
+  /** Sends the confirmation email again, with a link that still returns to this device. */
+  resendConfirmation: (email: string) => Promise<AuthResult>;
+  signInWithApple: () => Promise<SocialSignInResult>;
+  signInWithGoogle: () => Promise<SocialSignInResult>;
   signOut: () => Promise<void>;
 }
 
@@ -107,6 +118,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         });
         setLoading(false);
 
+        // Any sign-in or sign-out ends a pending email sign-up on this device: its confirmation
+        // nonce must not outlive it (security review, 2026-10-14).
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') clearConfirmNonce();
+
         // Register for push notifications on sign in
         if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current) {
           notificationsSetup.current = true;
@@ -121,6 +136,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           // sign-out elsewhere in the app) must not leave the flag
           // stuck true for whatever session comes next.
           setRecoverySession(false);
+          setEmailJustConfirmed(false); // the "just confirmed" chip belongs to one sign-in
         }
       }
     );
@@ -182,27 +198,56 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return { error: error ? { message: error.message, code: error.code } : null };
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, username: string): Promise<SignUpResult> => {
+  const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
     if (SHELL_FIXTURE) {
       await wait(FIXTURE_NETWORK_MS);
-      return { error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE }, needsConfirmation: false, usernameTaken: false };
+      return { error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE }, needsConfirmation: false };
     }
-    // The username travels as auth metadata: with "Confirm email" on, signUp()
-    // returns no session, so a client-side profile write would run as anon
-    // and be refused by RLS. The handle_new_user_profile trigger
-    // (20261005000001) reads this metadata in the same transaction that
-    // creates the auth.users row. The upsert after it is the pre-existing
-    // (now-redundant) fallback, kept for its 23505 "taken" signal.
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
-    if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false, usernameTaken: false };
-    if (data?.user) {
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .upsert({ id: data.user.id, username }, { onConflict: 'id' });
-      if (profileError?.code === '23505') return { error: null, needsConfirmation: false, usernameTaken: true };
-    }
-    return { error: null, needsConfirmation: !data?.session, usernameTaken: false };
+    // Email confirmation is ON (plan 2026-10-14): signUp() returns no session, and the email's
+    // link returns into the app through lib/auth/confirmLink.ts, bound to THIS device by a nonce.
+    // No username travels any more: the handle_new_user_profile trigger (20261005000001) still
+    // creates the profile row (username NULL), and the pick-username gate asks for one.
+    const nonce = await getOrCreateConfirmNonce(email);
+    if (!nonce) return { error: { message: '', code: CONFIRM_NONCE_UNAVAILABLE }, needsConfirmation: false };
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: buildConfirmRedirect(nonce) },
+    });
+    if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false };
+    return { error: null, needsConfirmation: !data?.session };
   }, []);
+
+  const resendConfirmation = useCallback(async (email: string): Promise<AuthResult> => {
+    if (SHELL_FIXTURE) {
+      await wait(FIXTURE_NETWORK_MS);
+      return { error: null };
+    }
+    const nonce = await getOrCreateConfirmNonce(email);
+    if (!nonce) return { error: { message: '', code: CONFIRM_NONCE_UNAVAILABLE } };
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: buildConfirmRedirect(nonce) },
+    });
+    return { error: error ? { message: error.message, code: error.code } : null };
+  }, []);
+
+  // The fixture never opens a native sheet: it answers as the server does today for a NEW
+  // account while signups are closed, so the refusal can be captured without an Apple ID.
+  const fixtureSocial = useCallback(async (): Promise<SocialSignInResult> => {
+    await wait(FIXTURE_NETWORK_MS);
+    return { kind: 'error', error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE } };
+  }, []);
+
+  const signInWithApple = useCallback(
+    () => (SHELL_FIXTURE ? fixtureSocial() : nativeAppleSignIn()),
+    [fixtureSocial]
+  );
+  const signInWithGoogle = useCallback(
+    () => (SHELL_FIXTURE ? fixtureSocial() : nativeGoogleSignIn()),
+    [fixtureSocial]
+  );
 
   const signOut = useCallback(async () => {
     if (SHELL_FIXTURE) {
@@ -214,7 +259,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (userId) {
       await removePushToken(userId);
     }
-    await supabase.auth.signOut();
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      // Still signed in to Supabase: leave Google as it is too, so the two stay in step.
+      console.warn('[auth] sign out failed', signOutError.code ?? '');
+      return;
+    }
+    // The next person on this phone picks their own Google account.
+    await signOutOfGoogle();
   }, [userId]);
 
   const profileLoading = !!userId && profileFor !== userId;
@@ -240,9 +292,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       refreshProfile,
       signIn,
       signUp,
+      resendConfirmation,
+      signInWithApple,
+      signInWithGoogle,
       signOut,
     }),
-    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signIn, signUp, signOut]
+    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signIn, signUp, resendConfirmation, signInWithApple, signInWithGoogle, signOut]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

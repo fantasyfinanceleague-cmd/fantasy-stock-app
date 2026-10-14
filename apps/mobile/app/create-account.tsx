@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { space, type } from '@/constants/tokens';
@@ -13,12 +13,12 @@ import { useMotion } from '@/components/sp/motion';
 import { WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
+import { ConfirmEmailSent } from '@/components/shell/ConfirmEmailSent';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
+import { SocialSignIn } from '@/components/shell/SocialSignIn';
 import { getAuthErrorMessage, isSignupsPausedError } from '@/lib/authErrors';
-import { validateUsername } from '@/lib/contentModeration';
 import { useSession } from '@/lib/SessionProvider';
-import { firstFailingRule } from '@/lib/shell/usernameRules';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
 import { CAPTURE } from '@/lib/shell/captureDev';
 
@@ -37,22 +37,26 @@ import { CAPTURE } from '@/lib/shell/captureDev';
 //   banner carries Giorgio's final text verbatim through brand.name, with
 //   [Sign in instead] in place of the primary action. Game Night (W4 Onboarding): the banner
 //   is the shared WarnPanel, its text in the fill's own `warnText` ink (§9C rule 4).
-
-type UsernameError = string | null;
+//
+// Onboarding W2 (plan 2026-10-14):
+// - Continue with Apple / Google sit above the email form; a first social sign-in IS an account
+//   creation, so it meets the same signup gate and shows the same banner.
+// - The username field is gone: every new account reaches the pick-username gate (its profile row
+//   has a NULL username), which W4 pre-fills.
+// - Email confirmation is ON: success shows "Check your email" (ConfirmEmailSent), and the
+//   email's link returns into the app and continues the flow.
 
 export default function CreateAccountScreen() {
   const { colors } = useTheme();
   const { signUp } = useSession();
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<ButtonStatus>('idle');
-  const [usernameError, setUsernameError] = useState<UsernameError>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const { reduced } = useMotion();
   const scrollRef = useRef<ScrollView>(null);
-  const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
   const passwordRules = PASSWORD_REQUIREMENTS.map((r) => ({ label: r.label, ok: r.test(password) }));
@@ -75,22 +79,8 @@ export default function CreateAccountScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function checkUsername(value: string): UsernameError {
-    const trimmed = value.trim();
-    if (!trimmed) return 'Please enter a username';
-    const failing = firstFailingRule(trimmed);
-    if (failing) return failing;
-    // Spec: the client content check's message is exactly this (the checker's
-    // own reason text is not shown).
-    if (!validateUsername(trimmed).isValid) return 'Username is not allowed';
-    return null;
-  }
-
   async function handleCreate() {
     if (status !== 'idle') return;
-    const uError = checkUsername(username);
-    setUsernameError(uError);
-    if (uError) return;
     if (!email || !password) {
       setFormError('Please enter email and password');
       return;
@@ -103,7 +93,7 @@ export default function CreateAccountScreen() {
     setFormError(null);
     setStatus('loading');
     markSignInIntent();
-    const result = await signUp(email.trim(), password, username.trim());
+    const result = await signUp(email.trim(), password);
 
     if (result.error) {
       clearSignInIntent();
@@ -115,17 +105,11 @@ export default function CreateAccountScreen() {
       setFormError(getAuthErrorMessage(result.error, PASSWORD_RULE_SENTENCE, brand.name));
       return;
     }
-    if (result.usernameTaken) {
-      clearSignInIntent();
-      setStatus('idle');
-      setUsernameError('This username is already taken.');
-      return;
-    }
     if (result.needsConfirmation) {
       clearSignInIntent();
       setStatus('idle');
-      Alert.alert('Success', 'Account created! Check your email to verify.');
-      router.replace('/login');
+      Keyboard.dismiss();
+      setSentTo(email.trim());
       return;
     }
     // Signed straight in: the session flip navigates (and shows Pick a
@@ -146,6 +130,8 @@ export default function CreateAccountScreen() {
     </>
   );
 
+  if (sentTo) return <ConfirmEmailSent email={sentTo} onBack={() => router.replace('/login')} />;
+
   return (
     <AuthScaffold ref={scrollRef} footer={footer}>
       <BrandLockup />
@@ -155,25 +141,9 @@ export default function CreateAccountScreen() {
           Join the competition
         </Text>
       </View>
+      {paused ? null : <SocialSignIn onPaused={showPaused} />}
       <View style={styles.fields}>
         <Field
-          label="Username"
-          value={username}
-          onChangeText={(v) => {
-            setUsername(v);
-            if (usernameError) setUsernameError(null);
-          }}
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="username-new"
-          textContentType="nickname"
-          returnKeyType="next"
-          onSubmitEditing={() => emailRef.current?.focus()}
-          helper="Displayed on leaderboards"
-          error={usernameError}
-        />
-        <Field
-          ref={emailRef}
           label="Email address"
           value={email}
           onChangeText={(v) => {
