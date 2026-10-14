@@ -44,9 +44,9 @@ Deno.test('each screen that broke stacks at large text (source guards)', () => {
   const roster = SOURCES['components/sp/gn/RosterRow.tsx'];
   assert(roster.includes('const stacked = useLargeText();'));
   assert(roster.includes('const layout = stacked ? styles.contentStacked : styles.content;'));
-  const sb = SOURCES['components/game/MatchScoreboard.tsx'];
-  assert(sb.includes("namesRow: { flexDirection: 'row', flexWrap: 'wrap',"));
-  assert(sb.includes("oppName: { flexShrink: 1, textAlign: 'right', marginLeft: 'auto' },"));
+  // The scoreboard digits shrink to fit once given a bounded width (ThisWeekCard's safety
+  // net for an unusual value; moved here from the retired MatchScoreboard's layout test).
+  assert(SOURCES['components/sp/game/ScoreDigits.tsx'].includes('adjustsFontSizeToFit'));
   const bracket = SOURCES['components/game/BracketView.tsx'];
   assert(bracket.includes('name: { flexShrink: 1, minWidth: 0 },'));
   assert(bracket.includes("end: { marginLeft: 'auto', flexShrink: 0 },"));

@@ -47,7 +47,5 @@ Deno.test('every manager list marks you with the shared row (source guards)', ()
   // GS-7's champion row, when it's you: ManagerRow's your-row tile (tint over surface + the ring).
   uses('components/game/BracketView.tsx', 'style={[styles.championYou, { backgroundColor: colors.youTint, borderColor: colors.you }]}', 'borderWidth: YOU_RING');
   uses('components/game/RenewalRoster.tsx', 'yourRowTint(p.user_id === myUserId, colors.youTint)', 'youA11y(p.user_id === myUserId)');
-  // All matchups: the tint replaces the old inset bar on your game's card.
-  uses('components/game/MatchScoreboard.tsx', "size === 'compact' && aIsYou ? { backgroundColor: colors.youTint } : null", 'yourNameStyle(true)');
   assert(SOURCES['app/(tabs)/league.tsx'].includes("<HistoryList rows={history.rows} myUserId={user?.id ?? ''} playoffs="));
 });
