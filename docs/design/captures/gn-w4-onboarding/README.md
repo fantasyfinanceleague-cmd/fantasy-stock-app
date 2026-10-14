@@ -3,9 +3,16 @@
 **Screenshots stay out of the repo (Giorgio, 2026-10-14).** Every still, recording and frame
 sheet is in **`~/fantasy-stock-design-review/feat-gn-w4-onboarding/`**; this file is the index.
 
-**One build:** every frame was shot on app code **`fa420806`** (the large-text pass on top of
-`516a38d7`), based on `origin/main` `8cac3563` (#266 merged). Stills from the earlier build were
-re-shot; none in the folder predates `fa420806` (checked by file time against the shoot start).
+**Builds.** The set was shot on **`fa420806`** (2026-10-14, 09:44–10:47 PDT, 121 files) and the
+Design Lead's pre-merge pass **`b61d1508`** (11:21–12:00 PDT, 68 files), both on `origin/main`
+`8cac3563`. The status bar is pinned at 9:41; the times above and per state below are the real
+ones (file times, the driver's log). **Every state whose rendering changed in `b61d1508` was
+re-shot on it**: onboarding card 3 (+ Reduce Motion), Create account (+ signups paused), Forgot
+password, Create league 15–21 and 16b, Home pre-draft 38/39 and the new 40. The states left on
+`fa420806` render the same pixels on `b61d1508`: none of their source changed except
+`gameNight.ts`'s `stackedNameCap`, refactored with identical output (tests pin it), and
+`keepDots.ts`, which only gained `keepHyphens` (used in Create league alone). Superseded frames
+are kept in `superseded/` (the impossible 38/39 and the old-icon 08b), not mixed in.
 
 ## How it was captured
 
@@ -37,19 +44,19 @@ re-shot; none in the folder predates `fa420806` (checked by file time against th
 
 | # | State | Frames | Shows |
 |---|---|---|---|
-| 01–03 | Onboarding cards 1–3 | 17e L/XL/XXXL (card 3), 17 Pro L, both themes | The vignettes are the app's own pieces: card 1 the draft board's tiles filling (category line at the bottom, never a fill); card 2 Matchup's Scoreboard with a lead change ("Gianluigi B. leads by $37.66" → "Roberto B. leads by $123.16"); card 3 the FINAL chip, the Scoreboard (your half shaded), "You win Week 6". The art panel is the page's own depth with its rim. The line is `display`, wrapping whole words at XXXL ("Best performance by / Friday's close wins.") |
+| 01–03 | Onboarding cards 1–3 | 17e L/XL/XXXL (card 3), 17 Pro L, both themes | The vignettes are the app's own pieces: card 1 the draft board's tiles filling (category line at the bottom, never a fill); card 2 Matchup's Scoreboard with a lead change ("Gianluigi B. leads by $37.66" → "Roberto B. leads by $123.16"); card 3 the FINAL chip, the Scoreboard (your half shaded), "You win Week 6". The art panel is the page's own depth with its rim. The line is `display` at its own 1.6× ceiling, wrapping whole words: at XL and XXXL card 3 reads "Best / performance / by Friday's / close wins." (four lines; **the XL and XXXL frames are byte-identical**, the display and the vignette caps being reached at XL; Profile's XL/XXXL pair is identical for the same reason). b61d1508: "You win Week 6" is `headline`, capped from the totals' fitted size, so it sits under them at every size |
 | 03b | Reduce Motion | 17e L, both | Card 3 after two Next presses: crossfades, the vignette at its final frame |
 | 04 | Get started | 17e L/XL/XXXL, 17 Pro L | Two §9C Cards (surface + rim, no shadow), icons on `inset` in `text` (no accent), drawn chevrons; "Sign in" the one accent link |
 | 05 | Sign in | 17e L/XL, 17 Pro L | Forgot password? a 44 pt target |
-| 06–07 | Create account; **signups closed** | 17e L/XL, 17 Pro L | The paused refusal in the shared WarnPanel (`warnTint`, `warnText` ink, no icon), Giorgio's text verbatim; "Sign in instead" replaces the primary. At XL the cold launch shows the form top (the real refusal scrolls the panel into view) |
-| 08, 08b | Forgot password; sent | 17e L | "Check your email" carded (rim), one primary + secondary pill. 08b comes from the tap-through |
+| 06–07 | Create account; **signups closed** | 17e L/XL, 17 Pro L | The paused refusal in the shared WarnPanel (`warnTint`, `warnText` ink, no icon), Giorgio's text verbatim; "Sign in instead" replaces the primary. b61d1508: the capture knob takes the real refusal path (`showPaused`), so at XL the panel is scrolled into view as a real refusal shows it. (P3 seen here, deferred to the plan's W4 auth rebuild: the rule "A lowercase letter (a–z)" can wrap at its en dash at XL) |
+| 08 | Forgot password | 17e L | Email + Send reset link. The sent state ("Check your email", carded) is in `rec-01` (fa420806, before its icon moved to sp/Icon in b61d1508; the old 08b stills are in `superseded/`) |
 | 09–10 | Pick a username (first run); taken | 17e L/XL, 17 Pro L | Rules check off; "roberto" taken (case-insensitive) → the error. At XL the keyboard covers the suggestions (they're in the field's scroll view) |
 | 11 | Profile | 17e L/XL/XXXL, 17 Pro L | Two §9C Cards, rows divided by space (8 pt), drawn chevrons, your avatar on `you`. Rows capped at 2× so the username heading stays loudest at XXXL |
 | 12 | Appearance | 17e L/XL | System / Light / Dark; selected = accent ring + radio |
 | 13, 13b | Profile › Username unchanged; changed | 17e L/XL; L | Unchanged: **no Continue** (nothing to save, no words to say so), Cancel stays. Changed ("roberto_b26"): available ✓, Continue appears |
 | 14 | Change password | 17e L | Update password disabled with the unmet rules beside it |
-| 15–18 | Create league, steps 1–4 | 17e L/XL/XXXL (step 2), 17 Pro L | Step 1: Next is live with an empty name (its press says "Enter a league name."). Step 2 at XL: the Stepper box goes under its label (no "Manager/s"). Step 3: pick clock 30–90 s (60 default), Draft time row, Random / Manual, rounds. Step 4: stake modes, summary |
-| 16b | 16 managers (stress) | 17e L, both | 16 managers, 15 weeks, 6 playoff teams: "the top 2 seeds get first-round byes" |
+| 15–18 | Create league, steps 1–4 | 17e L/XL/XXXL (steps 1 and 2), 17 Pro L | Step 1: Next is live with an empty name (its press says "Enter a league name."). Step 2 at XL: the Stepper box goes under its label (no "Manager/s"). Step 3: pick clock 30–90 s (60 default), Draft time row, Random / Manual, rounds. Step 4: stake modes, summary |
+| 16b | 16 managers (stress) | 17e L, both (b61d1508, real taps) | 16 managers, 15 weeks, 6 playoff teams: "the top 2 seeds get / first-round byes", the hyphenated word kept whole (keepHyphens). At XXXL (16, b61d1508) the subtitle is capped 2× and "Back · Step 2 of 4" 1.6×: the step title stays the loudest and the card is back on screen |
 | 18b | Summary, stress | 17e L light | The 20-character name and 16 teams whole; "·" lines kept whole (keepDots) |
 | 19, 19b, 19c | Price tiers, no slot; tapped; a slot added | 17e L, 17 Pro L | Create disabled with "Price tiers need at least one slot with a price range." on screen; SlotBuilder's capacity reason in `danger` |
 | 20, 20b, 20c, 21 | Done (league created); the share sheet; long name; no date | 17e L/XL, 17 Pro L | The invite code and **Share** (a new league is before its draft, so the ruled condition shows it); the iOS sheet carries "Join my league with code …" |
@@ -58,7 +65,7 @@ re-shot; none in the folder predates `fa420806` (checked by file time against th
 | 26–34 | Refusals | 17e L (+XL/XXXL for full) | full ("Ask your commissioner if they can make room."), drafted, drafting, already a member (Open the league), **season_completed**, expired, left (Join disabled, the reason above it), offline, rate-limited: each in the WarnPanel |
 | 35, 36 | Joined; full at join (race) | 17e L/XL, 17 Pro L | Joined: the trade-done medallion (check in `onYou` on `you`). Race: the same preview now carrying the refusal |
 | 37 | No leagues | 17e L, 17 Pro L | Home's empty state: Create a league / Join with a code |
-| 38, 39 | Home pre-draft: Share shown; **Share hidden** | 17e L, 17 Pro L | 38: three days before the draft, the invite row has Share. 39: past the draft time (inside T−1h), the code shows and Share is gone (`inviteShareShownFor`) |
+| 38, 39, 40 | Share: shown before the draft; **hidden** from T−1h; **hidden** after the season | 17e L, 17 Pro L (40: 17e L) | ONE fixture for 38/39 (`leagues-member` + the seam's draft status `scheduled:member` / `room_open:member`): 38, 2d 06h out, the invite row has Share; 39, the room open at T−42 min ("Draft room open · starts in", "You pick 1st", Go to the draft room), the code shows and Share is gone (Giorgio, 2026-10-14: "once the draft room opens… the share link cannot work"). 40: League settings for the finished Summer Cup (member): the code, no Share. 39's clock ticks, so its frames are the last poll ("unsettled" in the log), not a defect |
 
 **Recordings** (`.mov` + a de-duplicated frame sheet `*-frames.png`, both themes):
 
@@ -76,12 +83,14 @@ re-shot; none in the folder predates `fa420806` (checked by file time against th
   pitch, no line between); card to card 64.3 pt.
 - **Join preview rows** (`25-join-preview-17e-l-light`): 32.0 / 34.3 / 34.7 pt glyph to glyph,
   divided by space only.
-- **Accent by area** (`accent-split.txt` in the folder; same metric as
-  `tools/game-night/app_accent_area.py`, ΔRGB 45, every 2nd pixel; the screen's one full-width
-  primary pill measured apart): **175 frames, none over 5% without the primary.** Highest "rest":
-  4.68% (Home pre-draft, 38/39: its primary "Build your queue" sits inside the card, so it counts
-  as rest; still under). Highest totals with the primary: sign in at XL 6.2% (all of the extra
-  is the full-width Sign in pill), Create step 1 5.87% (Next).
+- **Accent by area** (`accent-split.txt` + the script `accent_split.py` in the folder; same
+  metric as `tools/game-night/app_accent_area.py`, ΔRGB 45, every 2nd pixel). The screen's one
+  primary is the accent blob spanning ≥ 75% of the frame width, measured apart. **181 frames, none
+  over 5% without the primary; the highest "rest" is 1.09%** (Sign in at XL: the two accent
+  links). One rule for every frame: the first pass used 80%, which missed Home's card-width
+  "Build your queue" pill on the 17e (79.5% of the frame) and caught it on the 17 Pro (81%); at
+  75% both devices read it as the primary (38/39: rest 0.19–0.44%). Highest totals WITH the
+  primary: Sign in at XL 6.2%, Create step 1 5.87%: the excess is the full-width pill alone.
 
 ## §5 mechanical checks
 
@@ -143,6 +152,18 @@ settings).
 | Find league / Join … / Open the league / Try another code / Invite code (back) | Join | look up / join / open / back to code entry; Join disabled for "left" with its reason | rec-02, 25–36 |
 | Share | Home pre-draft | the iOS sheet; hidden from T−1h | 38, 39 |
 
+## The Design Lead's pre-merge pass (b61d1508)
+
+| Item | Fix | Evidence |
+|---|---|---|
+| 1. Create league XXXL: subtitle = title, card below the fold | SetupScaffold subtitle ≤ 2×, "Back · Step N of 4" ≤ 1.6× (shared with League settings) | 15/16 XXXL, both themes |
+| 2. Card 3: "You win Week 6" outranks the totals at XL/XXXL | `headline`, capped from the totals' FITTED size (`lineUnderTotalsCap`) | 03 XL/XXXL, 03b |
+| 3. Unmapped auth errors showed GoTrue's English | `getAuthErrorMessage` falls back to "Something went wrong. Please try again." | tests + mutation |
+| 4. Signups paused at XL: panel off screen | the knob runs the real refusal path (scrolls into view) | 07 XL |
+| 5. 38/39 impossible state | one seam fixture, room open at T−42 min; + after-season (40) | 38, 39, 40 |
+| Ruling: postponed draft Share | the blockers card's Share follows `inviteShareShown`; a postponed draft has no draft time (cleared by `postpone_league_draft`) → `before_draft` → shown; `leaveWindow` already right, pinned by tests | tests + mutations |
+| P3s | "first-round" kept whole; Forgot/Reset icons via sp/Icon; the two stale text-on-warnTint pairs relabelled (app + board, key-screens rebuilt); this README | 16b; source |
+
 ## Not captured, and why
 
 - **VoiceOver**: not drivable here; labels are pinned by tests (preview rows read "label, value";
@@ -160,3 +181,7 @@ settings).
 - 39 is "past the draft time" because the fixture's draft date (Oct 3) is in the past.
 - `rec-03-create-league-flow-dark` names the league "G" (the typing tool dropped characters); the
   Light run has the full 20-character name.
+- Recordings `rec-01`…`rec-04` are on `fa420806`. What differs on `b61d1508` at Large: in rec-01,
+  card 3's winner line (headline, under the totals) and the sent state's icon (sp/Icon, 24pt);
+  in rec-03, "first-round byes" no longer splits at the hyphen. `rec-05` (Reduce Motion) was
+  re-recorded on `b61d1508`.
