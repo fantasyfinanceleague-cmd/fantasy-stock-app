@@ -20,7 +20,6 @@ import { Avatar } from '@/components/sp/Avatar';
 import { EmptyState } from '@/components/sp/EmptyState';
 import { BrandMark } from '@/components/sp/BrandMark';
 import { LiveDot } from '@/components/sp/game/LiveDot';
-import { Scoreboard } from '@/components/sp/game/Scoreboard';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme, ThemePreference } from '@/components/sp/ThemeProvider';
 import {
@@ -71,24 +70,11 @@ export default function DesignGalleryScreen() {
   const [segment, setSegment] = useState('all');
   const [sheetVisible, setSheetVisible] = useState(false);
   const [chipSelected, setChipSelected] = useState(false);
-  const [scores, setScores] = useState({ you: 128.4, opponent: 92.1 });
-  const [chyron, setChyron] = useState<string | null>(null);
   const [demoStatus, setDemoStatus] = useState<ButtonStatus>('idle');
   const [saleChosen, setSaleChosen] = useState<string | null>('gallery-sale-v');
 
   if (!__DEV__) {
     return <Redirect href="/" />;
-  }
-
-  function triggerLeadChange() {
-    setScores((prev) => {
-      // Flip who's ahead so <TugBar>/<ScoreDigits> exercise the lead-change
-      // overshoot (`spring.lively`) rather than just ticking in place.
-      const wasYouAhead = prev.you >= prev.opponent;
-      const next = wasYouAhead ? { you: prev.you - 40, opponent: prev.opponent + 260 } : { you: prev.you + 260, opponent: prev.opponent - 40 };
-      return next;
-    });
-    setChyron('NVDA just put you ahead');
   }
 
   return (
@@ -319,29 +305,6 @@ export default function DesignGalleryScreen() {
               </Text>
             </View>
           </Sheet>
-        </Section>
-  
-        <Section title="Live Scoreboard demo">
-          <Scoreboard
-            leagueName="Test League"
-            week={3}
-            you={{ name: 'You', gain: scores.you }}
-            opponent={{ name: 'Priya', gain: scores.opponent }}
-            live
-            chyronMessage={chyron}
-            onChyronDismiss={() => setChyron(null)}
-          />
-          <View style={styles.leadChangeButton}>
-            <Button label="Trigger lead change" variant="primary" onPress={triggerLeadChange} />
-          </View>
-        </Section>
-  
-        <Section title="Scoreboard — widest pair (regression check)">
-          {/* Design Lead, 2026-09-26: standard-size stress case for the
-              accessibility-XL overflow fix — a wide leader and a wide,
-              negative trailer, the combination most likely to squeeze the
-              name column or push ScoreDigits past its card. */}
-          <Scoreboard leagueName="Test League" week={3} you={{ name: 'You', gain: 1284.6 }} opponent={{ name: 'Priya', gain: -1038.25 }} live />
         </Section>
       </ScrollView>
     </SafeAreaView>
@@ -616,9 +579,5 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingTop: space[5],
-  },
-  leadChangeButton: {
-    marginTop: space[4],
-    alignItems: 'flex-start',
   },
 });

@@ -59,8 +59,8 @@ export interface PortfolioData {
   leagueName: string | null;
 }
 
-const NOOP = () => {};
-const EMPTY: Omit<PortfolioData, 'refresh'> & { refresh: () => void } = { status: 'loading', view: null, chart: null, prices: {}, requestCount: null, leagueName: null, refresh: NOOP };
+// No `refresh` here: the hook returns `{ ...state, refresh }`, the real one, in every state.
+const EMPTY: Omit<PortfolioData, 'refresh'> = { status: 'loading', view: null, chart: null, prices: {}, requestCount: null, leagueName: null };
 
 /** The league settings Portfolio reads: the stress money fixture's, the capture seam's, or the real league's. */
 function settingsOf(activeLeague: { stake_mode: string | null; notional_per_slot: number | null; num_rounds: number; budget_amount: number | null } | null) {

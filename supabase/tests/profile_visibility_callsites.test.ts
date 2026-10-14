@@ -68,10 +68,12 @@ Deno.test('every Realtime subscription on user_profiles is filtered to one id', 
   }
 });
 
+// apps/mobile/components/LeagueCarousel.tsx was the other moved call site; it was
+// deleted as dead code (W8: zero importers, never mounted). The walk above still
+// covers every mobile source, so a new user_profiles read anywhere is still caught.
 Deno.test('the moved call sites read other players through get_visible_profiles', () => {
   for (const f of [
     'apps/web/src/context/UserProfilesContext.jsx',
-    'apps/mobile/components/LeagueCarousel.tsx',
   ]) {
     const src = read(f);
     assertEquals(/\.rpc\(\s*['"]get_visible_profiles['"]\s*,\s*\{\s*p_user_ids:/.test(src), true, f);
