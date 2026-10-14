@@ -39,7 +39,8 @@ export interface DraftBlockersCardProps {
   onSetPlayoffTeams: (teams: number) => void;
   onReconfirm: (choice: 'move_forward' | 'invite') => void;
   inviteCode: string | null;
-  onShareInvite: () => void;
+  /** Null while Share is hidden (inviteShareShown: from the hour before the draft); the code still shows. */
+  onShareInvite: (() => void) | null;
   onPickNewTime: () => void;
   busy?: boolean;
   /** A fix that didn't save (shown at the bottom). */
@@ -87,7 +88,7 @@ export function DraftBlockersCard({
         <View style={styles.invite}>
           <Text variant="caption" tone="secondary">Invite code</Text>
           <Text variant="headline" selectable>{inviteCode}</Text>
-          <Button label="Share invite code" variant="secondary" size="sm" onPress={onShareInvite} />
+          {onShareInvite ? <Button label="Share invite code" variant="secondary" size="sm" onPress={onShareInvite} /> : null}
         </View>
       );
     }

@@ -11,6 +11,16 @@ export const NBSP = '\u00a0';
  * "Auto-picked AAPL for you", 24). */
 export const KEEP_WHOLE = 24;
 
+/** U+2060 WORD JOINER: zero-width, no glyph of its own (so no font fallback), forbids a break. */
+export const WORD_JOINER = '\u2060';
+
+/** A hyphenated word never splits at its hyphen ("first-" / "round byes", W4 Onboarding gate P3):
+ * a word joiner after each hyphen between letters. Display only (VoiceOver reads the same
+ * words; the copy, shared with the web, is unchanged). */
+export function keepHyphens(line: string): string {
+  return line.replace(/(\p{L})-(?=\p{L})/gu, `$1-${WORD_JOINER}`);
+}
+
 export function keepDots(line: string, keepWhole = KEEP_WHOLE): string {
   if (!line.includes(' · ')) return line;
   return line

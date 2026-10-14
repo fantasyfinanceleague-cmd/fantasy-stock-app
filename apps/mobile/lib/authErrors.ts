@@ -75,5 +75,7 @@ export function getAuthErrorMessage(error: any, weakPasswordMessage?: string, pr
   if (message.includes('network request failed') || message.includes('failed to fetch') || message.includes('network error')) {
     return 'Network error — check your connection and try again.';
   }
-  return error?.message || 'Something went wrong. Please try again.';
+  // Never the server's own words (W4 Onboarding gate, Design Lead 2026-10-14): an unmapped GoTrue
+  // error reads the generic line, on every screen that calls this.
+  return 'Something went wrong. Please try again.';
 }

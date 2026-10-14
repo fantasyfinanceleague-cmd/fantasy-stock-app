@@ -22,7 +22,7 @@ import { useDraftStatus } from './useDraftStatus';
 import { seamInvoke, seamUpdateLeague } from './seamCalls';
 import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
 import { draftDateForSave, updatedOneRow } from './draftDateSave';
-import { inviteShareMessage } from './leagueSettingsEntry';
+import { inviteShareDraftTime, inviteShareMessage, inviteShareShownFor } from './leagueSettingsEntry';
 import { readFunctionRefusal } from '../functionRefusal';
 import {
   DRAFT_TIME_NOT_SAVED,
@@ -125,6 +125,16 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     await refresh();
   };
 
+  // The blockers card's Share follows the one ruled condition (inviteShareShown): shown before the
+  // draft (a postponed draft included: it has no draft time), hidden from the hour before it.
+  const shareShown = inviteShareShownFor(
+    {
+      seasonStatus: activeLeague?.season_status,
+      draftStatus: activeLeague?.draft_status,
+      draftDate: inviteShareDraftTime(phase !== null, ds.startsAt, activeLeague?.draft_date),
+    },
+    serverNow,
+  );
   const shareInvite = () => {
     const code = activeLeague?.invite_code;
     if (code) void Share.share({ message: inviteShareMessage(code) });
@@ -170,7 +180,7 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
     roomLabel: ds.startsAt ? etTimeLabel(roomOpensAtMs(ds.startsAt)) : null,
     postponedLabel: postponedAt !== null ? etTimeLabel(postponedAt) : null,
     fixes: {
-      busy, fixError, setPlayoffTeams, reconfirm, shareInvite,
+      busy, fixError, setPlayoffTeams, reconfirm, shareInvite, shareShown,
       pickingTime, openPicker, closePicker, saveDraftTime,
     },
   };

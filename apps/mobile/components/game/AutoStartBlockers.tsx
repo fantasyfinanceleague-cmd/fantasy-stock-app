@@ -26,7 +26,7 @@ export function AutoStartBlockers({ auto, phase, playoffTeams, inviteCode }: Aut
         onSetPlayoffTeams={(t) => void f.setPlayoffTeams(t)}
         onReconfirm={(c) => void f.reconfirm(c)}
         inviteCode={inviteCode}
-        onShareInvite={f.shareInvite}
+        onShareInvite={f.shareShown ? f.shareInvite : null}
         onPickNewTime={f.openPicker}
         busy={f.busy}
         error={f.fixError}

@@ -86,7 +86,7 @@ import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { CAPTURE } from '@/lib/shell/captureDev';
 import { createFixtureStep } from '@/lib/shell/captureKnobs';
-import { keepDots } from '@/lib/game/keepDots';
+import { keepDots, keepHyphens } from '@/lib/game/keepDots';
 import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 interface WizardState {
@@ -356,7 +356,7 @@ export default function CreateLeagueWizard() {
                   canDecrement={playoffTeams > 2}
                   canIncrement={playoffTeams < state.size}
                 />
-                <Text variant="caption" style={styles.tabular}>{playoffLine(playoffTeams) ?? ''}</Text>
+                <Text variant="caption" style={styles.tabular}>{keepHyphens(playoffLine(playoffTeams) ?? '')}</Text>
                 <Text variant="caption" tone="secondary" style={styles.tabular}>
                   {seasonCheckCaption(shownWeeks, playoffTeams)}
                 </Text>

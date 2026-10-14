@@ -2,39 +2,79 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3214028af3ebbdda3a55c7596484cdf8ef51cf60",
-    "commitShort": "3214028a",
+    "commit": "50811abba59b237c1d272350d5cdca6d51bbdcec",
+    "commitShort": "50811abb",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
+        "path": "apps/mobile/app/create-account.tsx"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/app/create-league.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
+        "path": "apps/mobile/app/forgot-password.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/Stepper.tsx"
+        "path": "apps/mobile/components/game/AutoStartBlockers.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/AuthScaffold.tsx"
+        "path": "apps/mobile/components/game/DraftBlockersCard.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/ProfileView.tsx"
+        "path": "apps/mobile/components/game/SetupScaffold.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/home/PreDraftCard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/shell/onboarding/Vignettes.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/logic/gameNight.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/constants/tokens/contrastPairs.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/authErrors.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/keepDots.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/leagueSettingsEntry.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/useDraftAutoStart.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/authErrors.test.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/onboarding-game-night.test.ts"
       }
     ],
-    "timestamp": "2026-10-14T21:39:14Z",
-    "sourceHash": "sha256:0c73d1be8369df33d91ce68a563232b5ecde5dc34076f8d9ab4b77997d1ad0df",
+    "timestamp": "2026-10-14T21:39:33Z",
+    "sourceHash": "sha256:8ac10b042e4843804c83e2d09c15085f3ab97840452533068ef2c69944e6ceb9",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -16275,7 +16315,7 @@
       "columns": [],
       "callSites": [
         "apps/mobile/lib/game/useDraftAutoStart.ts:102",
-        "apps/mobile/lib/game/useDraftAutoStart.ts:150"
+        "apps/mobile/lib/game/useDraftAutoStart.ts:160"
       ],
       "via": [
         "seamUpdateLeague"
@@ -20011,7 +20051,7 @@
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
       "apps/mobile/lib/game/useBracket.ts:33 -> matchups.select",
       "apps/mobile/lib/game/useDraftAutoStart.ts:102 -> leagues.update (via seamUpdateLeague)",
-      "apps/mobile/lib/game/useDraftAutoStart.ts:150 -> leagues.update (via seamUpdateLeague)",
+      "apps/mobile/lib/game/useDraftAutoStart.ts:160 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/lib/game/useDraftQueue.ts:22 -> draft_queue.select",
       "apps/mobile/lib/game/useDraftRoom.ts:48 -> drafts.select",
       "apps/mobile/lib/game/useDraftRoom.ts:50 -> draft_queue.select",

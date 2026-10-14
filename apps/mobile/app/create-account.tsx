@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
@@ -49,14 +49,31 @@ export default function CreateAccountScreen() {
   const [status, setStatus] = useState<ButtonStatus>('idle');
   const [usernameError, setUsernameError] = useState<UsernameError>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  // DEV captures only: open on the refusal (lib/shell/captureKnobs.ts).
-  const [paused, setPaused] = useState(CAPTURE.signupPaused);
+  const [paused, setPaused] = useState(false);
   const { reduced } = useMotion();
   const scrollRef = useRef<ScrollView>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
   const passwordRules = PASSWORD_REQUIREMENTS.map((r) => ({ label: r.label, ok: r.test(password) }));
+
+  /** The signups-paused refusal: the panel replaces the primary, the keyboard drops and the panel
+   * scrolls into view (a jump under Reduce Motion). */
+  function showPaused() {
+    setPaused(true);
+    Keyboard.dismiss();
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduced }), 0);
+  }
+
+  // DEV captures only (lib/shell/captureKnobs.ts): take the SAME refusal path once the form has
+  // laid out, so the capture shows what a real refusal shows (the panel scrolled into view).
+  useEffect(() => {
+    if (!CAPTURE.signupPaused) return;
+    const t = setTimeout(showPaused, 600);
+    return () => clearTimeout(t);
+    // Mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function checkUsername(value: string): UsernameError {
     const trimmed = value.trim();
@@ -92,11 +109,7 @@ export default function CreateAccountScreen() {
       clearSignInIntent();
       setStatus('idle');
       if (isSignupsPausedError(result.error)) {
-        setPaused(true);
-        // The banner sits under the form: drop the keyboard and bring it
-        // into view (a jump under Reduce Motion).
-        Keyboard.dismiss();
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduced }), 0);
+        showPaused();
         return;
       }
       setFormError(getAuthErrorMessage(result.error, PASSWORD_RULE_SENTENCE, brand.name));

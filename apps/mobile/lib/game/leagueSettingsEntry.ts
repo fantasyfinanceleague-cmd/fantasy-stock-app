@@ -42,6 +42,18 @@ export function inviteShareShownFor(facts: LeaveLeagueFacts, nowMs: number): boo
   return inviteShareShown(leaveWindow(facts, nowMs));
 }
 
+/**
+ * The draft time the Share rule reads: the server's (draft-control status `starts_at`, which IS
+ * leagues.draft_date) once the status has been read, the league row's until then. A POSTPONED
+ * draft has none: postpone_league_draft clears leagues.draft_date (20261111000000; the old time
+ * lives only in draft_postponements.postponed_from, which this never reads), so a postponed
+ * league is `before_draft` and joinable, and Share shows (Design Lead ruling, W4 Onboarding gate,
+ * 2026-10-14). Never pass the postponement's `from`: it would read as locked.
+ */
+export function inviteShareDraftTime(statusRead: boolean, serverStartsAt: string | null, leagueDraftDate: string | null | undefined): string | null {
+  return statusRead ? serverStartsAt : (leagueDraftDate ?? null);
+}
+
 /** What Share sends (unchanged from the member's row). */
 export function inviteShareMessage(code: string): string {
   return `Join my league with code ${code}`;

@@ -17,6 +17,13 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 // Modeled on 3b-1's AuthScaffold rather than extending it, so the shell's
 // shared frame stays untouched.
 
+/** The standout stays loudest (W4 Onboarding gate, Design Lead 2026-10-14): the step title is
+ * `display` (32pt, its own 1.6× = 51.2pt). Uncapped, the subtitle (body 15pt) reached the title's
+ * cap height at XXXL and ran four lines, pushing the card below the fold; the "Back · Step N of 4"
+ * row grew past the subtitle. Capped: subtitle 2× (30pt), the top row 1.6× (20.8pt / 19.2pt). */
+export const SUBTITLE_MAX_SCALE = 2;
+export const TOP_ROW_MAX_SCALE = 1.6;
+
 export interface SetupScaffoldProps {
   /** Omitted on a screen with nowhere to go back to (Create league's done screen). */
   /** `modal`: an iOS modal's text-only "Cancel", no back chevron (G-7; League settings). */
@@ -44,7 +51,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
         {back ? (
           <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={[styles.back, back.modal ? styles.backModal : null]} hitSlop={8}>
             {back.modal ? null : <Icon name="chevronLeft" size="callout" tone="text2" />}
-            <Text variant="callout" tone="secondary">
+            <Text variant="callout" tone="secondary" maxFontSizeMultiplier={TOP_ROW_MAX_SCALE}>
               {back.label}
             </Text>
           </Pressable>
@@ -52,7 +59,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
           <View style={styles.back} />
         )}
         {step ? (
-          <Text variant="caption" tone="secondary" style={styles.tabular}>
+          <Text variant="caption" tone="secondary" maxFontSizeMultiplier={TOP_ROW_MAX_SCALE} style={styles.tabular}>
             {`Step ${step.number} of ${step.total}`}
           </Text>
         ) : null}
@@ -75,7 +82,7 @@ export function SetupScaffold({ back, step, title, subtitle, children, footer }:
           ) : null}
           <ScreenTitle>{title}</ScreenTitle>
           {subtitle ? (
-            <Text variant="body" tone="secondary">
+            <Text variant="body" tone="secondary" maxFontSizeMultiplier={SUBTITLE_MAX_SCALE}>
               {subtitle}
             </Text>
           ) : null}

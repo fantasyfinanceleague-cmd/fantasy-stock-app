@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 import { space } from '@/constants/tokens';
@@ -8,6 +8,8 @@ import { PhaseChip } from '@/components/sp/PhaseChip';
 import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
 import { DraftTile, Scoreboard } from '@/components/sp/gn';
+import { formatMoney } from '@/components/sp/logic/money';
+import { lineUnderTotalsCap } from '@/components/sp/logic/gameNight';
 import { FINAL, ROSTER_PICKS, VERSUS, versusSides } from '@/components/shell/onboarding/sampleData';
 
 // Phase 3b-1 — S1's live vignettes: each onboarding card shows the product
@@ -102,6 +104,16 @@ export function FinalVignette({ active }: VignetteProps) {
   const { reduced, duration, easing, spring, withSpring } = useMotion();
   const chip = useSharedValue(reduced ? 1 : 0);
   const winner = useSharedValue(reduced ? 1 : 0);
+  const { fontScale } = useWindowDimensions();
+  const [width, setWidth] = useState(0);
+  // The winner line never outranks the totals above it: capped from their FITTED size (the
+  // Scoreboard's score.xl, 32pt ≤ 1.2×, shrunk into each half's inner width: half − 2 × 20pt).
+  const winnerCap = lineUnderTotalsCap({
+    totals: [formatMoney(FINAL.you, { sign: 'always' }), formatMoney(FINAL.opp, { sign: 'always' })],
+    totalPt: TOTAL_PT * Math.min(fontScale, TOTAL_MAX_SCALE),
+    innerWidth: width / 2 - 2 * HALF_PAD,
+    linePt: WINNER_PT,
+  });
 
   useEffect(() => {
     if (reduced) {
@@ -124,20 +136,27 @@ export function FinalVignette({ active }: VignetteProps) {
   const winnerStyle = useAnimatedStyle(() => ({ opacity: winner.value, transform: [{ translateY: 12 * (1 - winner.value) }] }));
 
   return (
-    <View style={[styles.fill, styles.final]}>
+    <View style={[styles.fill, styles.final]} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Animated.View style={[styles.centerSelf, chipStyle]}>
         <PhaseChip phase="week_final" />
       </Animated.View>
       <Scoreboard you={{ name: VERSUS.you.name, gain: FINAL.you }} opponent={{ name: VERSUS.opp.name, gain: FINAL.opp }} final showLine={false} />
       <Animated.View style={winnerStyle}>
-        {/* Capped with the card line (1.3×), so it never outgrows the totals above it. */}
-        <Text variant="title" maxFontSizeMultiplier={1.3} style={styles.center}>
+        {/* headline (17pt, bold): at 1× a title (22pt) already sat above the fitted totals. */}
+        <Text variant="headline" maxFontSizeMultiplier={winnerCap} style={[styles.center, styles.winner]}>
           {FINAL.winner}
         </Text>
       </Animated.View>
     </View>
   );
 }
+
+/** The Scoreboard's totals (score.xl, capped 1.2×) and its half padding, for the winner-line cap. */
+const TOTAL_PT = 32;
+const TOTAL_MAX_SCALE = 1.2;
+const HALF_PAD = space[5];
+/** The winner line's base size (headline). */
+const WINNER_PT = 17;
 
 /** The draft board's tile, grown to fill a third of the art panel. */
 const TILE_HEIGHT = 64;
@@ -167,5 +186,8 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
+  },
+  winner: {
+    fontWeight: '700',
   },
 });

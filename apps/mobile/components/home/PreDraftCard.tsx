@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/useAuth';
 import { membersYouFirst } from '@/lib/home/preDraftMembers';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useDraftAutoStart } from '@/lib/game/useDraftAutoStart';
-import { inviteShareMessage, inviteShareShownFor } from '@/lib/game/leagueSettingsEntry';
+import { inviteShareDraftTime, inviteShareMessage, inviteShareShownFor } from '@/lib/game/leagueSettingsEntry';
 import {
   COMMISSIONER_FALLBACK,
   NO_DATE_TITLE,
@@ -123,7 +123,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   // Share follows the one ruled condition (Giorgio, B, #call-share-locked): only before the draft,
   // hidden from the hour before it (room open) on; the code itself always shows.
   const shareShown = inviteShareShownFor(
-    { seasonStatus: activeLeague?.season_status, draftStatus: activeLeague?.draft_status, draftDate: startsAt },
+    { seasonStatus: activeLeague?.season_status, draftStatus: activeLeague?.draft_status, draftDate: inviteShareDraftTime(phase !== null, ds.startsAt, draftDate) },
     serverNow,
   );
   // Ruling B (board #call-ux-pass1): the commissioner sets the time right here,

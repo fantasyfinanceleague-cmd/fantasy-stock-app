@@ -250,3 +250,88 @@ Deno.test('Profile: rows and the version line never outgrow the username heading
   assertEquals(s.match(/maxFontSizeMultiplier=\{PROFILE_ROW_MAX_SCALE\}/g)?.length, 3, 'label, value, version');
   assert(src('components/shell/AuthScaffold.tsx').includes('maxFontSizeMultiplier={2}'), 'the back row is capped');
 });
+
+// ── DL gate pass (2026-10-14) ─────────────────────────────────────────────────────
+
+import { inviteShareDraftTime } from '../lib/game/leagueSettingsEntry.ts';
+import { leaveWindow } from '../lib/game/leaveLeague.ts';
+import { keepHyphens, WORD_JOINER } from '../lib/game/keepDots.ts';
+import { fittedTotalPt, lineUnderTotalsCap } from '../components/sp/logic/gameNight.ts';
+import { getAuthErrorMessage } from '../lib/authErrors.ts';
+import { type } from '../constants/tokens/type.ts';
+
+Deno.test('a POSTPONED draft is before_draft (no draft time) and Share shows; the old time is never read', () => {
+  const now = Date.parse('2026-10-20T23:30:00Z');
+  // postpone_league_draft cleared leagues.draft_date: the status says starts_at null.
+  const draftDate = inviteShareDraftTime(true, null, null);
+  assertEquals(draftDate, null);
+  const facts = { seasonStatus: 'active', draftStatus: 'not_started', draftDate };
+  assertEquals(leaveWindow(facts, now), 'before_draft');
+  assertEquals(inviteShareShownFor(facts, now), true);
+  // Status read: the server's time wins over a stale league row; unread: the league row.
+  assertEquals(inviteShareDraftTime(true, null, '2026-10-20T23:00:00Z'), null);
+  assertEquals(inviteShareDraftTime(false, null, '2026-10-20T23:00:00Z'), '2026-10-20T23:00:00Z');
+  for (const path of ['lib/game/useDraftAutoStart.ts', 'components/home/PreDraftCard.tsx']) {
+    const s = src(path);
+    assert(s.includes('inviteShareDraftTime(phase !== null, ds.startsAt,'), `${path}: one draft-time source`);
+    assert(!/inviteShare[\s\S]{0,200}postponed/.test(s), `${path}: never the postponement`);
+  }
+});
+
+Deno.test('the blockers card shows "Share invite code" only under the one rule; the code stays', () => {
+  assert(src('components/game/AutoStartBlockers.tsx').includes('onShareInvite={f.shareShown ? f.shareInvite : null}'));
+  const card = src('components/game/DraftBlockersCard.tsx');
+  assert(card.includes('{onShareInvite ? <Button label="Share invite code"'));
+  assert(card.includes('<Text variant="headline" selectable>{inviteCode}</Text>'));
+  assert(src('lib/game/useDraftAutoStart.ts').includes('const shareShown = inviteShareShownFor('));
+});
+
+Deno.test('SetupScaffold: subtitle ≤ 2×, the top row ≤ 1.6×, both under the step title at every size', () => {
+  const s = src('components/game/SetupScaffold.tsx');
+  assert(s.includes('export const SUBTITLE_MAX_SCALE = 2;') && s.includes('export const TOP_ROW_MAX_SCALE = 1.6;'));
+  assertEquals(s.match(/maxFontSizeMultiplier=\{TOP_ROW_MAX_SCALE\}/g)?.length, 2, 'Back and Step N of 4');
+  assert(s.includes('<Text variant="body" tone="secondary" maxFontSizeMultiplier={SUBTITLE_MAX_SCALE}>'));
+  const title = type.display.fontSize * (type.display.maxScale ?? 1);
+  assert(type.body.fontSize * 2 < title);
+  assert(type.callout.fontSize * 1.6 < type.body.fontSize * 2, 'the top row stays under the subtitle');
+});
+
+Deno.test('onboarding card 3: "You win Week 6" never outranks the totals (cap from their FITTED size)', () => {
+  const totals = ['+$351.77', '−$38.88'];
+  // The vignette's real width: the art panel inside the gutter, border and padding (17e 308pt,
+  // 17 Pro 320pt).
+  for (const [width, scale] of [[308, 1], [308, 1.35], [308, 2], [320, 1.35], [320, 3]]) {
+    const inner = width / 2 - 40;
+    const totalPt = 32 * Math.min(scale, 1.2);
+    const cap = lineUnderTotalsCap({ totals, totalPt, innerWidth: inner, linePt: 17 });
+    const fitted = Math.min(...totals.map((t) => fittedTotalPt(t, totalPt, inner)));
+    const drawn = 17 * Math.min(scale, cap);
+    assert(drawn <= fitted, `width ${width} scale ${scale}: ${drawn} ≤ ${fitted}`);
+  }
+  const v = src('components/shell/onboarding/Vignettes.tsx');
+  assert(v.includes('<Text variant="headline" maxFontSizeMultiplier={winnerCap}'));
+});
+
+Deno.test('auth errors never show the server\'s own words: an unmapped error is the generic line', () => {
+  assertEquals(getAuthErrorMessage({ code: 'unexpected_failure', message: 'Database error saving new user' }), 'Something went wrong. Please try again.');
+  assertEquals(getAuthErrorMessage({ message: 'AuthApiError: something internal' }), 'Something went wrong. Please try again.');
+  assertEquals(getAuthErrorMessage(null), 'Something went wrong. Please try again.');
+  assert(!src('lib/authErrors.ts').includes('return error?.message'));
+});
+
+Deno.test('the signups-paused capture knob takes the real refusal path (scrolls the panel into view)', () => {
+  const s = src('app/create-account.tsx');
+  assert(s.includes('const t = setTimeout(showPaused, 600);'));
+  assert(s.includes('if (isSignupsPausedError(result.error)) {\n        showPaused();'));
+  assert(s.includes('scrollRef.current?.scrollToEnd({ animated: !reduced })'));
+});
+
+Deno.test('"first-round byes" never splits at the hyphen; the copy itself is unchanged', () => {
+  assertEquals(keepHyphens('the top 2 seeds get first-round byes'), `the top 2 seeds get first-${WORD_JOINER}round byes`);
+  assertEquals(keepHyphens('6 teams · −$38.88'), '6 teams · −$38.88', 'only letter-hyphen-letter');
+  assert(src('app/create-league.tsx').includes("{keepHyphens(playoffLine(playoffTeams) ?? '')}"));
+});
+
+Deno.test('Forgot / Reset password draw their EmptyState icon with sp/Icon', () => {
+  for (const p of ['app/forgot-password.tsx', 'app/reset-password.tsx']) assert(!src(p).includes('Ionicons'), p);
+});
