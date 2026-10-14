@@ -1,6 +1,9 @@
 # gn-sweep: the old-skin sweep before 1.3 (`feat/gn-sweep`), gate captures
 
-**Every after-frame was captured on ONE build: app code `a967325f`** (on `origin/main` `0fa519bf`).
+**The after-frames are on app code `a967325f`, and the item-4 failed-state set (`a0*`, `rec-a0*`) on
+`62bb6ea6`** (both on `origin/main` `0fa519bf`). `62bb6ea6` changes one constant, `LEAGUES_LOAD_FAILED`,
+to Giorgio's approved "Your leagues didn't load."; it renders only in the failed state, so every other
+frame is pixel-identical on either build. The `a0*` set was re-shot in full on `62bb6ea6`.
 The before-frames are `origin/main` `0fa519bf` itself, plus the same DEV-only capture plumbing
 patched into a throwaway checkout (the `type`/`typeq` search actions, `scrollto`, and the gallery's
 gn-sweep section), so each pair is driven the same way. Nothing else differs.
@@ -8,7 +11,7 @@ gn-sweep section), so each pair is driven the same way. Nothing else differs.
 **Where the files are:** `~/fantasy-stock-design-review/feat-gn-sweep/` (checklist §1: captures
 stay out of the repo). 112 stills (96 after, 16 before), 4 recordings, 1 frame sheet.
 
-**Capture times (2026-10-14, local):** after A 12:15–12:17 · B 12:18–12:21 · D1/D2 12:22–12:26 ·
+**Capture times (2026-10-14, local):** after A 12:51–12:55 · B 12:18–12:21 · D1/D2 12:22–12:26 ·
 E 12:26 · Q 12:27 · C 12:28; before 12:37–12:41.
 
 **How (headless).** Device access for my simulators wasn't granted, so no finger taps anything:
@@ -29,7 +32,7 @@ E 12:26 · Q 12:27 · C 12:28; before 12:37–12:41.
 
 | Files | State | Shows |
 |---|---|---|
-| `a01-home-failed-{17e,17pro}-{light,dark}` | **Item 4.** The league-list read failed (`leagues-failed-once`) | Home: header (title, avatar → Profile), the sp alert in the EmptyState disc, "Couldn't load this league", "Check your connection, then try again.", **Try again** (the screen's one primary). Never "No leagues yet". |
+| `a01-home-failed-{17e,17pro}-{light,dark}` | **Item 4.** The league-list read failed (`leagues-failed-once`) | Home: header (title, avatar → Profile), the sp alert in the EmptyState disc, "Your leagues didn't load." (Giorgio approved, 2026-10-14), "Check your connection, then try again.", **Try again** (the screen's one primary). Never "No leagues yet". |
 | `a02-league-failed-*` | same, League tab | The same state with League's header. |
 | `rec-a01-home-try-again-{17e,17pro}-light.mov`, `rec-a01-…-17e-light-frames.png` | Try again (scripted: the same `refresh` Try again calls) | Failed → the header alone while the re-read runs (the tap visibly acts) → Home loads with its entrance. |
 | `rec-a02-league-try-again-{17e,17pro}-dark.mov` | same, League | Failed → standings. |
@@ -84,8 +87,8 @@ disk for these screens); against the board frame: yes for the failed state, rese
 
 **Self-critique (1–5):** Philosophy 4 (separation by space and surface, as the six rules say) ·
 Hierarchy 4 (one primary per state; the XXXL inversion fixed) · Execution 4 (tokens only, every
-fill reads its own ink, the 11pt floor on the badge) · Specificity 3 (the failed state reuses the
-house copy, by design: no new copy) · Earned 4 (nothing added that wasn't asked; the capture
+fill reads its own ink, the 11pt floor on the badge) · Specificity 4 (the failed state names what
+failed: "Your leagues didn't load.", Giorgio's string) · Earned 4 (nothing added that wasn't asked; the capture
 switches are DEV-only) · Variety 4 (reads as the same system as W4's approved screens). None < 3.
 
 **`hallmark audit` punch list:**
@@ -122,7 +125,8 @@ Not tapped by a finger anywhere (no device grant); every handler named above is 
   absent from SymbolSearchField, QueueEditor, sp/ListRow, SeasonCompleteCard, SalePicker,
   PlayerPortfolioScreen (a test per file).
 - **Accent by area** (`app_accent_area.py`, cross-checked with a PIL port of the same rule that also
-  drops the largest accent region, the one primary: 96 of 96 frames agree to 0.01):
+  drops the largest accent region, the one primary: 96 of 96 frames of the first pass agree to 0.01; the
+  re-shot `a0*` rows below are from the port):
 
   Every product frame is ≤ 5% WITHOUT its one primary (the rule as the checklist states it). Over 5% in
   total: +not-found (5.05–5.20%, all but 0.02% of it the Go to Home pill) and the dev gallery `g01`
