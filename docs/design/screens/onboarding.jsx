@@ -313,13 +313,13 @@
   }
 
   // 9 · The email path: check your inbox, then the return
-  function CheckEmail({ t }) {
+  function CheckEmail({ t, invite = true }) {
     return (
-      <Page t={t} top={120} gap={16} label={`Check your email after sign-up, ${t}`}>
+      <Page t={t} top={120} gap={16} label={`Check your email after sign-up${invite ? ', with an invite' : ', no invite'}, ${t}`}>
         <Disc d={MAIL} size={72} />
         <span style={{ textAlign: 'center', display: 'grid', gap: 8 }}>
           <Title>Check your email</Title>
-          <Sub>We sent a link to roberto@example.com. Tap it to finish joining {LG.name}.</Sub>
+          <Sub>{invite ? `We sent a link to roberto@example.com. Tap it to finish joining ${LG.name}.` : 'We sent a link to roberto@example.com. Tap it to finish creating your account.'}</Sub>
         </span>
         <Btn kind="line">Didn't receive it? Send again</Btn>
       </Page>
@@ -412,8 +412,8 @@
         intro={<>The plan's board brief, frames 1 to 10, in Game Night, Light and Dark. The flow: an invited friend taps the link, lands on the invite, signs in with one tap, keeps the suggested username, and is in the league; then the notifications ask. A cold install sees the cards and Get started. Giorgio picked the cards (B) and the username style (a gamertag, never a name) on 2026-10-14; both calls are in the Archive.</>}
         notes={<>
           <li><b>Copy:</b> "{'{inviter}'} invited you to {'{league}'}", "Continue with Apple / Google", "Use email", "Keep / Change", "You're in {'{league}'}. Get the app to draft and play.", the notifications line, the week-window line and "How it works" are the approved plan's words. Everything else is shipped copy except what's marked NEW.</li>
-          <li><NEW /> <b>Pending (with Giorgio via the Planner):</b> "Not now" under the notifications ask (the plan says a user who declines there is not asked again, so the screen needs a way to decline).</li>
-          <li><NEW /> <b>Pending (with Giorgio via the Planner):</b> "We sent a link to {'{email}'}. Tap it to finish joining {'{league}'}." on Check your email after sign-up (the reset-password version exists), and the "Email confirmed" chip on the return.</li>
+          <li><b>Approved by Giorgio (2026-10-14, via the Planner: "fine"):</b> "Not now" under the notifications ask (a decline there is never pre-prompted again; Settings still reaches it).</li>
+          <li><b>Approved (2026-10-14):</b> Check your email after an email sign-up, "We sent a link to {'{email}'}. Tap it to finish joining {'{league}'}." with an invite, or "… Tap it to finish creating your account." with none; and the "Email confirmed" chip on the return.</li>
           <li><b>The week-window tip</b> follows PRODUCT_RULES "Generic scoring copy" (onboarding says "best performance wins", never "biggest dollar gain"): "Your week runs Monday's open to Friday's close. Best performance wins." The plan's draft line ("Best dollar gain wins.") is not used.</li>
           <li><b>The "started" refusal on the web page:</b> since your 2026-10-14 rule ("once the draft room opens… the league is considered started"), the refusal for an open room reuses the shipped "is drafting right now" line, which is only exactly true once picks begin. Drawn as shipped; one line to settle at the build.</li>
           <li><b>Reference:</b> the plan names Yahoo's "Marvin has invited you…" screen; I don't have that screenshot, so frame 1 stands without its reference. Send it and I'll pair them.</li>
@@ -446,7 +446,8 @@
         <Grid>{pair('f1', 'Profile', Profile)}</Grid>
         <Grid>{pair('f2', 'How it works', (p) => <Profile {...p} sheet />)}</Grid>
         <h3 className="b-sub">9 · The email path: check your inbox, then the link brings you back exactly here</h3>
-        <Grid>{pair('e1', 'Check your email', CheckEmail)}</Grid>
+        <Grid>{pair('e1', 'Check your email · with an invite', CheckEmail)}</Grid>
+        <Grid>{pair('e0', 'Check your email · no invite', (p) => <CheckEmail {...p} invite={false} />)}</Grid>
         <Grid>{pair('e2', 'The return: username', (p) => <Username {...p} value="HelpfulHornet151" confirmed />)}</Grid>
         <h3 className="b-sub">10 · No leagues: the same state on Home, Matchup, League and Portfolio</h3>
         <Grid>{pair('n1', 'No leagues (same on every tab)', NoLeague)}</Grid>

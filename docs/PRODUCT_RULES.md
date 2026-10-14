@@ -617,6 +617,15 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   invited friend straight back into the join.
 - **Push permission** is asked right after joining or creating a league, with one line of why,
   never during sign-up (recommendation taken).
+- **The new onboarding strings** (2026-10-14, approved via the Planner, shown the board frames:
+  "fine"), verbatim:
+  - **"Not now"**, a text link under the notifications pre-prompt's "Continue". A user who taps it
+    is never pre-prompted again; notifications stay reachable in Settings.
+  - **Check your email** after an email sign-up: with an invite, "We sent a link to {email}. Tap
+    it to finish joining {league}." with "Didn't receive it? Send again"; with no invite, "We sent
+    a link to {email}. Tap it to finish creating your account."
+  - **The "Email confirmed" chip** (✓, in the chip's capitals) above "Pick a username" when the
+    confirmation link brings you back.
 - **The inviter's name** shows on the invite page and the link-arrival preview ("{Roberto}
   invited you to {Stock Scudetto}"); the inviter only, nobody else (recommendation taken;
   amends the 2026-10-11 "no commissioner name" rule for link arrivals only).
