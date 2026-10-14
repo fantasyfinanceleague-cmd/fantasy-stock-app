@@ -222,3 +222,17 @@ Deno.test('+not-found: one way out (Go to Home), the sp medallion, no raw glyphs
   assert(nf.includes('<Button label="Go to Home" onPress={goHome} />'));
   assert(!nf.includes('Ionicons'));
 });
+
+Deno.test('reset-password capture override: DEV only, form|success only, view only (never the recovery flag)', async () => {
+  const { parseResetCaptureView } = await import('../lib/shell/resetCaptureView.ts');
+  assertEquals(parseResetCaptureView('form', true), 'form');
+  assertEquals(parseResetCaptureView('success', true), 'success');
+  assertEquals(parseResetCaptureView('form', false), null); // a release bundle
+  assertEquals(parseResetCaptureView('invalid', true), null);
+  assertEquals(parseResetCaptureView(undefined, true), null);
+  const rp = code(SOURCES['app/reset-password.tsx']);
+  assert(rp.includes('const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE, __DEV__);'));
+  // It never sets the recovery session: the only setRecoverySession(true) stays in _layout's verified path.
+  assert(!rp.includes('setRecoverySession(true)'));
+  assert(!code(SOURCES['lib/shell/resetCaptureView.ts']).includes('Recovery'));
+});

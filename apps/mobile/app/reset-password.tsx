@@ -17,6 +17,10 @@ import { useAuth } from '@/lib/useAuth';
 import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/recoveryNonce';
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { getAuthErrorMessage } from '@/lib/authErrors';
+import { parseResetCaptureView } from '@/lib/shell/resetCaptureView';
+
+// DEV-only (design captures): render the form or success state without a recovery link.
+const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE, __DEV__);
 
 // Phase 3b-1 (spec row 5): rebuilt visually on the shell's Field / Button /
 // EmptyState, with every string and ALL of the recovery logic below kept as
@@ -51,7 +55,7 @@ export default function ResetPasswordScreen() {
   const { signOut } = useAuth();
   const { colors } = useTheme();
   const isRecovery = useSyncExternalStore(subscribeRecoverySession, isRecoverySession, isRecoverySession);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState(CAPTURE_VIEW === 'success');
   const [verifyTimedOut, setVerifyTimedOut] = useState(false);
 
   // Bounded wait: if neither the recovery flag nor an explicit status ever
@@ -64,7 +68,7 @@ export default function ResetPasswordScreen() {
     return () => clearTimeout(timer);
   }, [isRecovery, status]);
 
-  const screenState = resetScreenState({
+  const screenState = CAPTURE_VIEW === 'form' ? 'form' : resetScreenState({
     status,
     isRecovery,
     elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
