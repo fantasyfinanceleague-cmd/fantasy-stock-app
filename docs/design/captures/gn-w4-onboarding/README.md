@@ -19,6 +19,16 @@ are kept in `superseded/` (the impossible 38/39 and the old-icon 08b), not mixed
 (`git diff b61d1508 5ba2ceba -- apps/mobile` is empty; main's #267–#269 changed docs, the plan
 and the server only; the architecture map was regenerated, never hand-merged).
 
+**After the second rebase onto `origin/main` `40906d51` (#270, the Game Night sweep):** the app
+commits are now `3214028a` / `9d1639cc` / `658c2a5e`. The one real conflict was
+`app/reset-password.tsx` (the sweep reskinned it and moved its icons to sp/Icon, including a
+`checkCircle` glyph): resolved by intent, **main's version kept whole** (this branch adds nothing
+there the sweep lacks), so reset-password is not recaptured here (the sweep's frames stand). The
+sweep's other primitive changes do not alter any frame in this set: `EmptyState`'s message cap
+(2.3× at Large; it only bites at XXXL, where I shot no EmptyState), `Button`'s check glyph (selected
+and done states only), `NewPasswordForm`'s no-autofocus (1.3× and up; Change password was shot at
+Large). The sourceManifest and architecture map were regenerated, never hand-merged.
+
 ## How it was captured
 
 - Two simulators of my own: "W4 Onboarding 17e" (390×844 pt) and "W4 Onboarding 17 Pro"
