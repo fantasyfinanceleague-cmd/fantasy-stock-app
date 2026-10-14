@@ -2,31 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "da4d1d89dd9ada2a8de639879a72beb1c511f6e2",
-    "commitShort": "da4d1d89",
+    "commit": "c59088b3465731890e13dd39d506df755f5688ac",
+    "commitShort": "c59088b3",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "docs/db-snapshot-2026-10-14",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/annotations.json"
-      },
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      }
-    ],
-    "timestamp": "2026-10-14T00:17:17Z",
-    "sourceHash": "sha256:c72b5e65e3b49c226cc30acd371d174b4b637831e9450a357be31a1242f8599a",
+    "branch": "feat/gn-w4-portfolio",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-14T03:39:27Z",
+    "sourceHash": "sha256:98522528e56a89015833588a468b76c667ae51cc317ad5565dc5686526559704",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 3.4,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
@@ -8704,6 +8695,23 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.money.PortfolioScreen",
+      "label": "PortfolioScreen.tsx",
+      "sublabel": "mobile/components/money/PortfolioScreen.tsx",
+      "kind": "client-component",
+      "source": {
+        "path": "apps/mobile/components/money/PortfolioScreen.tsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.money.priceReads",
       "label": "priceReads.ts",
       "sublabel": "mobile/lib/money/priceReads.ts",
@@ -8778,6 +8786,23 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/mobile/lib/money/useStockSheetData.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.money.useTradeSubmit",
+      "label": "useTradeSubmit.ts",
+      "sublabel": "mobile/lib/money/useTradeSubmit.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/money/useTradeSubmit.ts",
         "line": 1
       }
     },
@@ -9118,23 +9143,6 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/Ticker.jsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "ui.TradeModal",
-      "label": "TradeModal.tsx",
-      "sublabel": "mobile/components/TradeModal.tsx",
-      "kind": "client-component",
-      "source": {
-        "path": "apps/mobile/components/TradeModal.tsx",
         "line": 1
       }
     },
@@ -15998,9 +16006,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/components/game/DraftRoom.tsx:211",
-        "apps/mobile/components/game/DraftRoom.tsx:235",
-        "apps/mobile/components/game/DraftRoom.tsx:280"
+        "apps/mobile/components/game/DraftRoom.tsx:212",
+        "apps/mobile/components/game/DraftRoom.tsx:236",
+        "apps/mobile/components/game/DraftRoom.tsx:281"
       ],
       "via": [
         "seamInvoke"
@@ -17044,13 +17052,100 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.money.PortfolioScreen->pg.get_portfolio_ledger",
+      "from": "ui.money.PortfolioScreen",
+      "to": "pg.get_portfolio_ledger",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_portfolio_ledger')",
+      "callSites": [
+        "apps/mobile/components/money/PortfolioScreen.tsx:88"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PortfolioScreen->tbl.categories",
+      "from": "ui.money.PortfolioScreen",
+      "to": "tbl.categories",
+      "protocol": "postgrest-select",
+      "payload": ".from('categories').select('id, slug, name, is_misc')",
+      "columns": [
+        "id, slug, name, is_misc"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PortfolioScreen.tsx:88"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PortfolioScreen->tbl.drafts",
+      "from": "ui.money.PortfolioScreen",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-select",
+      "payload": ".from('drafts').select('user_id, symbol, slot_id, created_at')",
+      "columns": [
+        "user_id, symbol, slot_id, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PortfolioScreen.tsx:88"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PortfolioScreen->tbl.league_draft_slots",
+      "from": "ui.money.PortfolioScreen",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PortfolioScreen.tsx:88"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PortfolioScreen->tbl.trades",
+      "from": "ui.money.PortfolioScreen",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, slot_id, created_at')",
+      "columns": [
+        "user_id, symbol, slot_id, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PortfolioScreen.tsx:88"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.money.priceReads->fn.historical-bars",
       "from": "ui.money.priceReads",
       "to": "fn.historical-bars",
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/money/priceReads.ts:40"
+        "apps/mobile/lib/money/priceReads.ts:52"
       ]
     },
     {
@@ -17062,7 +17157,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/money/priceReads.ts:28"
+        "apps/mobile/lib/money/priceReads.ts:38"
       ]
     },
     {
@@ -17074,8 +17169,8 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('record-trade')",
       "callSites": [
-        "apps/mobile/lib/money/recordTrade.ts:24",
-        "apps/mobile/lib/money/recordTrade.ts:48"
+        "apps/mobile/lib/money/recordTrade.ts:33",
+        "apps/mobile/lib/money/recordTrade.ts:73"
       ]
     },
     {
@@ -17087,7 +17182,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/lib/money/usePortfolioLedger.ts:39"
+        "apps/mobile/lib/money/usePortfolioLedger.ts:41"
       ]
     },
     {
@@ -17099,7 +17194,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/money/useStockChartData.ts:39"
+        "apps/mobile/lib/money/useStockChartData.ts:46"
       ]
     },
     {
@@ -17111,7 +17206,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('symbol-name')",
       "callSites": [
-        "apps/mobile/lib/money/useStockSheetData.ts:152"
+        "apps/mobile/lib/money/useStockSheetData.ts:155"
       ]
     },
     {
@@ -17123,7 +17218,22 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('ticker-quotes')",
       "callSites": [
-        "apps/mobile/lib/money/useStockSheetData.ts:136"
+        "apps/mobile/lib/money/useStockSheetData.ts:139"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.useTradeSubmit->fn.record-trade",
+      "from": "ui.money.useTradeSubmit",
+      "to": "fn.record-trade",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('record-trade')",
+      "callSites": [
+        "apps/mobile/lib/money/useTradeSubmit.ts:34"
+      ],
+      "via": [
+        "callRecordTrade"
       ]
     },
     {
@@ -17997,44 +18107,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.TradeModal->fn.quote",
-      "from": "ui.TradeModal",
-      "to": "fn.quote",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('quote')",
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:134",
-        "apps/mobile/components/TradeModal.tsx:90"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->fn.record-trade",
-      "from": "ui.TradeModal",
-      "to": "fn.record-trade",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('record-trade')",
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:230"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.TradeModal->fn.symbol-name",
-      "from": "ui.TradeModal",
-      "to": "fn.symbol-name",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('symbol-name')",
-      "callSites": [
-        "apps/mobile/components/TradeModal.tsx:102",
-        "apps/mobile/components/TradeModal.tsx:151"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.useHistoricalPL->fn.historical-bars",
       "from": "ui.useHistoricalPL",
       "to": "fn.historical-bars",
@@ -18515,11 +18587,12 @@
       "title": "Buy or sell a stock",
       "trigger": {
         "kind": "user",
-        "detail": "User confirms a buy or sell in TradeModal (post-draft add/drop)"
+        "detail": "User confirms a buy or sell in the stock sheet's review (post-draft add/drop; the legacy TradeModal was deleted in W4 Portfolio)"
       },
       "nodePath": [
-        "ui.TradeModal",
-        "fn.quote",
+        "ui.money.useStockSheetData",
+        "fn.ticker-quotes",
+        "ui.money.recordTrade",
         "fn.record-trade",
         "pg.check_and_bump_rate_limit",
         "tbl.leagues",
@@ -18529,18 +18602,18 @@
       "steps": [
         {
           "n": 1,
-          "edge": "e.ui.TradeModal->fn.quote",
+          "edge": "e.ui.money.useStockSheetData->fn.ticker-quotes",
           "detail": "Live quote for display before confirming. Advisory only — the fill price is re-derived server-side.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:90"
+            "apps/mobile/lib/money/useStockSheetData.ts:139"
           ]
         },
         {
           "n": 2,
-          "edge": "e.ui.TradeModal->fn.record-trade",
-          "detail": "The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser().",
+          "edge": "e.ui.money.recordTrade->fn.record-trade",
+          "detail": "The ONLY trade write path since DR-001 Phase 3: the client-INSERT policy on trades was dropped (20260811000002). verify_jwt=true + in-code getUser(). The same function answers the review's advisory preview (slot map, would_fill — which ignores the budget, so the client refuses an over-budget buy itself).",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:230"
+            "apps/mobile/lib/money/recordTrade.ts:33"
           ]
         },
         {
@@ -18556,8 +18629,7 @@
           "edge": "e.fn.record-trade->tbl.leagues",
           "detail": "League rules: stake mode, budget, notional, allow_undraftable.",
           "files": [
-            "supabase/functions/record-trade/index.ts:195",
-            "supabase/functions/record-trade/index.ts:327"
+            "supabase/functions/record-trade/commit.ts:217"
           ]
         },
         {
@@ -18573,15 +18645,12 @@
           "edge": "e.fn.record-trade->tbl.trades",
           "detail": "Validated by the shared pure module (_shared/draft-validation.ts), filled at the server-fetched price. KNOWN RACE: two concurrent buys can both pass validation — needs an atomic SECURITY DEFINER RPC.",
           "files": [
-            "supabase/functions/record-trade/index.ts:217"
+            "supabase/functions/record-trade/commit.ts:240"
           ]
         }
       ],
       "annotation": "Since DR-001 Phase 3 the trade row is written SERVER-SIDE by record-trade, in the same request that validates it; the client-INSERT policy on trades is gone (20260811000002). The old two-actor gap (a real broker order with no DB row, closed after the fact by sync-alpaca-orders) no longer exists — there is no broker order at all, and place-order / sync-alpaca-orders / broker_credentials are deleted. What remains open is the concurrent-buy race inside record-trade (see the step note).\n\nPARTIAL SALES READ AS A BUG BUT ARE NOT ONE. If a position is partly sold during the week, the matchup and dashboard screens show UNREALIZED P/L on the quantity still held at week end, while the scorer additionally settles the REALIZED P/L of the sold portion from midWeekTrades. So a screen and a standings number can legitimately differ after a partial sale, and the screen will read low. This is pre-existing and symmetrical: week-start holdings behave the same way, because their snapshot quantity is Monday's and the UI never consults trades. Not a defect — but it is the first thing a user will report, so recognise it rather than re-investigating.",
-      "unverified": [
-        "step 4: anchor not found — supabase/functions/record-trade/index.ts no longer contains \"allowUndraftable: league.allow_undraftable\"",
-        "step 6: anchor not found — supabase/functions/record-trade/index.ts no longer contains \"validateTradeAdd({\""
-      ]
+      "unverified": []
     },
     {
       "id": "flow.draft-stock",
@@ -18652,9 +18721,8 @@
         "detail": "Any screen needing prices, names, or search"
       },
       "nodePath": [
-        "ui.TradeModal",
-        "fn.quote",
         "ui.home.useHomeLeague",
+        "fn.quote",
         "ui.money.priceReads",
         "ui.src.components.TradeModal.jsx",
         "ui.src.context.PriceContext.jsx",
@@ -18677,7 +18745,6 @@
         {
           "n": 1,
           "edge": [
-            "e.ui.TradeModal->fn.quote",
             "e.ui.home.useHomeLeague->fn.quote",
             "e.ui.money.priceReads->fn.quote",
             "e.ui.src.components.TradeModal.jsx->fn.quote",
@@ -18687,11 +18754,9 @@
           ],
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:134",
-            "apps/mobile/components/TradeModal.tsx:90",
             "apps/mobile/lib/game/useAllMatchups.ts:83",
             "apps/mobile/lib/home/useHomeLeague.ts:654",
-            "apps/mobile/lib/money/priceReads.ts:28",
+            "apps/mobile/lib/money/priceReads.ts:38",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
             "apps/web/src/context/PriceContext.jsx:99",
@@ -18707,7 +18772,7 @@
           ],
           "detail": "ticker-quotes — batch prices for the ticker strip.",
           "files": [
-            "apps/mobile/lib/money/useStockSheetData.ts:136",
+            "apps/mobile/lib/money/useStockSheetData.ts:139",
             "apps/mobile/lib/useStockPrices.ts:32",
             "apps/web/src/Ticker.jsx:28"
           ]
@@ -18715,16 +18780,13 @@
         {
           "n": 3,
           "edge": [
-            "e.ui.TradeModal->fn.symbol-name",
             "e.ui.money.useStockSheetData->fn.symbol-name",
             "e.ui.useStockNames->fn.symbol-name",
             "e.ui.src.components.TradeModal.jsx->fn.symbol-name"
           ],
           "detail": "symbol-name — display name resolution.",
           "files": [
-            "apps/mobile/components/TradeModal.tsx:102",
-            "apps/mobile/components/TradeModal.tsx:151",
-            "apps/mobile/lib/money/useStockSheetData.ts:152",
+            "apps/mobile/lib/money/useStockSheetData.ts:155",
             "apps/mobile/lib/useStockNames.ts:13",
             "apps/web/src/components/TradeModal.jsx:82"
           ]
@@ -18754,8 +18816,8 @@
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
             "apps/mobile/lib/home/useHomeLeague.ts:671",
-            "apps/mobile/lib/money/priceReads.ts:40",
-            "apps/mobile/lib/money/useStockChartData.ts:39",
+            "apps/mobile/lib/money/priceReads.ts:52",
+            "apps/mobile/lib/money/useStockChartData.ts:46",
             "apps/mobile/lib/useHistoricalPL.ts:65"
           ]
         }
@@ -19535,9 +19597,17 @@
     "wrappers": [
       {
         "surface": "client",
+        "name": "callRecordTrade",
+        "file": "apps/mobile/lib/money/recordTrade.ts",
+        "line": 21,
+        "kind": "seam-stub",
+        "detail": "invoke:record-trade"
+      },
+      {
+        "surface": "client",
         "name": "loadPortfolioLedger",
         "file": "apps/mobile/lib/money/usePortfolioLedger.ts",
-        "line": 21,
+        "line": 22,
         "kind": "seam-stub",
         "detail": "rpc:get_portfolio_ledger"
       },
@@ -19646,18 +19716,6 @@
       "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
     },
     {
-      "scope": "flow.place-trade",
-      "claim": "flow step is current",
-      "reason": "step 4: anchor not found — supabase/functions/record-trade/index.ts no longer contains \"allowUndraftable: league.allow_undraftable\"",
-      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
-    },
-    {
-      "scope": "flow.place-trade",
-      "claim": "flow step is current",
-      "reason": "step 6: anchor not found — supabase/functions/record-trade/index.ts no longer contains \"validateTradeAdd({\"",
-      "resolve": "Update the FLOWS block in scripts/gen-architecture.mjs."
-    },
-    {
       "scope": "flow.draft-stock",
       "claim": "flow step is current",
       "reason": "step 1: anchor not found — apps/mobile/app/(tabs)/draft.tsx no longer contains \"invoke('quote'\"",
@@ -19708,13 +19766,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 263,
-    "edges": 639,
+    "nodes": 264,
+    "edges": 642,
     "flows": 7,
     "drift": 29,
     "driftHigh": 0,
     "deadCode": 43,
-    "unverified": 13
+    "unverified": 11
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -19742,14 +19800,9 @@
     "invokes": [
       "apps/mobile/app/join-league.tsx:54 -> preview-league",
       "apps/mobile/app/join-league.tsx:63 -> join-league",
-      "apps/mobile/components/TradeModal.tsx:102 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:134 -> quote",
-      "apps/mobile/components/TradeModal.tsx:151 -> symbol-name",
-      "apps/mobile/components/TradeModal.tsx:230 -> record-trade",
-      "apps/mobile/components/TradeModal.tsx:90 -> quote",
-      "apps/mobile/components/game/DraftRoom.tsx:211 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:235 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:280 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:212 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:236 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:281 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:119 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:78 -> draft-control (via seamInvoke)",
@@ -19757,13 +19810,14 @@
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
       "apps/mobile/lib/home/useHomeLeague.ts:654 -> quote",
       "apps/mobile/lib/home/useHomeLeague.ts:671 -> historical-bars",
-      "apps/mobile/lib/money/priceReads.ts:28 -> quote",
-      "apps/mobile/lib/money/priceReads.ts:40 -> historical-bars",
-      "apps/mobile/lib/money/recordTrade.ts:24 -> record-trade",
-      "apps/mobile/lib/money/recordTrade.ts:48 -> record-trade",
-      "apps/mobile/lib/money/useStockChartData.ts:39 -> historical-bars",
-      "apps/mobile/lib/money/useStockSheetData.ts:136 -> ticker-quotes",
-      "apps/mobile/lib/money/useStockSheetData.ts:152 -> symbol-name",
+      "apps/mobile/lib/money/priceReads.ts:38 -> quote",
+      "apps/mobile/lib/money/priceReads.ts:52 -> historical-bars",
+      "apps/mobile/lib/money/recordTrade.ts:33 -> record-trade",
+      "apps/mobile/lib/money/recordTrade.ts:73 -> record-trade",
+      "apps/mobile/lib/money/useStockChartData.ts:46 -> historical-bars",
+      "apps/mobile/lib/money/useStockSheetData.ts:139 -> ticker-quotes",
+      "apps/mobile/lib/money/useStockSheetData.ts:155 -> symbol-name",
+      "apps/mobile/lib/money/useTradeSubmit.ts:34 -> record-trade (via callRecordTrade)",
       "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
@@ -19793,6 +19847,7 @@
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:88 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:169 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:174 -> market_session_status",
       "apps/mobile/lib/game/useDraftRoom.ts:46 -> get_draft_clock (via seamRpc)",
@@ -19812,7 +19867,7 @@
       "apps/mobile/lib/home/usePreDraftData.ts:111 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
       "apps/mobile/lib/home/useSeasonResult.ts:97 -> get_season_result",
-      "apps/mobile/lib/money/usePortfolioLedger.ts:39 -> get_portfolio_ledger",
+      "apps/mobile/lib/money/usePortfolioLedger.ts:41 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
       "apps/web/src/context/UserProfilesContext.jsx:30 -> get_visible_profiles",
@@ -19878,6 +19933,10 @@
       "apps/mobile/components/LeagueCarousel.tsx:111 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:130 -> league_standings.select",
       "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
+      "apps/mobile/components/money/PortfolioScreen.tsx:88 -> categories.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:88 -> drafts.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:88 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:88 -> trades.select (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:170 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:172 -> league_seasons.select",
       "apps/mobile/lib/LeagueContext.tsx:175 -> market_calendar.select",
@@ -20108,6 +20167,7 @@
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "wrappers": [
+      "callRecordTrade seam-stub apps/mobile/lib/money/recordTrade.ts",
       "loadPortfolioLedger seam-stub apps/mobile/lib/money/usePortfolioLedger.ts",
       "loadSlots seam-stub apps/mobile/lib/game/useRosterData.ts",
       "seamInsertLeague seam-stub apps/mobile/lib/game/seamCalls.ts",
