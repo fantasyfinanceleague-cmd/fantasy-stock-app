@@ -6,6 +6,7 @@ import { getSeasonLabel, getSeasonPhase } from './weekStatus';
 import type { SheetLeague } from './shell/leagueSheet';
 import { activeLeagueStorageKey, resolveActiveLeagueId } from './shell/activeLeague';
 import { classifyLeagueRead, needsLeaguesRead } from './shell/leagueRead';
+import { createReadSequence, errorSummary } from './shell/readSequence';
 import { FIXTURE_ACTIVE_LEAGUE, FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeagues, fixtureReadFails } from './shell/devFixture';
 import type { ShellFixture } from './shell/devFixture';
 import { SEAM_ON } from './game/devSeam';
@@ -266,6 +267,9 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<string | null>(null);
   // DEV fixture only: how many fixture reads have run (fixtureReadFails).
   const fixtureAttempt = useRef(0);
+  // Latest read wins (lib/shell/readSequence.ts): a read that resolves after a newer one began,
+  // or after sign-out, drops its results instead of writing them.
+  const reads = useRef(createReadSequence());
   const userId = user?.id ?? null;
 
   // Spec gate 6: the active league persists across relaunch, per user.
@@ -282,6 +286,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
   const fetchLeagues = useCallback(async () => {
     if (!userId) return;
+    const token = reads.current.begin();
+    const stale = () => !reads.current.isCurrent(token);
 
     setLoading(true);
     setLoadFailed(false);
@@ -290,6 +296,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       // DEV-only fixture (lib/shell/devFixture.ts): the board's leagues, no
       // queries — after a realistic delay, so pull-to-refresh (S5) is visible.
       await new Promise((resolve) => setTimeout(resolve, FIXTURE_NETWORK_MS));
+      if (stale()) return;
       if (fixtureReadFails(LEAGUE_FIXTURE, fixtureAttempt.current++)) {
         setLoadFailed(true);
         setLoading(false);
@@ -297,6 +304,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       }
       const fixture = fixtureLeagues(LEAGUE_FIXTURE);
       const stored = await readStoredActiveLeague(userId);
+      if (stale()) return;
       setLeagues(fixture.leagues);
       setSheetLeagues(fixture.sheet);
       // A normal Mon–Fri calendar for this week and the next two, so fixture captures
@@ -315,6 +323,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
       .select('league_id')
       .eq('user_id', userId)
       .is('hidden_at', null);
+    if (stale()) return;
     const membershipRead = { error: memberError, rows: memberships };
 
     // A successful read with zero memberships is "no leagues"; a FAILED read is its own
@@ -326,12 +335,14 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .in('id', (memberships ?? []).map((m) => m.league_id))
         .order('created_at', { ascending: false });
+      if (stale()) return;
       leagueRead = { error: leagueError, rows: (leagueData as League[] | null) ?? null };
     }
 
     const read = classifyLeagueRead<League>({ memberships: membershipRead, leagues: leagueRead });
     if (read.kind !== 'ok') {
-      if (read.kind === 'failed') console.error('[leagues] league list read failed:', read.reason, memberError ?? leagueRead?.error ?? '');
+      // Message and code only (security review): never the whole error object in a log.
+      if (read.kind === 'failed') console.error('[leagues] league list read failed:', read.reason, errorSummary(memberError ?? leagueRead?.error));
       setLeagues([]);
       setSheetLeagues([]);
       setHomeSummaryByLeague(new Map());
@@ -345,6 +356,7 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
     const list = read.leagues;
     const [facts, stored] = await Promise.all([fetchSheetFacts(userId, list), readStoredActiveLeague(userId)]);
+    if (stale()) return;
     const { sheet } = facts;
 
     setLeagues(list);
@@ -367,6 +379,8 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!userId) {
+      // Signed out: any read still in flight for the previous user is dropped.
+      reads.current.invalidate();
       setLeagues([]);
       setSheetLeagues([]);
       setHomeSummaryByLeague(new Map());

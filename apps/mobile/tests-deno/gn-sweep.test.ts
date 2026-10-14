@@ -264,3 +264,57 @@ Deno.test('capture-script actions (DEV, headless captures): each calls the handl
   assert(code(SOURCES['lib/LeagueContext.tsx']).includes("useCaptureAction('retry', () => { void fetchLeagues(); });"));
   assert(code(SOURCES['components/shell/BarsRefresh.tsx']).includes("useCaptureAction('scrollto', (y) => scrollRef.current?.scrollTo({ y: Number(y) || 0, animated: false }));"));
 });
+
+// ── Security review LOWs (2026-10-14): stale reads, error logging ────────────────
+
+Deno.test('readSequence: a read for user A that resolves after the switch to B is stale; B\'s is current', async () => {
+  const { createReadSequence } = await import('../lib/shell/readSequence.ts');
+  const reads = createReadSequence();
+  const writes: string[] = [];
+  // Two reads in flight; A's answers LAST (the race the guard exists for).
+  const readFor = (user: string, ms: number) => {
+    const token = reads.begin();
+    return new Promise<void>((done) => setTimeout(() => { if (reads.isCurrent(token)) writes.push(user); done(); }, ms));
+  };
+  await Promise.all([readFor('A', 20), readFor('B', 5)]);
+  assertEquals(writes, ['B']);
+  // A refresh supersedes an older refresh the same way.
+  const t1 = reads.begin(); const t2 = reads.begin();
+  assertEquals([reads.isCurrent(t1), reads.isCurrent(t2)], [false, true]);
+  // Sign-out invalidates whatever is in flight.
+  const t3 = reads.begin(); reads.invalidate();
+  assertEquals(reads.isCurrent(t3), false);
+});
+
+Deno.test('errorSummary: a log line carries only message and code, never the rest of the error', async () => {
+  const { errorSummary } = await import('../lib/shell/readSequence.ts');
+  const err = { message: 'permission denied for table leagues', code: '42501', details: 'row data', hint: 'secret hint' };
+  assertEquals(errorSummary(err), { message: 'permission denied for table leagues', code: '42501' });
+  assertEquals(errorSummary(null), null);
+  assertEquals(errorSummary(undefined), null);
+  assertEquals(errorSummary({ details: 'x' }), { message: null, code: null });
+});
+
+Deno.test('fetchLeagues: every await is followed by the stale check, before any setter; sign-out invalidates; logs use errorSummary', () => {
+  const ctx = code(SOURCES['lib/LeagueContext.tsx']);
+  const body = ctx.slice(ctx.indexOf('const fetchLeagues = useCallback'), ctx.indexOf('}, [userId, setActiveLeagueId]);'));
+  assert(body.includes('const token = reads.current.begin();'));
+  assert(body.includes('const stale = () => !reads.current.isCurrent(token);'));
+  // Each await's statement ends with ';' — the next statement must be the guard.
+  let from = 0; let awaits = 0;
+  for (;;) {
+    const at = body.indexOf('await ', from);
+    if (at < 0) break;
+    awaits += 1;
+    const end = body.indexOf(';', at);
+    const next = body.slice(end + 1).trimStart();
+    assert(next.startsWith('if (stale()) return;'), `no stale check after: ${body.slice(at, end + 1).slice(0, 80)}`);
+    from = end + 1;
+  }
+  assertEquals(awaits, 5); // fixture: delay, stored id; real: memberships, leagues, facts + stored id
+  const signOut = ctx.slice(ctx.indexOf('if (!userId) {', ctx.indexOf('useCaptureAction(\'retry\'')));
+  const inv = signOut.indexOf('reads.current.invalidate();');
+  assert(inv >= 0 && inv < signOut.indexOf('setLeagues([]);'), 'sign-out invalidates in-flight reads, before clearing');
+  assert(body.includes('errorSummary(memberError ?? leagueRead?.error)'));
+  assert(!/console\.(error|warn)\([^)]*\b(memberError|leagueError|leagueRead\?\.error)\s*[,)]/.test(body.replace('errorSummary(memberError ?? leagueRead?.error)', '')));
+});
