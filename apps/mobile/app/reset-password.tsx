@@ -2,12 +2,12 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { PASSWORD_RULE_SENTENCE } from '@/constants/passwordRules';
 import { EmptyState } from '@/components/sp/EmptyState';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -17,6 +17,10 @@ import { useAuth } from '@/lib/useAuth';
 import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/recoveryNonce';
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { getAuthErrorMessage } from '@/lib/authErrors';
+import { parseResetCaptureView } from '@/lib/shell/resetCaptureView';
+
+// DEV-only (design captures): render the form or success state without a recovery link.
+const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE, __DEV__);
 
 // Phase 3b-1 (spec row 5): rebuilt visually on the shell's Field / Button /
 // EmptyState, with every string and ALL of the recovery logic below kept as
@@ -51,7 +55,7 @@ export default function ResetPasswordScreen() {
   const { signOut } = useAuth();
   const { colors } = useTheme();
   const isRecovery = useSyncExternalStore(subscribeRecoverySession, isRecoverySession, isRecoverySession);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState(CAPTURE_VIEW === 'success');
   const [verifyTimedOut, setVerifyTimedOut] = useState(false);
 
   // Bounded wait: if neither the recovery flag nor an explicit status ever
@@ -64,7 +68,7 @@ export default function ResetPasswordScreen() {
     return () => clearTimeout(timer);
   }, [isRecovery, status]);
 
-  const screenState = resetScreenState({
+  const screenState = CAPTURE_VIEW === 'form' ? 'form' : resetScreenState({
     status,
     isRecovery,
     elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
@@ -94,7 +98,7 @@ export default function ResetPasswordScreen() {
     return (
       <AuthScaffold>
         <EmptyState
-          icon={(p) => <Ionicons name="checkmark-circle-outline" {...p} />}
+          icon={() => <Icon name="checkCircle" size="title" tone="text2" />}
           title="Password updated"
           message="You're signed in with your new password."
           actionLabel="Continue"
@@ -126,7 +130,7 @@ export default function ResetPasswordScreen() {
     return (
       <AuthScaffold>
         <EmptyState
-          icon={(p) => <Ionicons name="alert-circle-outline" {...p} />}
+          icon={() => <Icon name="alert" size="title" tone="text2" />}
           title="This link didn't work"
           message="It may have expired, been used already, or been opened on a different device than the one that asked for it. Request a new link to continue."
           actionLabel="Request a new link"

@@ -158,7 +158,10 @@ Deno.test('Card: surface + a 1pt rim, no shadow; the tab bar has no top rule', (
   assert(!/shadow|LinearGradient/i.test(card));
   const tab = strip(SOURCES['components/shell/ShellTabBar.tsx']);
   assert(!/borderTop/.test(tab));
-  assert(tab.includes('focused ? colors.accent : colors.text2'));
+  // The label and the icon read one token: accent when selected, text2 when not (gn-sweep:
+  // the icon is sp/Icon, so the tab passes the token, not a resolved colour).
+  assert(tab.includes("tone={focused ? 'accent' : 'text2'}"));
+  assert(tab.includes('const color = colors[tone];'));
 });
 
 // ── PlayerCard ───────────────────────────────────────────────────────────────────

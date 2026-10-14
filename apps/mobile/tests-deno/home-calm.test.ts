@@ -95,7 +95,7 @@ Deno.test('This week opens Matchup: the whole card, a button with the hint, a ch
   assert(press < card.indexOf('<Card style={styles.card}>'), 'the press wraps the whole card');
   assert(card.indexOf('</Card>\n    </PressableScale>') > 0);
   assert(card.includes('accessibilityRole="button"') && card.includes('accessibilityHint={OPENS_MATCHUP_HINT}'));
-  assert(card.indexOf('{liveChipLabel ?? LIVE_CHIP}') < card.indexOf('<Ionicons name="chevron-forward" size={16} color={colors.text2} />'));
+  assert(card.indexOf('{liveChipLabel ?? LIVE_CHIP}') < card.indexOf('<Icon name="chevronRight" size="callout" tone="text2" />'));
 });
 
 Deno.test('Standings opens League on Standings: the whole card, a chevron after "Through Week N"', () => {
@@ -103,7 +103,7 @@ Deno.test('Standings opens League on Standings: the whole card, a chevron after 
   const card = SOURCES['components/home/StandingsCard.tsx'];
   const press = card.indexOf('<PressableScale onPress={() => router.push(STANDINGS_HREF)} accessibilityRole="button">');
   assert(press > 0 && press < card.indexOf('<Card style={styles.card}>'));
-  assert(card.indexOf('{standingsThroughWeekCaption(throughWeek)}') < card.indexOf('<Ionicons name="chevron-forward"'));
+  assert(card.indexOf('{standingsThroughWeekCaption(throughWeek)}') < card.indexOf('<Icon name="chevronRight"'));
 });
 
 Deno.test("League reads ?segment= (as Matchup reads 'all') and clears it, so a second tap lands too", () => {
@@ -142,7 +142,7 @@ Deno.test('season over: Run it back (commissioner) or the ask (member) is the on
 Deno.test('the season-over card has no filled button: "See the final standings" is a row with a chevron, inside the one card', () => {
   const card = SOURCES['components/home/SeasonCompleteCard.tsx'];
   assert(!code(card).includes('<Button'), 'no Button in the season-over card');
-  assert(card.includes("<ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} divider={false} />"));
+  assert(card.includes("<ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} />"));
   // One card: the medallion block, the tiles on their `inset` panel, the row. Game Night
   // (§9C rule 2): no hairlines — separation by surface, never by rules.
   assertEquals((code(card).match(/<Card\b/g) ?? []).length, 1);

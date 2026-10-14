@@ -62,7 +62,7 @@ Deno.test('leagues-renewal lists Summer Cup\'s Season 2 (a renewed pre-draft lea
   assert(shell.includes("previous_league_id: 'fx-summer', commissioner_id: renewalCommissioner,"));
   assert(shell.includes("...(renewed ? { successor_league_id: RENEWAL_LEAGUE_ID, commissioner_id: renewalCommissioner } : {}),"));
   assert(shell.includes("seasonLabel: 'Season 2', seasonPhase: 'pre_draft' as const"));
-  assert(shell.includes("'leagues-member', 'leagues-renewal'];"));
+  assert(shell.includes("'leagues-member', 'leagues-renewal', 'leagues-failed-once'];"));
   assert(SOURCES['lib/game/seamCalls.ts'].includes("if (f && name === 'renew_league') markFixtureRenewed();"));
   // renew_league answers with the same league id the fixture lists.
   assert(SOURCES['lib/game/seamFixtures.ts'].includes("const SUCCESSOR = 'fixture-season-2';"));

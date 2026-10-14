@@ -9,3 +9,9 @@
 export function isEmptyStateCarded(actionLabel: string | undefined, hasAction: boolean): boolean {
   return !!actionLabel && hasAction;
 }
+
+/** The message's Dynamic Type ceiling: never larger than its own title at the title's cap
+ * (gn-sweep, XXXL: the 15pt body grew to ~47pt under a title capped at 35pt). */
+export function messageMaxScale(titlePt: number, titleMaxScale: number, bodyPt: number): number {
+  return Math.floor(((titlePt * titleMaxScale) / bodyPt) * 100) / 100;
+}

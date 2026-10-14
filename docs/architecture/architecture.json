@@ -2,26 +2,38 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "a8be3957b9f58b52813129583dbac012ff6f87b5",
-    "commitShort": "a8be3957",
+    "commit": "b16c04035c8968789c5e29efb4590b16d2b40573",
+    "commitShort": "b16c0403",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "fix/no-joins-after-room-opens",
+    "branch": "feat/gn-sweep",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql"
+        "path": "apps/mobile/lib/LeagueContext.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/shell/readSequence.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/gn-sweep.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-14T18:32:56Z",
-    "sourceHash": "sha256:b5e61b592d13781310e425b12a7e7db60310fc02b95228d0a8503e2ef56e6eb3",
+    "timestamp": "2026-10-14T20:00:59Z",
+    "sourceHash": "sha256:de3bfe80515b184a9ea9f945472e731c08c95d4b413329eb5fa887b8188a8880",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 18.3,
+    "ageHours": 19.8,
     "ageDays": 0.8,
     "staleAfterDays": 14,
     "stale": false,
@@ -16804,7 +16816,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:142"
+        "apps/mobile/app/(tabs)/league.tsx:143"
       ],
       "via": [
         "seamRpc"
@@ -16911,7 +16923,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_summary')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:169"
+        "apps/mobile/lib/LeagueContext.tsx:177"
       ]
     },
     {
@@ -16923,7 +16935,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('market_session_status')",
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:174"
+        "apps/mobile/lib/LeagueContext.tsx:182"
       ]
     },
     {
@@ -16938,8 +16950,8 @@
         "league_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:170",
-        "apps/mobile/lib/LeagueContext.tsx:298"
+        "apps/mobile/lib/LeagueContext.tsx:178",
+        "apps/mobile/lib/LeagueContext.tsx:322"
       ]
     },
     {
@@ -16954,7 +16966,7 @@
         "id, champion_user_id"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:172"
+        "apps/mobile/lib/LeagueContext.tsx:180"
       ]
     },
     {
@@ -16969,7 +16981,7 @@
         "*"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:316"
+        "apps/mobile/lib/LeagueContext.tsx:334"
       ]
     },
     {
@@ -16984,7 +16996,7 @@
         "session_date, open_et, close_et"
       ],
       "callSites": [
-        "apps/mobile/lib/LeagueContext.tsx:175"
+        "apps/mobile/lib/LeagueContext.tsx:183"
       ]
     },
     {
@@ -19865,7 +19877,7 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:142 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/league.tsx:143 -> renew_league (via seamRpc)",
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:38 -> set_draft_queue (via seamRpc)",
@@ -19875,8 +19887,8 @@
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> get_portfolio_ledger (via useRosterData)",
-      "apps/mobile/lib/LeagueContext.tsx:169 -> get_home_summary",
-      "apps/mobile/lib/LeagueContext.tsx:174 -> market_session_status",
+      "apps/mobile/lib/LeagueContext.tsx:177 -> get_home_summary",
+      "apps/mobile/lib/LeagueContext.tsx:182 -> market_session_status",
       "apps/mobile/lib/game/useDraftRoom.ts:46 -> get_draft_clock (via seamRpc)",
       "apps/mobile/lib/game/useDraftRoom.ts:47 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/game/useDraftRoom.ts:49 -> get_league_display_names (via seamRpc)",
@@ -19964,11 +19976,11 @@
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> drafts.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> league_draft_slots.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> trades.select (via useRosterData)",
-      "apps/mobile/lib/LeagueContext.tsx:170 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:172 -> league_seasons.select",
-      "apps/mobile/lib/LeagueContext.tsx:175 -> market_calendar.select",
-      "apps/mobile/lib/LeagueContext.tsx:298 -> league_members.select",
-      "apps/mobile/lib/LeagueContext.tsx:316 -> leagues.select",
+      "apps/mobile/lib/LeagueContext.tsx:178 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:180 -> league_seasons.select",
+      "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
+      "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
+      "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:141 -> user_profiles.select",
       "apps/mobile/lib/SessionProvider.tsx:200 -> user_profiles.upsert",
       "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",

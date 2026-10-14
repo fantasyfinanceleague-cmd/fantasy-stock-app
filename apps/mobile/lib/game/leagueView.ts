@@ -20,14 +20,21 @@ import type { Bracket, BracketGame, BracketSide } from './bracket';
 
 export const HISTORY_LOAD_FAILED = "Your league's history didn't load.";
 export const BRACKET_LOAD_FAILED = "The bracket didn't load.";
+/** The league LIST didn't load (gn-sweep; Home and League share it). Giorgio approved,
+ * 2026-10-14 (PRODUCT_RULES); with moneyCopy's retry line and Try again. */
+export const LEAGUES_LOAD_FAILED = "Your leagues didn't load.";
 
 // ── What League shows with no league to show ─────────────────────────────────────
 
-/** 'empty' (Home's "No leagues yet") ONLY when the list has loaded and is empty. While it
- * loads, or while it holds leagues but none is active yet (the instant after Run it back
- * switches to Season 2), 'pending': the header and a skeleton. */
-export function leagueFallback(input: { loading: boolean; leagueCount: number }): 'empty' | 'pending' {
-  return !input.loading && input.leagueCount === 0 ? 'empty' : 'pending';
+/** What Home and League show with no league to show. 'empty' ("No leagues yet") ONLY when
+ * the list READ SUCCEEDED and is empty. 'failed' when the read failed (LeagueContext's
+ * `loadFailed`): the load-failed state with Try again, never "No leagues yet" to someone who
+ * may have leagues (gn-sweep). While it loads, or while it holds leagues but none is active
+ * yet (the instant after Run it back switches to Season 2), 'pending': the header and a
+ * skeleton. Leagues in hand always win (never a failure over a list that's there). */
+export function leagueFallback(input: { loading: boolean; leagueCount: number; loadFailed: boolean }): 'empty' | 'pending' | 'failed' {
+  if (input.leagueCount > 0 || input.loading) return 'pending';
+  return input.loadFailed ? 'failed' : 'empty';
 }
 
 // ── "Through Week N" ─────────────────────────────────────────────────────────────

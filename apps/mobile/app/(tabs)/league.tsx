@@ -12,7 +12,8 @@ import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { StandingsRowView, StandingsTable, useStandingsLayout } from '@/components/game/StandingsTable';
 import { SegmentTabs } from '@/components/sp/gn';
 import { LoadFailed, TilesSkeleton } from '@/components/league/LeagueStates';
-import { BRACKET_LOAD_FAILED, HISTORY_LOAD_FAILED, leagueFallback, leagueThroughWeek, standingsColumnLabel } from '@/lib/game/leagueView';
+import { BRACKET_LOAD_FAILED, HISTORY_LOAD_FAILED, LEAGUES_LOAD_FAILED, leagueFallback, leagueThroughWeek, standingsColumnLabel } from '@/lib/game/leagueView';
+import { COPY as MONEY_COPY } from '@/lib/money/moneyCopy';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { playoffLine } from '@/lib/playoffs';
 import { buildSchedule } from '@/lib/game/schedule';
@@ -87,7 +88,7 @@ const LEAGUE_ROW_MAX_SCALE = 1.5;
 const STANDINGS_CAPTION = 'Ranked by win percentage, then head-to-head, then season gain. This is also the playoff seeding.';
 
 export default function LeagueScreen() {
-  const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId, leagues, loading } = useLeagueContext();
+  const { sheetLeagues, activeLeagueId, activeLeague, refresh, setActiveLeagueId, leagues, loading, loadFailed } = useLeagueContext();
   const { width } = useWindowDimensions();
   // League's segments: Standings | Schedule | (Playoffs) | History.
   const [segment, setSegment] = useState<'standings' | 'schedule' | 'playoffs' | 'history'>('standings');
@@ -283,7 +284,8 @@ export default function LeagueScreen() {
   // The empty state only for someone who truly has no leagues (leagueFallback). While the list
   // loads, or while a just-switched league isn't in it yet (Run it back), the header and the
   // tiles' skeleton: never "No leagues yet" to someone WITH leagues (W4 DL gate, P1).
-  if (leagueFallback({ loading, leagueCount: leagues.length }) === 'pending') {
+  const fallback = leagueFallback({ loading, leagueCount: leagues.length, loadFailed });
+  if (fallback === 'pending') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <ShellHeader title="League" showAvatar />
@@ -294,7 +296,24 @@ export default function LeagueScreen() {
     );
   }
 
-  // No leagues: Home's own empty state, word for word, so both buttons go somewhere real (W4;
+  // The league list didn't load (gn-sweep): say so, with Try again (and the pull). Never
+  // "No leagues yet" to someone whose read failed.
+  if (fallback === 'failed') {
+    return (
+      <PhasePlaceholder
+        title="League"
+        showAvatar
+        icon={() => <Icon name="alert" size="title" tone="text2" />}
+        heading={LEAGUES_LOAD_FAILED}
+        message={MONEY_COPY.loadRetryMessage}
+        actionLabel={MONEY_COPY.tryAgain}
+        onAction={refresh}
+        onRefresh={refresh}
+      />
+    );
+  }
+
+  // No leagues (a read that SUCCEEDED with none): Home's own empty state, word for word, so both buttons go somewhere real (W4;
   // the old "Standings are on the way … in the next update" was stale copy).
   return (
     <PhasePlaceholder

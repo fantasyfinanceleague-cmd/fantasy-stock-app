@@ -5,11 +5,15 @@
 export type IconName =
   | 'chevronRight' | 'chevronLeft' | 'chevronDown' | 'chevronUp'
   | 'check' | 'circle' | 'info' | 'close' | 'search' | 'add' | 'remove' | 'share'
-  | 'trophy' | 'lock' | 'mail' | 'alert' | 'star' | 'starFilled';
+  | 'trophy' | 'lock' | 'mail' | 'alert' | 'star' | 'starFilled'
+  | 'checkCircle' | 'pending'
+  // The tab bar's four tabs: outline when idle, filled when selected (TabIcon).
+  | 'tabHome' | 'tabHomeSelected' | 'tabMatchup' | 'tabMatchupSelected'
+  | 'tabLeague' | 'tabLeagueSelected' | 'tabPortfolio' | 'tabPortfolioSelected';
 
 /** The text roles an icon sits beside, plus the medallion (a 36 pt glyph in a
  * 72 pt disc, used only by the season-complete trophy and the Run it back card). */
-export type IconRole = 'caption' | 'callout' | 'body' | 'headline' | 'title' | 'medallion';
+export type IconRole = 'caption' | 'callout' | 'body' | 'headline' | 'title' | 'medallion' | 'tab';
 
 /** The Ionicons glyph for each semantic name (outline by default). */
 export const ICON_GLYPHS: Record<IconName, string> = {
@@ -32,6 +36,19 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   // The player card's Save (outline) and Saved (filled) — §9C, the W3 gate (2026-10-12).
   star: 'star-outline',
   starFilled: 'star',
+  // A done state (reset-password's "Password updated") and a wait ("One moment"; gn-sweep).
+  checkCircle: 'checkmark-circle-outline',
+  pending: 'hourglass-outline',
+  // The tab bar (Design Lead ruling 2026-09-29): home, the line chart, the trophy, the bars.
+  // The filled glyph is the selected state only, the one exception to "outline by default".
+  tabHome: 'home-outline',
+  tabHomeSelected: 'home',
+  tabMatchup: 'trending-up-outline',
+  tabMatchupSelected: 'trending-up',
+  tabLeague: 'trophy-outline',
+  tabLeagueSelected: 'trophy',
+  tabPortfolio: 'bar-chart-outline',
+  tabPortfolioSelected: 'bar-chart',
 };
 
 /** Icon size (pt) by the text role it sits with (the board's scale). */
@@ -43,6 +60,9 @@ export const ICON_SIZE: Record<IconRole, number> = {
   title: 24,
   // The medallion's glyph; its disc is MEDALLION_DISC_PT.
   medallion: 36,
+  // The tab bar's glyph: 24, and it never scales (the tab bar keeps its height at every
+  // text size, as iOS's does; its labels carry Dynamic Type within their own cap).
+  tab: 24,
 };
 
 /** The medallion's disc (pt) at standard Dynamic Type. */
@@ -59,6 +79,7 @@ export const ICON_MAX_SCALE: Record<IconRole, number> = {
   headline: 1.6,
   title: 1.6,
   medallion: MEDALLION_MAX_SCALE,
+  tab: 1,
 };
 
 /** The icon's point size at a given Dynamic Type scale: it scales, up to the role's ceiling. */

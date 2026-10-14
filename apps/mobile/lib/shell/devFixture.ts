@@ -38,9 +38,15 @@ import { USERNAME_RE } from './usernameRules';
  *                are in it (commissioner by default; in / new / pending / out:
  *                Paolo is commissioner). Needs EXPO_PUBLIC_RUN_IT_BACK=1.
  */
-export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting' | 'leagues-member' | 'leagues-renewal';
+export type ShellFixture = 'leagues' | 'no-leagues' | 'no-username' | 'signed-out' | 'onboarding' | 'drafting' | 'leagues-member' | 'leagues-renewal' | 'leagues-failed-once';
 
-const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting', 'leagues-member', 'leagues-renewal'];
+const FIXTURES: readonly ShellFixture[] = ['leagues', 'no-leagues', 'no-username', 'signed-out', 'onboarding', 'drafting', 'leagues-member', 'leagues-renewal', 'leagues-failed-once'];
+
+/** gn-sweep: 'leagues-failed-once' — the league-list read FAILS on the first attempt (Home
+ * and League show the load-failed state), then Try again reads the 'leagues' fixture. */
+export function fixtureReadFails(f: ShellFixture, attempt: number): boolean {
+  return f === 'leagues-failed-once' && attempt === 0;
+}
 
 /** Fixtures that start signed out. */
 export function fixtureStartsSignedOut(f: ShellFixture): boolean {
@@ -140,6 +146,7 @@ function league(over: Partial<League> & Pick<League, 'id' | 'name'>): League {
 /** The board's leagues (docs/design/screens/data.js + inventory.jsx "League sheet"). */
 export function fixtureLeagues(fixture: ShellFixture, renewalCaller: RenewalCaller | null = RENEWAL_CALLER): { leagues: League[]; sheet: SheetLeague[] } {
   if (fixture === 'no-leagues') return { leagues: [], sheet: [] };
+  if (fixture === 'leagues-failed-once') fixture = 'leagues';
   if (fixture === 'drafting') {
     // One league, so it is necessarily the active one (no persisted id wins).
     const l = league({ id: 'fx-drafting', name: 'Serie A Traders', num_participants: 8, draft_status: 'in_progress', league_start_date: null, current_week: 1 });

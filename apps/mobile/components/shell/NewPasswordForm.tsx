@@ -7,6 +7,7 @@ import { PASSWORD_REQUIREMENTS, PASSWORD_RULE_SENTENCE, checkPassword } from '@/
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
+import { useLargeText } from '@/components/sp/useLargeText';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 
@@ -27,6 +28,10 @@ export interface NewPasswordFormProps {
 
 export function NewPasswordForm({ submit, onDone, onCancel }: NewPasswordFormProps) {
   const { duration } = useMotion();
+  // At large text (≥ 1.3×, isLargeText) the form doesn't open the keyboard by itself: the
+  // keyboard and the focused field pushed the title off-screen at XL/XXXL, so the title is
+  // read first and one tap opens the field (Design Lead P3, gn-sweep gate).
+  const largeText = useLargeText();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [status, setStatus] = useState<ButtonStatus>('idle');
@@ -85,7 +90,7 @@ export function NewPasswordForm({ submit, onDone, onCancel }: NewPasswordFormPro
           textContentType="newPassword"
           returnKeyType="next"
           onSubmitEditing={() => confirmRef.current?.focus()}
-          autoFocus
+          autoFocus={!largeText}
           error={passwordError}
           rules={rules}
         />

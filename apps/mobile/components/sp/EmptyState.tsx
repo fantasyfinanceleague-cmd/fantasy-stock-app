@@ -4,7 +4,8 @@ import { StyleSheet, View } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
-import { isEmptyStateCarded } from '@/components/sp/logic/emptyState';
+import { isEmptyStateCarded, messageMaxScale } from '@/components/sp/logic/emptyState';
+import { type as typeTokens } from '@/constants/tokens/type';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -22,6 +23,8 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // everywhere.
 
 const ICON_SIZE = 28;
+/** The message never outgrows the title (the title caps at its own maxScale). */
+const MESSAGE_MAX_SCALE = messageMaxScale(typeTokens.title.fontSize, typeTokens.title.maxScale ?? 1, typeTokens.body.fontSize);
 const CIRCLE_SIZE = 64;
 
 export interface EmptyStateIconProps {
@@ -66,7 +69,7 @@ export function EmptyState({ icon: Icon, title, message, actionLabel, onAction, 
       <Text variant="title" style={styles.title}>
         {title}
       </Text>
-      <Text variant="body" tone="secondary" style={styles.message}>
+      <Text variant="body" tone="secondary" maxFontSizeMultiplier={MESSAGE_MAX_SCALE} style={styles.message}>
         {message}
       </Text>
       {carded ? (

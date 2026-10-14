@@ -13,6 +13,7 @@ import {
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useSymbolSearch, type UseSymbolSearchOptions } from '@/lib/useSymbolSearch';
 import type { ShapedSearchResult } from '@/lib/symbolSearch';
+import { useCaptureAction } from '@/lib/money/captureScript';
 
 interface SymbolSearchFieldProps extends UseSymbolSearchOptions {
   /** Controlled input text (typically uppercase — matches both call sites'
@@ -31,6 +32,9 @@ interface SymbolSearchFieldProps extends UseSymbolSearchOptions {
   /** OR'd into the field's own search-loading spinner — for a caller's own
    * follow-up fetch (e.g. TradeModal's post-select quote fetch). */
   extraLoading?: boolean;
+  /** DEV capture script only: the action name that types into THIS field (a screen can hold
+   * two fields, the room's and the queue's). Unset: no action. */
+  captureAction?: string;
 }
 
 export default function SymbolSearchField({
@@ -45,6 +49,7 @@ export default function SymbolSearchField({
   ownedBadgeLabel,
   debounceMs,
   limit,
+  captureAction = '',
 }: SymbolSearchFieldProps) {
   const [showResults, setShowResults] = useState(false);
   const { results, loading, error, retry } = useSymbolSearch(value, selectedSymbol, {
@@ -60,8 +65,12 @@ export default function SymbolSearchField({
     onChangeText(upper);
     setShowResults(true);
   };
+  // DEV capture script only (a no-op without the seam and a script): types as a finger would.
+  useCaptureAction(captureAction, (q) => handleChangeText(q ?? ''));
 
   // G-10 (pass-2b gate, §9A): every colour from the theme, so Dark is dark here too.
+  // gn-sweep (§9C rule 2): no rule line between results — rows divide by their own 12pt
+  // padding; the dropdown's edge is the card rim (elevation.card).
   const { colors, elevation } = useTheme();
 
   const handleSelect = (result: ShapedSearchResult) => {
@@ -92,12 +101,12 @@ export default function SymbolSearchField({
       )}
 
       {visible && results.length > 0 && (
-        <View style={[styles.resultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }, elevation.card]}>
+        <View style={[styles.resultsContainer, { backgroundColor: colors.surface }, elevation.card]}>
           <ScrollView style={styles.resultsList} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
             {results.map((item) => (
               <TouchableOpacity
                 key={item.symbol}
-                style={[styles.resultItem, { borderBottomColor: colors.line }, !item.selectable && styles.resultItemDisabled]}
+                style={[styles.resultItem, !item.selectable && styles.resultItemDisabled]}
                 onPress={() => handleSelect(item)}
                 disabled={!item.selectable}
               >
@@ -120,14 +129,14 @@ export default function SymbolSearchField({
       )}
 
       {visible && !loading && !error && results.length === 0 && (
-        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface }, elevation.card]}>
           <Text style={[styles.noResultsText, { color: colors.text2 }]}>No matching stocks found</Text>
         </View>
       )}
 
       {/* E-1 (3e UX audit): a failed search must never read as "no matches". */}
       {visible && !loading && error && (
-        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface, borderColor: colors.line }]}>
+        <View style={[styles.noResultsContainer, { backgroundColor: colors.surface }, elevation.card]}>
           <Text style={[styles.noResultsText, { color: colors.text2 }]}>Stocks didn't load. Check your connection, then try again.</Text>
           <TouchableOpacity onPress={retry} style={styles.retryButton}>
             <Text style={[styles.retryText, { color: colors.accent }]}>Try again</Text>
@@ -176,7 +185,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderBottomWidth: 1,
   },
   resultItemDisabled: {
     opacity: 0.5,
@@ -195,7 +203,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   badge: {
-    fontSize: 9,
+    // §9B: the 11pt floor.
+    fontSize: 11,
     fontFamily: 'Inter_700Bold',
     borderWidth: 1,
     borderRadius: 4,

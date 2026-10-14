@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 import { space } from '@/constants/tokens';
+import { Icon } from '@/components/sp/Icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
-import { useTheme } from '@/components/sp/ThemeProvider';
 
 // Stockpile — <ListRow> (Phase 2 foundation). A generic row for standings,
 // holdings, league lists, settings — leading slot, title/subtitle, trailing
 // slot, with the press affordance built in when `onPress` is given.
+// Game Night (§9C rule 2, gn-sweep): no rule line under a row; rows divide by
+// space (their own 12pt padding), a surface step, or your side's tint.
 
 export interface ListRowProps {
   leading?: ReactNode;
@@ -24,17 +25,11 @@ export interface ListRowProps {
   onPress?: () => void;
   /** Hides the trailing chevron even when `onPress` is set. */
   hideChevron?: boolean;
-  /** Set false for the last row inside a card, which has no line under it. Default true. */
-  divider?: boolean;
 }
 
-export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron, divider = true }: ListRowProps) {
-  const { colors } = useTheme();
-  const chevronColor = colors.text2;
-  const dividerColor = colors.line;
-
+export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron }: ListRowProps) {
   const content = (
-    <View style={[styles.row, divider ? { borderBottomColor: dividerColor } : styles.noDivider]}>
+    <View style={styles.row}>
       {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.titles}>
         <Text variant="body" numberOfLines={1}>
@@ -48,7 +43,7 @@ export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress
         {subtitle2 ?? null}
       </View>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      {onPress && !hideChevron ? <Ionicons name="chevron-forward" size={18} color={chevronColor} /> : null}
+      {onPress && !hideChevron ? <Icon name="chevronRight" size="body" tone="text2" /> : null}
     </View>
   );
 
@@ -66,11 +61,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: space[4],
-    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: space[4],
-  },
-  noDivider: {
-    borderBottomWidth: 0,
   },
   leading: {
     alignItems: 'center',

@@ -202,8 +202,8 @@ Deno.test('"Through Week N" is hidden while N = 0; the chevron and the card stil
   assert(card.includes('{throughWeekShown(throughWeek) ? ('));
   // The chevron stays OUTSIDE the condition (rendered unconditionally right after it), and
   // exactly one chevron exists, so it can't hide with the label.
-  assert(card.includes(') : null}\n          <Ionicons name="chevron-forward" size={16} color={colors.text2} />'));
-  assertEquals((card.match(/chevron-forward/g) ?? []).length, 1);
+  assert(card.includes(') : null}\n          <Icon name="chevronRight" size="callout" tone="text2" />'));
+  assertEquals((card.match(/chevronRight/g) ?? []).length, 1);
   assert(card.includes('<PressableScale onPress={() => router.push(STANDINGS_HREF)}'));
 });
 

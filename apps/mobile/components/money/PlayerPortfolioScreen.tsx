@@ -2,9 +2,14 @@
  * PlayerPortfolioScreen: another manager's portfolio (3e), read-only. The same
  * numbers as the caller's Portfolio, with no trade action and no row taps: a
  * manager can't buy or sell from someone else's portfolio.
+ *
+ * Game Night (gn-sweep): a money page, so `moneyBg` (§9C); the holdings divide by space,
+ * never a rule line (rule 2), at HoldingRow's 56pt rhythm.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+
+import { space } from '@/constants/tokens';
 
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { Text } from '@/components/sp/Text';
@@ -15,7 +20,7 @@ import { usePlayerPortfolioData } from '@/lib/money/usePlayerPortfolioData';
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: 20, paddingBottom: 32, gap: 10 },
-  row: { minHeight: 44, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
+  row: { minHeight: 56, paddingVertical: space[3], flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   lead: { flex: 1, paddingRight: 12 },
   trail: { alignItems: 'flex-end' },
 });
@@ -46,7 +51,7 @@ export function PlayerPortfolioScreen({ userId }: { userId: string }) {
 
         <Text variant="headline">{COPY.holdingsHeading}</Text>
         {v.rows.map((r) => (
-          <View key={r.symbol} style={[styles.row, { borderBottomColor: colors.border }]} accessible accessibilityLabel={`${r.symbol}, ${r.name}, ${r.quantityText} shares, ${r.valueText}`}>
+          <View key={r.symbol} style={styles.row} accessible accessibilityLabel={`${r.symbol}, ${r.name}, ${r.quantityText} shares, ${r.valueText}`}>
             <View style={styles.lead}>
               <Text variant="callout">{r.symbol}</Text>
               <Text variant="caption" tone="secondary">{r.name}</Text>
@@ -63,7 +68,7 @@ export function PlayerPortfolioScreen({ userId }: { userId: string }) {
   }
 
   return (
-    <ScrollView style={[styles.screen, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.screen, { backgroundColor: colors.moneyBg }]} contentContainerStyle={styles.content}>
       {body}
     </ScrollView>
   );

@@ -409,6 +409,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
             onSelect={onSelect}
             selectedSymbol={selected ?? ''}
             ownedSymbols={owned}
+            captureAction="type"
           />
           {/* Nothing tappable does nothing: Draft shows once there's a stock to draft (the
               screen's one primary, the accent pill), and waits while the pick is sent. */}

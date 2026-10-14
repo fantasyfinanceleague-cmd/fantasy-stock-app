@@ -299,15 +299,15 @@ import { gainColumnWidth, headCapsWidth, leagueFallback } from '../lib/game/leag
 import { inviteShareShown } from '../lib/game/leagueSettingsEntry.ts';
 
 Deno.test('P1: "No leagues yet" only for someone with no leagues; Run it back reads the list BEFORE switching', () => {
-  assertEquals(leagueFallback({ loading: false, leagueCount: 0 }), 'empty');
-  assertEquals(leagueFallback({ loading: true, leagueCount: 0 }), 'pending');
+  assertEquals(leagueFallback({ loading: false, leagueCount: 0, loadFailed: false }), 'empty');
+  assertEquals(leagueFallback({ loading: true, leagueCount: 0, loadFailed: false }), 'pending');
   // Leagues exist, none active yet (the instant after Run it back): never the empty state.
-  assertEquals(leagueFallback({ loading: false, leagueCount: 3 }), 'pending');
-  assertEquals(leagueFallback({ loading: true, leagueCount: 3 }), 'pending');
+  assertEquals(leagueFallback({ loading: false, leagueCount: 3, loadFailed: false }), 'pending');
+  assertEquals(leagueFallback({ loading: true, leagueCount: 3, loadFailed: false }), 'pending');
   const league = SOURCES['app/(tabs)/league.tsx'];
   const run = league.slice(league.indexOf('const runItBack = async () => {'), league.indexOf('const isCommissioner ='));
   assert(run.indexOf('await refresh();') < run.indexOf('setActiveLeagueId(res.league_id);'), 'refresh first, then switch');
-  assert(league.includes("if (leagueFallback({ loading, leagueCount: leagues.length }) === 'pending') {"));
+  assert(league.includes("const fallback = leagueFallback({ loading, leagueCount: leagues.length, loadFailed });\n  if (fallback === 'pending') {"));
 });
 
 Deno.test('P1 XL: the Run it back line 1.5×, History\'s season record 1.5× (under the 19.5pt gains)', () => {
