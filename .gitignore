@@ -46,3 +46,13 @@ docs/api-keys-inventory.md
 
 # Hallmark design skill cache (preflight.json, log.json): local, never committed
 .hallmark/
+
+# Review screenshots and recordings live OUTSIDE the repo (Giorgio, 2026-10-14):
+# ~/fantasy-stock-design-review/<branch>/. Only docs/design/captures/<set>/README.md is committed.
+# Already-tracked older sets are unaffected (ignore rules never touch tracked files).
+docs/design/captures/**/*.png
+docs/design/captures/**/*.jpg
+docs/design/captures/**/*.jpeg
+docs/design/captures/**/*.gif
+docs/design/captures/**/*.mov
+docs/design/captures/**/*.mp4
