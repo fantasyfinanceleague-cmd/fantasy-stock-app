@@ -10,6 +10,7 @@ import { FIXTURE_ACTIVE_LEAGUE, FIXTURE_NETWORK_MS, SHELL_FIXTURE, fixtureLeague
 import type { ShellFixture } from './shell/devFixture';
 import { SEAM_ON } from './game/devSeam';
 import { pickLeagueFixture } from './game/devSeamGate';
+import { useCaptureAction } from './money/captureScript';
 
 // The shell fixture, or the board's leagues under the capture seam (3c). Narrowest point:
 // only this fetch branch reads it, and the seam is off outside a dev build.
@@ -360,6 +361,9 @@ export function LeagueProvider({ children }: { children: React.ReactNode }) {
 
     setLoading(false);
   }, [userId, setActiveLeagueId]);
+
+  // DEV capture script only (a no-op without the seam and a script): the re-read Try again runs.
+  useCaptureAction('retry', () => { void fetchLeagues(); });
 
   useEffect(() => {
     if (!userId) {

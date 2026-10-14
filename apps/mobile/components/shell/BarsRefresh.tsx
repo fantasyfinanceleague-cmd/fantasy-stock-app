@@ -2,6 +2,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Platform, RefreshControl, ScrollView, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useFixtureScrollEnd } from '@/lib/shell/fixtureRoute';
+import { useCaptureAction } from '@/lib/money/captureScript';
 import { ScrollFoldContext, useScrollFoldSource } from './scrollFold';
 import Animated, {
   cancelAnimation,
@@ -113,6 +114,8 @@ function IosBarsRefresh({
   const scrollRef = useRef<Animated.ScrollView>(null);
   // DEV captures only (lib/shell/fixtureRoute.ts).
   useFixtureScrollEnd(scrollRef as never);
+  // DEV capture script only (a no-op without the seam and a script): scroll to y, as a swipe would.
+  useCaptureAction('scrollto', (y) => scrollRef.current?.scrollTo({ y: Number(y) || 0, animated: false }));
 
   const armHaptic = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 

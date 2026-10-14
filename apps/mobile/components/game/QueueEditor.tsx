@@ -71,7 +71,7 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
         </View>
       ))}
       {queue.length < QUEUE_MAX ? (
-        <SymbolSearchField value={search} onChangeText={setSearch} onSelect={onSelect} selectedSymbol="" ownedSymbols={new Set()} />
+        <SymbolSearchField value={search} onChangeText={setSearch} onSelect={onSelect} selectedSymbol="" ownedSymbols={new Set()} captureAction="typeq" />
       ) : null}
       {/* Save appears with something to save, beside the line that says so; it's a secondary
           pill, so the room's one primary stays Draft (§9C: one accent, small). */}

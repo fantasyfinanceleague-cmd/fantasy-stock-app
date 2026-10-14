@@ -29,6 +29,7 @@ import {
 } from '@/components/sp/gn';
 import { CATEGORIES, type Category } from '@/components/sp/logic/gameNight';
 import { formatMoney } from '@/components/sp/logic/money';
+import { SalePicker } from '@/components/money/SalePicker';
 
 // Stockpile — dev-only design gallery (§9A, "One design, two themes",
 // 2026-09-29). SOURCE OF TRUTH: the Phase 2 brief, build item 7: "renders
@@ -73,6 +74,7 @@ export default function DesignGalleryScreen() {
   const [scores, setScores] = useState({ you: 128.4, opponent: 92.1 });
   const [chyron, setChyron] = useState<string | null>(null);
   const [demoStatus, setDemoStatus] = useState<ButtonStatus>('idle');
+  const [saleChosen, setSaleChosen] = useState<string | null>('gallery-sale-v');
 
   if (!__DEV__) {
     return <Redirect href="/" />;
@@ -99,6 +101,36 @@ export default function DesignGalleryScreen() {
     // of the scroll is normal, the same as any other scrollable screen.
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.bg }]}>
+        {/* gn-sweep captures (first, so they're in frame on open): Button's two checks, now sp/Icon
+            in the label's ink (selected: Run it back's answer; done: the status check). */}
+        <Section title="gn-sweep · Button checks">
+          <Card style={styles.card}>
+            <View style={styles.row}>
+              <Button label="I'm out" variant="secondary" selected onPress={() => {}} />
+              <Button label="I'm in" variant="primary" selected onPress={() => {}} />
+            </View>
+            <View style={styles.row}>
+              <Button label="Sign in" status="done" onPress={() => {}} />
+              <Button label="Sign in" variant="secondary" status="done" onPress={() => {}} />
+            </View>
+          </Card>
+        </Section>
+
+        {/* gn-sweep: the stock sheet's "Which sale pays for this?" with two sales (its rows on an
+            inset panel, no hairlines). The live path needs two open sales, which no fixture has. */}
+        <Section title="gn-sweep · SalePicker">
+          <Card style={styles.card}>
+            <SalePicker
+              sources={[{ trade_id: 'gallery-sale-v', symbol: 'V', amount: 2194.91 }, { trade_id: 'gallery-sale-nvda', symbol: 'NVDA', amount: 2032.68 }]}
+              chosenId={saleChosen}
+              symbol="AMD"
+              onChoose={setSaleChosen}
+              onUse={() => {}}
+              onClose={() => setSaleChosen(null)}
+            />
+          </Card>
+        </Section>
+
         <Section title="Theme">
           <SegmentedControl options={THEME_OPTIONS} value={preference} onChange={(value) => setPreference(value as ThemePreference)} />
           <Text variant="body" tone="secondary">

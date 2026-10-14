@@ -236,3 +236,29 @@ Deno.test('reset-password capture override: DEV only, form|success only, view on
   assert(!rp.includes('setRecoverySession(true)'));
   assert(!code(SOURCES['lib/shell/resetCaptureView.ts']).includes('Recovery'));
 });
+
+Deno.test('EmptyState: the message never outgrows its title at any text size (reset-password XXXL capture)', async () => {
+  const { messageMaxScale } = await import('../components/sp/logic/emptyState.ts');
+  const { type } = await import('../constants/tokens/type.ts');
+  const cap = messageMaxScale(type.title.fontSize, type.title.maxScale ?? 1, type.body.fontSize);
+  assertEquals(cap, 2.34);
+  for (const s of [1, 1.35, 2.35, 3.12]) {
+    const title = type.title.fontSize * Math.min(s, type.title.maxScale ?? 1);
+    const message = type.body.fontSize * Math.min(s, cap);
+    assert(message <= title, `at ${s}×: message ${message} > title ${title}`);
+  }
+  assert(code(SOURCES['components/sp/EmptyState.tsx']).includes('maxFontSizeMultiplier={MESSAGE_MAX_SCALE}'));
+});
+
+Deno.test('capture-script actions (DEV, headless captures): each calls the handler a finger would, and is inert without the seam', () => {
+  // The script only runs under SEAM_ON (a dev build AND the seam flag) with a script set.
+  assert(code(SOURCES['lib/money/captureScript.ts']).includes('const STEPS = SEAM_ON ? parseCaptureScript(process.env.EXPO_PUBLIC_CAPTURE_SCRIPT) : [];'));
+  const field = code(SOURCES['components/SymbolSearchField.tsx']);
+  assert(field.includes("captureAction = '',")); // unset: no action registered (useCaptureAction skips '')
+  assert(field.includes("useCaptureAction(captureAction, (q) => handleChangeText(q ?? ''));"));
+  assert(code(SOURCES['components/game/DraftRoom.tsx']).includes('captureAction="type"'));
+  assert(code(SOURCES['components/game/QueueEditor.tsx']).includes('captureAction="typeq"'));
+  // Try again's own handler: the re-read.
+  assert(code(SOURCES['lib/LeagueContext.tsx']).includes("useCaptureAction('retry', () => { void fetchLeagues(); });"));
+  assert(code(SOURCES['components/shell/BarsRefresh.tsx']).includes("useCaptureAction('scrollto', (y) => scrollRef.current?.scrollTo({ y: Number(y) || 0, animated: false }));"));
+});
