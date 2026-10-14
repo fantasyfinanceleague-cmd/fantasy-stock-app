@@ -1,6 +1,6 @@
 # Onboarding: the invited friend's first minute
 
-Status: Draft (awaiting Giorgio's approval)
+Status: Approved (Giorgio, 2026-10-14: "approved")
 Planner session: "Planner" (Fable 5.1), 2026-10-14 · Orchestrator hand-off: —
 
 ## Goal
