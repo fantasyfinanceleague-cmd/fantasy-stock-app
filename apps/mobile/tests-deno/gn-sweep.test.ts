@@ -105,8 +105,10 @@ Deno.test('Home: "No leagues yet" only on the empty fallback (not on !loading &&
   assert(home.indexOf("if (fallback === 'empty') {") < home.indexOf('heading="No leagues yet"'));
 });
 
-Deno.test('the load-failed copy is existing strings only (no new copy)', async () => {
-  assertEquals(LEAGUES_LOAD_FAILED, "Couldn't load this league");
+Deno.test('the load-failed copy: Giorgio\'s approved title (2026-10-14), the existing retry line and Try again', async () => {
+  assertEquals(LEAGUES_LOAD_FAILED, "Your leagues didn't load.");
+  // One constant, shared by Home and League (never a second copy of the string).
+  for (const p of ['app/(tabs)/index.tsx', 'app/(tabs)/league.tsx']) assert(!SOURCES[p].includes("leagues didn't load"), p);
   const { COPY } = await import('../lib/money/moneyCopy.ts');
   assertEquals(COPY.tryAgain, 'Try again');
   assertEquals(COPY.loadRetryMessage, 'Check your connection, then try again.');

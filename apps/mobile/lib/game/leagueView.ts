@@ -20,9 +20,9 @@ import type { Bracket, BracketGame, BracketSide } from './bracket';
 
 export const HISTORY_LOAD_FAILED = "Your league's history didn't load.";
 export const BRACKET_LOAD_FAILED = "The bracket didn't load.";
-/** The league LIST didn't load (gn-sweep; Home and League). Existing strings only: Home's
- * own "Couldn't load this league", with the house retry line and Try again (moneyCopy). */
-export const LEAGUES_LOAD_FAILED = "Couldn't load this league";
+/** The league LIST didn't load (gn-sweep; Home and League share it). Giorgio approved,
+ * 2026-10-14 (PRODUCT_RULES); with moneyCopy's retry line and Try again. */
+export const LEAGUES_LOAD_FAILED = "Your leagues didn't load.";
 
 // ── What League shows with no league to show ─────────────────────────────────────
 

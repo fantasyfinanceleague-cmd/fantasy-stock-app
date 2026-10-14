@@ -281,6 +281,11 @@ building anything, and don't reopen a rule without him.
   Orchestrator during the W4 League build): History reads "Your league's history didn't
   load." and Playoffs reads "The bracket didn't load.", each beside the existing "Try
   again". (Before, a failed read left the segment blank.)
+- **The league list's load failure** (2026-10-14, Giorgio approved, relayed by the Orchestrator
+  during the gn-sweep): when the read of your leagues fails, Home and League read "Your
+  leagues didn't load." with "Check your connection, then try again." and "Try again" (one
+  string, shared by both). "No leagues yet" shows only when that read succeeds with no
+  leagues. (Before, a failed read said "No leagues yet" with Create / Join.)
 
 ## Home and Portfolio
 
