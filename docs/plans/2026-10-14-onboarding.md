@@ -57,7 +57,7 @@ All 2026-10-14, in the Planner session; verbatim in `docs/PRODUCT_RULES.md` ("On
 | 2 | How an invite travels | A **link** carrying the code. App installed → opens the app → account → auto-joined. Not installed → a web page for that league → account → joined → "Get the app". The share text keeps the code too | Planner chat, 2026-10-14 |
 | 3 | Sign-in methods | **Email + password, Sign in with Apple, Sign in with Google**, on the app and the web page | Planner chat, 2026-10-14 |
 | 4 | Username | **One screen after any sign-in, pre-filled with a generated name**, one tap to keep; the email form loses its username field; changeable in Profile | Planner chat, 2026-10-14 |
-| 5 | The three cards | **B: only on a cold install (no invite)**, with Skip remembered forever; never on the invited path; the titles stay Giorgio's; the scenes go to him as A/B (old vs Game Night) | Planner chat, 2026-10-14 (A/B pending on the board) |
+| 5 | The three cards | **B: only on a cold install (no invite)**, with Skip remembered forever; never on the invited path; the titles stay Giorgio's. **Scenes: the Game Night redraw** (real draft tiles with category lines; the real scoreboard with a lead change; the real FINAL) chosen over the 2026-09-29 scenes (Giorgio, 2026-10-14, on the W1 board) | board, 2026-10-14 |
 | 6 | Push permission | **After joining or creating a league**, with one line of why, then the iOS prompt | Planner chat, 2026-10-14 |
 | 7 | Inviter's name | Shown on the invite page and the link-arrival preview: "{inviter} invited you to {league}". The inviter only; nobody else | Planner chat, 2026-10-14 (amends the 2026-10-11 "no commissioner name" rule for link arrivals) |
 | 8 | Auto-join from a link | **Automatic**; the preview becomes the welcome "You're in {league}" | Planner chat, 2026-10-14 |
@@ -70,15 +70,21 @@ All 2026-10-14, in the Planner session; verbatim in `docs/PRODUCT_RULES.md` ("On
 
 ## Open questions
 
-None blocking the design work. Two the build settles:
+None blocking the design work. One the build settles (the second is decided):
 
 1. **The invite domain.** The product name is deferred, so the link uses the current web
    domain for now; universal links (the `apple-app-site-association` file + the app's
    associated domain) must be redone once the real domain exists. The plan builds it so the
    domain is one config value.
-2. **The username generator's style** (first-name-based when Apple/Google give a name vs a
-   game-style name): the Design Lead proposes three samples on the board with the username
-   frame; Giorgio picks by seeing.
+2. ~~The username generator's style~~ **DECIDED (Giorgio, 2026-10-14): gamertag style, never a
+   name.** "I want the username to be generated not by putting someone's first name and then
+   two digits, but doing it in the style that kind of like Xbox does for their gamer tags…
+   some sort of adjective or word and then like a animal. So it'll be like helpedhornet151 or
+   something like that. Something kind of playful and also unique… we don't know if users want
+   to keep their name visible. So let's not expose their first names." So the generator is
+   {adjective}{Animal}{digits}; it never reads a name or an email from any sign-in (including
+   the "Change" path's suggestions); every candidate passes the format and content checks.
+   The helper line "You can change it later in Profile." stays.
 
 ## Scope
 
