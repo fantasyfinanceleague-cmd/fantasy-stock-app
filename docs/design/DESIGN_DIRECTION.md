@@ -917,8 +917,10 @@ row's winner) and the five sample `tile*` keys and `onTile` (replaced by the 11 
   winning. That's going to be able to be seen by the … point total up top"): `youTint` marks
   your scoreboard half and your roster column, win or lose; there is no leader wash and no
   row-winner lighting (`lit` and `leadWash` are gone).
-- `bg` is for game screens; money screens (Portfolio, the stock sheet) use `moneyBg`
-  (near-black in Dark, the white surface in Light).
+- `bg` is for game screens; money PAGES (Portfolio, Buy a stock) use `moneyBg` (near-black in
+  Dark, the white surface in Light). Sheets that rise over them (the stock sheet, the player
+  card) are `surface`, as every sheet is: in Dark the sheet is a lightness step above the page
+  (W4 Portfolio gate, 2026-10-13).
 
 ### Type (Archivo; no new font files)
 

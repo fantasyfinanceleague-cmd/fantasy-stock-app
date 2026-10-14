@@ -8431,7 +8431,9 @@ window.KS_REFS = {
         <div key={t} style={{ display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) auto auto', gap: 12, alignItems: 'center', padding: d === 'b' ? '12px 12px' : '12px 0', background: d === 'b' ? 'var(--c-surface)' : undefined, borderRadius: d === 'b' ? 2 : 0 }}>
           <span className="dr-av" style={{ width: 40, height: 40, fontSize: 11, borderRadius: d === 'b' ? 4 : 20 }}>{t}</span>
           <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dr-t" style={{ fontSize: 16 }}>{t}</span>{d === 'a' && amended ? <span className="dr-pillcat" style={{ background: `var(--d-cat-${CAT_OF[t]})`, color: 'var(--d-on-cat)', height: 18, fontSize: 11 }}>{CAT_NAME[CAT_OF[t]]}</span> : <span className="dr-pillcat" style={{ background: `var(--d-tile-${s})`, height: 18, fontSize: 11 }}>{SECTOR_LABEL[s]}</span>}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dr-t" style={{ fontSize: 16 }}>{t}</span>{/* PRODUCT_RULES: the slot pill only in slotted leagues; Stock Scudetto is unslotted, so the
+                current frame shows none (W4 Portfolio gate, 2026-10-13). Archived frames keep theirs. */}
+              {d === 'a' && amended ? null : <span className="dr-pillcat" style={{ background: `var(--d-tile-${s})`, height: 18, fontSize: 11 }}>{SECTOR_LABEL[s]}</span>}</span>
             <span className="dr-cap dr-num">{r.co} · {r.qty.toFixed(2)} sh</span>
           </span>
           {d === 'a' && amended ? <span /> : <Spark pts={[r.mon, r.prev, r.thu]} color={toneVar(r.thu - r.mon)} w={52} h={22} />}
