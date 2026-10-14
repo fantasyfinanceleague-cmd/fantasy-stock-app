@@ -86,6 +86,7 @@ import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { CAPTURE } from '@/lib/shell/captureDev';
 import { createFixtureStep } from '@/lib/shell/captureKnobs';
+import { keepDots } from '@/lib/game/keepDots';
 import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 interface WizardState {
@@ -399,7 +400,7 @@ export default function CreateLeagueWizard() {
       <SetupCard>
         <SettingRow
           label="Draft time"
-          value={draftDateValue}
+          value={keepDots(draftDateValue)}
           valueColor={state.draftDateTBD ? colors.warnText : undefined}
           onPress={() => {
             // Opening writes nothing: the sheet holds the time until "Set draft time" (ruling B).
@@ -547,15 +548,15 @@ export default function CreateLeagueWizard() {
             label="Stakes"
             // The shared stakes line (Design Lead: one line across Join and this
             // summary), with the amounts the insert writes.
-            value={stakesLine(state.stakeMode, {
+            value={keepDots(stakesLine(state.stakeMode, {
               notionalPerSlot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
               budgetAmount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
-            })}
+            }))}
           />
           <RowDivider />
           <SettingRow
             label="Draft"
-            value={state.draftDateTBD ? 'TBD' : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'TBD'}
+            value={keepDots(state.draftDateTBD ? 'TBD' : draftDateTimeLabel(state.draftDate?.toISOString() ?? null) ?? 'TBD')}
             valueColor={state.draftDateTBD ? colors.warnText : undefined}
           />
         </SetupCard>

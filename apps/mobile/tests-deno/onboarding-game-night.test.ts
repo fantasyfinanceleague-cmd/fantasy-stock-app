@@ -219,3 +219,34 @@ Deno.test('Forgot password shows the shared auth copy, never the server message 
   assert(s.includes('setError(getAuthErrorMessage(resetError));'));
   assert(!s.includes('setError(resetError.message)'));
 });
+
+// ── Large text: nothing breaks a word, the standout stays loudest ────────────────
+
+import { keepDots, NBSP } from '../lib/game/keepDots.ts';
+
+Deno.test('Join preview / Create summary lines wrap only between "·" segments', () => {
+  assertEquals(keepDots('Sat, Oct 10 · 7:00 PM ET'), `Sat,${NBSP}Oct${NBSP}10${NBSP}· 7:00${NBSP}PM${NBSP}ET`);
+  assertEquals(keepDots('Equal stakes · $2,000 per slot'), `Equal${NBSP}stakes${NBSP}· $2,000${NBSP}per${NBSP}slot`);
+  const join = src('app/join-league.tsx');
+  assert(join.includes('{keepDots(row.value)}'));
+  assert(join.includes('style={stackRows ? styles.rowStacked : styles.row}'), 'rows stack at accessibility sizes');
+  const create = src('app/create-league.tsx');
+  assertEquals(create.match(/keepDots\(/g)?.length, 3, 'stakes, draft (summary) and Draft time');
+});
+
+Deno.test('the Stepper stacks its box under the label at accessibility sizes (no "Manager / s")', () => {
+  const s = src('components/game/Stepper.tsx');
+  assert(s.includes('const stacked = fontScale >= FULL_WIDTH_FONT_SCALE;'));
+  assert(s.includes('style={[styles.row, stacked && styles.rowStacked, disabled && styles.dim]}'));
+});
+
+Deno.test('Profile: rows and the version line never outgrow the username heading', async () => {
+  const PROFILE_ROW_MAX_SCALE = 2; // ProfileView.tsx's export (pinned below); a .tsx can't load under Deno.
+  const { type } = await import('../constants/tokens/type.ts');
+  const heading = type.title.fontSize * (type.title.maxScale ?? Infinity);
+  assert(type.body.fontSize * PROFILE_ROW_MAX_SCALE < heading, 'body row < title');
+  const s = src('components/shell/ProfileView.tsx');
+  assert(s.includes('export const PROFILE_ROW_MAX_SCALE = 2;'));
+  assertEquals(s.match(/maxFontSizeMultiplier=\{PROFILE_ROW_MAX_SCALE\}/g)?.length, 3, 'label, value, version');
+  assert(src('components/shell/AuthScaffold.tsx').includes('maxFontSizeMultiplier={2}'), 'the back row is capped');
+});

@@ -25,6 +25,11 @@ import { useTheme, type ThemePreference } from '@/components/sp/ThemeProvider';
 
 const APPEARANCE_LABEL: Record<ThemePreference, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
+/** The standout stays loudest (W4 gate §5): your username heading is `title`, 22pt capped at
+ * 1.6× (35.2pt). The rows and the version line are body/caption with no ceiling of their own, so
+ * at XXXL they reached ~47pt, louder than the name they belong to. Capped at 2× (body 30pt). */
+export const PROFILE_ROW_MAX_SCALE = 2;
+
 export interface ProfileViewProps {
   username: string | null;
   email: string | null;
@@ -63,7 +68,7 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
         <Row label="Sign out" onPress={onSignOut} danger />
       </Card>
 
-      <Text variant="caption" tone="secondary" style={styles.version}>
+      <Text variant="caption" tone="secondary" maxFontSizeMultiplier={PROFILE_ROW_MAX_SCALE} style={styles.version}>
         {`${brand.name} ${version}`}
       </Text>
     </>
@@ -83,11 +88,11 @@ function Row({ label, value, onPress, danger = false }: { label: string; value?:
   const stacked = fontScale >= FULL_WIDTH_FONT_SCALE;
   const text = (
     <View style={stacked ? styles.rowTextStacked : styles.rowTextInline}>
-      <Text variant="body" color={danger ? colors.danger : colors.text} style={styles.rowLabel}>
+      <Text variant="body" color={danger ? colors.danger : colors.text} maxFontSizeMultiplier={PROFILE_ROW_MAX_SCALE} style={styles.rowLabel}>
         {label}
       </Text>
       {value ? (
-        <Text variant="body" tone="secondary" numberOfLines={stacked ? undefined : 1} style={stacked ? null : styles.rowValue}>
+        <Text variant="body" tone="secondary" numberOfLines={stacked ? undefined : 1} maxFontSizeMultiplier={PROFILE_ROW_MAX_SCALE} style={stacked ? null : styles.rowValue}>
           {value}
         </Text>
       ) : null}

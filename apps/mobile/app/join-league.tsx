@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { router, Stack } from 'expo-router';
 
 import { radius, space, type } from '@/constants/tokens';
-import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { Button, FULL_WIDTH_FONT_SCALE, type ButtonStatus } from '@/components/sp/Button';
 import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
@@ -18,6 +18,7 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
+import { keepDots } from '@/lib/game/keepDots';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
 } from '@/lib/join/joinFixtureGate';
@@ -46,6 +47,10 @@ import {
 
 type Step = 'code' | 'preview' | 'joined';
 
+/** The preview rows' Dynamic Type ceiling (callout 13 → 26pt), under the league name's display
+ * (51pt at its 1.6× cap), so the name stays the screen's loudest line. */
+const PREVIEW_ROW_MAX_SCALE = 2;
+
 /** The two server calls. Kept inline (not in a lib) so the architecture map's call-site anchors stay on this screen. */
 async function callPreview(code: string): Promise<{ data: unknown; error: unknown }> {
   if (JOIN_FIXTURE) {
@@ -71,6 +76,10 @@ async function callJoin(code: string): Promise<{ data: unknown; error: unknown }
 
 export default function JoinLeagueScreen() {
   const { refresh, setActiveLeagueId } = useLeagueContext();
+  // At accessibility sizes a preview row stacks (label over value), so a value never wraps a word
+  // at a time beside its label (W4 Onboarding, XXXL: "Sat, Oct / 10 · / 7:00 PM / ET").
+  const { fontScale } = useWindowDimensions();
+  const stackRows = fontScale >= FULL_WIDTH_FONT_SCALE;
 
   const [step, setStep] = useState<Step>('code');
   const [code, setCode] = useState(JOIN_FIXTURE ? fixturePrefill(JOIN_FIXTURE) : '');
@@ -240,13 +249,14 @@ export default function JoinLeagueScreen() {
               key={row.label}
               accessible
               accessibilityLabel={`${row.label}, ${row.value}`}
-              style={styles.row}
+              style={stackRows ? styles.rowStacked : styles.row}
             >
-              <Text variant="callout" tone="secondary">
+              <Text variant="callout" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE}>
                 {row.label}
               </Text>
-              <Text variant="callout" numberOfLines={0} style={styles.rowValue}>
-                {row.value}
+              {/* keepDots: wraps only between "·" segments, never inside "7:00 PM ET". */}
+              <Text variant="callout" numberOfLines={0} maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={stackRows ? styles.rowValueStacked : styles.rowValue}>
+                {keepDots(row.value)}
               </Text>
             </View>
           ))}
@@ -345,6 +355,15 @@ const styles = StyleSheet.create({
     gap: space[4],
     minHeight: 44,
     paddingVertical: space[3],
+  },
+  rowStacked: {
+    gap: space[1],
+    minHeight: 44,
+    paddingVertical: space[3],
+  },
+  rowValueStacked: {
+    fontFamily: type.headline.fontFamily,
+    fontVariant: ['tabular-nums'],
   },
   rowValue: {
     flexShrink: 1,

@@ -33,7 +33,8 @@ export const AuthScaffold = forwardRef<ScrollView, AuthScaffoldProps>(function A
       {back ? (
         <Pressable onPress={back.onPress} accessibilityRole="button" accessibilityLabel={back.label} style={styles.back} hitSlop={8}>
           <Icon name="chevronLeft" size="callout" tone="text2" />
-          <Text variant="callout" tone="secondary">
+          {/* Capped (2×, 26pt) so the back row never outgrows a screen's heading (Profile's 35pt name). */}
+          <Text variant="callout" tone="secondary" maxFontSizeMultiplier={2}>
             {back.label}
           </Text>
         </Pressable>

@@ -2,23 +2,15 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "40906d514f313959a5156707752c7c45e52c18f6",
-    "commitShort": "40906d51",
+    "commit": "3214028af3ebbdda3a55c7596484cdf8ef51cf60",
+    "commitShort": "3214028a",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/create-account.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/app/create-league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/forgot-password.tsx"
       },
       {
         "code": "M",
@@ -26,31 +18,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/login.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/onboarding.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/SetupRows.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/PreDraftCard.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/join/AlertCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/StockSheetBody.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/TradeReviewPanel.tsx"
+        "path": "apps/mobile/components/game/Stepper.tsx"
       },
       {
         "code": "M",
@@ -58,79 +26,15 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/GetStarted.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/LeagueSheet.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/LeagueSheetRow.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/onboarding/OnboardingPager.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/onboarding/sampleData.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/onboarding/Vignettes.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/shell/ProfileView.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/UsernamePicker.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/Chip.tsx"
-      },
-      {
-        "code": "R",
-        "path": "apps/mobile/components/sp/WarnPanel.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/createLeagueSteps.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/leagueSettingsEntry.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/useDraftAutoStart.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/shell/captureDev.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/shell/captureKnobs.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/usernameMachine.ts"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/tests-deno/onboarding-game-night.test.ts"
-      },
-      {
-        "code": "UU",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-14T21:39:11Z",
-    "sourceHash": "sha256:517915cae83bdbd27f05485236e413adae5d45fb7a7e60a4a3a6af458cd91d61",
+    "timestamp": "2026-10-14T21:39:14Z",
+    "sourceHash": "sha256:0c73d1be8369df33d91ce68a563232b5ecde5dc34076f8d9ab4b77997d1ad0df",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -16084,7 +15988,7 @@
       "payload": ".from('league_draft_slots').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:230"
+        "apps/mobile/app/create-league.tsx:231"
       ],
       "via": [
         "seamSaveLeagueSlots"
@@ -16100,7 +16004,7 @@
       "payload": ".from('league_draft_slots').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:230"
+        "apps/mobile/app/create-league.tsx:231"
       ],
       "via": [
         "seamSaveLeagueSlots"
@@ -16116,7 +16020,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:220"
+        "apps/mobile/app/create-league.tsx:221"
       ],
       "via": [
         "seamInsertMember"
@@ -16132,7 +16036,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/create-league.tsx:196"
+        "apps/mobile/app/create-league.tsx:197"
       ],
       "via": [
         "seamInsertLeague"
@@ -16896,7 +16800,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:68"
+        "apps/mobile/app/join-league.tsx:73"
       ]
     },
     {
@@ -16908,7 +16812,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:59"
+        "apps/mobile/app/join-league.tsx:64"
       ]
     },
     {
@@ -18377,7 +18281,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:59"
+            "apps/mobile/app/join-league.tsx:64"
           ]
         },
         {
@@ -18393,7 +18297,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:68"
+            "apps/mobile/app/join-league.tsx:73"
           ]
         },
         {
@@ -19941,8 +19845,8 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/join-league.tsx:59 -> preview-league",
-      "apps/mobile/app/join-league.tsx:68 -> join-league",
+      "apps/mobile/app/join-league.tsx:64 -> preview-league",
+      "apps/mobile/app/join-league.tsx:73 -> join-league",
       "apps/mobile/components/game/DraftRoom.tsx:212 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:236 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:281 -> validate-and-record-pick (via seamInvoke)",
@@ -20066,10 +19970,10 @@
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> drafts.select (via useRosterData)",
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> league_draft_slots.select (via useRosterData)",
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> trades.select (via useRosterData)",
-      "apps/mobile/app/create-league.tsx:196 -> leagues.insert (via seamInsertLeague)",
-      "apps/mobile/app/create-league.tsx:220 -> league_members.insert (via seamInsertMember)",
-      "apps/mobile/app/create-league.tsx:230 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
-      "apps/mobile/app/create-league.tsx:230 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
+      "apps/mobile/app/create-league.tsx:197 -> leagues.insert (via seamInsertLeague)",
+      "apps/mobile/app/create-league.tsx:221 -> league_members.insert (via seamInsertMember)",
+      "apps/mobile/app/create-league.tsx:231 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
+      "apps/mobile/app/create-league.tsx:231 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
       "apps/mobile/app/league-settings.tsx:243 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
