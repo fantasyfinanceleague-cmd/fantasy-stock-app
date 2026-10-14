@@ -37,8 +37,15 @@ Nothing ships to TestFlight until every screen is on Game Night in both themes
   tappable element (§4).
 - **The stress fixture** (§9B): 20-character names, ≥ $1,000,000 values and losses, the
   longest ticker and company names in the universe, 16 managers where a list allows it.
-- Captures live in `~/fantasy-stock-design-review/<branch>/`; the worker's README lists each
-  file with its state and theme.
+- **Where the evidence lives** (Giorgio, 2026-10-14: the repo stays small; `docs/design/captures/`
+  had reached 216 MB and every retake adds to history):
+  - **Stills and recordings stay OUT of the repo**, in `~/fantasy-stock-design-review/<branch>/`.
+    Never `git add` a PNG, MOV or frame sheet under `docs/design/captures/`.
+  - **The repo keeps only `docs/design/captures/<set>/README.md`**, pointing at that folder. It
+    carries the build SHA every frame was taken on (one build per set: the gate checks
+    status-bar times against commit times), the states table (each file with its state, theme,
+    device and text size), the measurements, accent per frame, and the §2 / §3 / §4 tables.
+  - Sets already committed (through Portfolio) stay where they are; nothing is rewritten.
 
 ## 2. The reference check (the plan's new step)
 
