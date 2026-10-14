@@ -377,6 +377,8 @@
 
   // ── Waiting on you: ONLY the open calls, newest first (Giorgio, 2026-10-12). ──
   const OPEN = [
+    ['call-ob-cards', 'The three onboarding cards\' scenes (A/B)'],
+    ['call-ob-username', 'The suggested username\'s style (A/B/C)'],
   ];
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
@@ -483,6 +485,7 @@
         </header>
 
         {window.KSDirections ? <window.KSDirections /> : null}
+        {window.KSOnboarding ? <window.KSOnboarding /> : null}
 
         <header className="b-part" id="approved">
           <span className="b-part__eyebrow">Reference</span>

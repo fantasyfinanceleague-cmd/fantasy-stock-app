@@ -1557,6 +1557,8 @@
     );
   }
   window.KSDirections = () => null; // nothing waiting on Giorgio (2026-10-13)
+  // Shared Game Night pieces for the other board files (onboarding.jsx, 2026-10-14).
+  window.KSGN = { Fit, Av, Head, Body, Scoreboard, Board, FinalChip, LiveChip, NEW, G };
   window.KSShareLockedArchived = (decided, note) => () => <CallShareLocked archived decided={decided} decidedNote={note} />;
   window.KSDraftAutoArchived = () => <CallAuto archived />;
   window.KSMxCalls = {
