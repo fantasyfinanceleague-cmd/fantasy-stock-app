@@ -75,8 +75,8 @@ function settingsOf(activeLeague: { stake_mode: string | null; notional_per_slot
 }
 
 export function usePortfolioData(): PortfolioData {
-  const { user } = useSession();
-  const { activeLeague } = useLeagueContext();
+  const { user, loading: sessionLoading } = useSession();
+  const { activeLeague, loading: leaguesLoading } = useLeagueContext();
   // Key on primitives, not the league object: a LeagueContext refresh that rebuilds
   // the object must not refetch the quotes and bars.
   const settings = settingsOf(activeLeague);
@@ -100,7 +100,10 @@ export function usePortfolioData(): PortfolioData {
 
   useEffect(() => {
     if (!leagueId || !userId || numRounds == null) {
-      setState({ ...EMPTY, status: 'error', leagueName });
+      // The session or the leagues aren't read yet: that's loading, not a failure (the W4
+      // capture caught "didn't load" flashing at every launch).
+      const pending = sessionLoading || leaguesLoading;
+      setState(pending ? { ...EMPTY, status: 'loading', leagueName } : { ...EMPTY, status: 'error', leagueName });
       return;
     }
     // Still loading: say so. (Without this, an earlier render's 'error' — the session's user
@@ -250,7 +253,7 @@ export function usePortfolioData(): PortfolioData {
       cancelled = true;
     };
     // `tick` re-runs the price reads on Try again.
-  }, [leagueId, leagueName, stakeMode, notional, numRounds, budgetAmount, userId, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
+  }, [leagueId, leagueName, stakeMode, notional, numRounds, budgetAmount, userId, sessionLoading, leaguesLoading, ledgerState.status, ledgerState.ledger, ledgerState.fetchedNow, tick]);
 
   return { ...state, refresh };
 }

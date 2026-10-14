@@ -66,24 +66,25 @@ export interface PortfolioLedgerState {
 }
 
 export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerState {
-  const [state, setState] = useState<Omit<PortfolioLedgerState, 'refresh'>>({ status: 'loading', ledger: null, fetchedNow: false });
+  const [state, setState] = useState<Omit<PortfolioLedgerState, 'refresh'> & { forLeague: string | null }>({ status: 'loading', ledger: null, fetchedNow: false, forLeague: leagueId });
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (!leagueId) {
-      setState({ status: 'error', ledger: null, fetchedNow: false });
+      setState({ status: 'error', ledger: null, fetchedNow: false, forLeague: leagueId });
       return;
     }
     let cancelled = false;
     const wasCached = loaded.has(leagueId);
-    setState({ status: 'loading', ledger: loaded.get(leagueId) ?? null, fetchedNow: false });
+    setState({ status: 'loading', ledger: loaded.get(leagueId) ?? null, fetchedNow: false, forLeague: leagueId });
     loadPortfolioLedger(leagueId).then((ledger) => {
       if (cancelled) return;
       setState({
         status: ledger ? 'ready' : 'error',
         ledger,
         fetchedNow: !wasCached,
+        forLeague: leagueId,
       });
     });
     return () => {
@@ -92,5 +93,9 @@ export function usePortfolioLedger(leagueId: string | null): PortfolioLedgerStat
     // `tick` re-runs the load after an error.
   }, [leagueId, tick]);
 
-  return { ...state, refresh };
+  // The state belongs to the league it was loaded for: for the one render after the league id
+  // changes (before the effect resets it), report loading, never the previous league's result
+  // (a "didn't load" flashed at launch while the id arrived — W4 Portfolio capture).
+  if (state.forLeague !== leagueId) return { status: 'loading', ledger: null, fetchedNow: false, refresh };
+  return { status: state.status, ledger: state.ledger, fetchedNow: state.fetchedNow, refresh };
 }

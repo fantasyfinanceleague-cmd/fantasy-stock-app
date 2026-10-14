@@ -243,7 +243,13 @@ export function PortfolioScreen() {
               accessibilityLabel="Portfolio value"
             />
           ) : null}
-          <RangePills options={PORTFOLIO_RANGES} value={range} onChange={setRange} variant="pills" />
+          {/* Measured from pixels (W4 capture): the pills' own 6pt target margins put them 21pt under
+              the dates and the next block 34pt below; pulled in so the pills sit ~12pt under the
+              dates and the 24pt block gap is measured from the pill, glyph to glyph. Each pill
+              keeps its 44pt target (32pt fill + its hit slop). */}
+          <View style={styles.pillsRow}>
+            <RangePills options={PORTFOLIO_RANGES} value={range} onChange={setRange} variant="pills" />
+          </View>
         </View>
 
         {/* Cash and slots: what the team has to invest. */}
@@ -381,6 +387,7 @@ const styles = StyleSheet.create({
   blocks: { gap: space[7] },
   hero: { gap: space[4] },
   heroText: { gap: space[1] },
+  pillsRow: { marginTop: -space[3], marginBottom: -space[3] },
   rollRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
   nowrap: { flexDirection: 'row', alignItems: 'baseline' },
   facts: { gap: space[3] },
