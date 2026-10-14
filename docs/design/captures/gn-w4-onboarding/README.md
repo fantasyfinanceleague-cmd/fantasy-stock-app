@@ -14,6 +14,11 @@ password, Create league 15–21 and 16b, Home pre-draft 38/39 and the new 40. Th
 `keepDots.ts`, which only gained `keepHyphens` (used in Create league alone). Superseded frames
 are kept in `superseded/` (the impossible 38/39 and the old-icon 08b), not mixed in.
 
+**After the rebase onto `origin/main` `0fa519bf` (#269):** `fa420806` is now **`4f3c8761`** and
+`b61d1508` is now **`5ba2ceba`**, each with a byte-identical `apps/mobile/` tree
+(`git diff b61d1508 5ba2ceba -- apps/mobile` is empty; main's #267–#269 changed docs, the plan
+and the server only; the architecture map was regenerated, never hand-merged).
+
 ## How it was captured
 
 - Two simulators of my own: "W4 Onboarding 17e" (390×844 pt) and "W4 Onboarding 17 Pro"
