@@ -130,7 +130,15 @@ export default function CreateAccountScreen() {
     </>
   );
 
-  if (sentTo) return <ConfirmEmailSent email={sentTo} onBack={() => router.replace('/login')} />;
+  if (sentTo) {
+    return (
+      <ConfirmEmailSent
+        email={sentTo}
+        onResend={() => signUp(sentTo, password)}
+        onBack={() => router.replace('/login')}
+      />
+    );
+  }
 
   return (
     <AuthScaffold ref={scrollRef} footer={footer}>

@@ -2,10 +2,12 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
-import { setRecoverySession } from './recoveryNonce';
+import { setRecoverySession } from './auth/recoverySession';
 import { setEmailJustConfirmed } from './auth/emailConfirmed';
 import { buildConfirmRedirect } from './auth/confirmLink';
-import { clearConfirmNonce, getOrCreateConfirmNonce } from './auth/confirmNonce';
+import { pkceCryptoReady } from './auth/pkceCrypto';
+import { confirmationCooldown, RESEND_TOO_SOON } from './auth/resendCooldown';
+import { removeLegacyAuthKeys } from './auth/legacyAuthKeys';
 import { signInWithApple as nativeAppleSignIn, signInWithGoogle as nativeGoogleSignIn, signOutOfGoogle } from './auth/socialSignIn';
 import type { SocialSignInResult } from './auth/socialOutcome';
 import type { AuthPhase } from './shell/pendingRoute';
@@ -33,8 +35,10 @@ export type SignUpResult = AuthResult & {
   needsConfirmation: boolean;
 };
 
-/** The device could not store the confirmation nonce: no email was sent (see confirmNonce.ts). */
-export const CONFIRM_NONCE_UNAVAILABLE = 'confirm_nonce_unavailable';
+/** supabase-js could not store the PKCE code verifier, so no email was sent (see signUp). */
+export const PKCE_STORAGE_UNAVAILABLE = 'pkce_storage_unavailable';
+/** This build has no WebCrypto for PKCE (lib/auth/pkceCrypto.ts), so nothing was sent. */
+export const PKCE_CRYPTO_UNAVAILABLE = 'pkce_crypto_unavailable';
 
 // Phase 3b-1 — the ONE auth subscription for the whole app.
 //
@@ -66,8 +70,6 @@ export interface SessionContextValue {
   signIn: (email: string, password: string) => Promise<AuthResult>;
   /** Email + password sign-up. No username: the pick-username gate asks for it (onboarding W2). */
   signUp: (email: string, password: string) => Promise<SignUpResult>;
-  /** Sends the confirmation email again, with a link that still returns to this device. */
-  resendConfirmation: (email: string) => Promise<AuthResult>;
   signInWithApple: () => Promise<SocialSignInResult>;
   signInWithGoogle: () => Promise<SocialSignInResult>;
   signOut: () => Promise<void>;
@@ -95,6 +97,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // The nonce stores are gone (PKCE); clear their leftovers on upgraded devices. Best effort.
+    try {
+      removeLegacyAuthKeys(require('@react-native-async-storage/async-storage').default);
+    } catch {
+      // No AsyncStorage (static web render): nothing to clear.
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -117,10 +126,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           return prev?.id === newUser?.id ? prev : newUser;
         });
         setLoading(false);
-
-        // Any sign-in or sign-out ends a pending email sign-up on this device: its confirmation
-        // nonce must not outlive it (security review, 2026-10-14).
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') clearConfirmNonce();
 
         // Register for push notifications on sign in
         if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current) {
@@ -203,34 +208,35 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       await wait(FIXTURE_NETWORK_MS);
       return { error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE }, needsConfirmation: false };
     }
-    // Email confirmation is ON (plan 2026-10-14): signUp() returns no session, and the email's
-    // link returns into the app through lib/auth/confirmLink.ts, bound to THIS device by a nonce.
-    // No username travels any more: the handle_new_user_profile trigger (20261005000001) still
-    // creates the profile row (username NULL), and the pick-username gate asks for one.
-    const nonce = await getOrCreateConfirmNonce(email);
-    if (!nonce) return { error: { message: '', code: CONFIRM_NONCE_UNAVAILABLE }, needsConfirmation: false };
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: buildConfirmRedirect(nonce) },
-    });
-    if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false };
-    return { error: null, needsConfirmation: !data?.session };
-  }, []);
-
-  const resendConfirmation = useCallback(async (email: string): Promise<AuthResult> => {
-    if (SHELL_FIXTURE) {
-      await wait(FIXTURE_NETWORK_MS);
-      return { error: null };
+    // Email confirmation is ON (plan 2026-10-14): signUp() returns no session, and the email's link returns
+    // into the app with a one-time code (lib/auth/confirmLink.ts) that only THIS device can exchange: with
+    // flowType 'pkce' supabase-js stores a code verifier here before the request and sends its challenge.
+    // No username travels any more: the handle_new_user_profile trigger (20261005000001) still creates
+    // the profile row (username NULL), and the pick-username gate asks for one.
+    //
+    // Also "Send again": supabase.auth.resend() sends NO challenge, so its email would come back as an
+    // implicit-flow link with tokens in the URL. Repeating signUp() for the same, still-unconfirmed
+    // address re-sends the confirmation through the PKCE path (and replaces the verifier, which
+    // supersedes the earlier email, as GoTrue's own resend does).
+    // Never on the weak fallback (Math.random + the "plain" method) that auth-js uses without a WebCrypto.
+    if (!pkceCryptoReady()) return { error: { message: '', code: PKCE_CRYPTO_UNAVAILABLE }, needsConfirmation: false };
+    // The floor for ANY repeat to this address, whoever asks (lib/auth/resendCooldown.ts): a repeat inside
+    // GoTrue's interval would fail AND destroy the verifier the first email needs. The existing
+    // "Too many attempts" line words it.
+    if (confirmationCooldown.remainingMs(email) > 0) return { error: { ...RESEND_TOO_SOON }, needsConfirmation: false };
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: buildConfirmRedirect() },
+      });
+      if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false };
+      if (!data?.session) confirmationCooldown.markSent(email);
+      return { error: null, needsConfirmation: !data?.session };
+    } catch {
+      // supabase-js writes the verifier to storage BEFORE the request; a storage failure throws out of it.
+      return { error: { message: '', code: PKCE_STORAGE_UNAVAILABLE }, needsConfirmation: false };
     }
-    const nonce = await getOrCreateConfirmNonce(email);
-    if (!nonce) return { error: { message: '', code: CONFIRM_NONCE_UNAVAILABLE } };
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: buildConfirmRedirect(nonce) },
-    });
-    return { error: error ? { message: error.message, code: error.code } : null };
   }, []);
 
   // The fixture never opens a native sheet: it answers as the server does today for a NEW
@@ -292,12 +298,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       refreshProfile,
       signIn,
       signUp,
-      resendConfirmation,
       signInWithApple,
       signInWithGoogle,
       signOut,
     }),
-    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signIn, signUp, resendConfirmation, signInWithApple, signInWithGoogle, signOut]
+    [session, user, loading, username, profileLoading, authPhase, setUsernameLocal, refreshProfile, signIn, signUp, signInWithApple, signInWithGoogle, signOut]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -19,10 +19,9 @@ import { LeagueProvider } from '@/lib/LeagueContext';
 import { notificationRoute } from '@/lib/shell/notificationRoute';
 import { addNotificationListeners, removePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
-import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
-import { parseRecoveryLink } from '@/lib/recoveryLink';
-import { confirmedEmailMatches, createLinkDedupe, decideConfirmLink, parseConfirmLink, type ConfirmLinkResult } from '@/lib/auth/confirmLink';
-import { verifyAndConsumeConfirmNonce } from '@/lib/auth/confirmNonce';
+import { isRecoverySession, setRecoverySession } from '@/lib/auth/recoverySession';
+import { createAuthLinkHandler } from '@/lib/auth/authLinkHandlers';
+import { createLinkDedupe } from '@/lib/auth/authLink';
 import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
@@ -43,8 +42,9 @@ export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-// A cold-start confirmation link can arrive twice (getInitialURL AND the 'url' event); handle it once.
-const handledConfirmLinks = createLinkDedupe();
+// A cold-start auth link can arrive twice (getInitialURL AND the 'url' event); handle it once. A code is
+// single use, so a second exchange would fail (and flip a working password reset to "invalid").
+const handledAuthLinks = createLinkDedupe();
 
 // Rejects (harmlessly) when the splash is already gone, e.g. on a dev reload: handled.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -146,111 +146,38 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     }
   }, [shownPhase]);
 
-  // Handle deep links for password reset (and, onboarding W2, the email-confirmation return)
+  // The two email return links, both PKCE one-time codes (lib/supabase.ts flowType 'pkce'):
+  //   fantasystockapp://auth/confirm?code=…                  sign-up confirmation (onboarding W2)
+  //   fantasystockapp://reset-password?flow=pkce&code=…      password recovery
+  // supabase.auth.exchangeCodeForSession(code) succeeds only on the device that holds the code verifier
+  // stored when the flow began, so a forged, replayed or intercepted link fails. The decisions live in
+  // lib/auth/authLinkHandlers.ts (tested without React); this binds the real client, router and flags.
   useEffect(() => {
-    // The email-confirmation return link (lib/auth/confirmLink.ts). +native-intent has already
-    // sent the router to sign-in; this decides whether the link's session may be used: only when
-    // nobody is signed in AND the link carries the nonce this device stored at sign-up (single
-    // use, fail closed). Otherwise nothing happens: the address is confirmed server-side either
-    // way, so the person signs in with their password. A successful sign-in flips the auth phase
-    // and the root guard continues the flow (pick-username, then any pending route).
-    const handleConfirmLink = async (parsed: ConfirmLinkResult) => {
-      if (SHELL_FIXTURE || parsed.kind !== 'tokens') return;
-      const { data } = await supabase.auth.getSession();
-      const hasSession = !!data.session;
-      // Never consume the nonce for a link that can't be used anyway. The nonce answers with the
-      // address it was minted for (null = refused).
-      const boundEmail = hasSession ? null : await verifyAndConsumeConfirmNonce(parsed.nonce);
-      const action = decideConfirmLink(parsed, boundEmail !== null, hasSession);
-      if (action.kind !== 'signIn') return;
-      const { data: set, error } = await supabase.auth.setSession({
-        access_token: action.accessToken,
-        refresh_token: action.refreshToken,
-      });
-      if (error) {
-        console.warn('[auth] confirmation link could not sign in', error.code ?? '');
-        return;
-      }
-      // The session must belong to the address this device signed up with. Anything else is
-      // someone else's tokens riding a nonce they somehow held: leave that account again, and
-      // don't claim "email confirmed".
-      if (!confirmedEmailMatches(boundEmail, set.user?.email)) {
-        console.warn('[auth] confirmation link signed in a different address; signing out');
-        if (set.user?.id) await removePushToken(set.user.id).catch(() => {});
-        await supabase.auth.signOut();
-        return;
-      }
-      setEmailJustConfirmed(true); // W4's Pick a username draws "✓ EMAIL CONFIRMED"
-    };
-
-    // Handle URL when app is opened from a link
-    const handleDeepLink = async (event: { url: string }) => {
-      const confirm = parseConfirmLink(event.url);
-      if (confirm.kind !== 'none') {
-        // Mark BEFORE awaiting: the two cold-start deliveries race, and the nonce is single use.
-        if (handledConfirmLinks.firstTime(event.url)) await handleConfirmLink(confirm);
-        return;
-      }
-
-      const parsed = parseRecoveryLink(event.url);
-
-      if (parsed.kind === 'none') {
-        return;
-      }
-
-      if (parsed.kind === 'error') {
-        // Expired, already-used, or otherwise malformed link — Supabase
-        // redirected here with an error instead of tokens. Route to the
-        // invalid state rather than leaving reset-password with no session.
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Fixes F2 (deep-link session fixation): only set a session from a
-      // recovery link whose nonce matches one THIS device generated for a
-      // reset it requested. Fail closed — an attacker's crafted link (or a
-      // genuine link opened on a device that never requested the reset, or
-      // an older link superseded by a newer request) carries no matching
-      // nonce and is refused.
-      const nonceOk = await verifyAndConsumeRecoveryNonce(parsed.nonce);
-      if (!nonceOk) {
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Set the session with the tokens from the URL
-      const { error } = await supabase.auth.setSession({
-        access_token: parsed.accessToken,
-        refresh_token: parsed.refreshToken,
-      });
-
-      if (error) {
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Mark this session as a recovery session — reset-password.tsx's form
-      // state keys off this flag, not "is there any session at all", so a
-      // user who lands there some other way while signed in for an
-      // unrelated reason doesn't see the form. Cleared on Cancel or success.
-      setRecoverySession(true);
-
-      // Navigate to reset password screen
-      router.replace('/reset-password');
-    };
+    const handleDeepLink = createAuthLinkHandler({
+      confirmEnabled: !SHELL_FIXTURE,
+      getSession: () => supabase.auth.getSession(),
+      exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+      signOut: () => supabase.auth.signOut({ scope: 'local' }),
+      isRecoveryActive: isRecoverySession,
+      removePushToken,
+      setEmailJustConfirmed,
+      setRecoverySession,
+      replaceRoute: (path) => router.replace(path as never),
+      warn: (message, code) => console.warn(message, code),
+      dedupe: handledAuthLinks,
+    });
 
     // Get the initial URL if app was opened from a link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        handleDeepLink({ url });
+        handleDeepLink(url);
       }
     });
 
     // Listen for URL changes while app is running
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleDeepLink(event.url);
+    });
 
     return () => {
       subscription.remove();

@@ -37,7 +37,20 @@ refuses as paused, so that frame needs the real-server path or the W1 board's fr
 
 ## What is verified without screenshots
 
-See the hand-back message and the tests: `apps/mobile/tests-deno/onboarding-w2-auth.test.ts`
-(36 tests incl. the nonce store, the confirmation-link decision table, `app.config.js`, the wiring
-scans) and `supabase/tests/social_signup.pglite.test.ts` (profile row + signup gate for Apple /
-Google shapes on real Postgres). 76 mutations over the auth decisions were each killed.
+See the hand-back message and the tests:
+- `apps/mobile/tests-deno/pkce-auth-links.test.ts` (the confirmation and recovery links, the code
+  exchange with a fake client for every outcome, the PKCE crypto shim against auth-js's own helpers);
+- `apps/mobile/tests-deno/recoveryLink.test.ts` (recovery-link parsing and the reset screen's state);
+- `apps/mobile/tests-deno/onboarding-w2-auth.test.ts` (Apple/Google, privacy, the approved copy, the
+  native config, the create-account wiring);
+- `supabase/tests/social_signup.pglite.test.ts` (profile row + signup gate for Apple / Google shapes
+  on real Postgres).
+
+Mutations over the auth decisions (link parsing, the exchange handler, the recovery path, the crypto
+shim, sign-in privacy, copy, the signup hook) were each killed.
+
+## PKCE (2026-10-14)
+
+The email links now carry a one-time code (`flowType: 'pkce'`), exchanged on the device that holds the
+code verifier. Cross-device confirmation falls back to signing in with the password. "Send again" repeats
+`signUp()` (supabase's `resend()` sends no code challenge, so its email would be an implicit-flow link).

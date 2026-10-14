@@ -19,10 +19,16 @@
 // - Nothing here writes user metadata or a profile (no updateUser, no profile upsert).
 //
 // Apple carries a nonce end to end (the id token's `nonce` is SHA-256(raw); GoTrue re-hashes the
-// raw value we send and compares), so a captured Apple token can't be replayed. Google: the free
-// @react-native-google-signin API can't pass a nonce, and on iOS the Google SDK may stamp one we
-// can't see, so the Google provider runs with Supabase's "Skip nonce checks" (Giorgio's dashboard
-// step; the hand-back explains the trade-off). The audience check (our client IDs only) still holds.
+// raw value we send and compares), so a captured Apple token can't be replayed.
+//
+// GOOGLE (Giorgio, 2026-10-14, option 1): native one-tap, with the nonce check SKIPPED for Google only
+// (Supabase dashboard: Google provider -> "Skip nonce checks" ON). The free @react-native-google-signin
+// API cannot pass a nonce, so there is none to check. The Google sign-in itself stays verified
+// (signature, and audience = our own client IDs); what the nonce would add is replay protection. The
+// residual risk, written down on purpose: a Google ID token that is captured could be replayed to
+// Supabase within its validity window (about an hour). It is bounded to tokens Google issued to OUR iOS
+// or web client IDs, because GoTrue still rejects any other audience; the dashboard's Client IDs list must
+// hold exactly those two and nothing else.
 //
 // Signups stay closed server-side: a first Apple/Google sign-in CREATES a user, and GoTrue runs
 // the Before User Created hook (restrict_new_signups, 20260815000000) on that path exactly as on
@@ -171,6 +177,7 @@ export async function signInWithGoogle(): Promise<SocialSignInResult> {
     return { kind: 'error', error: { message: '' } };
   }
 
+  // No nonce, deliberately (see GOOGLE above): replay of a captured token is the accepted, bounded risk.
   const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: idToken });
   if (error) {
     // Leave Google's own session too, so the next attempt can pick a different account.

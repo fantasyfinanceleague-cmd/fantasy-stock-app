@@ -2,20 +2,12 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "16694781bce949c3768b710e1fd251100f44a038",
-    "commitShort": "16694781",
+    "commit": "0408ecfa1923a2937cf90ec9c6d29dd61a43ffa4",
+    "commitShort": "0408ecfa",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "feat/onboarding-w2-auth",
     "dirty": true,
     "dirtyPaths": [
-      {
-        "code": "A",
-        "path": "apps/mobile/app.config.js"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app.json"
-      },
       {
         "code": "M",
         "path": "apps/mobile/app/_layout.tsx"
@@ -25,52 +17,40 @@
         "path": "apps/mobile/app/+native-intent.tsx"
       },
       {
-        "code": "UU",
-        "path": "apps/mobile/app/create-account.tsx"
-      },
-      {
-        "code": "UU",
-        "path": "apps/mobile/app/login.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/shell/ConfirmEmailSent.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/shell/SocialSignIn.tsx"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/constants/confirmEmailCopy.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/confirmLink.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/confirmNonce.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/confirmNonceCore.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/emailConfirmed.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/socialOutcome.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/auth/socialSignIn.ts"
+        "code": "M",
+        "path": "apps/mobile/app/forgot-password.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/authErrors.ts"
+        "path": "apps/mobile/app/login.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/reset-password.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/shell/ConfirmEmailSent.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/auth/authLinkHandlers.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/auth/legacyAuthKeys.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/auth/pkceCrypto.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/auth/resendCooldown.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/recoveryLink.ts"
       },
       {
         "code": "M",
@@ -78,30 +58,34 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/package-lock.json"
+        "path": "apps/mobile/lib/shell/resumeTarget.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/package.json"
+        "path": "apps/mobile/lib/supabase.ts"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/onboarding-w2-auth.test.ts"
+        "code": "M",
+        "path": "apps/mobile/tests-deno/pkce-auth-links.test.ts"
       },
       {
-        "code": "UU",
+        "code": "M",
+        "path": "apps/mobile/tests-deno/recoveryLink.test.ts"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-14T21:48:14Z",
-    "sourceHash": "sha256:d107cca0d47b18ac65d9926d9f75d579ff836f1f43eda6512b6f9b698a9c0b79",
+    "timestamp": "2026-10-14T22:25:57Z",
+    "sourceHash": "sha256:fcb4d682b7192a4a34564ee3915b6e167cebe0503fd72e19f4fd0beb998165c3",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 21.5,
+    "ageHours": 22.2,
     "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
@@ -8731,23 +8715,6 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.LeagueCarousel",
-      "label": "LeagueCarousel.tsx",
-      "sublabel": "mobile/components/LeagueCarousel.tsx",
-      "kind": "client-component",
-      "source": {
-        "path": "apps/mobile/components/LeagueCarousel.tsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
       "id": "ui.LeagueContext",
       "label": "LeagueContext.tsx",
       "sublabel": "mobile/lib/LeagueContext.tsx",
@@ -9230,23 +9197,6 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/Ticker.jsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "ui.useHistoricalPL",
-      "label": "useHistoricalPL.ts",
-      "sublabel": "mobile/lib/useHistoricalPL.ts",
-      "kind": "client-hook",
-      "source": {
-        "path": "apps/mobile/lib/useHistoricalPL.ts",
         "line": 1
       }
     },
@@ -16941,50 +16891,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.LeagueCarousel->pg.get_visible_profiles",
-      "from": "ui.LeagueCarousel",
-      "to": "pg.get_visible_profiles",
-      "protocol": "postgrest-rpc",
-      "payload": "rpc('get_visible_profiles')",
-      "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:77"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.LeagueCarousel->tbl.league_seasons",
-      "from": "ui.LeagueCarousel",
-      "to": "tbl.league_seasons",
-      "protocol": "postgrest-select",
-      "payload": ".from('league_seasons').select('season_number, champion_user_id, runner_up_user_id, completed_at')",
-      "columns": [
-        "season_number, champion_user_id, runner_up_user_id, completed_at"
-      ],
-      "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:63"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.LeagueCarousel->tbl.league_standings",
-      "from": "ui.LeagueCarousel",
-      "to": "tbl.league_standings",
-      "protocol": "postgrest-select",
-      "payload": ".from('league_standings').select('user_id, wins, losses, ties')",
-      "columns": [
-        "user_id, points_for",
-        "user_id, wins, losses, ties"
-      ],
-      "callSites": [
-        "apps/mobile/components/LeagueCarousel.tsx:111",
-        "apps/mobile/components/LeagueCarousel.tsx:130"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.LeagueContext->pg.get_home_summary",
       "from": "ui.LeagueContext",
       "to": "pg.get_home_summary",
@@ -17393,7 +17299,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/SessionProvider.tsx:157"
+        "apps/mobile/lib/SessionProvider.tsx:162"
       ]
     },
     {
@@ -18199,18 +18105,6 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.useHistoricalPL->fn.historical-bars",
-      "from": "ui.useHistoricalPL",
-      "to": "fn.historical-bars",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('historical-bars')",
-      "callSites": [
-        "apps/mobile/lib/useHistoricalPL.ts:65"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
       "id": "e.ui.useLeagues->tbl.league_members",
       "from": "ui.useLeagues",
       "to": "tbl.league_members",
@@ -18832,8 +18726,7 @@
         "fn.symbols-search",
         "ui.src.components.DraftControls.jsx",
         "fn.historical-bars",
-        "ui.money.useStockChartData",
-        "ui.useHistoricalPL"
+        "ui.money.useStockChartData"
       ],
       "steps": [
         {
@@ -18904,15 +18797,13 @@
           "edge": [
             "e.ui.home.useHomeLeague->fn.historical-bars",
             "e.ui.money.priceReads->fn.historical-bars",
-            "e.ui.money.useStockChartData->fn.historical-bars",
-            "e.ui.useHistoricalPL->fn.historical-bars"
+            "e.ui.money.useStockChartData->fn.historical-bars"
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
             "apps/mobile/lib/home/useHomeLeague.ts:671",
             "apps/mobile/lib/money/priceReads.ts:52",
-            "apps/mobile/lib/money/useStockChartData.ts:46",
-            "apps/mobile/lib/useHistoricalPL.ts:65"
+            "apps/mobile/lib/money/useStockChartData.ts:46"
           ]
         }
       ],
@@ -19860,8 +19751,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 264,
-    "edges": 641,
+    "nodes": 262,
+    "edges": 637,
     "flows": 7,
     "drift": 29,
     "driftHigh": 0,
@@ -19912,7 +19803,6 @@
       "apps/mobile/lib/money/useStockSheetData.ts:139 -> ticker-quotes",
       "apps/mobile/lib/money/useStockSheetData.ts:155 -> symbol-name",
       "apps/mobile/lib/money/useTradeSubmit.ts:34 -> record-trade (via callRecordTrade)",
-      "apps/mobile/lib/useHistoricalPL.ts:65 -> historical-bars",
       "apps/mobile/lib/useStockNames.ts:13 -> symbol-name",
       "apps/mobile/lib/useStockPrices.ts:32 -> ticker-quotes",
       "apps/mobile/lib/useSymbolSearch.ts:85 -> symbols-search",
@@ -19934,7 +19824,6 @@
     "rpcs": [
       "apps/mobile/app/(tabs)/league.tsx:143 -> renew_league (via seamRpc)",
       "apps/mobile/app/(tabs)/matchup.tsx:84 -> get_portfolio_ledger (via useRosterData)",
-      "apps/mobile/components/LeagueCarousel.tsx:77 -> get_visible_profiles",
       "apps/mobile/components/game/QueueEditor.tsx:38 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
@@ -20024,9 +19913,6 @@
       "apps/mobile/app/league-settings.tsx:243 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
-      "apps/mobile/components/LeagueCarousel.tsx:111 -> league_standings.select",
-      "apps/mobile/components/LeagueCarousel.tsx:130 -> league_standings.select",
-      "apps/mobile/components/LeagueCarousel.tsx:63 -> league_seasons.select",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> categories.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> drafts.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> league_draft_slots.select (via useRosterData)",
@@ -20036,7 +19922,7 @@
       "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
       "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
-      "apps/mobile/lib/SessionProvider.tsx:157 -> user_profiles.select",
+      "apps/mobile/lib/SessionProvider.tsx:162 -> user_profiles.select",
       "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
       "apps/mobile/lib/categoryData.ts:113 -> symbols.select",

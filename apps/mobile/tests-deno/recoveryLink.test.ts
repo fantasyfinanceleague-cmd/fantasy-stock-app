@@ -1,6 +1,6 @@
 /**
- * Hermetic unit tests for lib/recoveryLink.ts's deep-link URL parsing. Run
- * from apps/mobile/tests-deno (see that directory's deno.json):
+ * Hermetic unit tests for lib/recoveryLink.ts: the PKCE password-recovery deep link's URL parsing and
+ * the reset screen's state. Run from apps/mobile/tests-deno (see that directory's deno.json):
  *
  *   cd apps/mobile/tests-deno && deno test .
  *
@@ -8,118 +8,123 @@
  *
  *   deno test apps/mobile/tests-deno/recoveryLink.test.ts
  *
- * Covers F2 (deep-link session fixation): the `rn` nonce must be read
- * strictly from the URL's query (before '#'), never from the fragment,
- * or an attacker could smuggle a matching `rn` into the fragment itself.
+ * Covers F2 (deep-link session fixation) in its PKCE form: the link carries only a one-time CODE, read
+ * strictly from the URL's query (before '#'), never the fragment; an error redirect wins over a code;
+ * and an old-style link with tokens in the fragment yields no code at all, so it can only fail closed.
+ * (The nonce this file used to test is gone: the exchange itself is bound to this device, see
+ * lib/recoveryLink.ts and onboarding-w2-auth.test.ts.)
  */
-import { assertEquals } from 'jsr:@std/assert';
-import { parseRecoveryLink, resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '../lib/recoveryLink.ts';
+import { assert, assertEquals, assertFalse } from 'jsr:@std/assert';
+import {
+  buildRecoveryRedirect,
+  isRecoveryExchange,
+  parseRecoveryLink,
+  resetScreenState,
+  RESET_VERIFY_TIMEOUT_MS,
+} from '../lib/recoveryLink.ts';
 
-const NONCE = 'a'.repeat(64);
+const CODE = '0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0';
 
-Deno.test('parseRecoveryLink: happy path — tokens and nonce from a genuine link', () => {
-  const url = `fantasystockapp://reset-password?rn=${NONCE}#access_token=at123&refresh_token=rt456&type=recovery`;
-  assertEquals(parseRecoveryLink(url), {
-    kind: 'tokens',
-    accessToken: 'at123',
-    refreshToken: 'rt456',
-    nonce: NONCE,
-  });
+Deno.test('parseRecoveryLink: a genuine PKCE link yields its code', () => {
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password?flow=pkce&code=${CODE}`, false), { kind: 'code', code: CODE });
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password?code=${CODE}`, false), { kind: 'code', code: CODE });
+  assertEquals(parseRecoveryLink(`fantasystockapp:///reset-password?flow=pkce&code=${CODE}`, false), { kind: 'code', code: CODE });
 });
 
-Deno.test('parseRecoveryLink: rn smuggled into the fragment is NOT read as the nonce', () => {
-  // No `?rn=` in the query at all — only in the fragment, where an attacker
-  // crafting a link could put anything. queryStart === -1 here entirely.
-  const url = `fantasystockapp://reset-password#access_token=at123&refresh_token=rt456&rn=${NONCE}`;
-  const result = parseRecoveryLink(url);
-  assertEquals(result.kind, 'tokens');
-  if (result.kind === 'tokens') {
-    assertEquals(result.nonce, null);
+Deno.test('parseRecoveryLink: a code smuggled into the FRAGMENT is never read', () => {
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password?flow=pkce#code=${CODE}`, false), { kind: 'empty' });
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password#code=${CODE}`, false), { kind: 'empty' });
+  // Query code wins and the fragment one is ignored.
+  const other = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password?code=${CODE}#code=${other}`, false), { kind: 'code', code: CODE });
+  // A `?code=` that appears only AFTER the '#' is fragment text.
+  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password#x=1?code=${CODE}`, false), { kind: 'empty' });
+});
+
+Deno.test('parseRecoveryLink: an old-style link (tokens in the fragment, a pre-PKCE build) has no code: fail closed', () => {
+  const old = `fantasystockapp://reset-password?rn=${'a'.repeat(64)}#access_token=at&refresh_token=rt&type=recovery`;
+  assertEquals(parseRecoveryLink(old, false), { kind: 'empty' });
+});
+
+Deno.test('parseRecoveryLink: expired / used link reports its error, in the query (PKCE) or the fragment (implicit)', () => {
+  assertEquals(
+    parseRecoveryLink('fantasystockapp://reset-password?flow=pkce&error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired', false),
+    { kind: 'error', code: 'otp_expired' }
+  );
+  assertEquals(
+    parseRecoveryLink('fantasystockapp://reset-password#error=access_denied&error_code=otp_expired', false),
+    { kind: 'error', code: 'otp_expired' }
+  );
+  assertEquals(parseRecoveryLink('fantasystockapp://reset-password?error=access_denied', false), { kind: 'error', code: 'access_denied' });
+});
+
+Deno.test('parseRecoveryLink: an error wins even if a code is also present', () => {
+  assertEquals(
+    parseRecoveryLink(`fantasystockapp://reset-password?code=${CODE}&error_code=otp_expired`, false),
+    { kind: 'error', code: 'otp_expired' }
+  );
+});
+
+Deno.test('parseRecoveryLink: the right path with no usable code is "empty"', () => {
+  for (const url of [
+    'fantasystockapp://reset-password',
+    'fantasystockapp://reset-password?flow=pkce',
+    'fantasystockapp://reset-password?code=',
+    'fantasystockapp://reset-password?code=short',
+    `fantasystockapp://reset-password?code=${'x'.repeat(300)}`,
+    'fantasystockapp://reset-password?code=has%20space%20in%20it',
+    'fantasystockapp://reset-password?code=<script>alert(1)</script>',
+  ]) {
+    assertEquals(parseRecoveryLink(url, false), { kind: 'empty' }, url);
   }
 });
 
-Deno.test('parseRecoveryLink: rn present in BOTH query and fragment reads only the query value', () => {
-  const queryNonce = 'b'.repeat(64);
-  const fragmentNonce = 'c'.repeat(64);
-  const url = `fantasystockapp://reset-password?rn=${queryNonce}#access_token=at123&refresh_token=rt456&rn=${fragmentNonce}`;
-  const result = parseRecoveryLink(url);
-  assertEquals(result.kind, 'tokens');
-  if (result.kind === 'tokens') {
-    assertEquals(result.nonce, queryNonce);
+Deno.test('parseRecoveryLink: anything that is not exactly the recovery path is "none"', () => {
+  for (const url of [
+    '',
+    `fantasystockapp://auth/confirm?code=${CODE}`,
+    `fantasystockapp://reset-passwordx?code=${CODE}`,
+    `fantasystockapp://reset-password/evil?code=${CODE}`,
+    `fantasystockapp://login?next=reset-password&code=${CODE}`,
+    `https://evil.example/reset-password?code=${CODE}`,
+    `evilfantasystockapp://reset-password?code=${CODE}`,
+    `fantasystockapp://join-league#reset-password`,
+  ]) {
+    assertEquals(parseRecoveryLink(url, false), { kind: 'none' }, url);
   }
 });
 
-Deno.test('parseRecoveryLink: expired/used link reports its error instead of tokens', () => {
-  const url = 'fantasystockapp://reset-password?rn=' + NONCE +
-    '#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
-  assertEquals(parseRecoveryLink(url), {
-    kind: 'error',
-    code: 'otp_expired',
-    description: 'Email link is invalid or has expired',
-  });
-});
-
-Deno.test('parseRecoveryLink: error takes precedence even if stray tokens are also present', () => {
-  const url = `fantasystockapp://reset-password#error=access_denied&error_code=otp_expired&access_token=at&refresh_token=rt`;
-  const result = parseRecoveryLink(url);
-  assertEquals(result.kind, 'error');
-});
-
-Deno.test('parseRecoveryLink: no hash fragment at all is "none"', () => {
-  assertEquals(parseRecoveryLink(`fantasystockapp://reset-password?rn=${NONCE}`), { kind: 'none' });
-});
-
-Deno.test('parseRecoveryLink: hash present but missing refresh_token is "none"', () => {
-  const url = `fantasystockapp://reset-password?rn=${NONCE}#access_token=at123&type=recovery`;
-  assertEquals(parseRecoveryLink(url), { kind: 'none' });
-});
-
-Deno.test('parseRecoveryLink: hash present but missing access_token is "none"', () => {
-  const url = `fantasystockapp://reset-password?rn=${NONCE}#refresh_token=rt456&type=recovery`;
-  assertEquals(parseRecoveryLink(url), { kind: 'none' });
-});
-
-Deno.test('parseRecoveryLink: a URL that is not a recovery link at all is "none"', () => {
-  assertEquals(parseRecoveryLink('fantasystockapp://league-settings?id=1'), { kind: 'none' });
-});
-
-Deno.test('parseRecoveryLink: matches on type=recovery even without the literal path "reset-password"', () => {
-  const url = `fantasystockapp://some-other-path?rn=${NONCE}#access_token=at&refresh_token=rt&type=recovery`;
-  const result = parseRecoveryLink(url);
-  assertEquals(result.kind, 'tokens');
-});
-
-Deno.test('parseRecoveryLink: empty string is "none"', () => {
-  assertEquals(parseRecoveryLink(''), { kind: 'none' });
-});
-
-Deno.test('parseRecoveryLink: missing rn param (no query at all) still returns tokens with a null nonce', () => {
-  const url = 'fantasystockapp://reset-password#access_token=at123&refresh_token=rt456&type=recovery';
-  const result = parseRecoveryLink(url);
-  assertEquals(result.kind, 'tokens');
-  if (result.kind === 'tokens') {
-    assertEquals(result.nonce, null);
+Deno.test('parseRecoveryLink: the bare-path and exp(s):// shapes are dev-only', () => {
+  for (const url of [`/reset-password?code=${CODE}`, `exp://127.0.0.1:8081/--/reset-password?code=${CODE}`]) {
+    assertEquals(parseRecoveryLink(url, false), { kind: 'none' }, `release: ${url}`);
+    assertEquals(parseRecoveryLink(url, true), { kind: 'code', code: CODE }, `dev: ${url}`);
+    assertEquals(parseRecoveryLink(url), { kind: 'none' }, `default under Deno (no __DEV__): ${url}`);
   }
 });
 
-// ---------------------------------------------------------------------------
-// resetScreenState
-// ---------------------------------------------------------------------------
-// Covers two gaps:
-//
-// 1. "verifying spins forever" — a URL that routes to reset-password by
-//    path but that parseRecoveryLink calls 'none' (a bare `?rn=` with no
-//    fragment, a truncated link, a future PKCE `?code=` link) never gets a
-//    `status` param and never sets the recovery flag, so only the
-//    elapsed-time fallback moves it off "verifying".
-//
-// 2. "form keyed on isRecovery, not on any signed-in user" — a user who is
-//    signed in for an unrelated reason and lands on /reset-password some
-//    other way (a stray deep link, a bookmark) must NOT see the form. That
-//    case has isRecovery: false the whole time (lib/recoveryNonce.ts's
-//    flag is only ever set true by a nonce-verified setSession in
-//    _layout.tsx), so it falls all the way through verifying -> timeout ->
-//    invalid, identically to having no session at all.
+Deno.test('buildRecoveryRedirect: no secret, and a query so the narrow F2 allow-list entry still matches', () => {
+  const redirect = buildRecoveryRedirect();
+  assertEquals(redirect, 'fantasystockapp://reset-password?flow=pkce');
+  // The dashboard patterns Giorgio may have (docs/security/DEPLOY-RUNBOOK.md step 2): `**` matches anything.
+  const glob = (pattern: string) =>
+    new RegExp('^' + pattern.split('**').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+  assert(glob('fantasystockapp://**').test(redirect));
+  assert(glob('fantasystockapp://reset-password?**').test(redirect));
+  // ...whereas a query-less URL would NOT match the narrow entry (the reason for the query):
+  assertFalse(glob('fantasystockapp://reset-password?**').test('fantasystockapp://reset-password'));
+  // The parser accepts what the redirect builds, with a code added by GoTrue.
+  assertEquals(parseRecoveryLink(`${redirect}&code=${CODE}`, false), { kind: 'code', code: CODE });
+});
+
+Deno.test('isRecoveryExchange: only a recovery exchange opens the form, under either spelling supabase-js has used', () => {
+  assert(isRecoveryExchange('PASSWORD_RECOVERY')); // auth-js 2.89 (the locked version)
+  assert(isRecoveryExchange('recovery')); // auth-js 2.108 (what a lockfile refresh could pull in)
+  for (const other of [null, undefined, '', 'password_recovery', 'RECOVERY', 'SIGNUP', 'signup', 'magiclink']) {
+    assertFalse(isRecoveryExchange(other as string | null | undefined), String(other));
+  }
+});
+
+// ── resetScreenState ─────────────────────────────────────────────────────────
 
 Deno.test('resetScreenState: status=invalid wins even with isRecovery true and zero elapsed time', () => {
   assertEquals(

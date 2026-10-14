@@ -13,7 +13,9 @@ import { Field } from '@/components/shell/Field';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { supabase } from '@/lib/supabase';
-import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
+import { buildRecoveryRedirect } from '@/lib/recoveryLink';
+import { pkceCryptoReady } from '@/lib/auth/pkceCrypto';
+import { resetCooldown, RESEND_TOO_SOON } from '@/lib/auth/resendCooldown';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE } from '@/lib/shell/devFixture';
 
 // Phase 3b-1 — Forgot password + "Check your email" (spec row 4; board
@@ -21,8 +23,8 @@ import { FIXTURE_NETWORK_MS, SHELL_FIXTURE } from '@/lib/shell/devFixture';
 // sentence case ("Forgot password?", "Send reset link", "Back to sign in",
 // "Didn't receive it? Send again", and the original description). The
 // sent state's explanation line is the board's new copy, as the spec allows.
-// Errors are inline and instant (§4). The recovery-nonce logic below is
-// unchanged (F2).
+// Errors are inline and instant (§4). F2 (session fixation) is closed by PKCE
+// now: the reset is bound to this device by the code verifier supabase-js stores.
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -43,12 +45,19 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
+    // The floor (lib/auth/resendCooldown.ts): a repeat inside GoTrue's interval would fail AND delete the
+    // verifier the first, still-valid reset email needs. "Send again" re-enters here, so it is covered too.
+    if (resetCooldown.remainingMs(email) > 0) {
+      setError(getAuthErrorMessage(RESEND_TOO_SOON));
+      return;
+    }
+
     setError(null);
     setStatus('loading');
 
     if (SHELL_FIXTURE) {
       // DEV fixture (lib/shell/devFixture.ts): show the sent state without
-      // emailing anyone — no nonce, no network.
+      // emailing anyone — no network, no verifier.
       setTimeout(() => {
         setStatus('idle');
         setSent(true);
@@ -56,22 +65,25 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    // Bind this reset to a per-request nonce so only a link WE requested on THIS
-    // device can complete the recovery (fixes F2: deep-link session fixation).
-    // The nonce is stored single-use and echoed back via redirectTo; the genuine
-    // Supabase email redirects to fantasystockapp://reset-password?rn=<nonce>#...,
-    // and app/_layout.tsx refuses to set a session unless the inbound rn matches.
-    const nonce = generateRecoveryNonce();
-    const stored = await storeRecoveryNonce(nonce);
-    if (!stored) {
+    // PKCE binds this reset to THIS device: supabase-js stores a code verifier before the request (flowType
+    // 'pkce', lib/supabase.ts) and the emailed link carries only a one-time code that exchanges with it
+    // (lib/recoveryLink.ts, app/_layout.tsx). Nothing else is generated here. A storage failure throws out
+    // of resetPasswordForEmail BEFORE any email is sent; treat it like the old "could not start" case.
+    let resetError: { message: string; code?: string } | null = null;
+    if (!pkceCryptoReady()) {
+      // No WebCrypto: auth-js would fall back to Math.random + the "plain" method. Refuse instead.
       setStatus('idle');
       setError('Could not start a secure password reset on this device. Please try again.');
       return;
     }
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `fantasystockapp://reset-password?rn=${encodeURIComponent(nonce)}`,
-    });
+    try {
+      const res = await supabase.auth.resetPasswordForEmail(email, { redirectTo: buildRecoveryRedirect() });
+      resetError = res.error;
+    } catch {
+      setStatus('idle');
+      setError('Could not start a secure password reset on this device. Please try again.');
+      return;
+    }
 
     setStatus('idle');
 
@@ -81,6 +93,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
+    resetCooldown.markSent(email);
     setSent(true);
   }
 

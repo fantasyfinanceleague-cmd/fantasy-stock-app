@@ -1,66 +1,73 @@
-// Pure parsing for the Supabase password-recovery deep link
-// (fantasystockapp://reset-password?rn=<nonce>#access_token=...&refresh_token=...&type=recovery).
+// Pure parsing for the Supabase password-recovery deep link, now the PKCE one:
 //
-// Extracted from app/_layout.tsx's deep-link handler so the URL-shape logic
-// is hermetically testable without React Native or expo-linking. The
-// handler still owns nonce verification (lib/recoveryNonce.ts) and the
-// actual supabase.auth.setSession call — this module only decides what the
-// URL is telling us.
+//   fantasystockapp://reset-password?flow=pkce&code=<one-time code>
 //
-// Security-critical rule, unchanged from the original handler: the `rn`
-// nonce is read strictly from the QUERY string (the part before '#'), never
-// from the fragment. Supabase appends access_token/refresh_token/etc. to the
-// fragment, and an attacker who can get a victim to open a URL with an `rn`
-// value smuggled into the fragment (rather than the query) must not have it
-// treated as if the app itself had put it in the query when generating the
-// redirectTo URL. See lib/recoveryNonce.ts for why the nonce exists at all.
+// Extracted from app/_layout.tsx's deep-link handler so the URL-shape logic is hermetically
+// testable without React Native or expo-linking. The handler still owns the exchange
+// (supabase.auth.exchangeCodeForSession) and the recovery flag; this module only decides what the URL
+// is telling us (shared mechanics in lib/auth/authLink.ts).
+//
+// SECURITY (F2, deep-link session fixation, now closed by PKCE instead of a nonce): the old link
+// carried session TOKENS in its fragment, so a crafted link with an attacker's tokens could swap the
+// victim into the attacker's account; a per-request nonce (a module since removed) was bound
+// to the link to stop that. The new link carries only a one-time code, and
+// supabase.auth.exchangeCodeForSession succeeds only together with the code verifier THIS device
+// stored when it asked for the reset, so a forged, replayed or intercepted code fails. The code is
+// read strictly from the QUERY, never the fragment, and the handler additionally requires the
+// exchange to report a PASSWORD_RECOVERY (isRecoveryExchange) before it shows the form, and fails
+// closed (the invalid screen) on anything else, including an old-style fragment link from a
+// pre-PKCE build.
 
-export type RecoveryLinkResult =
-  | { kind: 'tokens'; accessToken: string; refreshToken: string; nonce: string | null }
-  | { kind: 'error'; code: string | null; description: string | null }
-  | { kind: 'none' };
+import { AUTH_LINK_BASES, isDevBuild, linkIsPath, readLinkOutcome, type LinkOutcome } from './auth/authLink';
+
+export const RECOVERY_PATH = 'reset-password';
 
 /**
- * Parse a deep-link URL into a recovery outcome. Returns 'none' for any URL
- * that isn't a recovery link at all (a different deep link, a bare open),
- * so callers can leave those completely alone.
+ * The `redirectTo` for resetPasswordForEmail. The query is deliberate: the Supabase redirect
+ * allow-list entry from the F2 runbook may be the narrow `fantasystockapp://reset-password?**`, which
+ * a query-less URL would NOT match (GoTrue then falls back to the Site URL and the app never gets the
+ * link). `flow=pkce` carries no secret.
  */
-export function parseRecoveryLink(url: string): RecoveryLinkResult {
-  if (!url || (!url.includes('reset-password') && !url.includes('type=recovery'))) {
-    return { kind: 'none' };
-  }
+export function buildRecoveryRedirect(base: string = AUTH_LINK_BASES[0]): string {
+  return `${base}${RECOVERY_PATH}?flow=pkce`;
+}
 
-  const hashIndex = url.indexOf('#');
-  if (hashIndex === -1) {
-    return { kind: 'none' };
-  }
+/**
+ * True when a path the ROUTER sees names the reset screen, in any shape. Navigation only: +native-intent
+ * opens the plain screen so the one-time code never lands in the router's params (which are kept in
+ * navigation state); the exchange reads the code from the link itself (app/_layout.tsx). It never signs
+ * anyone in, which is why it can be broader than parseRecoveryLink.
+ */
+export function isRecoveryRoute(path: string | null | undefined): boolean {
+  return linkIsPath(path, RECOVERY_PATH, true);
+}
 
-  const hash = url.substring(hashIndex + 1);
-  const params = new URLSearchParams(hash);
+export type RecoveryLinkResult = LinkOutcome | { kind: 'none' };
 
-  // The nonce lives in the query, strictly before '#'. A `?rn=` appearing
-  // only in the fragment (after '#') is never read here.
-  const queryStart = url.indexOf('?');
-  let nonce: string | null = null;
-  if (queryStart !== -1 && queryStart < hashIndex) {
-    const query = url.substring(queryStart + 1, hashIndex);
-    nonce = new URLSearchParams(query).get('rn');
-  }
+/**
+ * Parse a deep-link URL into a recovery outcome. Returns 'none' for any URL that isn't the recovery
+ * path at all (a different deep link, a bare open), so callers can leave those completely alone.
+ * Exact path match on the registered origins (dev-only shapes follow lib/auth/authLink.ts).
+ */
+export function parseRecoveryLink(url: string, dev: boolean = isDevBuild()): RecoveryLinkResult {
+  if (!url || !linkIsPath(url, RECOVERY_PATH, dev)) return { kind: 'none' };
+  return readLinkOutcome(url.trim());
+}
 
-  // Supabase's expired/used/malformed-link redirect carries an error in the
-  // fragment instead of tokens, e.g. #error=access_denied&error_code=otp_expired.
-  const errorCode = params.get('error_code') || params.get('error');
-  if (errorCode) {
-    return { kind: 'error', code: errorCode, description: params.get('error_description') };
-  }
+/**
+ * After the exchange: only a code that supabase-js read as a password recovery (the verifier was stored
+ * by resetPasswordForEmail) may open the new-password form. A sign-up confirmation code presented on this
+ * path exchanges as a plain session (null), and is refused.
+ *
+ * supabase-js has spelled this marker two ways: 'PASSWORD_RECOVERY' (auth-js 2.89, the version locked in
+ * apps/mobile/package-lock.json) and 'recovery' (auth-js 2.108, which a lockfile refresh could pull in).
+ * Both are the recovery marker; accepting only one would make every genuine reset fail the day the library
+ * moves. tests-deno/pkce-auth-links.test.ts drives the INSTALLED library to prove its spelling is accepted.
+ */
+export const RECOVERY_REDIRECT_TYPES: readonly string[] = ['PASSWORD_RECOVERY', 'recovery'];
 
-  const accessToken = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
-  if (accessToken && refreshToken) {
-    return { kind: 'tokens', accessToken, refreshToken, nonce };
-  }
-
-  return { kind: 'none' };
+export function isRecoveryExchange(redirectType: string | null | undefined): boolean {
+  return typeof redirectType === 'string' && RECOVERY_REDIRECT_TYPES.includes(redirectType);
 }
 
 // ---------------------------------------------------------------------------
@@ -73,11 +80,9 @@ export type ResetScreenState = 'verifying' | 'invalid' | 'form';
  * How long reset-password waits with no session and no explicit status
  * before giving up and showing "invalid" rather than spinning forever.
  *
- * This covers URLs that route to reset-password by PATH but that
- * parseRecoveryLink treats as 'none' — a bare `.../reset-password?rn=N`
- * with no fragment at all, a mail client that truncates the link, or a
- * future PKCE `?code=` redirect this parser doesn't yet recognize. In all
- * of those cases app/_layout.tsx never calls router.replace with a
+ * This covers a route that opens without the link handler ever seeing a
+ * recovery link (a restored navigation state, a hand-typed path). In
+ * those cases app/_layout.tsx never calls router.replace with a
  * `status`, so nothing but a timeout moves the screen off "verifying".
  */
 export const RESET_VERIFY_TIMEOUT_MS = 8000;
@@ -85,7 +90,7 @@ export const RESET_VERIFY_TIMEOUT_MS = 8000;
 /**
  * Pure decision for which of reset-password's three states to show.
  * `status` is the `status` search param (only 'invalid' is meaningful);
- * `isRecovery` is lib/recoveryNonce.ts's recovery-session flag, NOT "does
+ * `isRecovery` is lib/auth/recoverySession.ts's recovery-session flag, NOT "does
  * useAuth() report any user" — a signed-in user who reaches this screen
  * some other way, without a valid recovery link, must not see the form
  * just because they happen to have an unrelated session. `elapsedMs` is

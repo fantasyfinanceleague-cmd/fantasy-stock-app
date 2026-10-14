@@ -151,6 +151,8 @@ pattern that preserves the query string, the fail-closed nonce check rejects **e
 legitimate reset. Existing entries still match 1.0.0 clients, so adding this breaks
 nothing. **It must be in place before the step-7 build reaches anyone.**
 
+> **Superseded 2026-10-14 (onboarding W2):** the mobile app now uses PKCE (`flowType: 'pkce'`). The nonce above is gone and the reset link carries only a one-time code: `redirectTo` is `fantasystockapp://reset-password?flow=pkce` (still with a query, so the narrow `fantasystockapp://reset-password?**` entry keeps matching). The sign-up confirmation redirect is `fantasystockapp://auth/confirm`. **The Redirect URLs allow-list needs BOTH of these, exactly as the app sends them: `fantasystockapp://auth/confirm` and `fantasystockapp://reset-password?flow=pkce`** (no wildcard needed; if GoTrue turns out to ignore or mismatch the query on the second, `fantasystockapp://reset-password?**` and `fantasystockapp://auth/confirm**` also work, and the broad `fantasystockapp://**` is wider than needed). The reset entry does not cover the confirm path, and a redirect that matches nothing silently falls back to the Site URL, so the app never receives the link: effect-test both before release. See `apps/mobile/lib/recoveryLink.ts` and `lib/auth/confirmLink.ts`.
+
 ## Step 3 — Merge PR #9  *(= Vercel prod deploy)*
 
 Merge on GitHub. The PR adds no new Vercel env vars. The web delta is the CSPRNG

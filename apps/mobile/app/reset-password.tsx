@@ -14,7 +14,7 @@ import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { NewPasswordForm } from '@/components/shell/NewPasswordForm';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/recoveryNonce';
+import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/auth/recoverySession';
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { parseResetCaptureView } from '@/lib/shell/resetCaptureView';
@@ -31,17 +31,17 @@ const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE
 // resetScreenState() (lib/recoveryLink.ts):
 //
 //   - verifying: no `status=invalid` param yet, and the recovery-session
-//     flag (lib/recoveryNonce.ts) isn't set yet either. Covers the brief
-//     window on cold start where this route is showing (expo-router
+//     flag (lib/auth/recoverySession.ts) isn't set yet either. Covers the
+//     brief window on cold start where this route is showing (expo-router
 //     restored it from the link before anything else rendered) but the
-//     async nonce-check + setSession in _layout.tsx hasn't resolved — and
-//     also a URL that routes here by PATH but that _layout.tsx's parser
-//     doesn't recognize as a recovery link at all (a bare `?rn=` with no
-//     fragment, a truncated link, a future PKCE `?code=` redirect):
-//     _layout.tsx never sets a status OR the flag for those, so nothing
-//     but RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
-//   - invalid: the link was rejected (bad/replayed/mismatched nonce), was
-//     already used, has expired, or verifying simply timed out — no
+//     async code exchange in _layout.tsx hasn't resolved — and also a URL
+//     that routes here by PATH without the link handler ever seeing it
+//     (the app opened this route some other way): _layout.tsx sets neither
+//     a status nor the flag for those, so nothing but
+//     RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
+//   - invalid: the link was rejected (a code that won't exchange: forged,
+//     replayed, from another device), was already used, has expired, or
+//     verifying simply timed out — no
 //     recovery session was set. There's nothing to recover from here; the
 //     user needs to request a new email.
 //   - form: the recovery flag is set, so this is a real recovery in

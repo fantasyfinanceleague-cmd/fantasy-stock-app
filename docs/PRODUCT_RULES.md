@@ -605,6 +605,33 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   {animal}{digits} (e.g. "HelpfulHornet151"), and it never uses a first name or anything else
   from Apple, Google or the email address: a privacy rule as well as a style. The line under the
   field, "You can change it later in Profile.", is approved.
+  **Clarified the same day (2026-10-14, W2 auth review) (A):** the rule is never SHOW or USE a name.
+  His words: "I meant never show it. Like if someone joins the app, I would rather the username
+  not automatically have their actual name in it just in case they don't want that shown. But
+  obviously if we're taking in their, they're using Google or Apple or something like that that
+  shares their name, then that's fine. It was mainly just changing how the username is
+  automatically generated." The decision: the name from Apple / Google is stored (by Supabase, in
+  `auth.users.raw_user_meta_data`, `auth.identities.identity_data` and each JWT's `user_metadata`)
+  but never read or shown by the app, and the username generator never uses it. No scrub trigger.
+  The app requests the email scope only (Apple asks for no name scope at all) and nothing in the
+  app reads, copies or logs that metadata.
+- **Email links use PKCE one-time codes (B)** (decision, 2026-10-14, W2 auth): the email-confirmation
+  link and the password-reset link carry a one-time code (`flowType: 'pkce'`), not session tokens.
+  Rationale: a link opened on another device, or intercepted by another app, can't be used, because
+  the code only exchanges with the verifier held by the app that started the flow (so no stored
+  nonce is needed any more). Opened on another device, the confirmation simply falls back to signing
+  in with the password (accepted). "Didn't receive it? Send again" stays, on both Check-your-email
+  variants (invite and no invite); it repeats `signUp` for the same address, because Supabase's
+  `resend()` sends no code challenge.
+- **Google uses native one-tap with the nonce check skipped; Apple keeps its nonce (C)** (decision,
+  2026-10-14, W2 auth; "option 1"): Google's sign-in is `@react-native-google-signin`'s native
+  one-tap, its ID token passed to `signInWithIdToken` with no nonce, and the Supabase Google
+  provider has "Skip nonce checks" ON. Apple sends a SHA-256-hashed nonce and passes the raw value.
+  Rationale: Google's sign-in itself stays verified (signature, and audience = our own client IDs);
+  the nonce would only add replay protection, which the native Google library can't supply. The
+  residual risk: a captured Google ID token could be replayed within its validity window. It is
+  bounded to tokens issued to OUR iOS / web client IDs, because the Google provider's Client IDs
+  list must hold exactly those two and nothing else.
 - **The three cards show only on a cold install** (no invite): "B, cards only for cold
   installs." Skip is remembered forever; link arrivals never see them; "How it works" lives in
   Profile. The card titles stay as approved on 2026-09-29. **The scenes are B, the real

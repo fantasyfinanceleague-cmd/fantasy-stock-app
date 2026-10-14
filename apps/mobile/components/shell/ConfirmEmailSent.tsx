@@ -11,34 +11,39 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { getAuthErrorMessage } from '@/lib/authErrors';
-import { useSession } from '@/lib/SessionProvider';
+import type { AuthResult } from '@/lib/SessionProvider';
 
 // Onboarding W2 — "Check your email" after an email sign-up (plan 2026-10-14: email confirmation
 // ON; "the forgot-password pattern"). The words are Giorgio's approved copy, in
 // constants/confirmEmailCopy.ts. The email's link returns into the app
 // (lib/auth/confirmLink.ts) and the flow continues from there; confirming on another device
 // leaves the person to sign in here with their password.
+//
+// "Send again" is the parent's: it repeats signUp() for the same address (SessionProvider explains why
+// supabase.auth.resend() is not used with PKCE), so it needs the password the parent already holds.
 
 export function ConfirmEmailSent({
   email,
   league,
+  onResend,
   onBack,
 }: {
   email: string;
   /** The pending invite's league name (W3 passes it); without one the body is the no-invite sentence. */
   league?: string | null;
+  /** Sends the confirmation email again; the parent owns the credentials it needs. */
+  onResend: () => Promise<AuthResult>;
   onBack: () => void;
 }) {
   const { colors } = useTheme();
-  const { resendConfirmation } = useSession();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function resend() {
     if (sending) return;
-    setSending(true);
     setError(null);
-    const { error: resendError } = await resendConfirmation(email);
+    setSending(true);
+    const { error: resendError } = await onResend();
     setSending(false);
     if (resendError) setError(getAuthErrorMessage(resendError, undefined, brand.name));
   }

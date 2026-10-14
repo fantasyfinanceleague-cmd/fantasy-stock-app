@@ -41,7 +41,7 @@ import { useFixtureInitialRoute } from '@/lib/shell/fixtureRoute';
 
 export default function SignInScreen() {
   const { colors } = useTheme();
-  const { signIn, resendConfirmation } = useSession();
+  const { signIn, signUp } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<ButtonStatus>('idle');
@@ -73,11 +73,14 @@ export default function SignInScreen() {
     setStatus('done');
   }
 
+  // "Send again" for an unconfirmed account. The password was just verified (GoTrue answers
+  // email_not_confirmed only after it), and signUp() for the same address re-sends the confirmation
+  // through the PKCE path (SessionProvider explains why not supabase.auth.resend()).
   async function handleResend() {
     if (resending.current) return;
-    resending.current = true;
     const to = email.trim();
-    const { error: resendError } = await resendConfirmation(to);
+    resending.current = true;
+    const { error: resendError } = await signUp(to, password);
     resending.current = false;
     if (resendError) {
       setUnconfirmed(false);
@@ -91,6 +94,7 @@ export default function SignInScreen() {
     return (
       <ConfirmEmailSent
         email={sentTo}
+        onResend={() => signUp(sentTo, password)}
         onBack={() => {
           setSentTo(null);
           setUnconfirmed(false);
