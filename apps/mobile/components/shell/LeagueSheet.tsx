@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Icon } from '@/components/sp/Icon';
 
 import { radius, space } from '@/constants/tokens';
 import { Button, FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
@@ -160,8 +160,8 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
             <Text variant="title" accessibilityRole="header">
               Your leagues
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={11} style={styles.close}>
-              <Ionicons name="close" size={22} color={colors.text2} />
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" style={styles.close}>
+              <Icon name="close" size="title" tone="text2" />
             </Pressable>
           </View>
 
@@ -178,7 +178,7 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
                   <Text variant="tag" tone="secondary" accessibilityRole="header">
                     {group.title}
                   </Text>
-                  {group.leagues.map((league, i) => {
+                  {group.leagues.map((league) => {
                     const index = rowIndex++;
                     const entering = reduced
                       ? undefined
@@ -192,7 +192,6 @@ export function LeagueSheet({ open, onClose, onPick, onCreate, onJoin }: LeagueS
                         <LeagueSheetRow
                           league={league}
                           selected={league.id === activeLeagueId}
-                          first={i === 0}
                           onPick={onPick}
                         />
                       </Animated.View>
@@ -243,8 +242,8 @@ const styles = StyleSheet.create({
     paddingBottom: space[3],
   },
   close: {
-    minWidth: 22,
-    minHeight: 22,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

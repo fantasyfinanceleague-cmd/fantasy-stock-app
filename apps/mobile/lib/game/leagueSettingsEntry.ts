@@ -7,7 +7,7 @@
  * can edit settings" screen. A missing user or commissioner id never matches
  * (unlike a bare `a === b`, where undefined === undefined).
  */
-import type { LeaveWindow } from './leaveLeague';
+import { leaveWindow, type LeaveLeagueFacts, type LeaveWindow } from './leaveLeague';
 
 export function showsLeagueSettingsRow(
   commissionerId: string | null | undefined,
@@ -33,6 +33,13 @@ export const SETTINGS_LOCKED = 'Settings are locked once the draft starts.';
  * ('season_completed'), so a code shared then can't be used. The code itself always shows. */
 export function inviteShareShown(window: LeaveWindow): boolean {
   return window === 'before_draft';
+}
+
+/** The same condition from a league's facts and the (server) clock, for every OTHER invite Share
+ * (W4 Onboarding): Home's pre-draft invite row, which before showed Share through the hour before
+ * the draft (room open) too. One rule, one function: `inviteShareShown(leaveWindow(…))`. */
+export function inviteShareShownFor(facts: LeaveLeagueFacts, nowMs: number): boolean {
+  return inviteShareShown(leaveWindow(facts, nowMs));
 }
 
 /** What Share sends (unchanged from the member's row). */

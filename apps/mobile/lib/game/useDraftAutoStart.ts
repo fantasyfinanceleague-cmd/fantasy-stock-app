@@ -22,6 +22,7 @@ import { useDraftStatus } from './useDraftStatus';
 import { seamInvoke, seamUpdateLeague } from './seamCalls';
 import { playoffTeamsSaveOutcome } from './playoffTeamsSave';
 import { draftDateForSave, updatedOneRow } from './draftDateSave';
+import { inviteShareMessage } from './leagueSettingsEntry';
 import { readFunctionRefusal } from '../functionRefusal';
 import {
   DRAFT_TIME_NOT_SAVED,
@@ -126,7 +127,7 @@ export function useDraftAutoStart(leagueId: string, opts: { kick: boolean }) {
 
   const shareInvite = () => {
     const code = activeLeague?.invite_code;
-    if (code) void Share.share({ message: `Join my league with code ${code}` });
+    if (code) void Share.share({ message: inviteShareMessage(code) });
   };
 
   // A draft time (a postponed draft's new one, the blockers card's sheet; or

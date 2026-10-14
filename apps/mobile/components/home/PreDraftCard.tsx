@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/useAuth';
 import { membersYouFirst } from '@/lib/home/preDraftMembers';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useDraftAutoStart } from '@/lib/game/useDraftAutoStart';
+import { inviteShareMessage, inviteShareShownFor } from '@/lib/game/leagueSettingsEntry';
 import {
   COMMISSIONER_FALLBACK,
   NO_DATE_TITLE,
@@ -93,7 +94,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
 
   async function onShare() {
     try {
-      await Share.share({ message: `Join my Stockpile league! Use code: ${inviteCode}` });
+      await Share.share({ message: inviteShareMessage(inviteCode) });
     } catch {
       // A dismissed share sheet is not an error.
     }
@@ -119,6 +120,12 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
   const roomOpen = view?.countdown === 'room_open' || view?.countdown === 'starting';
   const pick = roomOpen ? yourPickLine(orderRevealed, user?.id ?? '', ordinal) : null;
   const postponed = phase === 'postponed';
+  // Share follows the one ruled condition (Giorgio, B, #call-share-locked): only before the draft,
+  // hidden from the hour before it (room open) on; the code itself always shows.
+  const shareShown = inviteShareShownFor(
+    { seasonStatus: activeLeague?.season_status, draftStatus: activeLeague?.draft_status, draftDate: startsAt },
+    serverNow,
+  );
   // Ruling B (board #call-ux-pass1): the commissioner sets the time right here,
   // in the same Draft time sheet, opened in place (its own, so it never doubles
   // up with the blockers card's sheet). No Set later: there's no time yet.
@@ -274,7 +281,7 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
               {inviteCode}
             </Text>
           </View>
-          <Button label="Share" onPress={onShare} variant="secondary" size="sm" />
+          {shareShown ? <Button label="Share" onPress={onShare} variant="secondary" size="sm" /> : null}
         </View>
       </Card>
 

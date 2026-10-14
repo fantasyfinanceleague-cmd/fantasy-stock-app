@@ -3,13 +3,14 @@ import { useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { radius, space, type } from '@/constants/tokens';
+import { space, type } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { PASSWORD_REQUIREMENTS, PASSWORD_RULE_SENTENCE, checkPassword } from '@/constants/passwordRules';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { Field } from '@/components/shell/Field';
@@ -19,6 +20,7 @@ import { validateUsername } from '@/lib/contentModeration';
 import { useSession } from '@/lib/SessionProvider';
 import { firstFailingRule } from '@/lib/shell/usernameRules';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
+import { CAPTURE } from '@/lib/shell/captureDev';
 
 // Phase 3b-1 — Create account (spec rows 2–3; board "Create account" and
 // "Create account · sign-ups paused"). Split out of the old combined
@@ -33,7 +35,8 @@ import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransitio
 // - Every error is inline and appears INSTANTLY (§4).
 // - When the server's signup gate refuses, the form stays and a warn-tint
 //   banner carries Giorgio's final text verbatim through brand.name, with
-//   [Sign in instead] in place of the primary action.
+//   [Sign in instead] in place of the primary action. Game Night (W4 Onboarding): the banner
+//   is the shared WarnPanel, its text in the fill's own `warnText` ink (§9C rule 4).
 
 type UsernameError = string | null;
 
@@ -46,7 +49,8 @@ export default function CreateAccountScreen() {
   const [status, setStatus] = useState<ButtonStatus>('idle');
   const [usernameError, setUsernameError] = useState<UsernameError>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [paused, setPaused] = useState(false);
+  // DEV captures only: open on the refusal (lib/shell/captureKnobs.ts).
+  const [paused, setPaused] = useState(CAPTURE.signupPaused);
   const { reduced } = useMotion();
   const scrollRef = useRef<ScrollView>(null);
   const emailRef = useRef<TextInput>(null);
@@ -189,15 +193,7 @@ export default function CreateAccountScreen() {
         />
       </View>
       {paused ? (
-        <View
-          accessibilityRole="alert"
-          accessibilityLiveRegion="assertive"
-          style={[styles.banner, { backgroundColor: colors.warnTint, borderColor: colors.warnLine }]}
-        >
-          <Text variant="body" style={styles.bold}>
-            {`${brand.name} is not open for new signups yet — check back soon. Existing accounts can still sign in.`}
-          </Text>
-        </View>
+        <WarnPanel text={`${brand.name} is not open for new signups yet — check back soon. Existing accounts can still sign in.`} />
       ) : null}
     </AuthScaffold>
   );
@@ -209,11 +205,6 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: space[5],
-  },
-  banner: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: space[5],
   },
   bold: {
     fontFamily: type.headline.fontFamily,

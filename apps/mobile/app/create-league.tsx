@@ -43,6 +43,7 @@ import {
   MANAGER_SIZES,
   type CreateStep,
   byeExpectedCopy,
+  createNextDisabled,
   leagueNameError,
   nextStep,
   playoffTeamsSub,
@@ -83,6 +84,8 @@ import { Field } from '@/components/shell/Field';
 import { SetupScaffold } from '@/components/game/SetupScaffold';
 import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import { CAPTURE } from '@/lib/shell/captureDev';
+import { createFixtureStep } from '@/lib/shell/captureKnobs';
 import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 interface WizardState {
@@ -114,11 +117,16 @@ export default function CreateLeagueWizard() {
   const { user } = useAuth();
   const { refresh, setActiveLeagueId } = useLeagueContext();
 
-  const [step, setStep] = useState<CreateStep>('league');
+  // DEV captures only (lib/shell/captureKnobs.ts): open on a step, or on the done screen.
+  const [step, setStep] = useState<CreateStep>(createFixtureStep(CAPTURE.create));
   const [creating, setCreating] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   // The done screen (Design Lead ruling), in place of the old "League Created!" Alert.
-  const [created, setCreated] = useState<{ name: string; inviteCode: string; noDate: boolean } | null>(null);
+  const [created, setCreated] = useState<{ name: string; inviteCode: string; noDate: boolean } | null>(
+    CAPTURE.create === 'done' || CAPTURE.create === 'done_no_date'
+      ? { name: 'Serie A Traders', inviteCode: 'SERIEA7', noDate: CAPTURE.create === 'done_no_date' }
+      : null,
+  );
   // Inline, under the Draft date row: a chosen date with no value (draftDateForSave).
   const [dateError, setDateError] = useState<string | null>(null);
   // Inline, under the name field (Design Lead ruling), never an Alert.
@@ -128,10 +136,10 @@ export default function CreateLeagueWizard() {
   useEffect(() => { fetchCategories().then(setCategories); }, []);
 
   const [state, setState] = useState<WizardState>({
-    name: '',
+    name: CAPTURE.create ? 'Serie A Traders' : '',
     type: 'matchup',
     size: 8,
-    stakeMode: 'fixed_notional',
+    stakeMode: CAPTURE.create === 'tiers' ? 'price_tiers' : 'fixed_notional',
     notionalPerSlot: String(DEFAULT_NOTIONAL_PER_SLOT),
     budgetCap: String(DEFAULT_BUDGET_CAP),
     allowUndraftable: false,
@@ -595,9 +603,7 @@ export default function CreateLeagueWizard() {
   }
 
   const last = step === 'stakes';
-  const blocked =
-    (step === 'league' && !state.name.trim()) ||
-    (last && stakesStepError(state.stakeMode, state.slots.length, slotErrors) !== null);
+  const blocked = createNextDisabled(step, stakesStepError(state.stakeMode, state.slots.length, slotErrors));
 
   return (
     <SetupScaffold

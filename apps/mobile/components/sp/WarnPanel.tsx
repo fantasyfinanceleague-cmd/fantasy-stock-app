@@ -9,6 +9,8 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // stock sheet's pre-review blocks and the review's refusals. `warnTint` with its `warnLine`
 // edge, the text in `warnText` (§9C rule 4: every fill has its own ink), and NO icon (the
 // Design Lead's ruling for refusals and blockers). Announced as an alert.
+// Moved to sp/ in W4 Onboarding: the same panel carries Join's refusals and Create account's
+// signups-paused line, so a refusal looks the same on every surface.
 
 export function WarnPanel({ text }: { text: string }) {
   const { colors } = useTheme();

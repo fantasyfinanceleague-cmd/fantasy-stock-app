@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/sp/EmptyState';
 import { Text } from '@/components/sp/Text';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
+import { getAuthErrorMessage } from '@/lib/authErrors';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { supabase } from '@/lib/supabase';
 import { generateRecoveryNonce, storeRecoveryNonce } from '@/lib/recoveryNonce';
@@ -75,7 +76,8 @@ export default function ForgotPasswordScreen() {
     setStatus('idle');
 
     if (resetError) {
-      setError(resetError.message);
+      // The shared mapper (lib/authErrors.ts), never the server's own words (W4 Onboarding).
+      setError(getAuthErrorMessage(resetError));
       return;
     }
 

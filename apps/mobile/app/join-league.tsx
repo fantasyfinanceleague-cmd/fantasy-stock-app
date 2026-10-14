@@ -6,17 +6,18 @@ import { router, Stack } from 'expo-router';
 
 import { radius, space, type } from '@/constants/tokens';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
+import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
-import { useTheme } from '@/components/sp/ThemeProvider';
 import { useMotion } from '@/components/sp/motion';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { AlertCard } from '@/components/join/AlertCard';
+import { WarnPanel } from '@/components/sp/WarnPanel';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
+import { CAPTURE } from '@/lib/shell/captureDev';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
 } from '@/lib/join/joinFixtureGate';
@@ -38,6 +39,10 @@ import {
 // - Under the dev-only JOIN_FIXTURE flag (lib/join/devFixture.ts) the two invokes below are
 //   answered locally, so every state is reachable without a real code or join.
 //   The real parse/view code runs on top; nothing is written.
+//
+// Game Night (W4 Onboarding): the preview's rows sit in the §9C Card and divide by space,
+// never a line; a refusal is the WarnPanel (`warnTint`, its own `warnText` ink, no icon), as on
+// the money screens; Joined's medallion is the trade-done one (a check in `onYou` on `you`).
 
 type Step = 'code' | 'preview' | 'joined';
 
@@ -65,7 +70,6 @@ async function callJoin(code: string): Promise<{ data: unknown; error: unknown }
 }
 
 export default function JoinLeagueScreen() {
-  const { colors } = useTheme();
   const { refresh, setActiveLeagueId } = useLeagueContext();
 
   const [step, setStep] = useState<Step>('code');
@@ -200,6 +204,16 @@ export default function JoinLeagueScreen() {
     router.replace('/(tabs)');
   }
 
+  // DEV captures only (lib/shell/captureKnobs.ts): press Find league, then Join, by themselves,
+  // so each fixture's preview, refusal and the joined screen open on a cold launch.
+  useEffect(() => {
+    if (!JOIN_FIXTURE || !CAPTURE.joinAuto) return;
+    if (step === 'code' && findStatus === 'idle' && !fieldError && !league) void find();
+    if (step === 'preview' && CAPTURE.joinAuto === 'join' && block === null && actionStatus === 'idle') void join();
+    // Steps only: each fires once per state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   const view = league ? previewView(league, block) : null;
 
   if (step === 'joined' && league) {
@@ -220,13 +234,13 @@ export default function JoinLeagueScreen() {
           </Text>
           <ScreenTitle>{view.name}</ScreenTitle>
         </View>
-        <View style={[styles.rows, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {view.rows.map((row, i) => (
+        <Card style={styles.rows}>
+          {view.rows.map((row) => (
             <View
               key={row.label}
               accessible
               accessibilityLabel={`${row.label}, ${row.value}`}
-              style={[styles.row, i > 0 && { borderTopColor: colors.line, borderTopWidth: StyleSheet.hairlineWidth }]}
+              style={styles.row}
             >
               <Text variant="callout" tone="secondary">
                 {row.label}
@@ -236,9 +250,9 @@ export default function JoinLeagueScreen() {
               </Text>
             </View>
           ))}
-        </View>
-        {view.message ? <AlertCard message={view.message} /> : null}
-        {actionError ? <AlertCard message={actionError} /> : null}
+        </Card>
+        {view.message ? <WarnPanel text={view.message} /> : null}
+        {actionError ? <WarnPanel text={actionError} /> : null}
         <Button
           label={primary.label}
           variant={view.action === 'another' ? 'secondary' : 'primary'}
@@ -300,7 +314,7 @@ function Joined({ name, draftDate, onContinue }: { name: string; draftDate: stri
       <Stack.Screen options={{ gestureEnabled: false }} />
       <View style={styles.center}>
         <Animated.View style={popStyle}>
-          <Icon name="check" size="medallion" tone="gain" discTone="gainTint" />
+          <Icon name="check" size="medallion" tone="onYou" discTone="you" />
         </Animated.View>
         <ScreenTitle style={styles.centerText}>{v.title}</ScreenTitle>
         <Text variant="body" tone="secondary" style={styles.centerText}>
@@ -318,10 +332,11 @@ const styles = StyleSheet.create({
   previewHead: {
     gap: space[1],
   },
+  // Rows divide by space (§9C rule 2): each row's own 12pt padding, plus the card's 8pt.
   rows: {
-    borderWidth: 1,
     borderRadius: radius.lg,
     paddingHorizontal: space[5],
+    paddingVertical: space[2],
   },
   row: {
     flexDirection: 'row',
@@ -335,6 +350,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
     fontFamily: type.headline.fontFamily,
+    fontVariant: ['tabular-nums'],
   },
   caption: {
     textAlign: 'center',

@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Constants from 'expo-constants';
-import { Ionicons } from '@expo/vector-icons';
 
 import { radius, space, type } from '@/constants/tokens';
 import { brand } from '@/constants/brand';
 import { Avatar } from '@/components/sp/Avatar';
 import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
+import { Card } from '@/components/sp/Card';
+import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme, type ThemePreference } from '@/components/sp/ThemeProvider';
 
@@ -17,6 +18,10 @@ import { useTheme, type ThemePreference } from '@/components/sp/ThemeProvider';
 // the old screen hard-coded "Version 1.0.0". Account created / Last sign in
 // / the emoji avatar picker / "Open Web App" are dropped (Design Lead,
 // approved).
+//
+// Game Night (W4 Onboarding): each group is the §9C Card (surface + rim, no shadow) and its
+// rows are divided by SPACE, never a line (rule 2, the League settings rows' RowDivider);
+// the chevron is the drawn sp/Icon.
 
 const APPEARANCE_LABEL: Record<ThemePreference, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
@@ -30,9 +35,8 @@ export interface ProfileViewProps {
 }
 
 export function ProfileView({ username, email, onUsername, onChangePassword, onAppearance, onSignOut }: ProfileViewProps) {
-  const { colors, preference, elevation } = useTheme();
+  const { preference } = useTheme();
   const version = Constants.expoConfig?.version ?? '';
-  const cardStyle = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.card];
 
   return (
     <>
@@ -45,16 +49,19 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
         ) : null}
       </View>
 
-      <View style={cardStyle}>
-        <Row label="Username" value={username ?? ''} onPress={onUsername} first />
+      <Card style={styles.card}>
+        <Row label="Username" value={username ?? ''} onPress={onUsername} />
+        <RowGap />
         <Row label="Email" value={email ?? ''} />
+        <RowGap />
         <Row label="Change password" onPress={onChangePassword} />
+        <RowGap />
         <Row label="Appearance" value={APPEARANCE_LABEL[preference]} onPress={onAppearance} />
-      </View>
+      </Card>
 
-      <View style={cardStyle}>
-        <Row label="Sign out" onPress={onSignOut} danger first />
-      </View>
+      <Card style={styles.card}>
+        <Row label="Sign out" onPress={onSignOut} danger />
+      </Card>
 
       <Text variant="caption" tone="secondary" style={styles.version}>
         {`${brand.name} ${version}`}
@@ -63,7 +70,12 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
   );
 }
 
-function Row({ label, value, onPress, danger = false, first = false }: { label: string; value?: string; onPress?: () => void; danger?: boolean; first?: boolean }) {
+/** Between rows: space, never a line (§9C rule 2). */
+function RowGap() {
+  return <View style={styles.rowGap} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
+}
+
+function Row({ label, value, onPress, danger = false }: { label: string; value?: string; onPress?: () => void; danger?: boolean }) {
   const { colors } = useTheme();
   // At accessibility sizes the value moves under its label (full width, wrapping)
   // instead of being squeezed into an ellipsis beside it — nothing truncates.
@@ -84,10 +96,10 @@ function Row({ label, value, onPress, danger = false, first = false }: { label: 
   const content = (
     <>
       {text}
-      {onPress && !danger ? <Ionicons name="chevron-forward" size={16} color={colors.text2} /> : null}
+      {onPress && !danger ? <Icon name="chevronRight" size="callout" tone="text2" /> : null}
     </>
   );
-  const rowStyle = [styles.row, first ? null : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }];
+  const rowStyle = styles.row;
   if (!onPress) {
     return (
       <View style={rowStyle} accessible accessibilityLabel={value ? `${label}, ${value}` : label}>
@@ -110,8 +122,12 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: space[5],
+    paddingVertical: space[2],
+  },
+  // SetupRows' RowDivider: the same 8pt between rows as League settings.
+  rowGap: {
+    height: space[2],
   },
   row: {
     flexDirection: 'row',
