@@ -10,6 +10,7 @@ function base(overrides: Partial<PreviewLeagueInput> = {}): PreviewLeagueInput {
     isExistingMember: false,
     seasonStatus: 'active',
     draftStatus: 'not_started',
+    draftDate: null,
     invite: null,
     currentMembers: 2,
     numParticipants: 6,
@@ -130,4 +131,50 @@ Deno.test('precedence: already_member beats everything, including season_complet
     ),
     { joinable: false, reason: 'already_member' },
   );
+});
+
+// ---- The draft room (20261123000000; Giorgio, 2026-10-14) --------------------
+// "once the draft room opens (an hour before) the league is considered started.
+// no one can join and the share link cannot work"
+const T = '2026-10-17T16:00:00.000Z'; // a noon ET draft
+const NOW = (deltaFromT: number) => new Date(Date.parse(T) + deltaFromT * 1000);
+
+Deno.test('room: an hour and a second before the draft -> still joinable', () => {
+  assertEquals(previewJoinReason(base({ draftDate: T }), NOW(-3601)), { joinable: true, reason: null });
+});
+
+Deno.test('room: the minute the room opens (T-1h sharp) -> draft_started', () => {
+  assertEquals(previewJoinReason(base({ draftDate: T }), NOW(-3600)), { joinable: false, reason: 'draft_started' });
+});
+
+Deno.test('room: open, draft not started yet, and past T -> draft_started', () => {
+  assertEquals(previewJoinReason(base({ draftDate: T }), NOW(-60)), { joinable: false, reason: 'draft_started' });
+  assertEquals(previewJoinReason(base({ draftDate: T }), NOW(120)), { joinable: false, reason: 'draft_started' });
+});
+
+Deno.test('room: a postponed draft (draft_date cleared) -> joinable', () => {
+  assertEquals(previewJoinReason(base({ draftDate: null }), NOW(0)), { joinable: true, reason: null });
+});
+
+Deno.test('room: precedence unchanged (member / season over / expired invite win; beats full)', () => {
+  const open = { draftDate: T };
+  assertEquals(previewJoinReason(base({ ...open, isExistingMember: true }), NOW(0)).reason, 'already_member');
+  assertEquals(previewJoinReason(base({ ...open, seasonStatus: 'completed' }), NOW(0)).reason, 'season_completed');
+  assertEquals(previewJoinReason(base({ ...open, invite: { status: 'accepted', expiresAt: null } }), NOW(0)).reason, 'invite_expired');
+  assertEquals(previewJoinReason(base({ ...open, currentMembers: 6, numParticipants: 6 }), NOW(0)).reason, 'draft_started');
+});
+
+Deno.test('room: the same hour as the SQL clock (_draft_order_is_due / room_lead_s)', async () => {
+  // reason.ts must not grow its own constant: it reads the shared policy, whose
+  // ROOM_OPEN_LEAD_SECONDS the PGlite suite pins equal to draft_start_policy().
+  const src = await Deno.readTextFile(new URL('./reason.ts', import.meta.url));
+  assertEquals(/from '\.\.\/_shared\/draft-start-policy\.ts'/.test(src), true);
+  assertEquals(/3600|60 \* 60|HOUR/.test(src), false);
+});
+
+Deno.test('room: index.ts hands the league\'s draft_date to the reason', async () => {
+  // index.ts runs Deno.serve, so it is read, not imported: without this wiring
+  // the preview would invite a join the RPC refuses for the room's whole hour.
+  const src = await Deno.readTextFile(new URL('./index.ts', import.meta.url));
+  assertEquals(/draftDate:\s*league\.draft_date\b/.test(src), true);
 });

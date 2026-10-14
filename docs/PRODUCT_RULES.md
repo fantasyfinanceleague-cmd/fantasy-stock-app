@@ -377,7 +377,8 @@ building anything, and don't reopen a rule without him.
 - **Draft order:** a league setting with two modes, Random or Manual, never an automatic
   commissioner-first. Both lock at T−1h. If Manual was never saved, the random order
   locks. The order is set at the later of T−1h and the league reaching 4 members. A
-  joiner after T−1h picks last.
+  joiner after T−1h picks last. (Since 2026-10-14 nobody can join after T−1h; see "No joins
+  once the draft room opens" under League lifecycle.)
 - **The draft starts by itself** (2026-10-06): "the draft is not something that is
   started manually. It should be something that starts at the minute that is selected by
   the commissioner. So if the commissioner sets it for noon tomorrow, the draft room will
@@ -528,6 +529,12 @@ building anything, and don't reopen a rule without him.
   code itself stays visible. Share is shown before the draft (a renewed season too), when a code
   can be used; hidden while locked and after the season, until a renewal (a completed season
   refuses a join: preview-league's 'season_completed'). No new copy.
+- **No joins once the draft room opens** (2026-10-14, Giorgio, relayed by the Orchestrator):
+  "once the draft room opens (an hour before) the league is considered started. no one can
+  join and the share link cannot work"
+  - From T−1h a code is refused, by join-league and by the preview, the same moment Share
+    hides. The refusal is the started-draft one ('draft_started'), so no new copy.
+  - A postponed draft has no time, so its room is not open: the code works again.
 - **The commissioner** (2026-10-06): "A commissioner cannot leave, but a commissioner can
   transfer that title to someone else and then leave." "A commissioner can only hand over
   the title before or after a season." The season runs from when the draft room opens
