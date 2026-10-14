@@ -80,29 +80,30 @@ export function createConfirmNonceStore(deps: NonceDeps) {
     },
 
     /**
-     * True only when a fresh stored nonce exactly matches `inbound`, and then it is deleted (single
-     * use: a replayed link fails). A MISMATCH leaves the pending nonce alone, so a junk link can't
-     * burn a real sign-up's nonce (256 bits: nothing to brute-force). A stale or malformed record
-     * is deleted. Missing, mismatched, stale, malformed or any storage failure (including a failed
-     * delete): false.
+     * The ADDRESS this nonce was minted for (lowercased) when a fresh stored nonce exactly matches
+     * `inbound`, and then it is deleted (single use: a replayed link fails); otherwise null. The
+     * caller compares that address with the session the link produced. A MISMATCH leaves the
+     * pending nonce alone, so a junk link can't burn a real sign-up's nonce (256 bits: nothing to
+     * brute-force). A stale or malformed record is deleted. Missing, mismatched, stale, malformed
+     * or any storage failure (including a failed delete): null.
      */
-    async verifyAndConsume(inbound: string | null | undefined): Promise<boolean> {
-      if (!inbound) return false;
+    async verifyAndConsume(inbound: string | null | undefined): Promise<string | null> {
+      if (!inbound) return null;
       const storage = deps.storage();
-      if (!storage) return false;
+      if (!storage) return null;
       try {
         const raw = await storage.getItem(CONFIRM_NONCE_KEY);
-        if (!raw) return false;
+        if (!raw) return null;
         const stored = readFresh(raw, deps.now());
         if (!stored) {
           await storage.removeItem(CONFIRM_NONCE_KEY);
-          return false;
+          return null;
         }
-        if (!constantTimeEqual(stored.nonce, inbound)) return false;
+        if (!constantTimeEqual(stored.nonce, inbound)) return null;
         await storage.removeItem(CONFIRM_NONCE_KEY); // a failure throws: not accepted
-        return true;
+        return stored.email;
       } catch {
-        return false;
+        return null;
       }
     },
 

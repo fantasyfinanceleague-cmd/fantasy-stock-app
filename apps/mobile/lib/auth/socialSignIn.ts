@@ -6,9 +6,17 @@
 //   time on a top-level import. Lazily, the buttons simply don't render there.
 // - Expo Go has no Google module; the dev client gets both only after a rebuild.
 //
-// PRIVACY (Giorgio, 2026-10-14): no name is requested, kept or logged. Apple is asked for the
-// email scope only (the auth identity; never shown to other users); Google for email only.
-// Nothing here writes user metadata or a profile (no updateUser, no profile upsert).
+// PRIVACY (Giorgio, 2026-10-14): this app requests, copies, shows and logs no name. What it does
+// and does not control, exactly:
+// - Apple: asked for the email scope only. Apple's identity token carries no name (the name only
+//   ever arrives in the separate fullName credential, which is not requested), so GoTrue has none.
+// - Google: asked for the email scope, but the Google SDK ALWAYS adds openid + email + profile, so
+//   the id token DOES carry name / picture claims. GoTrue stores them in auth.users.raw_user_meta_data
+//   and auth.identities.identity_data, rewrites them on every sign-in, and puts them in
+//   user_metadata inside every JWT. The app never reads them and no app table or RPC copies them;
+//   the only SQL reader of that metadata is the signup trigger, and it reads the `username` key
+//   only. Whether to accept that residue or scrub it is a decision for Giorgio (not built).
+// - Nothing here writes user metadata or a profile (no updateUser, no profile upsert).
 //
 // Apple carries a nonce end to end (the id token's `nonce` is SHA-256(raw); GoTrue re-hashes the
 // raw value we send and compares), so a captured Apple token can't be replayed. Google: the free
@@ -117,11 +125,9 @@ let googleConfiguredOnce = false;
 function configureGoogle(google: GoogleModule): void {
   if (googleConfiguredOnce) return;
   google.GoogleSignin.configure({
-    // Email only is what WE ask for: usernames are generated gamertags, never derived from a name
-    // (Giorgio, 2026-10-14: "let's not expose their first names"). `scopes` is ADDITIONAL to the
-    // SDK's basics, so Google may still put name / picture claims in the id token; GoTrue stores
-    // those in the auth schema on its own, and this app never reads, copies or shows them. Whether
-    // they arrive is a fact to check on the first real sign-in (auth.users.raw_user_meta_data).
+    // `scopes` is ADDITIONAL to the SDK's own openid + email + profile, so this does NOT keep name or
+    // picture claims out of the id token: GoTrue stores them in the auth schema regardless (see the
+    // PRIVACY note at the top of this file). It only avoids asking for anything beyond the basics.
     scopes: ['email'],
     webClientId: GOOGLE_WEB_CLIENT_ID,
     ...(Platform.OS === 'ios' ? { iosClientId: GOOGLE_IOS_CLIENT_ID } : {}),

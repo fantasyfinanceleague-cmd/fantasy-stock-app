@@ -1,4 +1,4 @@
-import { isConfirmLink } from '@/lib/auth/confirmLink';
+import { isConfirmRoute } from '@/lib/auth/confirmLink';
 import { pendingRoute } from '@/lib/shell/pendingRoute';
 
 // Phase 3b-1 — the first half of the signed-out deep-link resume.
@@ -22,6 +22,6 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
   // screen. The root layout's link handler reads it; the router just opens sign-in, which the
   // guard swaps for the next step once (and only if) the link signs the person in. Returning a
   // fixed path also keeps the link's tokens out of the router's state.
-  if (isConfirmLink(path)) return '/login';
+  if (isConfirmRoute(path)) return '/login';
   return path;
 }

@@ -17,11 +17,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { notificationRoute } from '@/lib/shell/notificationRoute';
-import { addNotificationListeners } from '@/lib/notifications';
+import { addNotificationListeners, removePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
 import { parseRecoveryLink } from '@/lib/recoveryLink';
-import { decideConfirmLink, parseConfirmLink, type ConfirmLinkResult } from '@/lib/auth/confirmLink';
+import { confirmedEmailMatches, createLinkDedupe, decideConfirmLink, parseConfirmLink, type ConfirmLinkResult } from '@/lib/auth/confirmLink';
 import { verifyAndConsumeConfirmNonce } from '@/lib/auth/confirmNonce';
 import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
@@ -42,6 +42,9 @@ export {
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
+
+// A cold-start confirmation link can arrive twice (getInitialURL AND the 'url' event); handle it once.
+const handledConfirmLinks = createLinkDedupe();
 
 // Rejects (harmlessly) when the splash is already gone, e.g. on a dev reload: handled.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -155,23 +158,37 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
       if (SHELL_FIXTURE || parsed.kind !== 'tokens') return;
       const { data } = await supabase.auth.getSession();
       const hasSession = !!data.session;
-      // Never consume the nonce for a link that can't be used anyway.
-      const nonceOk = hasSession ? false : await verifyAndConsumeConfirmNonce(parsed.nonce);
-      const action = decideConfirmLink(parsed, nonceOk, hasSession);
+      // Never consume the nonce for a link that can't be used anyway. The nonce answers with the
+      // address it was minted for (null = refused).
+      const boundEmail = hasSession ? null : await verifyAndConsumeConfirmNonce(parsed.nonce);
+      const action = decideConfirmLink(parsed, boundEmail !== null, hasSession);
       if (action.kind !== 'signIn') return;
-      const { error } = await supabase.auth.setSession({
+      const { data: set, error } = await supabase.auth.setSession({
         access_token: action.accessToken,
         refresh_token: action.refreshToken,
       });
-      if (error) console.warn('[auth] confirmation link could not sign in', error.code ?? '');
-      else setEmailJustConfirmed(true); // W4's Pick a username draws "✓ EMAIL CONFIRMED"
+      if (error) {
+        console.warn('[auth] confirmation link could not sign in', error.code ?? '');
+        return;
+      }
+      // The session must belong to the address this device signed up with. Anything else is
+      // someone else's tokens riding a nonce they somehow held: leave that account again, and
+      // don't claim "email confirmed".
+      if (!confirmedEmailMatches(boundEmail, set.user?.email)) {
+        console.warn('[auth] confirmation link signed in a different address; signing out');
+        if (set.user?.id) await removePushToken(set.user.id).catch(() => {});
+        await supabase.auth.signOut();
+        return;
+      }
+      setEmailJustConfirmed(true); // W4's Pick a username draws "✓ EMAIL CONFIRMED"
     };
 
     // Handle URL when app is opened from a link
     const handleDeepLink = async (event: { url: string }) => {
       const confirm = parseConfirmLink(event.url);
       if (confirm.kind !== 'none') {
-        await handleConfirmLink(confirm);
+        // Mark BEFORE awaiting: the two cold-start deliveries race, and the nonce is single use.
+        if (handledConfirmLinks.firstTime(event.url)) await handleConfirmLink(confirm);
         return;
       }
 

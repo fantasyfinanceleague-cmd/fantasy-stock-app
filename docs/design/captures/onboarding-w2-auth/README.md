@@ -38,6 +38,6 @@ refuses as paused, so that frame needs the real-server path or the W1 board's fr
 ## What is verified without screenshots
 
 See the hand-back message and the tests: `apps/mobile/tests-deno/onboarding-w2-auth.test.ts`
-(28 tests incl. the nonce store, the confirmation-link decision table, `app.config.js`, the wiring
+(36 tests incl. the nonce store, the confirmation-link decision table, `app.config.js`, the wiring
 scans) and `supabase/tests/social_signup.pglite.test.ts` (profile row + signup gate for Apple /
-Google shapes on real Postgres). 55 mutations over the auth decisions were each killed.
+Google shapes on real Postgres). 76 mutations over the auth decisions were each killed.

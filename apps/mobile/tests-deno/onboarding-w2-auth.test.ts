@@ -11,8 +11,11 @@ import { assert, assertEquals, assertFalse, assertThrows } from 'jsr:@std/assert
 import {
   AUTH_LINK_BASES,
   buildConfirmRedirect,
+  confirmedEmailMatches,
+  createLinkDedupe,
   decideConfirmLink,
   isConfirmLink,
+  isConfirmRoute,
   parseConfirmLink,
   type ConfirmLinkResult,
 } from '../lib/auth/confirmLink.ts';
@@ -40,15 +43,39 @@ Deno.test('confirm redirect: the scheme fallback, nonce in the query, encoded', 
   assertEquals(APP_JSON.expo.scheme + '://', AUTH_LINK_BASES[0]);
 });
 
-Deno.test('isConfirmLink: every shape the app is handed', () => {
+Deno.test('isConfirmLink: the registered origins sign in, in a release build', () => {
   for (const url of [
     `fantasystockapp://auth/confirm?cn=${NONCE}#${TOKENS}`, // host form, as GoTrue redirects
     `fantasystockapp:///auth/confirm?cn=${NONCE}`, // empty-host form
     'fantasystockapp://auth/confirm/',
-    'exp://127.0.0.1:8081/--/auth/confirm?cn=x', // Expo Go (dev)
-    '/auth/confirm?cn=x', // app-relative, as +native-intent may see it
   ]) {
-    assert(isConfirmLink(url), url);
+    assert(isConfirmLink(url, false), url);
+    assert(isConfirmLink(url, true), url);
+  }
+});
+
+Deno.test('isConfirmLink: the bare-path and exp(s):// shapes are DEV-ONLY (a release build never signs in from them)', () => {
+  for (const url of [
+    'exp://127.0.0.1:8081/--/auth/confirm?cn=x', // Expo Go
+    'exps://host.example:443/--/auth/confirm?cn=x',
+    '/auth/confirm?cn=x', // app-relative
+    '//auth/confirm',
+  ]) {
+    assert(isConfirmLink(url, true), `dev: ${url}`);
+    assertFalse(isConfirmLink(url, false), `release: ${url}`);
+    assertFalse(isConfirmLink(url), `default (no __DEV__ under Deno) must be the release rule: ${url}`);
+    // ...and so the parser hands back nothing usable in a release, tokens or not.
+    assertEquals(parseConfirmLink(`${url}#${TOKENS}`, false), { kind: 'none' }, url);
+  }
+  assertEquals(parseConfirmLink(`exp://127.0.0.1:8081/--/auth/confirm?cn=${NONCE}#${TOKENS}`, true).kind, 'tokens');
+});
+
+Deno.test('isConfirmRoute: navigation only: every shape redirects to sign-in, none of them signs anyone in', () => {
+  for (const p of ['/auth/confirm', '/auth/confirm?cn=x', 'fantasystockapp://auth/confirm?cn=x', 'exp://h:1/--/auth/confirm']) {
+    assert(isConfirmRoute(p), p);
+  }
+  for (const p of ['/auth/confirmx', '/auth', '/login', 'https://evil.example/auth/confirm', '', null, undefined]) {
+    assertFalse(isConfirmRoute(p as string), String(p));
   }
 });
 
@@ -167,18 +194,18 @@ Deno.test('nonce store: a minted nonce verifies once and only once (single use)'
   const nonce = await store.getOrCreate(ADA);
   assert(nonce);
   assert(data.has(CONFIRM_NONCE_KEY));
-  assertEquals(await store.verifyAndConsume(nonce), true);
-  assertEquals(await store.verifyAndConsume(nonce), false); // a replayed link
+  assertEquals(await store.verifyAndConsume(nonce), ADA);
+  assertEquals(await store.verifyAndConsume(nonce), null); // a replayed link
   assertFalse(data.has(CONFIRM_NONCE_KEY));
 });
 
 Deno.test('nonce store: a WRONG nonce is refused and does NOT burn the pending one (a junk link cannot DoS a sign-up)', async () => {
   const { store, data } = memoryStore();
   const nonce = (await store.getOrCreate(ADA))!;
-  assertEquals(await store.verifyAndConsume('f'.repeat(nonce.length)), false);
-  assertEquals(await store.verifyAndConsume('short'), false);
+  assertEquals(await store.verifyAndConsume('f'.repeat(nonce.length)), null);
+  assertEquals(await store.verifyAndConsume('short'), null);
   assert(data.has(CONFIRM_NONCE_KEY), 'a mismatch must leave the real nonce in place');
-  assertEquals(await store.verifyAndConsume(nonce), true); // the genuine link still works
+  assertEquals(await store.verifyAndConsume(nonce), ADA); // the genuine link still works
 });
 
 Deno.test('nonce store: bound to the ADDRESS: a resend to the same address reuses it, any other address mints a new one', async () => {
@@ -189,8 +216,8 @@ Deno.test('nonce store: bound to the ADDRESS: a resend to the same address reuse
   assert(other !== first);
   const corrected = (await store.getOrCreate(ADA))!; // ...the corrected one: NOT the stranger's nonce
   assert(corrected !== other, 'the nonce minted for the mistyped address must not be reused');
-  assertEquals(await store.verifyAndConsume(other), false); // and it no longer works
-  assertEquals(await store.verifyAndConsume(corrected), true);
+  assertEquals(await store.verifyAndConsume(other), null); // and it no longer works
+  assertEquals(await store.verifyAndConsume(corrected), ADA);
   assertEquals(await store.getOrCreate(''), null);
 });
 
@@ -201,14 +228,14 @@ Deno.test('nonce store: 1 h TTL (GoTrue\'s link expiry): stale never verifies an
   advance(CONFIRM_NONCE_TTL_MS - 1);
   assertEquals(await store.getOrCreate(ADA), first);
   advance(2);
-  assertEquals(await store.verifyAndConsume(first), false);
+  assertEquals(await store.verifyAndConsume(first), null);
   assertFalse(data.has(CONFIRM_NONCE_KEY), 'a stale record is cleaned up');
   const again = memoryStore();
   const old = (await again.store.getOrCreate(ADA))!;
   again.advance(CONFIRM_NONCE_TTL_MS + 1);
   const fresh = (await again.store.getOrCreate(ADA))!;
   assert(fresh !== old, 'an expired nonce must not be reused');
-  assertEquals(await again.store.verifyAndConsume(fresh), true);
+  assertEquals(await again.store.verifyAndConsume(fresh), ADA);
 });
 
 Deno.test('nonce store: clear() forgets a pending nonce (every sign-in and sign-out)', async () => {
@@ -216,28 +243,28 @@ Deno.test('nonce store: clear() forgets a pending nonce (every sign-in and sign-
   const nonce = (await store.getOrCreate(ADA))!;
   await store.clear();
   assertFalse(data.has(CONFIRM_NONCE_KEY));
-  assertEquals(await store.verifyAndConsume(nonce), false);
+  assertEquals(await store.verifyAndConsume(nonce), null);
   await memoryStore({ failRemove: true }).store.clear(); // never throws
   await memoryStore({ none: true }).store.clear();
 });
 
 Deno.test('nonce store: fail closed on every storage failure and on garbage', async () => {
   assertEquals(await memoryStore({ none: true }).store.getOrCreate(ADA), null);
-  assertEquals(await memoryStore({ none: true }).store.verifyAndConsume('x'), false);
+  assertEquals(await memoryStore({ none: true }).store.verifyAndConsume('x'), null);
   assertEquals(await memoryStore({ failSet: true }).store.getOrCreate(ADA), null); // no email without a stored nonce
   assertEquals(await memoryStore({ failGet: true }).store.getOrCreate(ADA), null);
   const { store: s1, data: d1 } = memoryStore();
   const n1 = (await s1.getOrCreate(ADA))!;
-  assertEquals(await memoryStore({ failGet: true }).store.verifyAndConsume(n1), false);
+  assertEquals(await memoryStore({ failGet: true }).store.verifyAndConsume(n1), null);
   const { store: s2, data: d2 } = memoryStore({ failRemove: true });
   d2.set(CONFIRM_NONCE_KEY, JSON.stringify({ nonce: 'abc', email: ADA, createdAt: 1_000_000 }));
-  assertEquals(await s2.verifyAndConsume('abc'), false); // could not consume => not accepted
+  assertEquals(await s2.verifyAndConsume('abc'), null); // could not consume => not accepted
   for (const junk of ['not json', '{}', '{"nonce":1,"createdAt":2}', '{"nonce":"abc"}', '{"nonce":"abc","createdAt":1000000}', 'null']) {
     d1.set(CONFIRM_NONCE_KEY, junk);
-    assertEquals(await s1.verifyAndConsume('abc'), false, junk);
+    assertEquals(await s1.verifyAndConsume('abc'), null, junk);
   }
-  assertEquals(await s1.verifyAndConsume(''), false);
-  assertEquals(await s1.verifyAndConsume(null), false);
+  assertEquals(await s1.verifyAndConsume(''), null);
+  assertEquals(await s1.verifyAndConsume(null), null);
 });
 
 Deno.test('nonce store: the compare is exact and length-checked', () => {
@@ -261,6 +288,60 @@ Deno.test('wiring: the nonce is address-bound at both senders, cleared on sign-i
   // Google signed in natively but returned no token: the native session is closed too.
   const g = SOURCES['lib/auth/socialSignIn.ts'];
   assert(/if \(!idToken\) \{\s*await signOutOfGoogle\(\);/.test(g));
+});
+
+Deno.test('email binding: the session a link produced must belong to the address the nonce was minted for', () => {
+  assert(confirmedEmailMatches('ada@example.com', 'ada@example.com'));
+  assert(confirmedEmailMatches('ada@example.com', '  Ada@Example.COM '));
+  assertFalse(confirmedEmailMatches('ada@example.com', 'mallory@example.com'));
+  assertFalse(confirmedEmailMatches('ada@example.com', 'ada@example.com.evil'));
+  for (const missing of [null, undefined, '', '   ']) {
+    assertFalse(confirmedEmailMatches('ada@example.com', missing), `actual ${String(missing)}`);
+    assertFalse(confirmedEmailMatches(missing, 'ada@example.com'), `bound ${String(missing)}`);
+    assertFalse(confirmedEmailMatches(missing, missing), 'two blanks never match');
+  }
+});
+
+Deno.test('nonce store hands back the bound address, lowercased, only on a match', async () => {
+  const { store } = memoryStore();
+  const nonce = (await store.getOrCreate('  Ada@Example.com '))!;
+  assertEquals(await store.verifyAndConsume('f'.repeat(nonce.length)), null);
+  assertEquals(await store.verifyAndConsume(nonce), 'ada@example.com');
+  assertEquals(await store.verifyAndConsume(nonce), null);
+});
+
+Deno.test('dedupe: a cold-start link delivered twice is handled once; distinct links each get one run; bounded', () => {
+  const d = createLinkDedupe(3);
+  const a = `fantasystockapp://auth/confirm?cn=${NONCE}#${TOKENS}`;
+  assertEquals(d.firstTime(a), true);
+  assertEquals(d.firstTime(a), false); // getInitialURL + the 'url' event
+  assertEquals(d.firstTime(a), false);
+  assertEquals(d.firstTime(`fantasystockapp://auth/confirm?cn=${'b'.repeat(64)}`), true);
+  for (const k of ['k1', 'k2', 'k3']) d.firstTime(k); // pushes `a` out of the 3-entry window
+  assertEquals(d.firstTime(a), true, 'the window is bounded (oldest forgotten)');
+});
+
+Deno.test('wiring: the link handler dedupes before awaiting, checks the session address, and signs out on a mismatch', () => {
+  const src = SOURCES['app/_layout.tsx'];
+  assert(src.includes('const handledConfirmLinks = createLinkDedupe();'));
+  assert(src.includes('if (handledConfirmLinks.firstTime(event.url)) await handleConfirmLink(confirm);'));
+  const body = src.slice(src.indexOf('const handleConfirmLink'), src.indexOf('const handleDeepLink'));
+  const set = body.indexOf('supabase.auth.setSession');
+  const match = body.indexOf('confirmedEmailMatches(boundEmail, set.user?.email)');
+  const out = body.indexOf('await supabase.auth.signOut()');
+  const flag = body.indexOf('setEmailJustConfirmed(true)');
+  assert(set > -1 && match > set && out > match && flag > out, 'order: setSession -> address match -> signOut on mismatch -> flag');
+  assert(/if \(!confirmedEmailMatches\([^)]*\)\) \{[\s\S]*?await supabase\.auth\.signOut\(\);\s*return;\s*\}/.test(body), 'a mismatch signs out and returns before the flag');
+  assert(body.includes('const boundEmail = hasSession ? null : await verifyAndConsumeConfirmNonce(parsed.nonce);'));
+  assert(body.includes('decideConfirmLink(parsed, boundEmail !== null, hasSession)'));
+  assert(body.includes('removePushToken(set.user.id)'), "the refused account's push token is not left registered");
+});
+
+Deno.test('wiring: the push token is never logged (presence only)', () => {
+  const n = SOURCES['lib/notifications.ts'];
+  assertFalse(/console\.\w+\([^)]*[^!]tokenData\.data\s*\)/.test(n), 'no console call is handed the token');
+  assertFalse(n.includes("console.log('Push token:'"));
+  assert(n.includes("console.log('Push token obtained:', !!tokenData.data)"));
 });
 
 // ── the social half ───────────────────────────────────────────────────────
@@ -304,14 +385,35 @@ Deno.test('email confirmation: the unconfirmed sign-in is recognised by code and
   assertEquals(getAuthErrorMessage({ code: 'email_not_confirmed' }), 'Please verify your email before signing in.');
 });
 
-Deno.test('privacy: sign-in never requests, passes, stores or logs a name (Giorgio, 2026-10-14)', () => {
+Deno.test('privacy: the app never asserts a false fact about Google\'s claims; it says exactly what is and is not stored', () => {
+  // The Google SDK always adds openid + email + profile, so the id token DOES carry name / picture
+  // claims, and GoTrue stores them in the auth schema and in every JWT's user_metadata.
+  const g = SOURCES['lib/auth/socialSignIn.ts'];
+  for (const [path, src] of Object.entries(SOURCES)) {
+    assertFalse(
+      /(carries|has|contains|sends|includes|with)\s+no\s+(name|picture|profile)\s+(or\s+picture\s+)?claims?/i.test(src),
+      `${path} claims the Google token has no name claims, which is false`
+    );
+    assertFalse(/no profile scope\s*(→|->|=>)/i.test(src), path);
+  }
+  assert(g.includes('the Google SDK ALWAYS adds openid + email + profile'));
+  assert(g.includes('auth.users.raw_user_meta_data') && g.includes('auth.identities.identity_data'));
+  assert(g.includes('user_metadata inside every JWT'));
+  assert(g.includes('the only SQL reader of that metadata is the signup trigger, and it reads the `username` key'));
+  assert(g.includes("Apple's identity token carries no name"), 'the Apple side stays accurate');
+});
+
+Deno.test('privacy: THIS APP never requests (beyond the SDK basics), passes, copies or logs a name (Giorgio, 2026-10-14); what GoTrue stores from Google\'s token is not the app\'s doing and is documented, not denied', () => {
   const stripComments = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
   const social = stripComments(SOURCES['lib/auth/socialSignIn.ts']);
   // Apple: the email scope and nothing else.
   assert(social.includes('requestedScopes: [apple.AppleAuthenticationScope.EMAIL]'));
   assertFalse(/FULL_NAME|fullName|givenName|familyName/.test(social));
-  // Google: email only, so the id token carries no name claims.
+  // Google: we ask for the email scope. That does NOT keep name / picture claims out of the id token
+  // (the SDK always adds openid + email + profile, and GoTrue stores whatever the token carries in
+  // the auth schema); what this test pins is only what the APP does: it asks for nothing more.
   assert(social.includes("scopes: ['email']"));
+  assertFalse(/profile/.test(social.replace(/\/\/.*$/gm, '')), 'the app must not ask for the profile scope itself');
   // No metadata or profile write after a sign-in, and nothing sensitive in a log line.
   assertFalse(/updateUser|user_profiles|\.upsert\(|\.insert\(|options:\s*\{\s*data/.test(social));
   assertFalse(/console\.(log|info|debug|warn|error)/.test(social), 'the social sign-in module logs nothing');
@@ -420,7 +522,9 @@ Deno.test('just-confirmed flag: set only after a successful link sign-in; cleare
   const layout = SOURCES['app/_layout.tsx'];
   const body = layout.slice(layout.indexOf('const handleConfirmLink'), layout.indexOf('const handleDeepLink'));
   assert(body.indexOf('supabase.auth.setSession') < body.indexOf('setEmailJustConfirmed(true)'));
-  assert(/if \(error\) console\.warn\([^\n]*\n\s*else setEmailJustConfirmed\(true\)/.test(body), 'set only on the success branch');
+  // ...and only past BOTH refusals: a failed setSession and a session for a different address.
+  assert(/if \(error\) \{[^}]*return;\s*\}/.test(body), 'a failed setSession returns before the flag');
+  assert(body.indexOf('confirmedEmailMatches(') < body.indexOf('setEmailJustConfirmed(true)'));
   const sp = SOURCES['lib/SessionProvider.tsx'];
   assert(sp.slice(sp.indexOf("event === 'SIGNED_OUT'")).includes('setEmailJustConfirmed(false)'));
 });
@@ -443,12 +547,12 @@ Deno.test('wiring: the root layout checks the session before consuming the nonce
   const decide = body.indexOf('decideConfirmLink(');
   const set = body.indexOf('supabase.auth.setSession');
   assert(getSession > -1 && verify > getSession && decide > verify && set > decide, 'order: session → nonce → decide → setSession');
-  assert(body.includes('hasSession ? false : await verifyAndConsumeConfirmNonce'));
+  assert(body.includes('hasSession ? null : await verifyAndConsumeConfirmNonce'));
   assert(body.includes("if (action.kind !== 'signIn') return;"));
   // The confirm link is handled BEFORE (and instead of) the recovery parser.
   const handler = src.slice(src.indexOf('const handleDeepLink'));
   assert(handler.indexOf('parseConfirmLink') < handler.indexOf('parseRecoveryLink'));
-  assert(SOURCES['app/+native-intent.tsx'].includes("if (isConfirmLink(path)) return '/login';"));
+  assert(SOURCES['app/+native-intent.tsx'].includes("if (isConfirmRoute(path)) return '/login';"));
 });
 
 Deno.test('wiring: the native sign-in modules are only ever required lazily', () => {

@@ -39,19 +39,27 @@ export function buildConfirmRedirect(nonce: string, base: string = AUTH_LINK_BAS
   return `${base}${CONFIRM_PATH}?${CONFIRM_NONCE_PARAM}=${encodeURIComponent(nonce)}`;
 }
 
+/** React Native's `__DEV__`, read off globalThis so this pure module also loads under Deno. */
+function isDevBuild(): boolean {
+  return (globalThis as { __DEV__?: boolean }).__DEV__ === true;
+}
+
 /**
  * The link's path relative to its accepted base, or null when the URL is not on an accepted
- * origin. Handles the scheme's host form (fantasystockapp://auth/confirm), its empty-host form
- * (fantasystockapp:///auth/confirm) and a DEV Expo Go form (exp://host:port/--/auth/confirm).
+ * origin. A release build accepts ONLY the registered origins (AUTH_LINK_BASES: the scheme's host
+ * form fantasystockapp://auth/confirm and its empty-host form fantasystockapp:///auth/confirm).
+ * The two conveniences below exist for development and tests and are off in a release, where a
+ * link can only arrive through a registered origin: a bare app-relative path (what a router hands
+ * +native-intent in some shapes) and Expo Go's exp(s)://host:port/--/auth/confirm.
  */
-function relativePath(url: string): string | null {
+function relativePath(url: string, dev: boolean): string | null {
   const end = url.search(/[?#]/);
   const head = end === -1 ? url : url.slice(0, end);
-  // Already app-relative (expo-router hands +native-intent a path in some shapes).
-  if (head.startsWith('/')) return head.replace(/^\/+/, '');
   for (const base of AUTH_LINK_BASES) {
     if (head.startsWith(base)) return head.slice(base.length).replace(/^\/+/, '');
   }
+  if (!dev) return null;
+  if (head.startsWith('/')) return head.replace(/^\/+/, '');
   if (/^exps?:\/\//.test(head)) {
     const marker = head.indexOf('/--/');
     return marker === -1 ? null : head.slice(marker + 4);
@@ -59,11 +67,24 @@ function relativePath(url: string): string | null {
   return null;
 }
 
-/** True when the URL is a confirmation return link (exact path; never a substring match). */
-export function isConfirmLink(url: string | null | undefined): boolean {
+/**
+ * True when the URL is a confirmation return link that may SIGN SOMEONE IN (exact path; never a
+ * substring match; release builds: registered origins only, see relativePath). `dev` defaults to
+ * the build's __DEV__; tests pass it explicitly.
+ */
+export function isConfirmLink(url: string | null | undefined, dev: boolean = isDevBuild()): boolean {
   if (!url) return false;
-  const path = relativePath(url.trim());
+  const path = relativePath(url.trim(), dev);
   return path !== null && path.replace(/\/+$/, '') === CONFIRM_PATH;
+}
+
+/**
+ * True when a path the ROUTER sees names the confirm route, in any shape. Navigation only
+ * (+native-intent sends it to sign-in instead of a route that doesn't exist); it never signs
+ * anyone in, which is why it can be broader than isConfirmLink.
+ */
+export function isConfirmRoute(path: string | null | undefined): boolean {
+  return isConfirmLink(path, true);
 }
 
 export type ConfirmLinkResult =
@@ -76,8 +97,8 @@ export type ConfirmLinkResult =
   /** Not a confirmation link at all: the caller leaves it alone. */
   | { kind: 'none' };
 
-export function parseConfirmLink(raw: string | null | undefined): ConfirmLinkResult {
-  if (!raw || !isConfirmLink(raw)) return { kind: 'none' };
+export function parseConfirmLink(raw: string | null | undefined, dev: boolean = isDevBuild()): ConfirmLinkResult {
+  if (!raw || !isConfirmLink(raw, dev)) return { kind: 'none' };
   const url = raw.trim();
 
   const hashIndex = url.indexOf('#');
@@ -120,4 +141,35 @@ export function decideConfirmLink(parsed: ConfirmLinkResult, nonceOk: boolean, h
   if (hasSession) return { kind: 'ignore' };
   if (!nonceOk) return { kind: 'ignore' };
   return { kind: 'signIn', accessToken: parsed.accessToken, refreshToken: parsed.refreshToken };
+}
+
+/**
+ * After setSession: the session the link produced must belong to the address this device signed up
+ * with (the email stored beside the nonce). A mismatch means the tokens are someone else's, so the
+ * caller signs out again and does not show "email confirmed". Case-insensitive; a missing address
+ * on either side is a mismatch.
+ */
+export function confirmedEmailMatches(bound: string | null | undefined, actual: string | null | undefined): boolean {
+  const norm = (e: string | null | undefined) => (typeof e === 'string' ? e.trim().toLowerCase() : '');
+  const a = norm(bound);
+  return a !== '' && a === norm(actual);
+}
+
+/**
+ * In-memory "have we handled this link already". On a cold start the same link can arrive twice
+ * (getInitialURL AND the 'url' event); the handler must run once, because the nonce is single use
+ * and the second run would find it gone. Bounded, oldest first. Returns true the FIRST time a key
+ * is seen (the caller proceeds) and false on any repeat. Mark BEFORE awaiting anything: the two
+ * deliveries race.
+ */
+export function createLinkDedupe(max = 20) {
+  const seen: string[] = [];
+  return {
+    firstTime(key: string): boolean {
+      if (seen.includes(key)) return false;
+      seen.push(key);
+      if (seen.length > max) seen.shift();
+      return true;
+    },
+  };
 }
