@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import JoinPage, { joinStateFor, readHandoff } from './JoinPage';
 import { JoinView, inviteHeadline, initials, unbreakable, UNBROKEN_NAME_MAX } from './JoinView';
@@ -76,7 +76,7 @@ describe('joinStateFor', () => {
     expect(joinStateFor('abcde23456', { kind: 'not_found' })).toEqual({ kind: 'dead' });
     expect(joinStateFor('abcde23456', { kind: 'unknown' })).toEqual({ kind: 'invited', code: 'ABCDE23456', name: null, inviter: null });
     expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: null })).toEqual({ kind: 'invited', code: 'ABCDE23456', name: 'X', inviter: 'r' });
-    expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: 'league_full' })).toEqual({ kind: 'refused', name: 'X', inviter: 'r', block: 'league_full', signIn: true });
+    expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: 'league_full' })).toEqual({ kind: 'refused', name: 'X', inviter: 'r', block: 'league_full' });
   });
 });
 
@@ -110,20 +110,22 @@ describe('JoinView: the static states', () => {
   });
 
   it('a dead link: ONLY the Planner\'s panel and "Sign in" (no heading, no avatar, no badge), never the typing line', () => {
-    const { container } = render(<JoinView state={{ kind: 'dead' }} />);
+    const onSignIn = vi.fn();
+    const { container } = render(<JoinView state={{ kind: 'dead', onSignIn }} />);
     expect(screen.queryByRole('heading')).toBeNull();
     expect(container.querySelector('.obw__av, .obw__icon')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent("This invite link doesn't work anymore. Ask for a new one.");
     expect(screen.queryByText(/check it/i)).toBeNull();
-    const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(1);
-    expect(links[0]).toHaveTextContent('Sign in');
-    expect(links[0]).toHaveAttribute('href', 'fantasystockapp://login');
+    expect(screen.queryAllByRole('link')).toHaveLength(0); // never a link to the app's scheme: a dead link on a laptop
+    expect(container.querySelector('a[href^="fantasystockapp"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(onSignIn).toHaveBeenCalledTimes(1);
     expect(container.querySelector('.obw__arrival--dead')).not.toBeNull(); // centred on the page, not bottom-anchored
   });
 
-  it('a dead link after sign-in has no "Sign in" either', () => {
-    render(<JoinView state={{ kind: 'dead', signIn: false }} />);
+  it('a dead link with nothing to sign in to (after sign-in, or a code that can\'t be one) has no "Sign in"', () => {
+    render(<JoinView state={{ kind: 'dead' }} />);
+    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
@@ -134,29 +136,33 @@ describe('JoinView: the static states', () => {
     ['season_completed', "Stock Scudetto isn't taking new players right now."],
     ['unknown', "You can't join this league right now. Ask your commissioner to check the invite."],
   ] as const)('refused (%s): the heading stays, the warn panel replaces the buttons, "Sign in" under it, NO App Store badge', (block, line) => {
-    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'roberto_b', block, signIn: true }} />);
+    const onSignIn = vi.fn();
+    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'roberto_b', block, onSignIn }} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
     expect(screen.getByRole('alert')).toHaveTextContent(line);
     expect(screen.queryByRole('link', { name: WEB_COPY.appStoreBadge })).toBeNull();
-    expect(screen.queryByRole('button')).toBeNull(); // nobody makes an account for a closed league
-    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', 'fantasystockapp://login');
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Sign in']); // the ONLY control: no Apple/Google/email buttons
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(onSignIn).toHaveBeenCalledTimes(1);
     expect(refusalMessage(block, 'Stock Scudetto')).toBe(line);
   });
 
-  it('after sign-in a refusal has no "Sign in" link', () => {
-    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full', signIn: false }} />);
+  it('after sign-in a refusal has no "Sign in" (there is nothing left to sign in to)', () => {
+    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full' }} />);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're invited to Stock Scudetto");
   });
 
   it('no inviter: the league icon (not initials) above the heading', () => {
-    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full', signIn: true }} />);
+    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full' }} />);
     expect(container.querySelector('.obw__icon')).not.toBeNull();
     expect(container.querySelector('.obw__av')).toBeNull();
   });
 
   it('with an inviter: their initials above the heading', () => {
-    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'Roberto B.', block: 'league_full', signIn: true }} />);
+    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'Roberto B.', block: 'league_full' }} />);
     expect(container.querySelector('.obw__av')).toHaveTextContent('RB');
     expect(container.querySelector('.obw__icon')).toBeNull();
   });
@@ -171,7 +177,7 @@ describe('JoinView: the static states', () => {
   });
 
   it('renders a hostile league name or inviter as text, never markup', () => {
-    const { container } = render(<JoinView state={{ kind: 'refused', name: '<img src=x onerror=alert(1)>', inviter: '<b>x</b>', block: 'league_full', signIn: true }} />);
+    const { container } = render(<JoinView state={{ kind: 'refused', name: '<img src=x onerror=alert(1)>', inviter: '<b>x</b>', block: 'league_full', onSignIn: () => {} }} />);
     expect(container.querySelector('img')).toBeNull();
     expect([...container.querySelectorAll('b')].map((b) => b.textContent)).toEqual(['Sign in']); // the hostile <b> never became markup
   });
@@ -201,7 +207,8 @@ describe('/join/:code', () => {
     renderAt('/join/%3Cscript%3E');
     expect(screen.getByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead);
     expect(screen.queryByRole('heading')).toBeNull();
-    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Sign in']);
+    expect(screen.queryByRole('button')).toBeNull(); // a malformed code has nothing to join: no "Sign in" to nowhere
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(spy).not.toHaveBeenCalled();
     expect(m.currentSession).not.toHaveBeenCalled();
   });
@@ -218,9 +225,8 @@ describe('/join/:code', () => {
     answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'draft_started' });
     renderAt('/join/ABCDE23456');
     expect(await screen.findByRole('alert')).toHaveTextContent("Stock Scudetto isn't taking new players right now.");
-    expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.queryByRole('link', { name: WEB_COPY.appStoreBadge })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toHaveLength(0); // no App Store badge, no app-scheme link
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Sign in']);
     expect(m.currentSession).not.toHaveBeenCalled();
   });
 
@@ -229,7 +235,8 @@ describe('/join/:code', () => {
     renderAt('/join/ABCDE23456');
     expect(await screen.findByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead);
     expect(screen.queryByRole('heading')).toBeNull();
-    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Sign in']);
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Sign in']);
   });
 
   it.each([
@@ -264,6 +271,112 @@ describe('/join/:code', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/You're in/);
     // ...and the entry no longer carries it
     expect(screen.getByTestId('state')).toHaveTextContent('null');
+  });
+
+  describe('"Sign in" under a refusal opens the WEB sign-in (an existing member signs in; anyone else gets the genuine refusal)', () => {
+    const pl = (over: Record<string, unknown> = {}) => ({ name: 'Stock Scudetto', members: 6, max: 6, stakeMode: 'fixed_notional', notionalPerSlot: 2000, budgetAmount: null, leagueType: null, numWeeks: 14, durationDays: null, draftDate: '2026-10-03T23:00:00Z', draftStatus: 'not_started', ...over });
+    const signInWithEmailAndPassword = async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use email' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Already have an account? Sign in' }));
+      fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'roberto@example.com' } });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'Str0ng!pass' } });
+      fireEvent.submit(screen.getByLabelText('Email address').closest('form')!);
+    };
+    const full = () => answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'league_full' });
+    const open = async () => {
+      render(<MemoryRouter initialEntries={['/join/ABCDE23456']}><Routes><Route path="/join/:code" element={<JoinPage />} /></Routes></MemoryRouter>);
+      fireEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
+    };
+    beforeEach(() => {
+      m.currentSession.mockResolvedValueOnce(null).mockResolvedValue({ userId: 'u1' });
+      m.signInWithEmail.mockResolvedValue({ error: null });
+      m.readOwnUsername.mockResolvedValue('roberto');
+    });
+
+    it('it opens the same options screen (the three sign-ins), with the same headline, and never an app-scheme link', async () => {
+      full();
+      m.currentSession.mockReset();
+      m.currentSession.mockResolvedValue(null);
+      await open();
+      expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: WEB_COPY.continueGoogle })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: WEB_COPY.useEmail })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
+      expect(document.querySelector('a[href^="fantasystockapp"]')).toBeNull();
+    });
+
+    it('an existing MEMBER who met "full" signs in and is told "You\'re already in {league}." (with the facts)', async () => {
+      full();
+      m.previewWithSession.mockResolvedValue({ kind: 'found', league: pl(), block: 'already_member' });
+      await open();
+      await screen.findByRole('button', { name: WEB_COPY.useEmail });
+      await signInWithEmailAndPassword();
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto."));
+      expect(screen.getByText('6 of 6')).toBeInTheDocument();
+      expect(m.joinWithSession).not.toHaveBeenCalled(); // nothing is written for a member
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
+    });
+
+    it('a NON-member who met "full" signs in and gets the genuine refusal: the ruled line, no Sign in, no badge, no join', async () => {
+      full();
+      m.previewWithSession.mockResolvedValue({ kind: 'found', league: pl(), block: 'league_full' });
+      await open();
+      await screen.findByRole('button', { name: WEB_COPY.useEmail });
+      await signInWithEmailAndPassword();
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Stock Scudetto is full. Ask whoever invited you if they can make room.'));
+      expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+      expect(screen.queryAllByRole('link')).toHaveLength(0);
+      expect(m.joinWithSession).not.toHaveBeenCalled();
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
+    });
+
+    it('"not taking new players" works the same way (a member is recognised)', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: 'draft_started' });
+      m.previewWithSession.mockResolvedValue({ kind: 'found', league: pl({ draftStatus: 'in_progress' }), block: 'already_member' });
+      await open();
+      await screen.findByRole('button', { name: WEB_COPY.useEmail });
+      await signInWithEmailAndPassword();
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto."));
+    });
+
+    it('a dead link (found:false) opens the options with the generic headline; signing in ends on the dead panel, without a Sign in', async () => {
+      answer(200, { found: false });
+      m.previewWithSession.mockResolvedValue({ kind: 'bad_code' });
+      await open();
+      expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/^You're invited to a league$/);
+      await signInWithEmailAndPassword();
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead));
+      expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+      expect(screen.queryByRole('heading')).toBeNull();
+    });
+
+    it('opening "Sign in" is ALWAYS a cold start, even when the page arrived with "this visit signed in": it never joins with a session it already holds', async () => {
+      full();
+      m.currentSession.mockReset();
+      m.currentSession.mockResolvedValue({ userId: 'u1' }); // a live session AND a sign-in return handoff
+      m.previewWithSession.mockResolvedValue({ kind: 'found', league: { name: 'Stock Scudetto', members: 5, max: 6, stakeMode: null, notionalPerSlot: null, budgetAmount: null, leagueType: null, numWeeks: null, durationDays: null, draftDate: null, draftStatus: 'not_started' }, block: null });
+      m.joinWithSession.mockResolvedValue({ kind: 'joined', leagueId: 'L1', leagueName: 'Stock Scudetto' });
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/join/ABCDE23456', state: { signedIn: true } }]}>
+          <Routes><Route path="/join/:code" element={<JoinPage />} /></Routes>
+        </MemoryRouter>,
+      );
+      fireEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
+      expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument(); // the options, not a spinner into a join
+      expect(m.previewWithSession).not.toHaveBeenCalled();
+      expect(m.joinWithSession).not.toHaveBeenCalled();
+    });
+
+    it('a session left over from before is ended when the options open; it never joins on its own', async () => {
+      full();
+      m.currentSession.mockReset();
+      m.currentSession.mockResolvedValue({ userId: 'someone-else' });
+      await open();
+      expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
+      expect(m.signOutLocal).toHaveBeenCalled();
+      expect(m.previewWithSession).not.toHaveBeenCalled();
+      expect(m.joinWithSession).not.toHaveBeenCalled();
+    });
   });
 
   describe('ending the session when a sign-in return lands on a link that cannot be joined', () => {

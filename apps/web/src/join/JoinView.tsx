@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { brand } from '../brand';
-import { APP_STORE_URL, appSignInUrl } from './config';
+import { APP_STORE_URL } from './config';
 import { errorMessage, refusalMessage, WEB_COPY, type JoinBlock, type JoinErrorKind } from './joinCopy';
 import './joinWeb.css';
 
@@ -99,12 +99,18 @@ export function SignOutButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** The warning panel that takes the buttons' place, with "Sign in" under it (approved via the Planner). */
-function Refusal({ message, signIn }: { message: string; signIn: boolean }) {
+/**
+ * The warning panel that takes the buttons' place, with "Sign in" under it (approved via the Planner).
+ * "Sign in" opens the WEB sign-in (the Orchestrator's ruling, 2026-10-14: on a laptop an app-scheme link is a
+ * dead link): an existing member who meets a pre-sign-in "full" or "not taking new players" signs in and the
+ * session preview tells them "You're already in {league}"; anyone else gets the genuine refusal. It is absent
+ * where there is nothing to sign in to (after sign-in, or a code that can't be a code).
+ */
+function Refusal({ message, onSignIn }: { message: string; onSignIn?: () => void }) {
   return (
     <div className="obw__refuse">
       <Warn>{message}</Warn>
-      {signIn ? <a className="obw__link" href={appSignInUrl()}><b>{WEB_COPY.signIn}</b></a> : null}
+      {onSignIn ? <button type="button" className="obw__link" onClick={onSignIn}><b>{WEB_COPY.signIn}</b></button> : null}
     </div>
   );
 }
@@ -113,14 +119,14 @@ export type JoinViewState =
   /** The no-session preview is in flight: the page frame only. */
   | { kind: 'loading' }
   /** The code can't be a code, or resolved nowhere: no heading, the panel and "Sign in", centred. */
-  | { kind: 'dead'; signIn?: boolean }
+  | { kind: 'dead'; onSignIn?: () => void }
   /**
    * The league won't take this person (before sign-in: from the no-session
    * preview; after: from join-league). The heading stays, the panel replaces
-   * the buttons, and there is no App Store badge. `signIn` is only offered
+   * the buttons, and there is no App Store badge. `onSignIn` is only offered
    * before sign-in.
    */
-  | { kind: 'refused'; name: string; inviter: string | null; block: JoinBlock; signIn: boolean }
+  | { kind: 'refused'; name: string; inviter: string | null; block: JoinBlock; onSignIn?: () => void }
   /** A transport failure after sign-in: our line, never the server's. */
   | { kind: 'failed'; error: JoinErrorKind; onSignOut: () => void };
 
@@ -130,7 +136,7 @@ export function JoinView({ state }: { state: JoinViewState }) {
     return (
       <WebPage arrival>
         <div className="obw__arrival obw__arrival--dead">
-          <Refusal message={WEB_COPY.inviteLinkDead} signIn={state.signIn ?? true} />
+          <Refusal message={WEB_COPY.inviteLinkDead} onSignIn={state.onSignIn} />
         </div>
       </WebPage>
     );
@@ -140,7 +146,7 @@ export function JoinView({ state }: { state: JoinViewState }) {
       <WebPage arrival>
         <div className="obw__arrival">
           <InviteBlock name={state.name} inviter={state.inviter} />
-          <Refusal message={refusalMessage(state.block, state.name)} signIn={state.signIn} />
+          <Refusal message={refusalMessage(state.block, state.name)} onSignIn={state.onSignIn} />
         </div>
       </WebPage>
     );

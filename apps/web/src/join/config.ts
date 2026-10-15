@@ -6,16 +6,6 @@ import config from '../../universal-links.config.json';
 export const APP_STORE_URL: string = config.appStoreUrl;
 
 /**
- * "Sign in" under a refusal: the app's own sign-in, by its custom scheme (a
- * same-domain https link does not fire a universal link from Safari). The web
- * page signs people in only to JOIN; a closed or dead invite has nothing to
- * join, so an existing account's way in is the app.
- */
-export function appSignInUrl(): string {
-  return `${config.appScheme}://login`;
-}
-
-/**
  * The no-session league preview (onboarding W3's `invite-preview` edge
  * function). Plain fetch with the PUBLISHABLE key, never the supabase client:
  * the onboarding pages create no client until a person signs in, and a failed

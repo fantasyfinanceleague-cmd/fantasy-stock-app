@@ -254,9 +254,9 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     case 'failed':
       return <JoinView state={{ kind: 'failed', error: stage.error, onSignOut: () => void signOut() }} />;
     case 'dead':
-      return <JoinView state={{ kind: 'dead', signIn: false }} />;
+      return <JoinView state={{ kind: 'dead' }} />;
     case 'refused':
-      return <JoinView state={{ kind: 'refused', name: stage.name, inviter, block: stage.block, signIn: false }} />;
+      return <JoinView state={{ kind: 'refused', name: stage.name, inviter, block: stage.block }} />;
     case 'member':
       return <DoneScreen title={WEB_COPY.alreadyIn(stage.name)} rows={stage.rows} />;
     case 'in':

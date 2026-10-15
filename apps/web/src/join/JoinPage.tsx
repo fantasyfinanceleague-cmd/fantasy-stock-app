@@ -19,7 +19,7 @@ export function joinStateFor(rawCode: string | undefined, preview: InvitePreview
   if (preview.kind === 'not_found') return { kind: 'dead' };
   if (preview.kind === 'found') {
     // A league that won't take players is not worth an account: say so, offer the app, no sign-in.
-    if (preview.block) return { kind: 'refused', name: preview.name, inviter: preview.inviter, block: preview.block, signIn: true };
+    if (preview.block) return { kind: 'refused', name: preview.name, inviter: preview.inviter, block: preview.block };
     return { kind: 'invited', code, name: preview.name, inviter: preview.inviter };
   }
   return { kind: 'invited', code, name: null, inviter: null };
@@ -74,6 +74,12 @@ export default function JoinPage() {
 
   const preview = loaded && loaded.code === code ? loaded.preview : null;
   const view = joinStateFor(raw, preview);
+  // "Sign in" under a refusal opens the web sign-in. It needs a code to join with: a malformed one has none.
+  const [signInOpen, setSignInOpen] = useState(false);
+  const signIn =
+    code && view.kind === 'refused' ? { name: view.name, inviter: view.inviter }
+    : code && view.kind === 'dead' ? { name: null, inviter: null }
+    : null;
   // A sign-in return (Google/Apple/email link) that lands on a link which can't be joined never mounts the
   // flow, so nothing else would end the browser session it just made. End it here: the web's only job is the join.
   const endSession = handoff?.signedIn === true && (view.kind === 'refused' || view.kind === 'dead');
@@ -83,5 +89,13 @@ export default function JoinPage() {
   if (view.kind === 'invited') {
     return <JoinFlow key={view.code} code={view.code} name={view.name} inviter={view.inviter} handoff={handoff} />;
   }
+  if (signInOpen && signIn && code) {
+    // The same options screen, now: sign in, and the session preview decides ("You're already in {league}", or the genuine refusal).
+    // Cold (no handoff): a session left over from before is ended there, never joined with.
+    return <JoinFlow key="sign-in" code={code} name={signIn.name} inviter={signIn.inviter} handoff={null} />;
+  }
+  const onSignIn = signIn ? () => setSignInOpen(true) : undefined;
+  if (view.kind === 'refused') return <JoinView state={{ ...view, onSignIn }} />;
+  if (view.kind === 'dead') return <JoinView state={{ kind: 'dead', onSignIn }} />;
   return <JoinView state={view} />;
 }
