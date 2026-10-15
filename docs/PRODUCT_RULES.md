@@ -660,8 +660,9 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   (2026-10-14, board `#call-ob-arrival`: **B**). The no-sign-in preview returns only the name,
   the inviter and why a link can't be used (the Planner's security ruling), so the arrival, in
   the app and on the web page, is "{inviter} invited you to {league}" (no inviter: "You're
-  invited to {league}"), then Continue with Apple, Continue with Google, Use email. No
-  Managers / Draft / Stakes / Season card before sign-in.
+  invited to {league}"; while the preview loads, or when it can't be reached: "You're invited to
+  a league", the B call's own fallback), then Continue with Apple, Continue with Google, Use
+  email. No Managers / Draft / Stakes / Season card before sign-in.
   - **The facts move to "You're in {league}"** (same call: **C1**): a card with Managers, Stakes
     and Season under the draft sentence in the app; the web page, which has no draft sentence,
     adds a Draft row. Not on the pre-draft Home.
@@ -678,6 +679,13 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
 - **No theme choice in onboarding** (System by default, Profile › Appearance), and the game's
   unfamiliar ideas (the week window, dollars decide) are taught in place, one line, once, on
   the first pre-draft Home and in the first draft room, never on a launch card.
+  - **The pre-draft Home line:** "Your week runs Monday's open to Friday's close. Best
+    performance wins." (the plan's line, with its ending set by "Generic scoring copy" above:
+    onboarding says "best performance wins", never "best dollar gain").
+  - **The draft-room line** (the Planner, 2026-10-14), verbatim: "Out of time? We pick for you:
+    your queue first, then the best stock that fits your league's rules." Shown the first time
+    someone enters any draft room, in the same first-time tip above the board; it goes away on
+    a tap of its × or on that person's first pick, and never shows again.
 - **One no-league empty state on every tab** (Home, Matchup, League, Portfolio): Create a
   league / Join with a code (recommendation taken).
 
