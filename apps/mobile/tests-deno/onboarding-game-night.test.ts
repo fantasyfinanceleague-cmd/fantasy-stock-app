@@ -195,7 +195,11 @@ Deno.test('capture knobs: a release bundle (isDev false) reads nothing, whatever
 
 Deno.test('capture knobs: recognised values only', () => {
   const k = parseCaptureKnobs(true, { card: '3', create: 'tiers', joinAuto: 'find', signupPaused: '1', usernamePrefill: ' roberto ' });
-  assertEquals(k, { onboardingCard: 2, create: 'tiers', joinAuto: 'find', signupPaused: true, usernamePrefill: 'roberto', pushAsk: false });
+  assertEquals(k, { onboardingCard: 2, create: 'tiers', joinAuto: 'find', signupPaused: true, usernamePrefill: 'roberto', pushAsk: false, confirmed: null });
+  assertEquals(parseCaptureKnobs(true, { confirmed: 'chip' }).confirmed, 'chip');
+  assertEquals(parseCaptureKnobs(true, { confirmed: 'notice' }).confirmed, 'notice');
+  assertEquals(parseCaptureKnobs(true, { confirmed: 'x' }).confirmed, null);
+  assertEquals(parseCaptureKnobs(false, { confirmed: 'chip' }).confirmed, null);
   assertEquals(parseCaptureKnobs(true, { pushAsk: '1' }).pushAsk, true);
   assertEquals(parseCaptureKnobs(true, { card: '4', create: 'bogus', joinAuto: 'yes', signupPaused: 'true' }), NO_KNOBS);
   assertEquals(createFixtureStep('tiers'), 'stakes');

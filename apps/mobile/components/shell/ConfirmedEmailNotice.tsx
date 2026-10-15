@@ -6,6 +6,7 @@ import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
+import { CAPTURE } from '@/lib/shell/captureDev';
 import {
   CONFIRM_FAILED_NOTICE,
   isConfirmFailedNotice,
@@ -20,7 +21,8 @@ import {
 // attempt or the × clears it. The × is a 44pt target.
 
 export function ConfirmedEmailNotice() {
-  const shown = useSyncExternalStore(subscribeConfirmFailedNotice, isConfirmFailedNotice);
+  const stored = useSyncExternalStore(subscribeConfirmFailedNotice, isConfirmFailedNotice);
+  const shown = stored || CAPTURE.confirmed === 'notice'; // DEV captures only (captureDev reads nothing in release)
   if (!shown) return null;
   return (
     <Card style={styles.card} accessibilityLiveRegion="polite">

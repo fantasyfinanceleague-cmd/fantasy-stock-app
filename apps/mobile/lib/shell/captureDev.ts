@@ -12,4 +12,5 @@ export const CAPTURE = parseCaptureKnobs(__DEV__, {
   signupPaused: process.env.EXPO_PUBLIC_SIGNUP_PAUSED,
   usernamePrefill: process.env.EXPO_PUBLIC_USERNAME_PREFILL,
   pushAsk: process.env.EXPO_PUBLIC_PUSH_ASK,
+  confirmed: process.env.EXPO_PUBLIC_CONFIRMED,
 });

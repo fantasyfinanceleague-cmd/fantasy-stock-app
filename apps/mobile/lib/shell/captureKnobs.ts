@@ -12,6 +12,8 @@
  *   EXPO_PUBLIC_SIGNUP_PAUSED=1            Create account opens on the signups-paused refusal
  *   EXPO_PUBLIC_USERNAME_PREFILL=<name>    the username picker starts with this typed in
  *   EXPO_PUBLIC_PUSH_ASK=1                 the notifications ask is due (a simulator has no push token)
+ *   EXPO_PUBLIC_CONFIRMED=chip|notice      the username screen shows the EMAIL CONFIRMED chip / Sign in shows
+ *                                          the confirm-failed line (no email link can be opened on a simulator)
  */
 import type { CreateStep } from '../game/createLeagueSteps';
 
@@ -26,9 +28,10 @@ export interface CaptureKnobs {
   signupPaused: boolean;
   usernamePrefill: string | null;
   pushAsk: boolean;
+  confirmed: 'chip' | 'notice' | null;
 }
 
-export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null, pushAsk: false };
+export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null, pushAsk: false, confirmed: null };
 
 export interface CaptureEnv {
   card?: string;
@@ -37,6 +40,7 @@ export interface CaptureEnv {
   signupPaused?: string;
   usernamePrefill?: string;
   pushAsk?: string;
+  confirmed?: string;
 }
 
 /** Only a development build reads anything; an unrecognised value is ignored, never guessed. */
@@ -53,6 +57,7 @@ export function parseCaptureKnobs(isDev: boolean, env: CaptureEnv): CaptureKnobs
     signupPaused: env.signupPaused === '1',
     usernamePrefill: prefill,
     pushAsk: env.pushAsk === '1',
+    confirmed: env.confirmed === 'chip' || env.confirmed === 'notice' ? env.confirmed : null,
   };
 }
 

@@ -178,7 +178,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/AuthScaffold.tsx:34` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/shell/ConfirmEmailSent.tsx:67` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
 | `components/shell/ConfirmEmailSent.tsx:69` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
-| `components/shell/ConfirmedEmailNotice.tsx:32` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
+| `components/shell/ConfirmedEmailNotice.tsx:34` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
 | `components/shell/FirstTimeTip.tsx:24` | Pressable | onPress | `inline: () => dismissTip(tip)` | fn dismissTip |  |
 | `components/shell/GetStarted.tsx:44` | Choice | onPress | `onCreate` | prop onCreate (the caller's) |  |
 | `components/shell/GetStarted.tsx:45` | Choice | onPress | `onJoin` | prop onJoin (the caller's) |  |

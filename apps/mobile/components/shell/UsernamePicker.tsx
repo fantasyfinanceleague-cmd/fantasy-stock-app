@@ -182,7 +182,7 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
   const picking = mode !== 'editing';
   return (
     <>
-      {firstRun && confirmed ? <EmailConfirmedChip /> : null}
+      {firstRun && (confirmed || CAPTURE.confirmed === 'chip') ? <EmailConfirmedChip /> : null}
       <View style={styles.heading}>
         <ScreenTitle>Pick a username</ScreenTitle>
         <Text variant="body" tone="secondary">
