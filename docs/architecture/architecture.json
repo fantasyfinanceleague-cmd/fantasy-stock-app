@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "f5448587874fbe3a8493152fc780817ca904eefc",
-    "commitShort": "f5448587",
+    "commit": "9f287b4319c06e7d653604c5c907d9c005256a01",
+    "commitShort": "9f287b43",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w4",
     "dirty": true,
@@ -13,124 +13,16 @@
         "path": "apps/mobile/app/_layout.tsx"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/matchup.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/(tabs)/portfolio.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/+native-intent.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/create-league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/get-started.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/login.tsx"
+        "code": "??",
+        "path": "apps/mobile/app/invite.tsx"
       },
       {
         "code": "??",
-        "path": "apps/mobile/app/notifications-ask.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/onboarding.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/pick-username.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/profile.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/username.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/PreDraftCard.tsx"
+        "path": "apps/mobile/components/shell/InviteArrival.tsx"
       },
       {
         "code": "??",
-        "path": "apps/mobile/components/shell/ConfirmedEmailNotice.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/shell/EmailConfirmedChip.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/Field.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/shell/FirstTimeTip.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/shell/HowItWorksSheet.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/shell/NoLeagueState.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/onboarding/Vignettes.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/ProfileView.tsx"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/components/shell/PushPrePrompt.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/UsernamePicker.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/sp/logic/icon.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/constants/tokens/contrastPairs.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/auth/confirmFailedNotice.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/SessionProvider.tsx"
+        "path": "apps/mobile/lib/invite/"
       },
       {
         "code": "M",
@@ -141,75 +33,15 @@
         "path": "apps/mobile/lib/shell/captureKnobs.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/confirmedChip.ts"
-      },
-      {
         "code": "M",
-        "path": "apps/mobile/lib/shell/firstRun.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/firstTimeTip.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/firstTimeTipPolicy.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/gamertag.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/pushAsk.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/pushAskPolicy.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/usernameMachine.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/gn-sweep.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/league-game-night.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/onboarding-game-night.test.ts"
-      },
-      {
-        "code": "??",
         "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/pkce-auth-links.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/shell-username.test.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sp-icon.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/tokens-v3-game-night.test.ts"
       }
     ],
-    "timestamp": "2026-10-15T02:22:04Z",
+    "timestamp": "2026-10-15T02:31:34Z",
     "sourceHash": "sha256:ffe9afdbfb9908743cd66aa068021f5583889455db9ea8b737ddb0aff32aca80",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -217,7 +49,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 26.1,
+    "ageHours": 26.3,
     "ageDays": 1.1,
     "staleAfterDays": 14,
     "stale": false,

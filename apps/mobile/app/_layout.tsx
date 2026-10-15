@@ -33,6 +33,7 @@ import { MoneyHostProvider } from '@/components/money/MoneyHost';
 import { useMotion } from '@/components/sp/motion';
 import { takeSignInIntent } from '@/lib/shell/signInTransition';
 import { useGetStartedOpen, useOnboardingSeen } from '@/lib/shell/firstRun';
+import { useArrivalInvite } from '@/lib/invite/useArrivalInvite';
 import { ThemeDipProvider } from '@/components/shell/ThemeDip';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
@@ -63,6 +64,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
   const onboardingSeen = useOnboardingSeen();
   const getStartedOpen = useGetStartedOpen();
+  const pendingInvite = useArrivalInvite();
 
   // The phase the navigator renders. authPhase passes through 'unknown' not
   // only at cold start but on EVERY sign-in, while the new account's profile
@@ -270,6 +272,11 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
           <ShellOverlayProvider>
             <Stack screenOptions={HIDDEN_HEADER}>
               <Stack.Protected guard={!signedIn}>
+                {/* An invite link's arrival (W4; W3 supplies the pending invite). First in the group, so a
+                    signed-out person with an invite pending lands here, not on the cards or Sign in. */}
+                <Stack.Protected guard={pendingInvite !== null}>
+                  <Stack.Screen name="invite" options={crossfade} />
+                </Stack.Protected>
                 {/* First run only (the stored "seen" flag), and skipped when a
                     deep link is waiting: that user already knows where they're
                     going, so they land on sign-in (spec gate 9). */}

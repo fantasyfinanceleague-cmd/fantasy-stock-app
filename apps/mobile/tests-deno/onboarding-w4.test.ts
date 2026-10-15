@@ -29,6 +29,11 @@ import { PUSH_ASK_COPY, pushAskDestination, pushAskRoute, shouldPrePrompt, type 
 import { TIPS, tipVisible } from '../lib/shell/firstTimeTipPolicy.ts';
 import { confirmedChipLabel } from '../lib/shell/confirmedChip.ts';
 import { CONFIRM_EMAIL_COPY } from '../constants/confirmEmailCopy.ts';
+import { ARRIVAL_COPY, arrivalTitle, arrivalView } from '../lib/invite/arrivalView.ts';
+import { INVITE_FIXTURES, inviteFixture } from '../lib/invite/inviteFixture.ts';
+import { JOIN_COPY, blockMessage } from '../lib/join/joinPreview.ts';
+import type { InvitePreview } from '../lib/invite/usePendingInvite.ts';
+import { parseCaptureKnobs } from '../lib/shell/captureKnobs.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
 /** Source without comments, so a guard never passes on a comment that names the thing. */
@@ -296,4 +301,79 @@ Deno.test('Profile: a "How it works" row opens the sheet (the three cards, still
   assert(page.includes('onHowItWorks={() => setHowItWorks(true)}') && page.includes('<HowItWorksSheet'));
   const sheet = code(SOURCES['components/shell/HowItWorksSheet.tsx']);
   assert(sheet.includes('How it works') && sheet.includes('still'));
+});
+
+// ── The signed-out invite arrival ────────────────────────────────────────────────
+
+const view = (k: (typeof INVITE_FIXTURES)[number]) => arrivalView(inviteFixture(k));
+
+Deno.test('arrival: "{inviter} invited you to {league}", or "You\'re invited to {league}" when the inviter is null', () => {
+  assertEquals(arrivalTitle('Stock Scudetto', 'Roberto'), 'Roberto invited you to Stock Scudetto');
+  assertEquals(arrivalTitle('Stock Scudetto', null), "You're invited to Stock Scudetto");
+  assertEquals(arrivalTitle(null, 'Roberto'), "You're invited to a league", 'no name: never a half-built sentence');
+  assertEquals(view('found').title, 'Roberto invited you to Stock Scudetto');
+  assertEquals(view('solo').title, "You're invited to Stock Scudetto");
+});
+
+Deno.test('arrival: loading, not found and unavailable are the generic line with every sign-in option, never an error page', () => {
+  for (const k of ['loading', 'not_found', 'unavailable'] as const) {
+    const v = view(k);
+    assertEquals(v.title, "You're invited to a league", k);
+    assertEquals([v.canJoin, v.refusal, v.rows.length, v.avatarName], [true, null, 0, null], k);
+  }
+  assertEquals(ARRIVAL_COPY.generic, "You're invited to a league");
+});
+
+Deno.test('arrival: only an unavailable preview offers Try again, with Join\'s own unreachable line', () => {
+  for (const k of INVITE_FIXTURES) assertEquals(view(k).retry, k === 'unavailable', k);
+  assertEquals(view('unavailable').unreachable, JOIN_COPY.unreachable);
+  for (const k of INVITE_FIXTURES) if (k !== 'unavailable') assertEquals(view(k).unreachable, null, k);
+  assertEquals(ARRIVAL_COPY.tryAgain, 'Try again');
+});
+
+Deno.test('arrival: a found league shows Managers / Draft / Stakes / Season, and a joinable one has no refusal', () => {
+  const v = view('found');
+  assertEquals(v.rows.map((r) => r.label), ['Managers', 'Draft', 'Stakes', 'Season']);
+  assertEquals([v.canJoin, v.refusal, v.avatarName], [true, null, 'Stock Scudetto']);
+});
+
+Deno.test('arrival: a refusal is Join\'s own copy, replaces the sign-in buttons, and a full league reads N of N', () => {
+  const l = { name: 'Stock Scudetto', max: 6 };
+  const full = view('full');
+  assertEquals([full.canJoin, full.refusal], [false, blockMessage('league_full', l)]);
+  assertEquals(full.rows[0], { label: 'Managers', value: '6 of 6' });
+  assertEquals(view('drafting').refusal, blockMessage('draft_in_progress', l));
+  assertEquals(view('over').refusal, blockMessage('season_completed', l));
+  // A finished draft (completed) reads "has already drafted", not "drafting right now".
+  const base = inviteFixture('found').preview as Extract<InvitePreview, { kind: 'found' }>;
+  const drafted = arrivalView({ preview: { ...base, reason: 'draft_started', league: { ...base.league!, draftStatus: 'completed' } } });
+  assertEquals(drafted.refusal, blockMessage('draft_started', l));
+});
+
+Deno.test('arrival: without the league facts a full league falls back to the shipped line (never a guessed count)', () => {
+  const v = arrivalView({ preview: { kind: 'found', name: 'Stock Scudetto', inviter: 'Roberto', reason: 'league_full' } });
+  assertEquals(v.refusal, JOIN_COPY.unknownBlock);
+  assertEquals([v.canJoin, v.rows.length], [false, 0]);
+  const over = arrivalView({ preview: { kind: 'found', name: 'Stock Scudetto', inviter: 'Roberto', reason: 'season_completed' } });
+  assertEquals(over.refusal, "Stock Scudetto's season is over. Ask your commissioner whether they're running it back.");
+});
+
+Deno.test('arrival: the capture knob parses only in a dev build and only a known state', () => {
+  for (const k of INVITE_FIXTURES) assertEquals(parseCaptureKnobs(true, { invite: k }).invite, k);
+  assertEquals(parseCaptureKnobs(true, { invite: 'nope' }).invite, null);
+  assertEquals(parseCaptureKnobs(false, { invite: 'found' }).invite, null);
+});
+
+Deno.test('arrival: wired as the FIRST signed-out screen while an invite is pending; stub hook; screen acts on every tappable', () => {
+  const layout = code(SOURCES['app/_layout.tsx']);
+  const group = layout.slice(layout.indexOf('<Stack.Protected guard={!signedIn}>'));
+  assert(group.indexOf('name="invite"') > -1 && group.indexOf('name="invite"') < group.indexOf('name="onboarding"'), 'invite comes before the cards');
+  assert(layout.includes('<Stack.Protected guard={pendingInvite !== null}>') && layout.includes('useArrivalInvite()'));
+  const hook = code(SOURCES['lib/invite/usePendingInvite.ts']);
+  assert(hook.includes('return null;'), 'the stub never has a pending invite');
+  assert(code(SOURCES['lib/invite/useArrivalInvite.ts']).includes('FIXTURE ?? pending'));
+  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
+  assert(screen.includes('onPress={invite.retryPreview}'), 'Try again re-asks on a tap, never a loop');
+  assert(screen.includes("router.push('/create-account')") && screen.includes("router.push('/login')"));
+  assert(!/setInterval|setTimeout|useEffect/.test(screen), 'no polling or retry loop');
 });

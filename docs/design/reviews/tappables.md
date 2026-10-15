@@ -4,8 +4,8 @@
 
 Every tappable element in `apps/mobile/app` and `apps/mobile/components` (the dev-only `design-gallery.tsx` excluded), with its handler and, where the code says, its destination. PRODUCT_RULES, "Nothing tappable does nothing": every control either does its job, or is not shown / disabled with its reason.
 
-- **216** tappables in **79** files.
-- **79** forward a prop (`prop …`): the destination is the caller's, listed at the call site.
+- **219** tappables in **80** files.
+- **80** forward a prop (`prop …`): the destination is the caller's, listed at the call site.
 - **46** carry a `disabled` expression: whether its reason is visible is checked on the simulator pass (W8 part 2).
 - Static no-op check (`apps/mobile/tests-deno/no-op-handlers.test.ts`): **0** findings.
 
@@ -185,6 +185,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/GetStarted.tsx:47` | Pressable | onPress | `onSignIn` | prop onSignIn (the caller's) |  |
 | `components/shell/GetStarted.tsx:69` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/HowItWorksSheet.tsx:35` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
+| `components/shell/InviteArrival.tsx:55` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
+| `components/shell/InviteArrival.tsx:79` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
+| `components/shell/InviteArrival.tsx:82` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
 | `components/shell/LeaguePill.tsx:60` | PressableScale | onPress | `openLeagueSheet` | fn openLeagueSheet (from a hook or import) |  |
 | `components/shell/LeagueSheet.tsx:143` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
 | `components/shell/LeagueSheet.tsx:163` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |

@@ -13,4 +13,5 @@ export const CAPTURE = parseCaptureKnobs(__DEV__, {
   usernamePrefill: process.env.EXPO_PUBLIC_USERNAME_PREFILL,
   pushAsk: process.env.EXPO_PUBLIC_PUSH_ASK,
   confirmed: process.env.EXPO_PUBLIC_CONFIRMED,
+  invite: process.env.EXPO_PUBLIC_INVITE_FIXTURE,
 });
