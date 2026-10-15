@@ -18,7 +18,15 @@
 // closed (the invalid screen) on anything else, including an old-style fragment link from a
 // pre-PKCE build.
 
-import { AUTH_LINK_BASES, isDevBuild, linkIsPath, readLinkOutcome, type LinkOutcome } from './auth/authLink';
+import { APP_SCHEME_BASE, isDevBuild, linkIsPath, readLinkOutcome, type LinkOutcome } from './auth/authLink';
+
+/**
+ * The password-reset link stays on the SCHEME (W3): the https universal link is registered only for
+ * /join/* and /auth/confirm, and there is no web page behind /reset-password, so an https reset link
+ * would open a dead page. It is also the only accepted origin here, so a reset code presented on an https
+ * link is refused rather than exchanged.
+ */
+const RECOVERY_BASES: readonly string[] = [APP_SCHEME_BASE];
 
 export const RECOVERY_PATH = 'reset-password';
 
@@ -28,7 +36,7 @@ export const RECOVERY_PATH = 'reset-password';
  * a query-less URL would NOT match (GoTrue then falls back to the Site URL and the app never gets the
  * link). `flow=pkce` carries no secret.
  */
-export function buildRecoveryRedirect(base: string = AUTH_LINK_BASES[0]): string {
+export function buildRecoveryRedirect(base: string = APP_SCHEME_BASE): string {
   return `${base}${RECOVERY_PATH}?flow=pkce`;
 }
 
@@ -39,7 +47,7 @@ export function buildRecoveryRedirect(base: string = AUTH_LINK_BASES[0]): string
  * anyone in, which is why it can be broader than parseRecoveryLink.
  */
 export function isRecoveryRoute(path: string | null | undefined): boolean {
-  return linkIsPath(path, RECOVERY_PATH, true);
+  return linkIsPath(path, RECOVERY_PATH, true, RECOVERY_BASES);
 }
 
 export type RecoveryLinkResult = LinkOutcome | { kind: 'none' };
@@ -50,7 +58,7 @@ export type RecoveryLinkResult = LinkOutcome | { kind: 'none' };
  * Exact path match on the registered origins (dev-only shapes follow lib/auth/authLink.ts).
  */
 export function parseRecoveryLink(url: string, dev: boolean = isDevBuild()): RecoveryLinkResult {
-  if (!url || !linkIsPath(url, RECOVERY_PATH, dev)) return { kind: 'none' };
+  if (!url || !linkIsPath(url, RECOVERY_PATH, dev, RECOVERY_BASES)) return { kind: 'none' };
   return readLinkOutcome(url.trim());
 }
 

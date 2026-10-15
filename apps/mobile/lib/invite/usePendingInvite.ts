@@ -1,34 +1,36 @@
-// The invite-arrival API (Orchestrator, 2026-10-14; the contract W3 builds, branch
-// feat/onboarding-w3-invite-links). THIS FILE IS A STUB until W3 merges: W3 replaces it whole and
-// keeps these exported types, so the arrival screen (components/shell/InviteArrival.tsx) does not
-// change. Until then no invite is ever pending, so the arrival route is unreachable in a release.
+// The invite-arrival API the screens read (Orchestrator contract, 2026-10-14; W4 builds the signed-out arrival
+// screen on it). The pending invite itself is lib/invite/pendingInvite.ts, bound in pendingInviteStore.ts; this
+// is its read-only view, `null` when no invite is pending.
 //
-// 'unavailable' covers a 429, a 5xx, a network failure, or the function not deployed. A signed-out
-// 'not_found' does NOT clear the invite: the definitive clear-with-explanation happens at 'ready',
-// inside W3's auto-join. Before sign-in the only data is the league's NAME, its INVITER and a refusal
-// REASON (Planner: the no-session endpoint returns nothing else); counts, dates and stakes appear after
-// sign-in, in the session preview inside auto-join. There is no retry loop; retryPreview() fires only on a user tap.
+// `preview` is the NO-SESSION invite-preview function's answer and nothing more: the league's name, the
+// commissioner's username and whether the league can still be joined (Planner: name + inviter + reason only; no
+// counts, stakes or dates before sign-in). 'unavailable' covers a 429, a 5xx, a network failure, an unparseable
+// body, a reason this app doesn't know, or the function not being deployed: the screen then shows the generic
+// "You're invited to a league" (inviteHeadline). A shared network can reach the per-IP miss limit after a few
+// typos, so a 429 must read as that generic line, never as an error page.
+//
+// A signed-out 'not_found' does NOT clear the invite: the definitive clear-with-explanation happens at 'ready',
+// inside the auto-join (lib/invite/inviteJoin.ts), so there is one place that decides. There is no retry loop:
+// retryPreview() fires only on a user tap.
+import { useMemo, useSyncExternalStore } from 'react';
 
-export type InviteReason = 'league_full' | 'draft_started' | 'season_completed';
+import { screenPreview } from './pendingInvite';
+import { pendingInvite } from './pendingInviteStore';
+import type { PendingInvite } from './pendingInviteTypes';
 
-export type InvitePreview =
-  | { kind: 'loading' }
-  | {
-      kind: 'found';
-      name: string;
-      inviter: string | null;
-      reason: InviteReason | null;
-    }
-  | { kind: 'not_found' }
-  | { kind: 'unavailable' };
+// The contract's types live in a pure module (pendingInviteTypes.ts) so hermetic tests can import them; re-exported unchanged.
+export type { InvitePreview, InviteReason, PendingInvite } from './pendingInviteTypes';
 
-export interface PendingInvite {
-  code: string;
-  leagueName: string | null;
-  preview: InvitePreview;
-  retryPreview(): void;
-}
-
+/** The pending invite, or null. The same object between changes (it is safe as an effect dependency). */
 export function usePendingInvite(): PendingInvite | null {
-  return null;
+  const snap = useSyncExternalStore(pendingInvite.subscribe, pendingInvite.getSnapshot);
+  return useMemo(() => {
+    if (!snap.code) return null;
+    return {
+      code: snap.code,
+      leagueName: snap.leagueName,
+      preview: screenPreview(snap.preview),
+      retryPreview: pendingInvite.retryPreview,
+    };
+  }, [snap.code, snap.leagueName, snap.preview]);
 }

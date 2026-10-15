@@ -4,7 +4,8 @@
 // GoTrue's /verify, which confirms the address SERVER-SIDE and redirects to the `emailRedirectTo`
 // this module builds, carrying a one-time code (PKCE; shared mechanics in lib/auth/authLink.ts):
 //
-//   fantasystockapp://auth/confirm?code=<one-time code>
+//   https://<domain>/auth/confirm?code=<one-time code>      (W3: the universal link; the scheme form
+//   fantasystockapp://auth/confirm?code=… is the fallback the web page's "Open the app" button uses)
 //
 // The app exchanges the code for a session (app/_layout.tsx) and continues where the user was (the
 // username gate, then any pending route).
@@ -27,9 +28,12 @@
 // without an exchange when it is absent or belongs to the other flow, and restores it if an exchange still
 // fails (lib/auth/verifierSlot.ts).
 //
-// THE BASE (scheme now, universal link later): AUTH_LINK_BASES (authLink.ts) is the one place a
-// domain is added (`https://<domain>/`); the parser accepts ONLY exact prefixes, so a look-alike host
-// never parses as a confirm link.
+// THE BASE: AUTH_LINK_BASES (authLink.ts) lists the origins a link may arrive on and the domain itself is
+// the one value in lib/links/webDomain.ts; the parser accepts ONLY exact prefixes, so a look-alike host
+// never parses as a confirm link. The email carries the https universal link, so a device WITHOUT the app
+// lands on the web app's /auth/confirm page (W5) instead of a dead scheme; on a phone WITH the app,
+// the link opens the app. NO invite code rides on it (Planner, decision 17: a mistyped address would hand a
+// stranger a join capability); the phone finishes the join from the invite it stored on the device.
 
 import {
   AUTH_LINK_BASES,
@@ -39,14 +43,19 @@ import {
   readLinkOutcome,
   type LinkOutcome,
 } from './authLink';
+import { WEB_BASE } from '../links/webDomain';
 
 export { AUTH_LINK_BASES, createLinkDedupe };
 
 export const CONFIRM_PATH = 'auth/confirm';
 
-/** The `emailRedirectTo` for signUp(): no query, no secret. The code is added by GoTrue. */
-export function buildConfirmRedirect(base: string = AUTH_LINK_BASES[0]): string {
-  return `${base}${CONFIRM_PATH}`;
+/**
+ * The `emailRedirectTo` for signUp(): the https universal link, plain: no query, no secret, and NO invite code
+ * (decision 17). GoTrue adds the one-time auth code after validating this against the dashboard's Redirect URL
+ * allow-list, so the allow-list entry is this exact URL.
+ */
+export function buildConfirmRedirect(): string {
+  return `${WEB_BASE}${CONFIRM_PATH}`;
 }
 
 /**

@@ -28,6 +28,9 @@ import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
+import { getLiveSession } from '@/lib/auth/liveSession';
+import { inviteJoinRoute, inviteOwnerAction, shouldAutoOpenInvite, shouldClearInviteOnAuthChange, signedInAtArrivalFrom } from '@/lib/invite/autoJoin';
+import { pendingInvite as inviteStore, useInviteSnapshot } from '@/lib/invite/pendingInviteStore';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
 import { MoneyHostProvider } from '@/components/money/MoneyHost';
 import { useMotion } from '@/components/sp/motion';
@@ -64,7 +67,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
   const onboardingSeen = useOnboardingSeen();
   const getStartedOpen = useGetStartedOpen();
+  // W4's arrival: the pending invite as the arrival screen reads it (a DEV fixture may stand in), or null. W3's store is
+  // imported as `inviteStore` so this name stays W4's.
   const pendingInvite = useArrivalInvite();
+  const invite = useInviteSnapshot();
 
   // The phase the navigator renders. authPhase passes through 'unknown' not
   // only at cold start but on EVERY sign-in, while the new account's profile
@@ -125,7 +131,9 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   // (session read AND, when signed in, the profile's username read). The
   // guards below pick the first screen from that phase, so rendering before
   // it resolves would flash the wrong one.
-  const phaseKnown = shownPhase !== 'unknown' && onboardingSeen !== null;
+  // The stored invite is read before the first screen is chosen too: a person who tapped an invite link and
+  // relaunched must not see the sign-in form flash before the invite does (W3).
+  const phaseKnown = shownPhase !== 'unknown' && onboardingSeen !== null && invite.loaded;
   useEffect(() => {
     if (fontsLoaded && themeReady && phaseKnown) {
       // hideAsync REJECTS when no native splash is up (every JS reload after the first launch:
@@ -153,14 +161,64 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     }
   }, [shownPhase]);
 
+  // An invite belongs to the person who tapped it: when the signed-in person CHANGES or signs out (from any phase,
+  // the username gate included), it is dropped, so person B on the same phone never auto-joins A's pending league.
+  // The first sign-in (nobody before) keeps it: that is the invited friend arriving.
+  const userId = user?.id ?? null;
+  const lastUserId = useRef<string | null>(null);
+  // The invite code THIS render saw: the effects below clear only that one, so a link captured between the commit and the
+  // effect is not wiped by a decision made about the previous one.
+  const renderedInviteCode = useRef<string | null>(null);
+  renderedInviteCode.current = invite.code;
+  useEffect(() => {
+    const seen = renderedInviteCode.current;
+    if (seen && shouldClearInviteOnAuthChange(lastUserId.current, userId)) void inviteStore.clear(seen);
+    lastUserId.current = userId;
+  }, [userId]);
+
+  // Whose invite is it? Stamped with the person signed in the first time they are signed in with it pending; a
+  // DIFFERENT person signing in later (even after a cold start that never saw the first one sign out) drops it.
+  const ownerAction = invite.loaded && invite.code ? inviteOwnerAction(invite.ownerUserId, userId) : 'none';
+  useEffect(() => {
+    const seen = renderedInviteCode.current;
+    if (ownerAction === 'claim' && userId && seen) inviteStore.claim(userId, seen);
+    else if (ownerAction === 'clear' && seen) void inviteStore.clear(seen);
+  }, [ownerAction, userId]);
+
+  // A link that arrived at a cold start (auth not resolved yet) records "unknown"; the first resolved phase settles whether
+  // the person had a session then. The https link never needs it (it auto-joins either way).
+  useEffect(() => {
+    if (invite.code && invite.signedInAtArrival === null && shownPhase !== 'unknown') {
+      // The live session first (no lag), the phase only as the fallback.
+      inviteStore.settleArrival(getLiveSession().signedIn ?? signedInAtArrivalFrom(shownPhase) === true);
+    }
+  }, [invite.code, invite.signedInAtArrival, shownPhase]);
+  const arrivalSettled = invite.origin === 'https' || invite.signedInAtArrival !== null;
+
   // ...and opened when the hold ends (the reset finished or was cancelled, or the link was refused).
+  const [holdTick, setHoldTick] = useState(0);
   useEffect(() => {
     return subscribeRecoverySession(() => {
+      setHoldTick((n) => n + 1); // the pending invite (below) re-checks whether it may open now
       if (isRecoveryHold()) return;
       const held = pendingRoute.releaseHold();
       if (held) setTimeout(() => router.push(held as never), 0);
     });
   }, []);
+
+  // Onboarding W3: the invite link's code, kept as the pending invite (app/+native-intent.tsx), opens the join
+  // screen ONCE per code per launch, the moment the person is in the full app: after sign-in, after the username
+  // step, after an email-confirmation round trip, or straight away for someone already signed in. The screen
+  // (app/join-league.tsx, invite mode) joins without a tap and clears the invite on every definitive answer.
+  // No cleanup on the timer on purpose: marking the code opened re-runs this effect, which would cancel it.
+  useEffect(() => {
+    if (!shouldAutoOpenInvite({ phase: shownPhase, code: invite.code, autoOpenedCode: invite.autoOpenedCode, recoveryHold: isRecoveryHold(), ownerAction, arrivalSettled })) return;
+    inviteStore.markAutoOpened(invite.code as string);
+    // Auto-join for the shared https link; the "Join {league}" preview that waits for a tap for a scheme link that
+    // arrived while signed in (inviteJoinRoute, decision 18).
+    const route = inviteJoinRoute(invite);
+    setTimeout(() => router.push(route as never), 0);
+  }, [shownPhase, invite, holdTick, ownerAction, arrivalSettled]);
 
   // The two email return links, both PKCE one-time codes (lib/supabase.ts flowType 'pkce'):
   //   fantasystockapp://auth/confirm?code=…                  sign-up confirmation (onboarding W2)
@@ -278,9 +336,9 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="invite" options={crossfade} />
                 </Stack.Protected>
                 {/* First run only (the stored "seen" flag), and skipped when a
-                    deep link is waiting: that user already knows where they're
-                    going, so they land on sign-in (spec gate 9). */}
-                <Stack.Protected guard={!onboardingSeen && !pendingRoute.peek()}>
+                    deep link or an invite is waiting: that user already knows where
+                    they're going, so they land on sign-in (spec gate 9). */}
+                <Stack.Protected guard={!onboardingSeen && !pendingRoute.peek() && !invite.code}>
                   <Stack.Screen name="onboarding" options={crossfade} />
                 </Stack.Protected>
                 {/* Get started follows the cards on the cold path. It stays open after a Skip marks the

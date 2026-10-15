@@ -2,7 +2,9 @@
 // (lib/auth/confirmLink.ts) and the password-recovery link (lib/recoveryLink.ts).
 //
 // With flowType 'pkce' (lib/supabase.ts) GoTrue redirects the email link to
-//   fantasystockapp://auth/confirm?code=<one-time code>            (sign-up confirmation)
+//   https://<domain>/auth/confirm?code=<one-time code>              (sign-up confirmation; the universal link, opened by
+//                                                                   the app when installed. The scheme form
+//                                                                   fantasystockapp://auth/confirm?code=… is the fallback.)
 //   fantasystockapp://reset-password?flow=pkce&code=<one-time code> (password recovery)
 // and the app calls supabase.auth.exchangeCodeForSession(code). The exchange succeeds only on the
 // device that holds the code VERIFIER stored when the flow began, so a crafted link, a replayed link
@@ -11,11 +13,17 @@
 //
 // Pure (no React Native imports) so tests-deno can exercise it hermetically.
 
+import { WEB_BASE } from '../links/webDomain';
+
 /** The scheme fallback. Kept in step with app.json's `expo.scheme`. */
 export const APP_SCHEME_BASE = 'fantasystockapp://';
 
-/** Every origin an auth link may arrive on; the first one is what new emails carry. */
-export const AUTH_LINK_BASES: readonly string[] = [APP_SCHEME_BASE];
+/**
+ * Every origin a link may arrive on. The scheme is first and is what the password-reset email carries
+ * (lib/recoveryLink.ts pins it); the https universal link (W3; app.json associatedDomains + the web app's
+ * apple-app-site-association) is what the sign-up confirmation email carries (lib/auth/confirmLink.ts).
+ */
+export const AUTH_LINK_BASES: readonly string[] = [APP_SCHEME_BASE, WEB_BASE];
 
 /** React Native's `__DEV__`, read off globalThis so this pure module also loads under Deno. */
 export function isDevBuild(): boolean {
@@ -30,10 +38,10 @@ export function isDevBuild(): boolean {
  * arrive through a registered origin: a bare app-relative path, and Expo Go's
  * exp(s)://host:port/--/auth/confirm.
  */
-export function linkRelativePath(url: string, dev: boolean): string | null {
+export function linkRelativePath(url: string, dev: boolean, bases: readonly string[] = AUTH_LINK_BASES): string | null {
   const end = url.search(/[?#]/);
   const head = end === -1 ? url : url.slice(0, end);
-  for (const base of AUTH_LINK_BASES) {
+  for (const base of bases) {
     if (head.startsWith(base)) return head.slice(base.length).replace(/^\/+/, '');
   }
   if (!dev) return null;
@@ -46,9 +54,14 @@ export function linkRelativePath(url: string, dev: boolean): string | null {
 }
 
 /** True when the URL's path (relative to an accepted origin) is exactly `path`. */
-export function linkIsPath(url: string | null | undefined, path: string, dev: boolean): boolean {
+export function linkIsPath(
+  url: string | null | undefined,
+  path: string,
+  dev: boolean,
+  bases: readonly string[] = AUTH_LINK_BASES
+): boolean {
   if (!url) return false;
-  const rel = linkRelativePath(url.trim(), dev);
+  const rel = linkRelativePath(url.trim(), dev, bases);
   return rel !== null && rel.replace(/\/+$/, '') === path;
 }
 

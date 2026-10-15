@@ -449,7 +449,9 @@ Deno.test('a full league: inside an invite the Planner\'s line; a typed code kee
 
 Deno.test('a full league: Join keys the line on a pending invite, and the post-join refusal re-renders through it', () => {
   const join = code(SOURCES['app/join-league.tsx']);
-  assert(join.includes('const invited = useArrivalInvite() !== null;'));
+  // W3 made it sticky: `invited` stays true after the invite is CLEARED (the refusal re-renders through it), because the
+  // screen was opened for one (inviteMode is fixed at mount) as well as while one is pending.
+  assert(join.includes('const invited = inviteMode || arrivalInvite !== null;') && join.includes('const arrivalInvite = useArrivalInvite();'));
   assert(join.includes('previewView(league, block, { invited })'));
 });
 

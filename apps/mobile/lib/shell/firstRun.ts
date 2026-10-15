@@ -24,10 +24,12 @@ function load() {
   }
   AsyncStorage.getItem(KEY)
     .then((v) => {
-      seen = v === '1';
+      // An in-memory mark made while this read was in flight (a link arrival at cold start, W3) is newer than
+      // what was stored: it must not be overwritten by the stale "not seen".
+      if (seen === null) seen = v === '1';
     })
     .catch(() => {
-      seen = true;
+      if (seen === null) seen = true;
     })
     .finally(emit);
 }

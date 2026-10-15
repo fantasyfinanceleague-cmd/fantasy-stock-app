@@ -49,16 +49,17 @@ export function previewJoinReason(input: PreviewLeagueInput, now: Date = new Dat
   return { joinable: reason === null, reason };
 }
 
+/** A league_invites code that no longer works: not pending, or past its expiry. Null (a league's own code) never is. */
+export function isInviteExpired(invite: { status: string; expiresAt: string | null } | null, now: Date): boolean {
+  if (!invite) return false;
+  return invite.status !== 'pending' || (invite.expiresAt !== null && new Date(invite.expiresAt) < now);
+}
+
 function computeReason(input: PreviewLeagueInput, now: Date): PreviewReason {
   if (input.isExistingMember) return 'already_member';
   if (input.seasonStatus === 'completed') return 'season_completed';
 
-  if (input.invite) {
-    const expired =
-      input.invite.status !== 'pending' ||
-      (input.invite.expiresAt !== null && new Date(input.invite.expiresAt) < now);
-    if (expired) return 'invite_expired';
-  }
+  if (isInviteExpired(input.invite, now)) return 'invite_expired';
 
   if (input.draftStatus !== 'not_started' || isRoomTime(input.draftDate, now)) return 'draft_started';
 

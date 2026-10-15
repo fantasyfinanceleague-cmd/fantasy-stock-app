@@ -19,7 +19,7 @@ import { keepHyphens } from '../game/keepDots';
 import { JOIN_COPY } from '../join/joinPreview';
 import { COPY as MONEY_COPY } from '../money/moneyCopy';
 import { INVITE_COPY } from './inviteCopy';
-import type { PendingInvite } from './usePendingInvite';
+import type { PendingInvite } from './pendingInviteTypes';
 
 export const ARRIVAL_COPY = {
   generic: "You're invited to a league",

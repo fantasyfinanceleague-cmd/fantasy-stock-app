@@ -14,6 +14,7 @@ import { WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { ConfirmEmailSent } from '@/components/shell/ConfirmEmailSent';
+import { usePendingInvite } from '@/lib/invite/usePendingInvite';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { SocialSignIn } from '@/components/shell/SocialSignIn';
@@ -54,6 +55,7 @@ export default function CreateAccountScreen() {
   const [status, setStatus] = useState<ButtonStatus>('idle');
   const [formError, setFormError] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const invite = usePendingInvite(); // the league named on "Check your email" when a link brought the person here
   const [sentTo, setSentTo] = useState<string | null>(null);
   const { reduced } = useMotion();
   const scrollRef = useRef<ScrollView>(null);
@@ -138,6 +140,7 @@ export default function CreateAccountScreen() {
     return (
       <ConfirmEmailSent
         email={sentTo}
+        league={invite?.leagueName ?? null}
         onResend={() => signUp(sentTo, password)}
         onBack={() => router.replace('/login')}
       />

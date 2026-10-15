@@ -41,6 +41,6 @@ Deno.test('a failed create never shows the raw message', () => {
   assertEquals(CREATE_FAILED, { title: "The league wasn't created", message: 'Check your connection, then try again.' });
 });
 
-Deno.test('the share text', () => {
-  assertEquals(inviteShareMessage('K7Q2XR'), 'Join my league with code K7Q2XR');
+Deno.test('the share text: Giorgio\'s sentence verbatim, then the invite link on its own line (W3)', () => {
+  assertEquals(inviteShareMessage('K7Q2XR'), 'Join my league with code K7Q2XR\nhttps://fantasy-stock-app.vercel.app/join/K7Q2XR');
 });
