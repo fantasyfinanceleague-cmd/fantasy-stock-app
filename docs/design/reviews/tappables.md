@@ -185,9 +185,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/GetStarted.tsx:47` | Pressable | onPress | `onSignIn` | prop onSignIn (the caller's) |  |
 | `components/shell/GetStarted.tsx:69` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/HowItWorksSheet.tsx:35` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
-| `components/shell/InviteArrival.tsx:37` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
-| `components/shell/InviteArrival.tsx:42` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
-| `components/shell/InviteArrival.tsx:68` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
+| `components/shell/InviteArrival.tsx:36` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
+| `components/shell/InviteArrival.tsx:41` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
+| `components/shell/InviteArrival.tsx:77` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
 | `components/shell/LeaguePill.tsx:60` | PressableScale | onPress | `openLeagueSheet` | fn openLeagueSheet (from a hook or import) |  |
 | `components/shell/LeagueSheet.tsx:143` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
 | `components/shell/LeagueSheet.tsx:163` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |

@@ -341,7 +341,7 @@ function Joined({ name, draftDate, leagueId, fixtureLeague, onContinue }: { name
           <Icon name="check" size="medallion" tone="onYou" discTone="you" />
         </Animated.View>
         <ScreenTitle style={styles.centerText}>{v.title}</ScreenTitle>
-        <Text variant="body" tone="secondary" style={styles.centerText}>
+        <Text variant="body" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={styles.centerText}>
           {v.body}
         </Text>
         {rows.length > 0 ? (

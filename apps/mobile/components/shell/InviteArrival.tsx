@@ -10,7 +10,6 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
-import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { SocialSignIn } from '@/components/shell/SocialSignIn';
 import { ARRIVAL_COPY, arrivalView } from '@/lib/invite/arrivalView';
 import type { PendingInvite } from '@/lib/invite/usePendingInvite';
@@ -58,7 +57,17 @@ export function InviteArrival({ invite }: { invite: PendingInvite }) {
               <Icon name="trophy" size="title" tone="text2" />
             </View>
           )}
-          <ScreenTitle style={styles.title}>{view.title}</ScreenTitle>
+          {/* The lead wraps; the league's name sits on its own line and shrinks to fit it, so it never breaks (even at XXXL). */}
+          <View accessible accessibilityRole="header" accessibilityLabel={view.title} style={styles.heading}>
+            <Text variant="display" numberOfLines={0} style={styles.title}>
+              {view.titleParts?.lead}
+            </Text>
+            {view.titleParts?.name ? (
+              <Text variant="display" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4} style={styles.title}>
+                {view.titleParts.name}
+              </Text>
+            ) : null}
+          </View>
           {view.unreachable ? (
             <Text variant="body" tone="secondary" style={styles.title}>
               {view.unreachable}
@@ -88,6 +97,9 @@ const styles = StyleSheet.create({
     borderRadius: DISC / 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  heading: {
+    alignSelf: 'stretch',
   },
   title: {
     textAlign: 'center',

@@ -311,6 +311,9 @@ const NB = '\u00a0';
 
 Deno.test('arrival: "{inviter} invited you to {league}" over the inviter\'s initials; "You\'re invited to {league}" and the generic line over the league icon', () => {
   assertEquals(view('found').title, `Roberto invited you to Stock${NB}Scudetto`);
+  assertEquals(view('found').titleParts, { lead: 'Roberto invited you to', name: `Stock${NB}Scudetto` });
+  assertEquals(view('solo').titleParts, { lead: "You're invited to", name: `Stock${NB}Scudetto` });
+  assertEquals(view('loading').titleParts, { lead: "You're invited to a league", name: null });
   assertEquals(view('found').mark, { kind: 'inviter', name: 'Roberto' });
   assertEquals(view('solo').title, `You're invited to Stock${NB}Scudetto`);
   assertEquals(view('solo').mark, { kind: 'league' });
@@ -381,6 +384,7 @@ Deno.test('arrival: the capture knob parses only in a dev build and only a known
 Deno.test('arrival: the layout centres the invite and docks the actions; wired first in the signed-out group', () => {
   const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
   assert(screen.includes('<AuthScaffold centerBody footer='), 'invite centred above, actions in the footer');
+  assert(screen.includes('numberOfLines={1} adjustsFontSizeToFit'), 'the league name is fitted to one line, so it never breaks even at the largest size');
   assert(screen.includes('onPress={invite.retryPreview}'), 'Try again re-asks on a tap, never a loop');
   assert(screen.includes("router.push('/create-account')") && screen.includes("router.push('/login')"));
   assert(!/setInterval|setTimeout|useEffect/.test(screen), 'no polling or retry loop');

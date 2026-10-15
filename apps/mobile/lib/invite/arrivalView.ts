@@ -34,6 +34,8 @@ export type ArrivalMark = { kind: 'inviter'; name: string } | { kind: 'league' }
 export interface ArrivalView {
   /** null = no heading at all (a dead link). */
   title: string | null;
+  /** The same heading, split for the screen (lead wraps, name is fitted to one line). */
+  titleParts: TitleParts | null;
   mark: ArrivalMark;
   /** The refusal (WarnPanel), or null. */
   refusal: string | null;
@@ -50,9 +52,23 @@ export function keepName(name: string): string {
   return keepHyphens(name.replace(/ /g, ' '));
 }
 
+/**
+ * The heading in two parts: the lead sentence (it wraps) and the league's name (it never does: the
+ * screen sets it on its own line and shrinks it to fit, so even at the largest text size it stays whole).
+ */
+export interface TitleParts {
+  lead: string;
+  name: string | null;
+}
+
+export function arrivalTitleParts(name: string | null, inviter: string | null): TitleParts {
+  if (!name) return { lead: ARRIVAL_COPY.generic, name: null };
+  return { lead: inviter ? `${inviter} invited you to` : "You're invited to", name: keepName(name) };
+}
+
 export function arrivalTitle(name: string | null, inviter: string | null): string {
-  if (!name) return ARRIVAL_COPY.generic;
-  return inviter ? `${inviter} invited you to ${keepName(name)}` : `You're invited to ${keepName(name)}`;
+  const t = arrivalTitleParts(name, inviter);
+  return t.name ? `${t.lead} ${t.name}` : t.lead;
 }
 
 /** The refusal line for a reason (the contract's three, and invite_expired / anything unknown = a dead link). */
@@ -72,12 +88,13 @@ export function arrivalView(invite: Pick<PendingInvite, 'preview'>): ArrivalView
   const p = invite.preview;
   if (p.kind === 'not_found') {
     // A dead link: the refusal alone (no heading), then Sign in.
-    return { title: null, mark: { kind: 'none' }, refusal: INVITE_COPY.dead, canJoin: false, unreachable: null, retry: false };
+    return { title: null, titleParts: null, mark: { kind: 'none' }, refusal: INVITE_COPY.dead, canJoin: false, unreachable: null, retry: false };
   }
   if (p.kind !== 'found') {
     const unavailable = p.kind === 'unavailable';
     return {
       title: ARRIVAL_COPY.generic,
+      titleParts: arrivalTitleParts(null, null),
       mark: { kind: 'league' },
       refusal: null,
       canJoin: true,
@@ -87,6 +104,7 @@ export function arrivalView(invite: Pick<PendingInvite, 'preview'>): ArrivalView
   }
   return {
     title: arrivalTitle(p.name, p.inviter),
+    titleParts: arrivalTitleParts(p.name, p.inviter),
     mark: p.inviter ? { kind: 'inviter', name: p.inviter } : { kind: 'league' },
     refusal: p.reason ? refusalLine(p.reason, p.name) : null,
     canJoin: p.reason === null,

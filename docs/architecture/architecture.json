@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c19e356e2d3def6cc7264c4b63c22e32b6287929",
-    "commitShort": "c19e356e",
+    "commit": "1538783cf5581df2c799aea3bb5a7917bbda1063",
+    "commitShort": "1538783c",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w4",
     "dirty": true,
@@ -14,10 +14,6 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/AuthScaffold.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/shell/InviteArrival.tsx"
       },
       {
@@ -25,27 +21,11 @@
         "path": "apps/mobile/lib/invite/arrivalView.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/invite/inviteCopy.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/join/joinedFacts.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/join/joinPreview.ts"
-      },
-      {
         "code": "M",
         "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-15T02:49:06Z",
+    "timestamp": "2026-10-15T03:05:56Z",
     "sourceHash": "sha256:58a1c355f12172c680b6a04fe72796de9e86fb90c538b3610a320aeb61dc55d6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -53,7 +33,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 26.6,
+    "ageHours": 26.8,
     "ageDays": 1.1,
     "staleAfterDays": 14,
     "stale": false,
