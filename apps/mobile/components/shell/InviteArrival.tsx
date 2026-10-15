@@ -21,7 +21,8 @@ import type { PendingInvite } from '@/lib/invite/usePendingInvite';
 // inviter). It never blocks on the preview and never shows an error page: while it loads, or is
 // unavailable, the heading is the generic "You're invited to a league" and the buttons are all there
 // (lib/invite/arrivalView.ts). A link that cannot be used (full, not taking players, a dead link) is
-// the shared WarnPanel in the buttons' place, then "Sign in" for someone who already has an account.
+// the shared WarnPanel in the buttons' place, then "Sign in" for someone who already has an account
+// (a dead link has no invite block, so its panel and link are centred rather than docked).
 // Signing in is the navigation: W3's auto-join takes over at 'ready'.
 
 const DISC = 64;
@@ -45,6 +46,17 @@ export function InviteArrival({ invite }: { invite: PendingInvite }) {
       </Pressable>
     </>
   );
+
+  // A dead link has no invite block above the actions, so docking them leaves an empty phone: the
+  // panel and "Sign in" are CENTRED instead (the decided board, frame "a dead link"). Every other state
+  // keeps the invite centred and the actions docked.
+  if (!view.title) {
+    return (
+      <AuthScaffold centerBody>
+        <View style={styles.actions}>{actions}</View>
+      </AuthScaffold>
+    );
+  }
 
   return (
     <AuthScaffold centerBody footer={<View style={styles.actions}>{actions}</View>}>
