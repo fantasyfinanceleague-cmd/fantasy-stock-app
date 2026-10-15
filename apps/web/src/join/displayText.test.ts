@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanDisplay, MAX_DISPLAY_LENGTH, MAX_INVITER_LENGTH } from './displayText';
 import { fetchInvitePreview, parseInvitePreview } from './invitePreview';
 import { interpretJoin, parsePreviewLeague } from './previewData';
@@ -8,10 +10,10 @@ describe('cleanDisplay: text from outside, dropped into our own headline templat
     ['Stock Scudetto', 'Stock Scudetto'],
     ['  Stock   Scudetto \n', 'Stock Scudetto'],
     ['Wall\tStreet', 'Wall Street'],
-    ['Bold‮evil', 'Bold evil'], // right-to-left override
-    ['a⁦b⁩c', 'a b c'], // isolates
-    ['zero​width', 'zero width'],
-    ['﻿bom', 'bom'],
+    ['Bold\u202Eevil', 'Bold evil'], // right-to-left override
+    ['a\u2066b\u2069c', 'a b c'], // isolates
+    ['zero\u200Bwidth', 'zero width'],
+    ['\uFEFFbom', 'bom'],
     ['ctrl\u0007bell', 'ctrl bell'],
     ['Émile 🏈 FC', 'Émile 🏈 FC'],
     // the second review's list: invisible or bidi, and not caught by the first cut
@@ -28,11 +30,16 @@ describe('cleanDisplay: text from outside, dropped into our own headline templat
     ['obj\uFFFCrepl', 'obj repl'],
     ['line\u2028sep\u2029para', 'line sep para'],
     ['non\u00A0breaking', 'non breaking'],
+    // the third review's list
+    ['khmer\u17B4vowel', 'khmer vowel'],
+    ['mongolian\u180Bfvs\u180Fx', 'mongolian fvs x'],
+    ['reserved\uFFF0special', 'reserved special'],
+    ['reserved\u{E0FFF}ignorable', 'reserved ignorable'],
   ])('%j -> %j', (raw, want) => {
     expect(cleanDisplay(raw)).toBe(want);
   });
 
-  it.each([undefined, null, 42, {}, [], '', '   ', '‮​', '\n\t'])('%j is nothing', (v) => {
+  it.each([undefined, null, 42, {}, [], '', '   ', '\u17B4', '\u180B\u180C\u180D\u180F', '\uFFF0\uFFF8', '\u{E01F0}', '\u202E\u200B', '\n\t'])('%j is nothing', (v) => {
     expect(cleanDisplay(v)).toBeNull();
   });
 
@@ -52,21 +59,30 @@ describe('cleanDisplay: text from outside, dropped into our own headline templat
   });
 });
 
+describe('the sanitizer\'s source', () => {
+  it('is pure ASCII: every invisible character is spelled as an escape, so a formatter that strips zero-width characters cannot weaken it', () => {
+    const src = readFileSync(resolve(process.cwd(), 'src/join/displayText.ts'), 'utf-8');
+    const offending = [...src].filter((c) => c.charCodeAt(0) > 0x7f);
+    expect(offending).toEqual([]);
+    expect(src).toMatch(/\\u200B-\\u200F/); // the escapes are really there
+  });
+});
+
 describe('the preview text is cleaned where it enters', () => {
   it('invite-preview: name and inviter', () => {
-    const got = parseInvitePreview(200, { found: true, name: 'Stock‮ Scudetto', inviter: 'x'.repeat(200), reason: null });
+    const got = parseInvitePreview(200, { found: true, name: 'Stock\u202E Scudetto', inviter: 'x'.repeat(200), reason: null });
     expect(got).toMatchObject({ kind: 'found', name: 'Stock Scudetto' });
     expect(Array.from((got as { inviter: string }).inviter)).toHaveLength(MAX_INVITER_LENGTH); // 40 for an inviter, not 60
   });
 
   it('invite-preview: a name that is nothing but invisible characters is no league', () => {
-    expect(parseInvitePreview(200, { found: true, name: '​‮', inviter: null, reason: null })).toEqual({ kind: 'unknown' });
+    expect(parseInvitePreview(200, { found: true, name: '\u200B\u202E', inviter: null, reason: null })).toEqual({ kind: 'unknown' });
   });
 
   it('preview-league: the league name', () => {
-    const l = parsePreviewLeague({ name: 'Bad‮name', num_participants: 6 });
+    const l = parsePreviewLeague({ name: 'Bad\u202Ename', num_participants: 6 });
     expect(l?.name).toBe('Bad name');
-    expect(parsePreviewLeague({ name: '​', num_participants: 6 })).toBeNull();
+    expect(parsePreviewLeague({ name: '\u200B', num_participants: 6 })).toBeNull();
   });
 
   it('join-league: the name that becomes "You\'re in {league}." is cleaned too (the one that used to slip through)', () => {
@@ -80,7 +96,7 @@ describe('the preview text is cleaned where it enters', () => {
   });
 
   it('a hostile response over the wire is cleaned too', async () => {
-    const fetchImpl = (async () => new Response(JSON.stringify({ found: true, name: 'A‮B', inviter: null, reason: null }), { status: 200 })) as typeof fetch;
+    const fetchImpl = (async () => new Response(JSON.stringify({ found: true, name: 'A\u202EB', inviter: null, reason: null }), { status: 200 })) as typeof fetch;
     expect(await fetchInvitePreview('ABCDE23456', { fetchImpl, url: 'https://x.invalid/f' })).toMatchObject({ name: 'A B' });
   });
 });

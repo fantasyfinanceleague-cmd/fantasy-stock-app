@@ -69,7 +69,7 @@ describe('the paused route table (onboarding W5)', () => {
     const dir = fileURLToPath(new URL('../join/', import.meta.url));
     const files = readdirSync(dir).filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f));
     expect(files.length).toBeGreaterThan(8);
-    const mayUseAuth = new Set(['JoinFlow.tsx', 'WebCallbackPage.tsx']);
+    const mayUseAuth = new Set(['JoinFlow.tsx', 'WebCallbackPage.tsx', 'JoinPage.tsx']); // JoinPage only ends a session (signOutLocal)
     const importsSupabase = /(from|import\()\s*['"][^'"]*supabase/i;
     const importsAuth = /(from|import\()\s*['"]\.\/onboardingAuth['"]/;
     for (const f of files) {

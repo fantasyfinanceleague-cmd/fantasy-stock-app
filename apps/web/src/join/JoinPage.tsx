@@ -4,6 +4,7 @@ import JoinFlow, { type FlowHandoff, type FlowNotice } from './JoinFlow';
 import { normalizeInviteCode } from './inviteCode';
 import { fetchInvitePreview, type InvitePreview } from './invitePreview';
 import { JoinView, type JoinViewState } from './JoinView';
+import { signOutLocal } from './onboardingAuth';
 
 /** What /join/:code shows for a code and (once it arrives) the no-session preview. */
 export type JoinPageState =
@@ -73,6 +74,12 @@ export default function JoinPage() {
 
   const preview = loaded && loaded.code === code ? loaded.preview : null;
   const view = joinStateFor(raw, preview);
+  // A sign-in return (Google/Apple/email link) that lands on a link which can't be joined never mounts the
+  // flow, so nothing else would end the browser session it just made. End it here: the web's only job is the join.
+  const endSession = handoff?.signedIn === true && (view.kind === 'refused' || view.kind === 'dead');
+  useEffect(() => {
+    if (endSession) void signOutLocal();
+  }, [endSession]);
   if (view.kind === 'invited') {
     return <JoinFlow key={view.code} code={view.code} name={view.name} inviter={view.inviter} handoff={handoff} />;
   }

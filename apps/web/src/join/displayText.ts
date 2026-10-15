@@ -18,10 +18,16 @@ export const MAX_DISPLAY_LENGTH = 60;
 /** An inviter's name is shorter: it sits at the start of the sentence (W3's review, 2026-10-14). */
 export const MAX_INVITER_LENGTH = 40;
 
-// Cc controls, Cf format (ZW*, bidi marks/overrides/isolates, soft hyphen, BOM, tags, the Arabic letter mark…),
-// then what is invisible but is NOT Cc/Cf: the grapheme joiner, Hangul and braille blanks, variation selectors,
-// the object-replacement character; plus the format block spelled out so a reserved gap in it can't slip by.
-const UNSAFE = /[\p{Cc}\p{Cf}͏؜ᅟᅠ᠎​-‏‪-‮⁠-⁯⠀ㅤ︀-️﻿ﾠ￹-￼\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu;
+// Written as \u ESCAPES on purpose (an editor or formatter that strips zero-width characters must not be able
+// to weaken this silently; displayText.test.ts also asserts the file is pure ASCII).
+//   \p{Cc}  controls                       \p{Cf}  format: zero-width, bidi marks/overrides/isolates, soft hyphen, BOM, tags
+//   U+034F grapheme joiner                 U+061C Arabic letter mark
+//   U+115F, U+1160, U+3164, U+FFA0         Hangul fillers (blank)       U+2800 braille blank
+//   U+17B4-17B5 Khmer inherent vowels      U+180B-180F Mongolian free variation selectors / vowel separator
+//   U+200B-200F, U+202A-202E, U+2060-206F  the format blocks, spelled out so a reserved gap can't slip by
+//   U+FE00-FE0F variation selectors        U+FEFF BOM                    U+FFF0-FFFC specials / annotation / object replacement
+//   U+E0000-E0FFF tags, variation-selector supplement and the reserved default-ignorables around them
+const UNSAFE = /[\p{Cc}\p{Cf}\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u2800\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFFC\u{E0000}-\u{E0FFF}]/gu;
 
 /** The string cleaned for display, or null when nothing is left. */
 export function cleanDisplay(value: unknown, max: number = MAX_DISPLAY_LENGTH): string | null {

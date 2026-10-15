@@ -33,6 +33,16 @@ describe('the join pages obey their own CSP', () => {
     }
   });
 
+  it('no file here holds an invisible or bidi-control character as a LITERAL (they must be \\u escapes: unreviewable in a diff, and a "trojan source" hazard)', () => {
+    // Cc/Cf and the blank fillers; ordinary punctuation and emoji are fine.
+    const invisible = /[\p{Cc}\p{Cf}\u034F\u115F\u1160\u2800\u3164\uFFA0\u00A0]/u;
+    const all = readdirSync(dir).filter((f) => /\.(ts|tsx|css)$/.test(f));
+    for (const f of all) {
+      const offending = [...read(f)].filter((c) => invisible.test(c) && c !== '\n' && c !== '\t' && c !== '\r').map((c) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase());
+      expect({ file: f, offending }).toEqual({ file: f, offending: [] });
+    }
+  });
+
   it('every @font-face is a self-hosted TTF that exists, with the licence next to it', () => {
     const css = read('joinWeb.css');
     const urls = [...css.matchAll(/url\('([^']+)'\)/g)].map((m) => m[1]);

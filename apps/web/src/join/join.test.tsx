@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import JoinPage, { joinStateFor, readHandoff } from './JoinPage';
 import { JoinView, inviteHeadline, initials, unbreakable, UNBROKEN_NAME_MAX } from './JoinView';
@@ -264,6 +264,48 @@ describe('/join/:code', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/You're in/);
     // ...and the entry no longer carries it
     expect(screen.getByTestId('state')).toHaveTextContent('null');
+  });
+
+  describe('ending the session when a sign-in return lands on a link that cannot be joined', () => {
+    const renderWith = (state: unknown, path = '/join/ABCDE23456') =>
+      render(
+        <MemoryRouter initialEntries={[{ pathname: path, state }]}>
+          <Routes><Route path="/join/:code" element={<JoinPage />} /></Routes>
+        </MemoryRouter>,
+      );
+
+    it('refused after a sign-in return: the session is ended (the flow never mounts to do it)', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'league_full' });
+      renderWith({ signedIn: true });
+      expect(await screen.findByRole('alert')).toHaveTextContent('is full');
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalledTimes(1));
+    });
+
+    it('a dead link after a sign-in return: ended too (found:false, and a malformed code)', async () => {
+      answer(200, { found: false });
+      renderWith({ signedIn: true });
+      await screen.findByRole('alert');
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
+      cleanup();
+      m.signOutLocal.mockClear();
+      renderWith({ signedIn: true }, '/join/%3Cscript%3E');
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalledTimes(1));
+    });
+
+    it('a COLD visit to a refused link signs nobody out (there is nothing to end)', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: 'league_full' });
+      renderWith(null);
+      await screen.findByRole('alert');
+      expect(m.signOutLocal).not.toHaveBeenCalled();
+    });
+
+    it('a joinable link after a sign-in return is the flow\'s to finish, not ended here', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: null });
+      m.currentSession.mockResolvedValue(null);
+      renderWith({ signedIn: true });
+      await screen.findByRole('button', { name: WEB_COPY.continueApple });
+      expect(m.signOutLocal).not.toHaveBeenCalled();
+    });
   });
 
   it('a notice handed back by the web callback shows; junk router state is ignored', async () => {
