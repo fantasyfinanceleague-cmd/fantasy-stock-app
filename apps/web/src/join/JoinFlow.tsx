@@ -17,7 +17,7 @@ import {
   signUpWithEmail,
   type AuthFailure,
 } from './onboardingAuth';
-import { previewRows, type PreviewLeague } from './previewData';
+import { previewRows, type PreviewRow } from './previewData';
 import { suggestUsername } from './usernameSuggestion';
 
 /** A notice the web callback hands back to /join (router state: only these words, never a message). */
@@ -28,6 +28,12 @@ export interface FlowHandoff {
   notice?: FlowNotice;
   /** The link confirmed the email and signed this browser in. */
   emailConfirmed?: boolean;
+  /**
+   * THIS visit produced the sign-in (a confirmation link or a Google/Apple return, both
+   * through /auth/web-callback, which can only hand this over via the router's own state).
+   * Only then does an existing session carry straight on to the join.
+   */
+  signedIn?: boolean;
 }
 
 export function noticeFor(notice: FlowNotice | undefined): Notice | null {
@@ -55,9 +61,9 @@ type Stage =
   | { s: 'failed'; error: JoinErrorKind }
   // Terminal: the session ends here (signOutLocal), the web's only job is done.
   | { s: 'dead' }
-  | { s: 'refused'; league: PreviewLeague; block: JoinBlock }
-  | { s: 'member'; name: string }
-  | { s: 'in'; name: string };
+  | { s: 'refused'; name: string; block: JoinBlock }
+  | { s: 'member'; name: string; rows: PreviewRow[] | null }
+  | { s: 'in'; name: string; rows: PreviewRow[] | null };
 
 const TERMINAL = new Set<Stage['s']>(['dead', 'refused', 'member', 'in']);
 
@@ -90,14 +96,20 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     if (preview.kind === 'error') return set({ s: 'failed', error: preview.error });
     if (preview.kind === 'bad_code') return set({ s: 'dead' });
     const { league, block } = preview;
-    if (block === 'already_member') return set({ s: 'member', name: league.name });
-    if (block) return set({ s: 'refused', league, block });
+    if (block === 'already_member') return set({ s: 'member', name: league.name, rows: previewRows(league, null) });
+    if (block) return set({ s: 'refused', name: league.name, block });
     // The preview said joinable; join-league is the only truth (the league can change in between).
     const joined = await joinWithSession(code);
-    if (joined.kind === 'joined') return set({ s: 'in', name: joined.leagueName });
     if (joined.kind === 'error') return set({ s: 'failed', error: joined.error });
-    if (joined.block === 'already_member') return set({ s: 'member', name: league.name });
-    return set({ s: 'refused', league, block: joined.block });
+    if (joined.kind === 'refused') {
+      if (joined.block === 'already_member') return set({ s: 'member', name: league.name, rows: previewRows(league, null) });
+      return set({ s: 'refused', name: league.name, block: joined.block });
+    }
+    // Joined. The facts are readable now (C1): fetch them AFTER the join, so Managers counts this person.
+    // A failed fetch is not a failed join: the card is simply absent.
+    const facts = await previewWithSession(code);
+    const rows = facts.kind === 'found' ? previewRows(facts.league, null) : null;
+    return set({ s: 'in', name: joined.leagueName, rows });
   }, [code, set]);
 
   const afterSignIn = useCallback(async (userId: string) => {
@@ -115,7 +127,11 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     void (async () => {
       const session = await currentSession();
       if (cancelled) return;
-      if (session) return void (await afterSignIn(session.userId));
+      if (session && props.handoff?.signedIn) return void (await afterSignIn(session.userId));
+      // A session found COLD (an abandoned flow, a shared computer) never joins a league on its own:
+      // anyone could send that person an invite link. It is ended, and the person signs in again.
+      if (session) await signOutLocal();
+      if (cancelled) return;
       set(props.handoff?.notice === 'confirmed-sign-in' ? { s: 'email', mode: 'signin' } : { s: 'options' });
     })();
     return () => { cancelled = true; };
@@ -173,6 +189,7 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     const session = await currentSession();
     if (!alive.current) return;
     setBusy(null);
+    credentials.current = null; // the password has done its job
     if (session) await afterSignIn(session.userId);
     else setError(WEB_COPY.generic);
   };
@@ -207,7 +224,7 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     case 'options':
       return (
         <SignInScreen
-          code={code} name={name} inviter={inviter} notice={notice} error={error}
+          name={name} inviter={inviter} notice={notice} error={error}
           busy={busy === 'apple' || busy === 'google' ? busy : null}
           onApple={() => void provider('apple')}
           onGoogle={() => void provider('google')}
@@ -237,16 +254,12 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     case 'failed':
       return <JoinView state={{ kind: 'failed', error: stage.error, onSignOut: () => void signOut() }} />;
     case 'dead':
-      return <JoinView state={{ kind: 'dead' }} />;
+      return <JoinView state={{ kind: 'dead', signIn: false }} />;
     case 'refused':
-      return (
-        <JoinView
-          state={{ kind: 'refused_after', league: { name: stage.league.name, max: stage.league.max }, inviter, rows: previewRows(stage.league, stage.block), block: stage.block }}
-        />
-      );
+      return <JoinView state={{ kind: 'refused', name: stage.name, inviter, block: stage.block, signIn: false }} />;
     case 'member':
-      return <DoneScreen title={WEB_COPY.alreadyIn(stage.name)} />;
+      return <DoneScreen title={WEB_COPY.alreadyIn(stage.name)} rows={stage.rows} />;
     case 'in':
-      return <DoneScreen title={WEB_COPY.youreIn(stage.name)} />;
+      return <DoneScreen title={WEB_COPY.youreIn(stage.name)} rows={stage.rows} />;
   }
 }

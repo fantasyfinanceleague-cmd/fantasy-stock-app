@@ -8,6 +8,7 @@
  * and the exact refusal reason, and `join-league` is the only truth for
  * joining. No server text ever reaches the page.
  */
+import { cleanDisplay } from './displayText';
 import { coerceBlock, refineBlock, type JoinBlock, type JoinErrorKind } from './joinCopy';
 
 function num(v: unknown): number | null {
@@ -37,7 +38,7 @@ export interface PreviewLeague {
 export function parsePreviewLeague(raw: unknown): PreviewLeague | null {
   const l = rec(raw);
   if (!l) return null;
-  const name = str(l.name);
+  const name = cleanDisplay(l.name);
   const max = num(l.num_participants);
   if (!name || max === null) return null;
   return {

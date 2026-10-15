@@ -4,6 +4,7 @@ import { readConfirmOutcome } from './confirmOutcome';
 import { fetchInvitePreview } from './invitePreview';
 import { normalizeInviteCode } from './inviteCode';
 import { openConfirmInAppUrl } from './config';
+import { takeHeld } from './heldLink';
 import { WEB_COPY } from './joinCopy';
 import { Busy, WebPage } from './JoinView';
 
@@ -12,7 +13,7 @@ const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 /** What the inline script in index.html kept IN MEMORY (never the URL): the code, and a pending invite. */
 interface HeldLink { code: string | null; invite: string | null }
 function readHeldLink(): HeldLink {
-  const held = (window as unknown as { __stockpileAuthConfirm?: Partial<HeldLink> }).__stockpileAuthConfirm;
+  const held = takeHeld<Partial<HeldLink>>('__stockpileAuthConfirm');
   return { code: typeof held?.code === 'string' && held.code ? held.code : null, invite: typeof held?.invite === 'string' ? held.invite : null };
 }
 

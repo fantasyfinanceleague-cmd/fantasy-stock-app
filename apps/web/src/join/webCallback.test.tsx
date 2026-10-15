@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import WebCallbackPage, { failureNotice, readHeldCallback, type HeldCallback } from './WebCallbackPage';
 import { PENDING_INVITE_KEY } from './pendingInvite';
 import { WEB_COPY } from './joinCopy';
+import { forgetHeld } from './heldLink';
 import type { makeAuthMock } from './testing/mockAuth';
 
 const m = vi.hoisted(() => {
@@ -46,6 +47,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   delete (window as unknown as Record<string, unknown>).__stockpileWebCallback;
+  forgetHeld();
   localStorage.clear();
 });
 
@@ -53,7 +55,7 @@ describe('/auth/web-callback: the web flow\'s own return exchanges the code, onc
   it('an email link: exchanges the code, then back to /join/<invite> with the chip flag', async () => {
     hold({ code: CODE, invite: 'abcde23456', via: 'email' });
     renderCallback();
-    expect(await landed()).toBe('/join/ABCDE23456 {"emailConfirmed":true}');
+    expect(await landed()).toBe('/join/ABCDE23456 {"emailConfirmed":true,"signedIn":true}');
     expect(m.exchangeCode).toHaveBeenCalledTimes(1);
     expect(m.exchangeCode).toHaveBeenCalledWith(CODE);
   });
@@ -61,14 +63,14 @@ describe('/auth/web-callback: the web flow\'s own return exchanges the code, onc
   it('an OAuth return: no "email confirmed" chip', async () => {
     hold({ code: CODE, invite: 'ABCDE23456', via: 'oauth' });
     renderCallback();
-    expect(await landed()).toBe('/join/ABCDE23456 {"emailConfirmed":false}');
+    expect(await landed()).toBe('/join/ABCDE23456 {"emailConfirmed":false,"signedIn":true}');
   });
 
   it('takes the invite from the one stored when sign-in began when the URL had none', async () => {
     localStorage.setItem(PENDING_INVITE_KEY, 'XYZW9876');
     hold({ code: CODE, invite: null, via: 'email' });
     renderCallback();
-    expect(await landed()).toBe('/join/XYZW9876 {"emailConfirmed":true}');
+    expect(await landed()).toBe('/join/XYZW9876 {"emailConfirmed":true,"signedIn":true}');
   });
 
   it('a junk invite is ignored, never navigated to', async () => {
@@ -165,6 +167,20 @@ describe('readHeldCallback', () => {
     expect(readHeldCallback()).toBeNull();
     hold({ code: CODE, invite: 'ABCDE23456', via: 'oauth', error: 'paused' });
     expect(readHeldCallback()).toEqual({ code: CODE, invite: 'ABCDE23456', via: 'oauth', error: 'paused' });
+  });
+
+  it('takes it ONCE: deleted from window after the read, kept in module scope for a remount', () => {
+    hold({ code: CODE, invite: 'ABCDE23456', via: 'email', error: false });
+    expect(readHeldCallback()?.code).toBe(CODE);
+    expect('__stockpileWebCallback' in window).toBe(false);
+    expect(readHeldCallback()?.code).toBe(CODE); // StrictMode runs initialisers twice
+  });
+
+  it('a NEW link in the same tab replaces the old one', () => {
+    hold({ code: CODE, invite: 'ABCDE23456' });
+    readHeldCallback();
+    hold({ code: 'zzzzzzzz-1111', invite: 'WXYZ2345' });
+    expect(readHeldCallback()).toMatchObject({ code: 'zzzzzzzz-1111', invite: 'WXYZ2345' });
   });
 
   it('coerces anything odd to a safe value', () => {

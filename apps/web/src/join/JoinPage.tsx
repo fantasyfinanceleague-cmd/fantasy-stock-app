@@ -18,7 +18,7 @@ export function joinStateFor(rawCode: string | undefined, preview: InvitePreview
   if (preview.kind === 'not_found') return { kind: 'dead' };
   if (preview.kind === 'found') {
     // A league that won't take players is not worth an account: say so, offer the app, no sign-in.
-    if (preview.block) return { kind: 'refused', name: preview.name, inviter: preview.inviter, block: preview.block };
+    if (preview.block) return { kind: 'refused', name: preview.name, inviter: preview.inviter, block: preview.block, signIn: true };
     return { kind: 'invited', code, name: preview.name, inviter: preview.inviter };
   }
   return { kind: 'invited', code, name: null, inviter: null };
@@ -29,10 +29,11 @@ const NOTICES: readonly FlowNotice[] = ['confirmed-sign-in', 'expired', 'paused'
 /** The router state /auth/web-callback hands back: only known words, never a message. */
 export function readHandoff(state: unknown): FlowHandoff | null {
   if (state === null || typeof state !== 'object') return null;
-  const s = state as { notice?: unknown; emailConfirmed?: unknown };
+  const s = state as { notice?: unknown; emailConfirmed?: unknown; signedIn?: unknown };
   const notice = NOTICES.find((n) => n === s.notice);
   const emailConfirmed = s.emailConfirmed === true;
-  return notice || emailConfirmed ? { notice, emailConfirmed } : null;
+  const signedIn = s.signedIn === true || emailConfirmed;
+  return notice || emailConfirmed || signedIn ? { notice, emailConfirmed, signedIn } : null;
 }
 
 /**

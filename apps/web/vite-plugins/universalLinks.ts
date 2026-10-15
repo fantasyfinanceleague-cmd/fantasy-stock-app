@@ -110,7 +110,10 @@ export function firstInlineScript(html: string): string | null {
  */
 export function cspHashProblems(html: string, vercelJson: { headers?: { source: string; headers: { key: string; value: string }[] }[] }): string[] {
   const script = firstInlineScript(html);
-  if (script === null) return [];
+  // Fail CLOSED: the scrub and the CSP are a pair. A page with no bare inline <script> (the scrub was
+  // removed, or gained an attribute such as a nonce so this stops matching) would otherwise ship with
+  // the code-stripping silently gone.
+  if (script === null) return ['index.html has no bare inline <script>: the URL scrub (and the hash its CSP allows) is gone'];
   const hash = cspScriptHash(script);
   const problems: string[] = [];
   for (const source of ['/join/:path*', '/auth/:path*']) {
@@ -160,7 +163,8 @@ export function universalLinks(
       this.emitFile({ type: 'asset', fileName: AASA_PATH.slice(1), source: aasaBody(config) });
       if (vercelJsonPath) {
         const page = bundle['index.html'] as { type: string; source?: string | Uint8Array } | undefined;
-        const html = page ? (typeof page.source === 'string' ? page.source : new TextDecoder().decode(page.source)) : '';
+        if (!page) this.error('index.html is not in the bundle: cannot verify the CSP hash of the URL scrub');
+        const html = typeof page.source === 'string' ? page.source : new TextDecoder().decode(page.source);
         const problems = cspHashProblems(html, JSON.parse(readFileSync(vercelJsonPath, 'utf-8')));
         if (problems.length) this.error(`vercel.json CSP is out of step with index.html:\n  - ${problems.join('\n  - ')}`);
       }

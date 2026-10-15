@@ -257,6 +257,18 @@ describe('the CSP / inline-script guard (a stale hash would block the scrub in p
     expect(problems.join('\n')).toMatch(/does not allow the inline script/);
   });
 
+  it('fails CLOSED when the page has no inline script at all (the scrub is gone)', () => {
+    expect(cspHashProblems('<head><script type="module" src="/a.js"></script></head>', vercelFor(cspScriptHash('x')))).toHaveLength(1);
+    expect(cspHashProblems('<head><script nonce="abc">var a=1;</script></head>', vercelFor(cspScriptHash('var a=1;')))[0]).toMatch(/no bare inline/);
+  });
+
+  it('is a build error when index.html is missing from the bundle', () => {
+    const plugin = universalLinks(ready, {}, fileURLToPath(new URL('../vercel.json', import.meta.url)));
+    const ctx = { error: (m: string) => { throw new Error(m); }, warn: () => {}, emitFile: () => 'id' };
+    const gen = plugin.generateBundle as unknown as (this: typeof ctx, o: unknown, b: unknown) => void;
+    expect(() => gen.call(ctx, {}, { 'a.js': { type: 'chunk', code: 'x' } })).toThrow(/index\.html is not in the bundle/);
+  });
+
   it('fails when a guarded path has no CSP at all', () => {
     expect(cspHashProblems(html('x'), { headers: [] })).toHaveLength(2);
   });

@@ -87,6 +87,8 @@
   box-sizing: border-box;
   min-height: 100vh;
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   padding: 40px 20px 32px;
   background: var(--c-bg);
   color: var(--c-text);
@@ -100,18 +102,48 @@
 
 .obw__col { display: grid; gap: 18px; width: 100%; max-width: 420px; margin: 0 auto; }
 .obw__col--center { justify-items: center; text-align: center; gap: 16px; }
-.obw__body { padding-top: 18px; }
+.obw__body { flex: 1; padding-top: 18px; }
 
 @media (min-width: 720px) {
-  .obw { display: grid; grid-template-rows: auto 1fr; padding: 28px 40px; }
+  .obw { padding: 28px 40px; }
   .obw__body { display: grid; place-items: center; padding: 0; }
+}
+
+/* ── The invite arrival (Giorgio, 2026-10-14: B; board frames 1 and 7) ──
+   Phone: the invite block is centred in the space between the wordmark and the
+   actions, and the actions sit at the bottom, in the thumb's reach. Desktop: one
+   centred column, the block above the actions. A dead link has no heading and no
+   actions: its panel and "Sign in" are centred on the page. */
+.obw__body--arrival { display: flex; flex-direction: column; }
+.obw__arrival {
+  flex: 1; display: grid; grid-template-rows: 1fr auto; gap: 18px;
+  width: 100%; max-width: 420px; margin: 0 auto;
+}
+.obw__arrival--dead { grid-template-rows: 1fr; }
+.obw__invite {
+  display: grid; gap: 16px; align-content: center; justify-items: center;
+  text-align: center; text-wrap: balance;
+}
+.obw__invite .obw__title { text-align: center; overflow-wrap: anywhere; }
+.obw__refuse { display: grid; gap: 16px; align-content: center; justify-items: stretch; text-align: center; }
+.obw__refuse .obw__warn { text-align: left; }
+.obw__bottom { display: grid; gap: 14px; }
+.obw__icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-inset); color: var(--c-text-2);
+}
+@media (min-width: 720px) {
+  .obw__body--arrival { align-items: center; justify-content: center; padding: 0; }
+  .obw__arrival { flex: none; grid-template-rows: auto auto; width: 400px; max-width: 100%; gap: 32px; }
+  .obw__arrival--dead { grid-template-rows: auto; }
 }
 
 .obw__title { margin: 0; font-size: 28px; line-height: 32px; font-weight: 800; color: var(--c-text); text-wrap: balance; }
 .obw__sub { margin: 0; font-size: 15px; line-height: 21px; color: var(--c-text-2); }
 
 .obw__av {
-  width: 56px; height: 56px; border-radius: 50%;
+  width: 64px; height: 64px; border-radius: 50%;
   display: grid; place-items: center;
   background: var(--c-you); color: var(--c-on-you);
   font-size: 20px; font-weight: 800;
@@ -123,6 +155,7 @@
 }
 
 .obw__card { background: var(--c-surface); box-shadow: inset 0 0 0 1px var(--c-line); border-radius: 14px; padding: 4px 16px; }
+.obw__card--wide { width: 100%; text-align: left; }
 .obw__row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 12px; font-size: 15px; }
 .obw__row dt { color: var(--c-text-2); }
 .obw__row dd { margin: 0; font-weight: 700; color: var(--c-text); text-align: right; }

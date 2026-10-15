@@ -17,18 +17,19 @@ with `web`). Copy: all in `apps/web/src/join/joinCopy.ts`, one module, for the g
   reach. Each frame is 375×812 (`sheet-desktop-*`: 1000×640). Fonts are the self-hosted Archivo.
 - Local-only settings: `LOCAL_ALLOW_PLACEHOLDERS=1` (the production build refuses to finish while the
   App Store URL is a placeholder; the flag is ignored on Vercel) and fake `VITE_SUPABASE_*` values.
-- `invite-preview` (W3) is not deployed yet, so the live `/join` captures show its fallback headline,
-  "You're invited to a league". The sheets show the real names ("Roberto B. invited you to…").
+- `invite-preview` (W3) is not deployed yet, so a live `/join` shows its fallback headline, "You're invited to a league". The sheets show the real names ("Roberto B. invited you to…").
 
 ## Captures
 
+Reference: the decided board, PR #278 (`design/onboarding-arrival-redraw` @ 74470752), frames 1 and 7
+(Giorgio, 2026-10-14: **B with C1**).
+
 | File | Shows |
 |---|---|
-| `sheet-A-{light,dark}.png` | Invite with inviter · invite with the preview unavailable · invite with a notice (expired web link) · Create account · Sign in with the unconfirmed-email line and "Send again" (and the plain-text "Forgot your password? Reset it in the app.") |
-| `sheet-B-{light,dark}.png` | Check your email · Pick a username (the "✓ EMAIL CONFIRMED" chip, pre-filled gamertag, Keep / Change, "Not you? Sign out") · "You're in {league}." + Get the app · "You're already in {league}." · a refusal before sign-in ("{league} is full. Ask whoever invited you…", no facts) |
-| `sheet-C-{light,dark}.png` | Refusals AFTER sign-in, with the facts rows and the app's full lines: drafting · full · season over · then the dead-link line and the transport-failure line with "Not you? Sign out" |
-| `sheet-desktop-{light,dark}.png` | The invite and "You're in" at desktop width |
-| `join-signin-phone-light.png` | The live build: `/join/<code>` with the preview unavailable, self-hosted Archivo loaded under the CSP |
+| `sheet-arrival-{light,dark}.png` | The signed-out arrival, five states: inviter initials + "{inviter} invited you to {league}" · no inviter, league icon + "You're invited to {league}" · no preview, league icon + "You're invited to a league" · a long league name (wraps at its spaces, never chopped) · with a notice above the buttons (expired web link). The invite block is centred; Apple, Google and Use email sit at the bottom |
+| `sheet-refusals-{light,dark}.png` | The long-name arrival again, then the refusals: full · not taking new players (the warn panel in the buttons' place, "Sign in" under it, NO App Store badge) · a dead link (no heading, the panel and "Sign in" centred on the page) · the transport-failure line with "Not you? Sign out" · Create account |
+| `sheet-signin-and-done-{light,dark}.png` | Sign in with the unconfirmed-email line and "Send again" (and the plain-text forgot line) · Check your email · Pick a username (✓ EMAIL CONFIRMED chip) · "You're in {league}." and "You're already in {league}.", each with the facts card (Managers, Draft, Stakes, Season) and the App Store badge |
+| `sheet-desktop-arrival-{light,dark}.png`, `sheet-desktop-dead-and-in-light.png` | The arrival and a refusal at desktop width (one 400pt column), the dead link, and "You're in" with the facts |
 | `join-confirmed-signin-phone-{light,dark}.png` | The live web callback: a link opened where the code verifier isn't (no exchange possible) lands on Sign in with "Your email is confirmed. Sign in with your password." |
 | `confirm-ok-phone-{light,dark}.png` | `/auth/confirm` (the app's email link on a device without the app): the approved line. The URL is already bare |
 | `confirm-error-phone-{light,dark}.png` | The same page for an expired link: "This link has expired. Open the app and sign in to get a new one." |

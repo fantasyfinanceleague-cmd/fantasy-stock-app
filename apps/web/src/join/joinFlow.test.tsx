@@ -42,7 +42,7 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('signed out: the three options', () => {
-  it('headline, then Apple, Google, email in the board\'s order, and the app', async () => {
+  it('headline, then Apple, Google, email in the board\'s order, and nothing else', async () => {
     renderFlow();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
     const buttons = screen.getAllByRole('button');
@@ -50,7 +50,8 @@ describe('signed out: the three options', () => {
     expect(buttons[0]).toHaveAccessibleName(WEB_COPY.continueApple);
     expect(buttons[1]).toHaveAccessibleName(WEB_COPY.continueGoogle);
     expect(buttons[2]).toHaveAccessibleName(WEB_COPY.useEmail);
-    expect(screen.getByRole('link', { name: WEB_COPY.openApp })).toHaveAttribute('href', 'fantasystockapp://join/ABCDE23456');
+    expect(screen.queryAllByRole('link')).toHaveLength(0); // no App Store badge, no extra links before sign-in
+    expect(screen.queryByText(/Managers|Stakes|Season/)).toBeNull(); // the facts come after joining
     expect(m.signOutLocal).not.toHaveBeenCalled(); // not a terminal screen
   });
 
@@ -206,20 +207,42 @@ describe('email', () => {
 
 describe('after sign-in: username, join, terminal screens', () => {
   beforeEach(() => m.currentSession.mockResolvedValue({ userId: 'u1' }));
+  /** Arrives the way the web callback leaves things: this visit produced the sign-in. */
+  const renderAuthed = (props: Partial<React.ComponentProps<typeof JoinFlow>> = {}) =>
+    renderFlow({ handoff: { signedIn: true }, ...props });
 
-  it('has a username: previews, joins, then "You\'re in {league}." + "Get the app…" + the App Store, and ends the session', async () => {
-    renderFlow();
+  it('has a username: previews, joins, then "You\'re in {league}." + "Get the app…" + the facts + the App Store, and ends the session', async () => {
+    m.previewWithSession.mockResolvedValueOnce({ kind: 'found', league: league(), block: null });
+    m.previewWithSession.mockResolvedValueOnce({ kind: 'found', league: league({ current_members: 6 }), block: 'already_member' });
+    renderAuthed();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're in Stock Scudetto.");
     expect(screen.getByText('Get the app to draft and play.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: WEB_COPY.appStoreBadge })).toHaveAttribute('href', APP_STORE_URL);
-    expect(m.previewWithSession).toHaveBeenCalledWith(CODE);
+    // C1: the facts are fetched AFTER the join, so Managers counts this person (6 of 6, not the preview's 5 of 6)
+    expect(m.previewWithSession).toHaveBeenCalledTimes(2);
+    const rows = screen.getAllByText(/^(Managers|Draft|Stakes|Season)$/).map((e) => e.textContent);
+    expect(rows).toEqual(['Managers', 'Draft', 'Stakes', 'Season']);
+    expect(screen.getByText('6 of 6')).toBeInTheDocument();
+    expect(screen.getByText('Sat, Oct 3 · 7:00 PM ET')).toBeInTheDocument();
+    expect(screen.getByText('Equal stakes · $2,000 per slot')).toBeInTheDocument();
+    expect(screen.getByText('14 weeks')).toBeInTheDocument();
     expect(m.joinWithSession).toHaveBeenCalledWith(CODE);
     await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
   });
 
+  it('a failed facts fetch is not a failed join: "You\'re in" without the card', async () => {
+    m.previewWithSession.mockResolvedValueOnce({ kind: 'found', league: league(), block: null });
+    m.previewWithSession.mockResolvedValueOnce({ kind: 'error', error: 'unreachable' });
+    renderAuthed();
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're in Stock Scudetto.");
+    expect(screen.queryByText('Managers')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('link', { name: WEB_COPY.appStoreBadge })).toBeInTheDocument();
+  });
+
   it('a failed profile read fails OPEN (straight to the join), like the app', async () => {
     m.readOwnUsername.mockResolvedValue(undefined);
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're in Stock Scudetto.");
   });
 
@@ -227,7 +250,7 @@ describe('after sign-in: username, join, terminal screens', () => {
     beforeEach(() => m.readOwnUsername.mockResolvedValue(null));
 
     it('shows a pre-filled gamertag, the helper line, Keep and Change', async () => {
-      renderFlow({ handoff: { emailConfirmed: true } });
+      renderAuthed({ handoff: { emailConfirmed: true, signedIn: true } });
       expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Pick a username');
       const field = screen.getByLabelText(WEB_COPY.usernameLabel) as HTMLInputElement;
       expect(field.value).toMatch(/^[A-Z][a-z]+[A-Z][a-z]+\d{3}$/);
@@ -240,13 +263,13 @@ describe('after sign-in: username, join, terminal screens', () => {
     });
 
     it('no chip unless the confirmation link brought them back', async () => {
-      renderFlow();
+      renderAuthed();
       await screen.findByLabelText(WEB_COPY.usernameLabel);
       expect(screen.queryByText('✓ EMAIL CONFIRMED')).toBeNull();
     });
 
     it('offers the available candidate', async () => {
-      renderFlow();
+      renderAuthed();
       const field = (await screen.findByLabelText(WEB_COPY.usernameLabel)) as HTMLInputElement;
       const candidates = m.checkUsernames.mock.calls[0][0] as string[];
       expect(candidates).toHaveLength(3);
@@ -254,7 +277,7 @@ describe('after sign-in: username, join, terminal screens', () => {
     });
 
     it('Keep sets the name, then joins', async () => {
-      renderFlow();
+      renderAuthed();
       const field = (await screen.findByLabelText(WEB_COPY.usernameLabel)) as HTMLInputElement;
       m.checkUsernames.mockResolvedValueOnce([{ username: field.value, status: 'available' }]);
       click(WEB_COPY.keep);
@@ -263,7 +286,7 @@ describe('after sign-in: username, join, terminal screens', () => {
     });
 
     it('Change opens the field; a bad format never reaches the server', async () => {
-      renderFlow();
+      renderAuthed();
       await screen.findByLabelText(WEB_COPY.usernameLabel);
       click(WEB_COPY.change);
       const field = screen.getByLabelText(WEB_COPY.usernameLabel);
@@ -283,7 +306,7 @@ describe('after sign-in: username, join, terminal screens', () => {
       ['taken at the write (a race)', async () => { m.checkUsernames.mockResolvedValueOnce([{ username: 'Taken_one', status: 'available' }]); m.setUsername.mockResolvedValue('taken'); }, 'This username is already taken.'],
       ['unknown at the write', async () => { m.checkUsernames.mockResolvedValueOnce(null); m.setUsername.mockResolvedValue(null); }, "Couldn't check right now"],
     ] as const)('%s: its line, the field stays open, no join', async (_label, arrange, line) => {
-      renderFlow();
+      renderAuthed();
       await screen.findByLabelText(WEB_COPY.usernameLabel);
       click(WEB_COPY.change);
       fireEvent.change(screen.getByLabelText(WEB_COPY.usernameLabel), { target: { value: 'Taken_one' } });
@@ -295,7 +318,7 @@ describe('after sign-in: username, join, terminal screens', () => {
     });
 
     it('"Not you? Sign out" ends the session and returns to the options', async () => {
-      renderFlow();
+      renderAuthed();
       await screen.findByLabelText(WEB_COPY.usernameLabel);
       click(WEB_COPY.notYouSignOut);
       expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
@@ -303,47 +326,61 @@ describe('after sign-in: username, join, terminal screens', () => {
     });
   });
 
-  it('a refusal after sign-in: the facts, the app\'s full line with counts, the App Store, no join, session ended', async () => {
+  it('a refusal after sign-in: the heading and the Planner\'s line, no facts, no App Store, no Sign in, session ended', async () => {
     m.previewWithSession.mockResolvedValue({ kind: 'found', league: league({ current_members: 6 }), block: 'league_full' });
-    renderFlow();
-    expect(await screen.findByRole('alert')).toHaveTextContent('Stock Scudetto is full: 6 of 6 managers. Ask your commissioner if they can make room.');
-    expect(screen.getByText('6 of 6')).toBeInTheDocument();
-    expect(screen.getByText('Equal stakes · $2,000 per slot')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: WEB_COPY.appStoreBadge })).toBeInTheDocument();
+    renderAuthed();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Stock Scudetto is full. Ask whoever invited you if they can make room.');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
+    expect(screen.queryByText('Managers')).toBeNull();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
     expect(m.joinWithSession).not.toHaveBeenCalled();
     await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
   });
 
-  it('a draft under way reads as "drafting right now"', async () => {
-    m.previewWithSession.mockResolvedValue({ kind: 'found', league: league({ draft_status: 'in_progress' }), block: 'draft_in_progress' });
-    renderFlow();
-    expect(await screen.findByRole('alert')).toHaveTextContent("Stock Scudetto is drafting right now, so it can't take new managers this season.");
+  it.each([
+    ['in progress', { draft_status: 'in_progress' }, 'draft_in_progress'],
+    ['drafted', { draft_status: 'completed' }, 'draft_started'],
+  ] as const)('a draft %s: "isn\'t taking new players right now."', async (_label, over, block) => {
+    m.previewWithSession.mockResolvedValue({ kind: 'found', league: league(over), block });
+    renderAuthed();
+    expect(await screen.findByRole('alert')).toHaveTextContent("Stock Scudetto isn't taking new players right now.");
+  });
+
+  it('the season is over: the same neutral line', async () => {
+    m.previewWithSession.mockResolvedValue({ kind: 'found', league: league(), block: 'season_completed' });
+    renderAuthed();
+    expect(await screen.findByRole('alert')).toHaveTextContent("Stock Scudetto isn't taking new players right now.");
   });
 
   it('already a member (preview): "You\'re already in {league}.", nothing written', async () => {
     m.previewWithSession.mockResolvedValue({ kind: 'found', league: league(), block: 'already_member' });
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto.");
+    expect(screen.getByText('5 of 6')).toBeInTheDocument(); // they are a member: the facts are theirs to read
     expect(m.joinWithSession).not.toHaveBeenCalled();
     await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
   });
 
   it('the league changed between the preview and the join: join-league is the truth', async () => {
     m.joinWithSession.mockResolvedValue({ kind: 'refused', block: 'league_full', leagueId: null });
-    renderFlow();
-    expect(await screen.findByRole('alert')).toHaveTextContent(/is full: 6 of 6 managers/);
+    renderAuthed();
+    // in THIS flow the full refusal says "whoever invited you", never join-league's "Ask your commissioner"
+    expect(await screen.findByRole('alert')).toHaveTextContent('Stock Scudetto is full. Ask whoever invited you if they can make room.');
+    expect(screen.queryByText(/commissioner/i)).toBeNull();
   });
 
   it('a race that makes them a member reads as already in', async () => {
     m.joinWithSession.mockResolvedValue({ kind: 'refused', block: 'already_member', leagueId: 'L1' });
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto.");
   });
 
-  it('a code that resolves nowhere once signed in: the dead-link line, session ended', async () => {
+  it('a code that resolves nowhere once signed in: the dead-link line (no heading, no Sign in), session ended', async () => {
     m.previewWithSession.mockResolvedValue({ kind: 'bad_code' });
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
     await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
   });
 
@@ -352,7 +389,7 @@ describe('after sign-in: username, join, terminal screens', () => {
     ['rate_limited', 'Too many tries. Wait a moment, then try again.'],
   ] as const)('a %s failure: our line, "Not you? Sign out", and the session is KEPT for a retry', async (error, line) => {
     m.previewWithSession.mockResolvedValue({ kind: 'error', error });
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('alert')).toHaveTextContent(line);
     expect(m.signOutLocal).not.toHaveBeenCalled();
     click(WEB_COPY.notYouSignOut);
@@ -362,7 +399,7 @@ describe('after sign-in: username, join, terminal screens', () => {
 
   it('a join transport failure is the same', async () => {
     m.joinWithSession.mockResolvedValue({ kind: 'error', error: 'unreachable' });
-    renderFlow();
+    renderAuthed();
     expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn't reach the league/);
   });
 });
@@ -391,10 +428,27 @@ describe('what the web callback hands back', () => {
     expect(screen.queryByText(WEB_COPY.webLinkExpired)).toBeNull();
   });
 
-  it('a live session on arrival skips the options entirely', async () => {
+  it('a session THIS visit produced (the callback says so) carries straight on to the join', async () => {
     m.currentSession.mockResolvedValue({ userId: 'u1' });
-    renderFlow({ handoff: { notice: 'expired' } });
+    renderFlow({ handoff: { signedIn: true } });
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent("You're in Stock Scudetto.");
     expect(screen.queryByRole('button', { name: WEB_COPY.continueApple })).toBeNull();
+  });
+
+  it('a session found COLD never joins a league on its own: it is ended and the options show', async () => {
+    m.currentSession.mockResolvedValue({ userId: 'u1' });
+    renderFlow();
+    expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
+    expect(m.signOutLocal).toHaveBeenCalled();
+    expect(m.previewWithSession).not.toHaveBeenCalled();
+    expect(m.joinWithSession).not.toHaveBeenCalled();
+    expect(m.readOwnUsername).not.toHaveBeenCalled();
+  });
+
+  it('a cold session with a notice still shows the notice after ending it', async () => {
+    m.currentSession.mockResolvedValue({ userId: 'u1' });
+    renderFlow({ handoff: { notice: 'expired' } });
+    expect(await screen.findByRole('alert')).toHaveTextContent(WEB_COPY.webLinkExpired);
+    expect(m.signOutLocal).toHaveBeenCalled();
   });
 });

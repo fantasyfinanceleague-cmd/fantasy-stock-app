@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { takeHeld } from './heldLink';
 import { clearPendingInvite, getPendingInvite } from './pendingInvite';
 import { normalizeInviteCode } from './inviteCode';
 import { exchangeCode, signOutLocal } from './onboardingAuth';
@@ -17,7 +18,7 @@ export interface HeldCallback {
 }
 
 export function readHeldCallback(): HeldCallback | null {
-  const held = (window as unknown as { __stockpileWebCallback?: Partial<HeldCallback> }).__stockpileWebCallback;
+  const held = takeHeld<Partial<HeldCallback>>('__stockpileWebCallback');
   if (!held) return null;
   return {
     code: typeof held.code === 'string' && held.code ? held.code : null,
@@ -91,7 +92,7 @@ export default function WebCallbackPage() {
         await signOutLocal();
         return navigate('/', { replace: true });
       }
-      return back({ emailConfirmed: held.via === 'email' });
+      return back({ emailConfirmed: held.via === 'email', signedIn: true });
     })();
   }, [held, invite, navigate]);
 

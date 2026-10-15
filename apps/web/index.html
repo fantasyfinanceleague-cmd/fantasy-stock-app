@@ -51,7 +51,9 @@
         for (var i = 0; i < keys.length; i++) {
           if (q.has(keys[i]) || h.has(keys[i])) hasError = true;
         }
+        // An auth code is a short opaque token: anything else is not one (and is never echoed).
         var code = q.get('code');
+        if (code && !/^[A-Za-z0-9._~-]{8,200}$/.test(code)) code = null;
         if (isCallback) {
           var description = (q.get('error_description') || h.get('error_description') || '').toLowerCase();
           var failure = hasError ? (description.indexOf('not open for new signups') !== -1 ? 'paused' : 'other') : false;

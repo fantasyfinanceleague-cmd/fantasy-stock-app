@@ -65,6 +65,24 @@ describe('/auth/confirm', () => {
     expect(strip(run(url))).toEqual({ path: '/auth/confirm', outcome: 'none', referrer: 'no-referrer' });
   });
 
+  it.each([
+    ['too short', 'abc'],
+    ['markup', '<img src=x onerror=alert(1)>'],
+    ['spaces', 'not a real code at all'],
+    ['too long', 'a'.repeat(201)],
+    ['a path', '../../etc/passwd'],
+  ])('a code that is not token-shaped (%s) is no code: nothing confirmed, nothing held', (_label, junk) => {
+    const r = run(`/auth/confirm?code=${encodeURIComponent(junk)}`);
+    expect(r.outcome).toBe('none');
+    expect(r.held).toEqual({ code: null, invite: null });
+    expect(r.path).toBe('/auth/confirm');
+  });
+
+  it('the shapes real codes take are accepted (a UUID, and a longer opaque token)', () => {
+    expect(run('/auth/confirm?code=9f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b').outcome).toBe('confirmed');
+    expect(run('/auth/confirm?code=' + 'Ab1._~-'.repeat(20)).outcome).toBe('confirmed');
+  });
+
   it('drops every other param too (e.g. an invite code)', () => {
     expect(run(`/auth/confirm?invite=ABCDE23456&code=${CODE}`).path).toBe('/auth/confirm');
   });
@@ -161,6 +179,11 @@ describe('/auth/web-callback (the web flow\'s own return: this page exchanges, s
   it('an error beats a code that came with it', () => {
     const r = runCallback(`/auth/web-callback?invite=ABCDE23456&code=${CODE}&error=access_denied`);
     expect(r.held).toEqual({ code: null, invite: 'ABCDE23456', via: 'email', error: 'other' });
+  });
+
+  it('the web callback applies the same rule to a code that is not token-shaped', () => {
+    expect(runCallback('/auth/web-callback?invite=ABCDE23456&code=%3Cscript%3E').held).toEqual({ code: null, invite: 'ABCDE23456', via: 'email', error: false });
+    expect(runCallback('/auth/web-callback?invite=ABCDE23456&code=short').held?.code).toBeNull();
   });
 
   it('a visit with no code and no error holds neither', () => {

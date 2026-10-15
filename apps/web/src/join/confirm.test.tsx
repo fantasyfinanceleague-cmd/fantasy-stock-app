@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ConfirmPage from './ConfirmPage';
 import { readConfirmOutcome } from './confirmOutcome';
 import { WEB_COPY } from './joinCopy';
+import { forgetHeld } from './heldLink';
 
 describe('readConfirmOutcome', () => {
   it.each([
@@ -27,6 +28,7 @@ describe('/auth/confirm', () => {
   afterEach(() => {
     window.history.replaceState(null, '', '/');
     delete (window as unknown as Record<string, unknown>).__stockpileAuthConfirm;
+    forgetHeld();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -58,6 +60,12 @@ describe('/auth/confirm', () => {
 
   it('a touch device with a code: "Open the app" to the app\'s confirm link', () => {
     arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: null }, true);
+    expect(screen.getByRole('link', { name: WEB_COPY.openApp })).toHaveAttribute('href', `fantasystockapp://auth/confirm?code=${CODE}`);
+  });
+
+  it('takes the held code ONCE and deletes it from window (no other script on the origin can read it)', () => {
+    arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: null }, true);
+    expect('__stockpileAuthConfirm' in window).toBe(false);
     expect(screen.getByRole('link', { name: WEB_COPY.openApp })).toHaveAttribute('href', `fantasystockapp://auth/confirm?code=${CODE}`);
   });
 

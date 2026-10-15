@@ -1,3 +1,4 @@
+import { cleanDisplay } from './displayText';
 import { coerceBlock, type JoinBlock } from './joinCopy';
 import { INVITE_PREVIEW_URL, PUBLISHABLE_KEY } from './config';
 
@@ -20,23 +21,19 @@ export type InvitePreview =
 
 const UNKNOWN: InvitePreview = { kind: 'unknown' };
 
-function text(v: unknown): string | null {
-  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
-}
-
 /** Status + body to a preview; anything unexpected is `unknown`. */
 export function parseInvitePreview(status: number, body: unknown): InvitePreview {
   if (status !== 200 || body === null || typeof body !== 'object' || Array.isArray(body)) return UNKNOWN;
   const b = body as Record<string, unknown>;
   if (b.found === false) return { kind: 'not_found' };
   if (b.found !== true) return UNKNOWN;
-  const name = text(b.name);
+  const name = cleanDisplay(b.name);
   if (!name) return UNKNOWN;
   const reason = b.reason;
   return {
     kind: 'found',
     name,
-    inviter: text(b.inviter),
+    inviter: cleanDisplay(b.inviter),
     // An unknown reason from a newer server is a refusal we have no line for, never "joinable".
     block: reason === null || reason === undefined ? null : coerceBlock(reason),
   };

@@ -171,12 +171,16 @@ export function blockMessage(block: JoinBlock, l: { name: string; max: number })
 }
 
 /**
- * A refusal BEFORE sign-in, from the no-session preview (a reason, no counts,
- * no draft status). The Planner's words (b, c, 2026-10-14): full has its own
- * line; every "not taking players" reason (room open, drafting, drafted, season
- * over) is one neutral line that is true for all of them.
+ * Every refusal the web invite shows, before or after sign-in (the Planner,
+ * 2026-10-14; Giorgio's decided arrival, B). The no-session preview sends a
+ * reason but no counts or draft status, so these lines need only the name:
+ * "full" has its own, and every "not taking players" reason (room open,
+ * drafting, drafted, season over) is one neutral line true for all of them.
+ * "Ask whoever invited you" belongs to this invite-link flow only; the app's
+ * typed-code flow keeps "Ask your commissioner". Reasons with no ruled line
+ * (an expired invite, a rejoin after leaving) keep the app's own.
  */
-export function preSignInBlockMessage(block: JoinBlock, name: string): string {
+export function refusalMessage(block: JoinBlock, name: string): string {
   switch (block) {
     case 'league_full':
       return `${name} is full. Ask whoever invited you if they can make room.`;
@@ -185,6 +189,6 @@ export function preSignInBlockMessage(block: JoinBlock, name: string): string {
     case 'season_completed':
       return `${name} isn't taking new players right now.`;
     default:
-      return JOIN_COPY.unknownBlock;
+      return blockMessage(block, { name, max: 0 });
   }
 }

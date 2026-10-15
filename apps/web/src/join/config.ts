@@ -6,13 +6,13 @@ import config from '../../universal-links.config.json';
 export const APP_STORE_URL: string = config.appStoreUrl;
 
 /**
- * "Open in the app": the custom scheme, not the https link. Safari does not
- * hand a link to the app when the tap stays on the same domain, so an https
- * /join/<code> link on this page would just reload it. The app maps
- * <scheme>://join/<code> to the pending invite (onboarding W3).
+ * "Sign in" under a refusal: the app's own sign-in, by its custom scheme (a
+ * same-domain https link does not fire a universal link from Safari). The web
+ * page signs people in only to JOIN; a closed or dead invite has nothing to
+ * join, so an existing account's way in is the app.
  */
-export function openInAppUrl(code: string): string {
-  return `${config.appScheme}://join/${encodeURIComponent(code)}`;
+export function appSignInUrl(): string {
+  return `${config.appScheme}://login`;
 }
 
 /**

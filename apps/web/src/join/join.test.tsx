@@ -2,10 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import JoinPage, { joinStateFor, readHandoff } from './JoinPage';
-import { JoinView, inviteHeadline } from './JoinView';
+import { JoinView, inviteHeadline, initials, unbreakable, UNBROKEN_NAME_MAX } from './JoinView';
 import { normalizeInviteCode } from './inviteCode';
-import { WEB_COPY, preSignInBlockMessage, JOIN_BLOCKS } from './joinCopy';
-import { APP_STORE_URL } from './config';
+import { WEB_COPY, refusalMessage, JOIN_BLOCKS } from './joinCopy';
 import type { makeAuthMock } from './testing/mockAuth';
 
 const m = vi.hoisted(() => {
@@ -38,13 +37,35 @@ describe('normalizeInviteCode', () => {
 });
 
 describe('the headline', () => {
+  const nb = (v: string) => v.replace(/ /g, '\u00a0');
   it.each([
-    ['Stock Scudetto', 'roberto_b', 'roberto_b invited you to Stock Scudetto'],
-    ['Stock Scudetto', null, "You're invited to Stock Scudetto"],
+    ['Stock Scudetto', 'roberto_b', `roberto_b invited you to ${nb('Stock Scudetto')}`],
+    ['Stock Scudetto', null, `You're invited to ${nb('Stock Scudetto')}`],
     [null, 'roberto_b', "You're invited to a league"],
     [null, null, "You're invited to a league"],
   ])('%s / %s', (name, inviter, line) => {
     expect(inviteHeadline(name, inviter)).toBe(line);
+  });
+
+  it('the league name never breaks across lines (non-breaking spaces; the rest may wrap)', () => {
+    expect(unbreakable('Wall Street Wolves')).toBe('Wall\u00a0Street\u00a0Wolves');
+    expect(inviteHeadline('Wall Street Wolves', 'roberto_b')).toContain('Wall\u00a0Street\u00a0Wolves');
+    expect(inviteHeadline('Wall Street Wolves', 'roberto_b')).toMatch(/^roberto_b invited you to /);
+  });
+
+  it('a name too long to fit one line may wrap at its spaces (never chopped mid-word)', () => {
+    const long = 'Wall Street Wolves Fantasy Finance Club';
+    expect(Array.from(long).length).toBeGreaterThan(UNBROKEN_NAME_MAX);
+    expect(unbreakable(long)).toBe(long);
+    expect(unbreakable('A'.repeat(UNBROKEN_NAME_MAX - 2) + ' B')).toContain('\u00a0'); // exactly at the limit it still holds
+    expect(unbreakable('A'.repeat(UNBROKEN_NAME_MAX - 1) + ' B')).not.toContain('\u00a0'); // one over, it may wrap
+  });
+
+  it('initials: first letters, code-point aware (never half an emoji)', () => {
+    expect(initials('Roberto B.')).toBe('RB');
+    expect(initials('roberto_b')).toBe('R');
+    expect(initials('  ')).toBe('');
+    expect(initials('😀 Bob')).toBe('😀B');
   });
 });
 
@@ -55,16 +76,18 @@ describe('joinStateFor', () => {
     expect(joinStateFor('abcde23456', { kind: 'not_found' })).toEqual({ kind: 'dead' });
     expect(joinStateFor('abcde23456', { kind: 'unknown' })).toEqual({ kind: 'invited', code: 'ABCDE23456', name: null, inviter: null });
     expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: null })).toEqual({ kind: 'invited', code: 'ABCDE23456', name: 'X', inviter: 'r' });
-    expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: 'league_full' })).toEqual({ kind: 'refused', name: 'X', inviter: 'r', block: 'league_full' });
+    expect(joinStateFor('abcde23456', { kind: 'found', name: 'X', inviter: 'r', block: 'league_full' })).toEqual({ kind: 'refused', name: 'X', inviter: 'r', block: 'league_full', signIn: true });
   });
 });
 
 describe('readHandoff: only known words from the router state', () => {
   it.each([
-    [{ notice: 'expired' }, { notice: 'expired', emailConfirmed: false }],
-    [{ notice: 'confirmed-sign-in' }, { notice: 'confirmed-sign-in', emailConfirmed: false }],
-    [{ emailConfirmed: true }, { notice: undefined, emailConfirmed: true }],
-    [{ notice: 'paused', emailConfirmed: true }, { notice: 'paused', emailConfirmed: true }],
+    [{ notice: 'expired' }, { notice: 'expired', emailConfirmed: false, signedIn: false }],
+    [{ notice: 'confirmed-sign-in' }, { notice: 'confirmed-sign-in', emailConfirmed: false, signedIn: false }],
+    [{ emailConfirmed: true }, { notice: undefined, emailConfirmed: true, signedIn: true }], // a confirmed link signed this browser in
+    [{ signedIn: true }, { notice: undefined, emailConfirmed: false, signedIn: true }], // an OAuth return
+    [{ signedIn: 'yes' }, null],
+    [{ notice: 'paused', emailConfirmed: true }, { notice: 'paused', emailConfirmed: true, signedIn: true }],
     [{ notice: '<img src=x onerror=alert(1)>' }, null],
     [{ notice: 'Your email is confirmed.' }, null],
     [{ emailConfirmed: 'yes' }, null],
@@ -86,10 +109,21 @@ describe('JoinView: the static states', () => {
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
-  it('dead: the Planner\'s line, never the typing line, no way onward', () => {
-    render(<JoinView state={{ kind: 'dead' }} />);
+  it('a dead link: ONLY the Planner\'s panel and "Sign in" (no heading, no avatar, no badge), never the typing line', () => {
+    const { container } = render(<JoinView state={{ kind: 'dead' }} />);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(container.querySelector('.obw__av, .obw__icon')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent("This invite link doesn't work anymore. Ask for a new one.");
     expect(screen.queryByText(/check it/i)).toBeNull();
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent('Sign in');
+    expect(links[0]).toHaveAttribute('href', 'fantasystockapp://login');
+    expect(container.querySelector('.obw__arrival--dead')).not.toBeNull(); // centred on the page, not bottom-anchored
+  });
+
+  it('a dead link after sign-in has no "Sign in" either', () => {
+    render(<JoinView state={{ kind: 'dead', signIn: false }} />);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
@@ -99,23 +133,47 @@ describe('JoinView: the static states', () => {
     ['draft_in_progress', "Stock Scudetto isn't taking new players right now."],
     ['season_completed', "Stock Scudetto isn't taking new players right now."],
     ['unknown', "You can't join this league right now. Ask your commissioner to check the invite."],
-  ] as const)('refused before sign-in: %s', (block, line) => {
-    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'roberto_b', block }} />);
+  ] as const)('refused (%s): the heading stays, the warn panel replaces the buttons, "Sign in" under it, NO App Store badge', (block, line) => {
+    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'roberto_b', block, signIn: true }} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
     expect(screen.getByRole('alert')).toHaveTextContent(line);
-    expect(screen.getByRole('link', { name: WEB_COPY.appStoreBadge })).toHaveAttribute('href', APP_STORE_URL);
+    expect(screen.queryByRole('link', { name: WEB_COPY.appStoreBadge })).toBeNull();
     expect(screen.queryByRole('button')).toBeNull(); // nobody makes an account for a closed league
-    expect(preSignInBlockMessage(block, 'Stock Scudetto')).toBe(line);
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', 'fantasystockapp://login');
+    expect(refusalMessage(block, 'Stock Scudetto')).toBe(line);
   });
 
-  it('every block has a pre-sign-in line (none is empty or raw)', () => {
-    for (const b of JOIN_BLOCKS) expect(preSignInBlockMessage(b, 'X').length).toBeGreaterThan(10);
+  it('after sign-in a refusal has no "Sign in" link', () => {
+    render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full', signIn: false }} />);
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're invited to Stock Scudetto");
+  });
+
+  it('no inviter: the league icon (not initials) above the heading', () => {
+    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: null, block: 'league_full', signIn: true }} />);
+    expect(container.querySelector('.obw__icon')).not.toBeNull();
+    expect(container.querySelector('.obw__av')).toBeNull();
+  });
+
+  it('with an inviter: their initials above the heading', () => {
+    const { container } = render(<JoinView state={{ kind: 'refused', name: 'Stock Scudetto', inviter: 'Roberto B.', block: 'league_full', signIn: true }} />);
+    expect(container.querySelector('.obw__av')).toHaveTextContent('RB');
+    expect(container.querySelector('.obw__icon')).toBeNull();
+  });
+
+  it('every block has a line (none empty, none raw)', () => {
+    for (const b of JOIN_BLOCKS) expect(refusalMessage(b, 'X').length).toBeGreaterThan(10);
+  });
+
+  it('the Planner\'s lines hold in this flow only: the app\'s typed-code "Ask your commissioner" is untouched elsewhere', () => {
+    expect(refusalMessage('league_full', 'X')).not.toMatch(/commissioner/i);
+    expect(refusalMessage('invite_expired', 'X')).toBe('This invite has expired. Ask your commissioner for a new code.');
   });
 
   it('renders a hostile league name or inviter as text, never markup', () => {
-    const { container } = render(<JoinView state={{ kind: 'refused', name: '<img src=x onerror=alert(1)>', inviter: '<b>x</b>', block: 'league_full' }} />);
+    const { container } = render(<JoinView state={{ kind: 'refused', name: '<img src=x onerror=alert(1)>', inviter: '<b>x</b>', block: 'league_full', signIn: true }} />);
     expect(container.querySelector('img')).toBeNull();
-    expect(container.querySelector('b')).toBeNull();
+    expect([...container.querySelectorAll('b')].map((b) => b.textContent)).toEqual(['Sign in']); // the hostile <b> never became markup
   });
 });
 
@@ -142,7 +200,8 @@ describe('/join/:code', () => {
     const spy = vi.spyOn(globalThis, 'fetch');
     renderAt('/join/%3Cscript%3E');
     expect(screen.getByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead);
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Sign in']);
     expect(spy).not.toHaveBeenCalled();
     expect(m.currentSession).not.toHaveBeenCalled();
   });
@@ -152,7 +211,7 @@ describe('/join/:code', () => {
     renderAt('/join/abcde23456');
     expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('roberto_b invited you to Stock Scudetto');
-    expect(screen.getByRole('link', { name: WEB_COPY.openApp })).toHaveAttribute('href', 'fantasystockapp://join/ABCDE23456');
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
   it('a refusal: its neutral line and the App Store, and the sign-in flow never starts', async () => {
@@ -160,14 +219,17 @@ describe('/join/:code', () => {
     renderAt('/join/ABCDE23456');
     expect(await screen.findByRole('alert')).toHaveTextContent("Stock Scudetto isn't taking new players right now.");
     expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('link', { name: WEB_COPY.appStoreBadge })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toBeInTheDocument();
     expect(m.currentSession).not.toHaveBeenCalled();
   });
 
-  it('found:false: the dead-link line', async () => {
+  it('found:false: the dead-link panel, no heading, "Sign in"', async () => {
     answer(200, { found: false });
     renderAt('/join/ABCDE23456');
     expect(await screen.findByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead);
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getAllByRole('link').map((a) => a.textContent)).toEqual(['Sign in']);
   });
 
   it.each([

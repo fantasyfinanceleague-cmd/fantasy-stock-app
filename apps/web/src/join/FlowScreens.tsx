@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { PASSWORD_REQUIREMENTS } from '@fantasy-stock/shared/constants';
 import { WEB_COPY } from './joinCopy';
 import { firstFailingRule } from './usernameRules';
-import { APPLE_PATH, AppStoreBadge, Avatar, Busy, inviteHeadline, OpenInApp, SignOutButton, WebPage, Warn } from './JoinView';
+import type { PreviewRow } from './previewData';
+import { APPLE_PATH, AppStoreBadge, Busy, InviteBlock, SignOutButton, WebPage, Warn } from './JoinView';
 
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 
@@ -17,9 +18,12 @@ function NoticeLine({ notice }: { notice: Notice | null }) {
   return notice.tone === 'warn' ? <Warn>{notice.text}</Warn> : <p className="obw__sub" role="status">{notice.text}</p>;
 }
 
-/** Continue with Apple · Continue with Google · Use email (the board's order). */
+/**
+ * The invite arrival (Giorgio, 2026-10-14: B): the league and the inviter,
+ * centred; Apple, Google, "Use email" at the bottom on a phone. Nothing else is
+ * known before sign-in, so there is no facts card and no App Store badge.
+ */
 export function SignInScreen(props: {
-  code: string;
   name: string | null;
   inviter: string | null;
   notice: Notice | null;
@@ -31,25 +35,27 @@ export function SignInScreen(props: {
 }) {
   const { busy } = props;
   return (
-    <WebPage>
-      <Avatar inviter={props.name ? props.inviter : null} />
-      <h1 className="obw__title">{inviteHeadline(props.name, props.inviter)}</h1>
-      <NoticeLine notice={props.notice} />
-      <div className="obw__stack">
-        <button type="button" className="obw__btn obw__btn--apple" disabled={busy !== null} onClick={props.onApple}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={APPLE_PATH} /></svg>
-          {WEB_COPY.continueApple}
-        </button>
-        <button type="button" className="obw__btn obw__btn--line" disabled={busy !== null} onClick={props.onGoogle}>
-          <b aria-hidden="true">G</b>
-          {WEB_COPY.continueGoogle}
-        </button>
-        <button type="button" className="obw__btn obw__btn--line" disabled={busy !== null} onClick={props.onEmail}>
-          {WEB_COPY.useEmail}
-        </button>
+    <WebPage arrival>
+      <div className="obw__arrival">
+        <InviteBlock name={props.name} inviter={props.inviter} />
+        <div className="obw__bottom">
+          <NoticeLine notice={props.notice} />
+          <div className="obw__stack">
+            <button type="button" className="obw__btn obw__btn--apple" disabled={busy !== null} onClick={props.onApple}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={APPLE_PATH} /></svg>
+              {WEB_COPY.continueApple}
+            </button>
+            <button type="button" className="obw__btn obw__btn--line" disabled={busy !== null} onClick={props.onGoogle}>
+              <b aria-hidden="true">G</b>
+              {WEB_COPY.continueGoogle}
+            </button>
+            <button type="button" className="obw__btn obw__btn--line" disabled={busy !== null} onClick={props.onEmail}>
+              {WEB_COPY.useEmail}
+            </button>
+          </div>
+          {props.error ? <p className="obw__error" role="alert">{props.error}</p> : null}
+        </div>
       </div>
-      {props.error ? <p className="obw__error" role="alert">{props.error}</p> : null}
-      <OpenInApp code={props.code} as="link" />
     </WebPage>
   );
 }
@@ -190,8 +196,13 @@ export function UsernameScreen(props: {
   );
 }
 
-/** "You're in {league}." + "Get the app to draft and play." (approved, plan Decision 10). */
-export function DoneScreen({ title, showSub = true }: { title: string; showSub?: boolean }) {
+/**
+ * "You're in {league}." + "Get the app to draft and play." (approved, plan
+ * Decision 10), then the league's facts (Giorgio's C1, 2026-10-14): the web has
+ * no draft sentence, so the card keeps a Draft row. The facts are readable now
+ * that the person is a member; without them the card is simply absent.
+ */
+export function DoneScreen({ title, rows }: { title: string; rows: PreviewRow[] | null }) {
   return (
     <WebPage center>
       <span className="obw__disc" aria-hidden="true">
@@ -199,11 +210,18 @@ export function DoneScreen({ title, showSub = true }: { title: string; showSub?:
       </span>
       <div className="obw__stack">
         <h1 className="obw__title">{title}</h1>
-        {showSub ? <p className="obw__sub">{WEB_COPY.getTheApp}</p> : null}
+        <p className="obw__sub">{WEB_COPY.getTheApp}</p>
       </div>
+      {rows && rows.length > 0 ? (
+        <dl className="obw__card obw__card--wide">
+          {rows.map((r) => (
+            <div className="obw__row" key={r.label}><dt>{r.label}</dt><dd>{r.value}</dd></div>
+          ))}
+        </dl>
+      ) : null}
       <AppStoreBadge />
     </WebPage>
   );
 }
 
-export { Busy };
+export { Busy, Warn };
