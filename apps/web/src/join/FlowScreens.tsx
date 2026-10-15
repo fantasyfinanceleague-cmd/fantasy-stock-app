@@ -147,7 +147,8 @@ export function UsernameScreen(props: {
   onSignOut: () => void;
 }) {
   const [value, setValue] = useState(props.initial);
-  const [editing, setEditing] = useState(false);
+  // No checked suggestion (the check failed or timed out): the plain form, an empty field to type in.
+  const [editing, setEditing] = useState(props.initial === '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);

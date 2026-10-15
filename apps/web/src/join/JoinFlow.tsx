@@ -18,7 +18,7 @@ import {
   type AuthFailure,
 } from './onboardingAuth';
 import { previewRows, type PreviewRow } from './previewData';
-import { suggestUsername } from './usernameSuggestion';
+import { suggestGamertag } from './gamertag';
 
 /** A notice the web callback hands back to /join (router state: only these words, never a message). */
 export type FlowNotice = 'confirmed-sign-in' | 'expired' | 'paused' | 'generic';
@@ -116,10 +116,10 @@ export default function JoinFlow(props: { code: string; name: string | null; inv
     const username = await readOwnUsername(userId);
     // Fail open like the app: a failed read must not strand someone on a username screen.
     if (username !== null) return void (await joinNow());
-    const candidates = [suggestUsername(), suggestUsername(), suggestUsername()];
-    const checked = await checkUsernames(candidates);
-    const available = checked?.find((r) => r.status === 'available')?.username ?? candidates[0];
-    set({ s: 'username', suggestion: available });
+    // A gamertag the server says is free (the app's generator, mirrored), or the plain form: an empty
+    // field to type in. Never a name nobody checked.
+    const tag = await suggestGamertag(checkUsernames);
+    set({ s: 'username', suggestion: tag ?? '' });
   }, [joinNow, set]);
 
   useEffect(() => {

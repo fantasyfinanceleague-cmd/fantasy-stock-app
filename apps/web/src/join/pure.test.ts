@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { clearPendingInvite, getPendingInvite, PENDING_INVITE_KEY, setPendingInvite } from './pendingInvite';
-import { suggestUsername } from './usernameSuggestion';
-import { USERNAME_RE } from './usernameRules';
 import { webCallbackUrl } from './config';
+import { getConfig } from '@testing-library/react';
 
 describe('pendingInvite', () => {
   const memory = () => {
@@ -36,26 +35,6 @@ describe('pendingInvite', () => {
   });
 });
 
-describe('the username suggestion (a gamertag, never a name)', () => {
-  it('is {adjective}{animal}{digits} and always passes the format rule', () => {
-    for (let i = 0; i < 500; i++) {
-      const name = suggestUsername();
-      expect(name).toMatch(/^[A-Z][a-z]+[A-Z][a-z]+\d{3}$/);
-      expect(USERNAME_RE.test(name)).toBe(true);
-    }
-  });
-
-  it('is deterministic for a given random source', () => {
-    const seq = (values: number[]) => { let i = 0; return () => values[i++ % values.length]; };
-    expect(suggestUsername(seq([0, 0, 0]))).toBe(suggestUsername(seq([0, 0, 0])));
-    expect(suggestUsername(seq([0, 0, 0]))).toBe('HelpfulHornet100');
-  });
-
-  // MIRROR PENDING: W4 owns the app's generator. When its path is relayed, this
-  // stand-in becomes a mirror and this todo becomes the parity test.
-  it.todo("matches W4's generator for the same random source");
-});
-
 describe('webCallbackUrl', () => {
   it('carries the invite and the kind of return, and nothing else', () => {
     expect(webCallbackUrl('https://x.example', 'ABCDE23456', 'email')).toBe('https://x.example/auth/web-callback?invite=ABCDE23456&via=email');
@@ -64,5 +43,11 @@ describe('webCallbackUrl', () => {
 
   it('is never the app\'s path (that one is in the apple-app-site-association)', () => {
     expect(webCallbackUrl('https://x.example', 'ABCDE23456', 'email')).not.toContain('/auth/confirm');
+  });
+});
+
+describe('the test setup', () => {
+  it('waits up to 4s for async UI (the shared setup\'s asyncUtilTimeout took effect for the library the tests use)', () => {
+    expect(getConfig().asyncUtilTimeout).toBe(4000);
   });
 });

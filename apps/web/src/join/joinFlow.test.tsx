@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import JoinFlow from './JoinFlow';
 import { parsePreviewLeague, type PreviewLeague } from './previewData';
 import { APP_STORE_URL } from './config';
@@ -272,8 +272,41 @@ describe('after sign-in: username, join, terminal screens', () => {
       renderAuthed();
       const field = (await screen.findByLabelText(WEB_COPY.usernameLabel)) as HTMLInputElement;
       const candidates = m.checkUsernames.mock.calls[0][0] as string[];
-      expect(candidates).toHaveLength(3);
-      expect(field.value).toBe(candidates[1]);
+      expect(candidates).toHaveLength(8); // the app's generator asks for a batch of 8 (check_usernames takes up to 10)
+      expect(field.value).toBe(candidates[1]); // the first the server says is free
+    });
+
+    it('the suggestion is asked of the SERVER first: a name nobody checked is never offered (the check failing = an empty field to type in)', async () => {
+      m.checkUsernames.mockResolvedValue(null);
+      renderAuthed();
+      const field = (await screen.findByLabelText(WEB_COPY.usernameLabel)) as HTMLInputElement;
+      expect(field.value).toBe('');
+      expect(field).not.toHaveAttribute('readonly'); // the plain form: open for typing
+      expect(field).toHaveFocus();
+      expect(screen.queryByRole('button', { name: WEB_COPY.change })).toBeNull(); // nothing to "change"
+      expect(screen.getByRole('button', { name: WEB_COPY.keep })).toBeInTheDocument();
+    });
+
+    it('every batch taken (3 batches): the plain form, not an unchecked name', async () => {
+      m.checkUsernames.mockImplementation(async (c: string[]) => c.map((username) => ({ username, status: 'taken' })));
+      renderAuthed();
+      const field = (await screen.findByLabelText(WEB_COPY.usernameLabel)) as HTMLInputElement;
+      expect(field.value).toBe('');
+      expect(m.checkUsernames).toHaveBeenCalledTimes(3);
+    });
+
+    it('a check that never answers falls back to the plain form after the timeout', async () => {
+      vi.useFakeTimers();
+      try {
+        m.checkUsernames.mockReturnValue(new Promise(() => {}));
+        renderAuthed();
+        await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+        await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+        const field = screen.getByLabelText(WEB_COPY.usernameLabel) as HTMLInputElement;
+        expect(field.value).toBe('');
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('Keep sets the name, then joins', async () => {
