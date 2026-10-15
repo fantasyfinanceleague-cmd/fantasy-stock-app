@@ -473,3 +473,12 @@ Deno.test('arrival: the stress fixture (a long league name and inviter) still sp
   assertEquals(v.mark, { kind: 'inviter', name: 'Gianluigi Bartolomeo-Ricci' });
   assertEquals([v.canJoin, v.refusal], [true, null]);
 });
+
+Deno.test('How it works: the thumbnail is tall enough for the FINAL scene (its winner line was clipped at 88pt)', () => {
+  const sheet = code(SOURCES['components/shell/HowItWorksSheet.tsx']);
+  const height = Number(/THUMB = \{ width: \d+, height: (\d+) \}/.exec(sheet)![1]);
+  const scale = Number(/SCALE = ([\d.]+);/.exec(sheet)![1]);
+  const sceneWidth = Number(/SCENE_WIDTH = (\d+);/.exec(sheet)![1]);
+  assert(height >= 96, 'the thumbnail is at least 96pt tall');
+  assert(sceneWidth * scale <= 120, 'the scaled scene fits the thumbnail width');
+});

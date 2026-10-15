@@ -19,8 +19,9 @@ import { ONBOARDING_CARDS } from '@/components/shell/onboarding/sampleData';
 const SCENES: ComponentType<VignetteProps>[] = [RosterVignette, VersusVignette, FinalVignette];
 /** The scene's own layout width (the cards' art panel on a 17e) scaled into the thumbnail. */
 const SCENE_WIDTH = 308;
-const THUMB = { width: 120, height: 88 } as const;
-const SCALE = 0.36;
+/** 96pt tall and 0.34x: the FINAL scene's winner line sat on the 88pt thumbnail's rounded edge and was clipped. */
+const THUMB = { width: 120, height: 96 } as const;
+const SCALE = 0.34;
 
 export function HowItWorksSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors } = useTheme();

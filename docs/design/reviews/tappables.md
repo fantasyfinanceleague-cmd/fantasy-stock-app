@@ -184,7 +184,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/GetStarted.tsx:45` | Choice | onPress | `onJoin` | prop onJoin (the caller's) |  |
 | `components/shell/GetStarted.tsx:47` | Pressable | onPress | `onSignIn` | prop onSignIn (the caller's) |  |
 | `components/shell/GetStarted.tsx:69` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
-| `components/shell/HowItWorksSheet.tsx:35` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
+| `components/shell/HowItWorksSheet.tsx:36` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
 | `components/shell/InviteArrival.tsx:36` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
 | `components/shell/InviteArrival.tsx:41` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
 | `components/shell/InviteArrival.tsx:77` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
