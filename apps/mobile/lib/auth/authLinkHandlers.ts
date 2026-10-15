@@ -29,7 +29,8 @@ export interface ExchangeResult {
 export interface AuthLinkDeps {
   /** Confirmation links do nothing in the dev fixture (no real session exists there). */
   confirmEnabled: boolean;
-  getSession(): Promise<{ data: { session: object | null } }>;
+  /** supabase.auth.getSession(): a failed refresh resolves { session: null, error }, which is NOT "signed out". */
+  getSession(): Promise<{ data: { session: object | null }; error?: object | null }>;
   exchangeCodeForSession(code: string): Promise<ExchangeResult>;
   /** The raw stored PKCE verifier item (lib/auth/verifierStorage.ts), or null. */
   readVerifier(): Promise<string | null>;
@@ -101,8 +102,15 @@ export function createAuthLinkHandler(deps: AuthLinkDeps): (url: string) => Prom
   async function confirm(url: string, parsed: ReturnType<typeof parseConfirmLink>): Promise<AuthLinkOutcome> {
     if (!deps.confirmEnabled) return 'confirm-ignored';
     // Checked BEFORE the exchange: an existing session is never replaced, and the verifier isn't spent.
-    const { data } = await deps.getSession();
-    const action = decideConfirmLink(parsed, !!data.session);
+    const first = await deps.getSession();
+    if (first.error) {
+      // The session is UNKNOWN (auth-js returns { session: null, error } when a refresh fails): do not read
+      // that as "nobody is signed in", and do not exchange. Nothing was spent, so a re-tap may try again.
+      deps.warn('[auth] confirmation link: could not read the session', '');
+      deps.dedupe.release(url);
+      return 'confirm-ignored';
+    }
+    const action = decideConfirmLink(parsed, !!first.data.session);
     if (action.kind !== 'exchange') return 'confirm-ignored';
 
     // Read the slot first: no exchange for a code this device cannot have started, or whose pending flow is
@@ -123,8 +131,13 @@ export function createAuthLinkHandler(deps: AuthLinkDeps): (url: string) => Prom
       }
       // The first session check ran BEFORE waiting for the lock (a slow sign-up / reset can hold it for a while);
       // somebody may have signed in meanwhile. Check again, right before the exchange, and never replace a session.
-      const { data: now } = await deps.getSession();
-      if (decideConfirmLink(parsed, !!now.session).kind !== 'exchange') {
+      const now = await deps.getSession();
+      if (now.error) {
+        deps.warn('[auth] confirmation link: could not read the session', '');
+        deps.dedupe.release(url);
+        return { kind: 'refused' as const, outcome: 'confirm-ignored' as AuthLinkOutcome };
+      }
+      if (decideConfirmLink(parsed, !!now.data.session).kind !== 'exchange') {
         return { kind: 'refused' as const, outcome: 'confirm-ignored' as AuthLinkOutcome };
       }
       return { kind: 'exchanged' as const, got: await exchange(url, action.code, snapshot) };

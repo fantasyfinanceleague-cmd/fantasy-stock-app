@@ -22,8 +22,10 @@
 // Cross-device (the email opened on another phone) cannot exchange: there is no verifier there, so
 // the person signs in with their password (the address is already confirmed).
 //
-// A junk link (`?code=anything`) can still spend a pending verifier, because supabase-js removes it
-// after every exchange attempt. The cost is the same as for any lost link: sign in with the password.
+// A junk link (`?code=anything`) does NOT spend a pending verifier: supabase-js removes it after every
+// exchange attempt, so the handler (lib/auth/authLinkHandlers.ts) reads the stored verifier first and refuses
+// without an exchange when it is absent or belongs to the other flow, and restores it if an exchange still
+// fails (lib/auth/verifierSlot.ts).
 //
 // THE BASE (scheme now, universal link later): AUTH_LINK_BASES (authLink.ts) is the one place a
 // domain is added (`https://<domain>/`); the parser accepts ONLY exact prefixes, so a look-alike host

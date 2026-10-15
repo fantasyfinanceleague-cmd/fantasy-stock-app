@@ -10,7 +10,8 @@
 // restored, the dedupe mark released), and sign-up / reset already restore on any error.
 //
 // Scoped to GoTrue's own endpoints (/auth/v1/): PostgREST and the edge functions keep their existing
-// behaviour. Pure and dependency-injected so tests-deno can drive it.
+// behaviour. Known limits (accepted): the scope is a SUBSTRING match, so any URL containing "/auth/v1/" gets the
+// timeout; and the timer is cleared when the response HEADERS arrive, so a body that then stalls is not aborted. Pure and dependency-injected so tests-deno can drive it.
 
 export const AUTH_FETCH_TIMEOUT_MS = 25_000;
 

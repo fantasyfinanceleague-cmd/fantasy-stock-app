@@ -71,10 +71,10 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/login.tsx:169` | Button | onPress | `handleSignIn` | fn handleSignIn |  |
 | `app/login.tsx:170` | Pressable | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
 | `app/pick-username.tsx:15` | UsernamePickerExit | onPress | `signOut` | fn signOut (from a hook or import) |  |
-| `app/reset-password.tsx:109` | EmptyState | onAction | `inline: () => router.replace('/')` | route replace('/') |  |
-| `app/reset-password.tsx:123` | Pressable | onPress | `handleCancel` | route replace('/') |  |
-| `app/reset-password.tsx:141` | EmptyState | onAction | `inline: () => router.replace('/forgot-password')` | route replace('/forgot-password') |  |
-| `app/reset-password.tsx:143` | EmptyState | onSecondaryAction | `handleCancel` | route replace('/') |  |
+| `app/reset-password.tsx:125` | EmptyState | onAction | `inline: () => router.replace('/')` | route replace('/') |  |
+| `app/reset-password.tsx:139` | Pressable | onPress | `handleCancel` | route replace('/') |  |
+| `app/reset-password.tsx:157` | EmptyState | onAction | `inline: () => router.replace('/forgot-password')` | route replace('/forgot-password') |  |
+| `app/reset-password.tsx:159` | EmptyState | onSecondaryAction | `handleCancel` | route replace('/') |  |
 | `app/username.tsx:22` | UsernamePickerExit | onPress | `back` | route replace('/profile'); route back |  |
 | `components/SlotBuilder.tsx:133` | Pressable | onPress | `inline: () => !disabled && removeSlot(i)` | fn removeSlot | `disabled` |
 | `components/SlotBuilder.tsx:190` | SettingRow | onPress | `inline: () => !disabled && setCategoryPickerFor(i)` | sheet setCategoryPickerFor(i) | `disabled` |

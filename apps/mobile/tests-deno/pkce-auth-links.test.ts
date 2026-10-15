@@ -239,6 +239,8 @@ function harness(
     session?: boolean;
     /** getSession answers 'no session' this many times, then 'a session exists' (somebody signed in while we waited). */
     sessionAppearsAfter?: number;
+    /** The Nth getSession() call (1-based) resolves { session: null, error }, as auth-js does when a refresh fails. */
+    sessionErrorAtCall?: number;
     exchange?: ExchangeResult;
     throws?: boolean;
     confirmEnabled?: boolean;
@@ -262,6 +264,7 @@ function harness(
     confirmEnabled: o.confirmEnabled ?? true,
     getSession: async () => {
       sessionCalls++;
+      if (o.sessionErrorAtCall === sessionCalls) return { data: { session: null }, error: { code: 'refresh_failed' } };
       const appeared = o.sessionAppearsAfter !== undefined && sessionCalls > o.sessionAppearsAfter;
       return { data: { session: o.session || appeared ? { access_token: 'existing' } : null } };
     },
@@ -1257,6 +1260,89 @@ Deno.test('auth fetch: only /auth/v1/ requests are aborted after the timeout; a 
   assert(client.includes('global: { fetch: authFetch }') && client.includes('AUTH_FETCH_TIMEOUT_MS'));
 });
 
+Deno.test('confirm: an UNREADABLE session (a failed refresh) is "unknown", never "signed out": no exchange, at either read', async () => {
+  for (const call of [1, 2]) {
+    const h = harness({ sessionErrorAtCall: call });
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-ignored', `read #${call}`);
+    assertEquals(h.exchanged, [], `read #${call}: nothing exchanged, so nothing spent`);
+    if (call === 2) assertEquals(h.slot(), SIGNUP_SLOT, 'the verifier was read and left alone');
+    assertFalse(h.calls.includes('confirmed:true'));
+    // Nothing was spent, so the SAME link may be tried again once the session can be read.
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-signed-in', `read #${call}: the re-tap is not "duplicate"`);
+  }
+  // With no error the same link still exchanges.
+  assertEquals(await harness({}).handle(CONFIRM_URL), 'confirm-signed-in');
+  const src = SOURCES['lib/auth/authLinkHandlers.ts'];
+  assertEquals(src.split('.error) {').length - 1 >= 2, true);
+});
+
+Deno.test('restore: a write that FAILS reports false (the signal is not a lie); verifierStorage.write surfaces failure', async () => {
+  let stored: string | null = null;
+  const writeFails: VerifierSlot = { read: async () => stored, write: async () => { throw new Error('disk full'); } };
+  assertEquals(await restoreVerifierIfAbsent(writeFails, 'snap'), false);
+  assertEquals(stored, null);
+  const ok: VerifierSlot = { read: async () => stored, write: async (raw) => { stored = raw; } };
+  assertEquals(await restoreVerifierIfAbsent(ok, 'snap'), true);
+  assertEquals(stored, 'snap');
+  const vs = SOURCES['lib/auth/verifierStorage.ts'];
+  const write = vs.slice(vs.indexOf('async write(raw)'));
+  assertFalse(/catch/.test(write.replace(/\/\/.*$/gm, '')), 'write() must not swallow its own failure');
+  assert(write.includes("if (!store) throw new Error('no storage for the verifier');"));
+  assert(write.includes('await store.setItem('));
+});
+
+Deno.test('Cancel: signs out BEFORE the recovery hold is released, so the deferred push setup never runs for the cancelled account', () => {
+  // The model of SessionProvider's deferred setup: a subscriber that runs setup when the hold ends and a user exists.
+  const run = (order: 'signOutFirst' | 'flagFirst') => {
+    let userId: string | null = 'u1';
+    const pushed: string[] = [];
+    setRecoverySession(true);
+    const off = subscribeRecoverySession(() => {
+      if (isRecoveryHold() || !userId) return;
+      pushed.push(userId);
+    });
+    const signOut = () => {
+      userId = null; // userIdRef is updated at SIGNED_OUT, before...
+      setRecoverySession(false); // ...the SIGNED_OUT handler clears the flag
+    };
+    if (order === 'flagFirst') { setRecoverySession(false); signOut(); } else { signOut(); setRecoverySession(false); }
+    off();
+    setRecoverySession(false);
+    return pushed;
+  };
+  assertEquals(run('flagFirst'), ['u1'], 'the OLD order: the hold ended while the user still existed (the race)');
+  assertEquals(run('signOutFirst'), [], 'the NEW order: no user left to set up');
+  // The real code.
+  const rp = SOURCES['app/reset-password.tsx'];
+  const cancel = rp.slice(rp.indexOf('async function handleCancel'), rp.indexOf('async function updatePassword'));
+  const drop = cancel.indexOf('pendingRoute.dropHeld()');
+  const out = cancel.indexOf('await signOut()');
+  const flag = cancel.indexOf('setRecoverySession(false)');
+  assert(drop > -1 && out > drop && flag > out, 'dropHeld -> signOut -> clear the flag');
+  const sp = SOURCES['lib/SessionProvider.tsx'];
+  const listener = sp.slice(sp.indexOf('supabase.auth.onAuthStateChange('));
+  const idAt = listener.indexOf('userIdRef.current = session?.user?.id ?? null;');
+  assert(idAt > -1 && idAt < listener.indexOf("event === 'SIGNED_OUT'"), 'the user id is cleared before the SIGNED_OUT handler clears the flag');
+  assertFalse(/setTimeout\(\(\) => \{ userIdRef\.current/.test(listener), 'and not deferred past it');
+  assertFalse(cancel.includes('setupPushNotifications'), 'Cancel never sets up push itself');
+  // Robust: a rejected sign-out still clears the flag and leaves; a second tap while it runs does nothing.
+  assert(/try \{\s*await signOut\(\);\s*\} catch \{[\s\S]*?\} finally \{[\s\S]*?setRecoverySession\(false\);\s*\}/.test(cancel), 'signOut in try/catch, the flag cleared in finally');
+  assert(cancel.includes('if (cancelling.current) return;') && cancel.includes('cancelling.current = true;') && cancel.includes('cancelling.current = false;'));
+  assert(cancel.indexOf('cancelling.current = false;') < cancel.indexOf("router.replace('/')"));
+});
+
+Deno.test('docs: the junk-link comment no longer claims a junk link can spend the verifier', () => {
+  const cl = SOURCES['lib/auth/confirmLink.ts'];
+  assertFalse(cl.includes('can still spend a pending verifier'));
+  assert(cl.includes('does NOT spend a pending verifier'));
+  const vs = SOURCES['lib/auth/verifierSlot.ts'];
+  for (const phrase of ['KNOWN LIMITS (accepted', 'delete-then-restore window', 'without sending an email', 'aborted sign-up', 'stuck recovery flag']) {
+    assert(vs.includes(phrase), phrase);
+  }
+  assert(SOURCES['lib/auth/authFetch.ts'].includes('SUBSTRING match') && SOURCES['lib/auth/authFetch.ts'].includes('body that then stalls'));
+  assert(SOURCES['lib/auth/recoverySession.ts'].includes('"Password updated"') && SOURCES['lib/auth/recoverySession.ts'].includes('second recovery session'));
+});
+
 // ── the recovery hold, and what waits on it ──────────────────────────────
 
 Deno.test('recovery hold: in-progress OR an open form holds; either ending notifies; nothing holds by default', () => {
@@ -1326,7 +1412,6 @@ Deno.test('wiring: Cancel drops the kept link BEFORE the hold ends; sign-out dro
   const rp = SOURCES['app/reset-password.tsx'];
   const cancel = rp.slice(rp.indexOf('async function handleCancel'), rp.indexOf('async function updatePassword'));
   assert(cancel.indexOf('pendingRoute.dropHeld()') > -1 && cancel.indexOf('pendingRoute.dropHeld()') < cancel.indexOf('setRecoverySession(false)'));
-  assert(cancel.indexOf('setRecoverySession(false)') < cancel.indexOf('await signOut()'));
   const sp = SOURCES['lib/SessionProvider.tsx'];
   const out = sp.slice(sp.indexOf("event === 'SIGNED_OUT'"), sp.indexOf("event === 'SIGNED_OUT'") + 700);
   assert(out.indexOf('pendingRoute.dropHeld()') > -1 && out.indexOf('pendingRoute.dropHeld()') < out.indexOf('setRecoverySession(false)'));

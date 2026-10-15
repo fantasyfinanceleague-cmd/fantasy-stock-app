@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -75,7 +75,12 @@ export default function ResetPasswordScreen() {
     elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
   });
 
+  // A ref, not state: a second tap while the sign-out is still running must do nothing (not sign out twice).
+  const cancelling = useRef(false);
+
   async function handleCancel() {
+    if (cancelling.current) return;
+    cancelling.current = true;
     // Only end a session THIS screen created. A recovery link signs the
     // device in as a side effect of recovering it, so leaving via Cancel
     // should undo that — but a user who reached this screen some other
@@ -85,9 +90,20 @@ export default function ResetPasswordScreen() {
       // Drop a deep link the recovery hold was keeping BEFORE the flag clears: ending the hold would otherwise
       // open it while this recovery session is still signed in, a moment before the sign-out below.
       pendingRoute.dropHeld();
-      setRecoverySession(false);
-      await signOut();
+      // Sign out FIRST, with the recovery hold still up. Clearing the flag first would end the hold, and
+      // SessionProvider's deferred push setup would then register this about-to-be-signed-out account (and could
+      // raise the iOS permission prompt during Cancel) while signOut() is removing its token. By the time the flag
+      // clears below (the SIGNED_OUT handler already cleared it; this is idempotent) there is no user to set up.
+      try {
+        await signOut();
+      } catch {
+        // A rejected sign-out leaves the session as it was; there is nothing further to undo here.
+      } finally {
+        // Always clear the flag, so the hold ends and the screen can leave.
+        setRecoverySession(false);
+      }
     }
+    cancelling.current = false;
     router.replace('/');
   }
 

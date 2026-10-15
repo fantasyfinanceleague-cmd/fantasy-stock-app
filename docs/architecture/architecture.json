@@ -2,39 +2,19 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "80c1affee2bbd810a674622cdddc403e0c2c2feb",
-    "commitShort": "80c1affe",
+    "commit": "3c613027ea1d8ba69e0eb9d38f21e2b5190ad674",
+    "commitShort": "3c613027",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w2-auth",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/create-account.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/forgot-password.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/app/reset-password.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/ConfirmEmailSent.tsx"
-      },
-      {
-        "code": "??",
         "path": "apps/mobile/lib/auth/authFetch.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/auth/authLink.ts"
       },
       {
         "code": "M",
@@ -42,38 +22,26 @@
       },
       {
         "code": "M",
+        "path": "apps/mobile/lib/auth/confirmLink.ts"
+      },
+      {
+        "code": "M",
         "path": "apps/mobile/lib/auth/recoverySession.ts"
       },
       {
-        "code": "??",
+        "code": "M",
         "path": "apps/mobile/lib/auth/verifierSlot.ts"
       },
       {
-        "code": "??",
+        "code": "M",
         "path": "apps/mobile/lib/auth/verifierStorage.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/SessionProvider.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/pendingRoute.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/supabase.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/tests-deno/pkce-auth-links.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-15T00:37:27Z",
+    "timestamp": "2026-10-15T00:52:22Z",
     "sourceHash": "sha256:3bc320a95cad83a1a5ead4988503f4a6c441a895fdcb7b4a60589e4ecf28f420",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
@@ -81,7 +49,7 @@
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 24.4,
+    "ageHours": 24.6,
     "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,

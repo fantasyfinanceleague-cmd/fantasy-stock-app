@@ -19,6 +19,16 @@
 // SUCCESSFUL new flow superseding the old one is accepted, and is also what GoTrue itself does (a new email
 // invalidates the old link).
 //
+// KNOWN LIMITS (accepted; none needs code):
+//   - The delete-then-restore window: auth-js deletes the verifier and we put it back a moment later. If the app
+//     is killed in between, the verifier is gone and the person signs in with their password.
+//   - A call that SUCCEEDS without sending an email (a reset for an unknown address, or signUp for a registered
+//     one) still writes a new verifier and so supersedes the other flow's. Recoverable: "Send again".
+//   - An aborted sign-up (the 25 s auth timeout) comes back as an error, not a throw, so the 60 s floor is not
+//     held for it; the verifier is restored instead.
+//   - The stuck recovery flag after Android back on the reset screen (lib/auth/recoverySession.ts): a device
+//     check on the rebuild list.
+//
 // Pure and storage-injected so tests-deno can drive it, and pinned against the installed GoTrueClient.
 
 /** supabase.createClient's `auth.storageKey`; lib/supabase.ts imports it so the two cannot drift. */

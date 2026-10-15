@@ -55,6 +55,10 @@ export function subscribeRecoverySession(listener: RecoveryFlagListener): () => 
 // (b) start setupPushNotifications, which can raise the iOS permission prompt on top of the form. So the
 // link handler raises `inProgress` before the exchange and drops it when the exchange is settled (the flag
 // above takes over on success). Both consumers wait on `isRecoveryHold()` and run when it ends.
+//
+// Known limits (accepted): the flag half stays up if the reset screen is left without Cancel or success (Android
+// back; a device check on the rebuild list), and a kept link opens when the hold ends, which can be over
+// "Password updated" or into a second recovery session.
 
 let recoveryInProgress = false;
 

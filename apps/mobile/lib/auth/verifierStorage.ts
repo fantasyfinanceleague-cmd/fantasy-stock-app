@@ -25,10 +25,10 @@ export const verifierSlot: VerifierSlot = {
     }
   },
   async write(raw) {
-    try {
-      await storage()?.setItem(verifierKey(AUTH_STORAGE_KEY), raw);
-    } catch {
-      // Best effort: a failed restore leaves the person where an unrestored slot would (sign in with the password).
-    }
+    // A failure REJECTS (no storage, or setItem fails): restoreVerifierIfAbsent catches it and reports `false`,
+    // so "restored" is never claimed for a write that did not happen.
+    const store = storage();
+    if (!store) throw new Error('no storage for the verifier');
+    await store.setItem(verifierKey(AUTH_STORAGE_KEY), raw);
   },
 };
