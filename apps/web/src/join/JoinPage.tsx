@@ -80,12 +80,19 @@ export default function JoinPage() {
     code && view.kind === 'refused' ? { name: view.name, inviter: view.inviter }
     : code && view.kind === 'dead' ? { name: null, inviter: null }
     : null;
-  // A sign-in return (Google/Apple/email link) that lands on a link which can't be joined never mounts the
-  // flow, so nothing else would end the browser session it just made. End it here: the web's only job is the join.
-  const endSession = handoff?.signedIn === true && (view.kind === 'refused' || view.kind === 'dead');
+  // A sign-in return (Google/Apple/an email link) arrives through /auth/web-callback with `signedIn`, and the
+  // no-session preview may well say "refused" or "dead" (an existing member who met "full" and signed in to prove it).
+  // With a code to join with, the FLOW decides: it previews with the session ("You're already in {league}", or the
+  // genuine refusal) and ends the session on every terminal screen itself. Only a code that can't be one has nothing
+  // to decide, so its session is ended here (the web's only job is the join).
+  const signedInReturn = handoff?.signedIn === true;
+  const endSession = signedInReturn && view.kind === 'dead' && !code;
   useEffect(() => {
     if (endSession) void signOutLocal();
   }, [endSession]);
+  if (signedInReturn && signIn && code) {
+    return <JoinFlow key={code} code={code} name={signIn.name} inviter={signIn.inviter} handoff={handoff} />;
+  }
   if (view.kind === 'invited') {
     return <JoinFlow key={view.code} code={view.code} name={view.name} inviter={view.inviter} handoff={handoff} />;
   }

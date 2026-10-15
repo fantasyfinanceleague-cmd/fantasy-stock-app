@@ -9,7 +9,7 @@
  *  - an unbounded length (a name that pushes the real sentence off the screen).
  * Whitespace is collapsed (a name is one line) and the result is capped by CODE
  * POINTS, never mid-character. Stripping format characters also splits joined
- * emoji (a ZWJ sequence becomes its parts): a fair price for a headline we vouch for.
+ * emoji (a ZWJ sequence becomes its parts, adjacent and unjoined): a fair price for a headline we vouch for.
  *
  * What it cannot do: plain words. A 40-character name that reads "Call this number"
  * is still text; the template's own words ("invited you to") are the frame.
@@ -29,10 +29,16 @@ export const MAX_INVITER_LENGTH = 40;
 //   U+E0000-E0FFF tags, variation-selector supplement and the reserved default-ignorables around them
 const UNSAFE = /[\p{Cc}\p{Cf}\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u2800\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFFC\u{E0000}-\u{E0FFF}]/gu;
 
+// GLUE: invisible characters that attach to the character BESIDE them (joiners, variation selectors, tags, the grapheme
+// joiner, the Khmer inherent vowels). They are REMOVED, not replaced by a space: a space would split the word they belong
+// to (a Persian name written with a ZWNJ, an emoji with its variation selector). Everything else unsafe is a separator
+// (bidi marks, zero-width space, fillers...) and becomes a space, so two words it sat between don't fuse.
+const GLUE = /[\u034F\u17B4\u17B5\u180B-\u180D\u180F\u200C\u200D\uFE00-\uFE0F\u{E0000}-\u{E0FFF}]/gu;
+
 /** The string cleaned for display, or null when nothing is left. */
 export function cleanDisplay(value: unknown, max: number = MAX_DISPLAY_LENGTH): string | null {
   if (typeof value !== 'string') return null;
-  const collapsed = value.replace(UNSAFE, ' ').replace(/\s+/g, ' ').trim();
+  const collapsed = value.replace(GLUE, '').replace(UNSAFE, ' ').replace(/\s+/g, ' ').trim();
   if (collapsed === '') return null;
   return Array.from(collapsed).slice(0, max).join('').trim() || null;
 }

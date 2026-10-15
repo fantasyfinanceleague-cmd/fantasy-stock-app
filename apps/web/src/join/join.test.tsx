@@ -350,23 +350,6 @@ describe('/join/:code', () => {
       expect(screen.queryByRole('heading')).toBeNull();
     });
 
-    it('opening "Sign in" is ALWAYS a cold start, even when the page arrived with "this visit signed in": it never joins with a session it already holds', async () => {
-      full();
-      m.currentSession.mockReset();
-      m.currentSession.mockResolvedValue({ userId: 'u1' }); // a live session AND a sign-in return handoff
-      m.previewWithSession.mockResolvedValue({ kind: 'found', league: { name: 'Stock Scudetto', members: 5, max: 6, stakeMode: null, notionalPerSlot: null, budgetAmount: null, leagueType: null, numWeeks: null, durationDays: null, draftDate: null, draftStatus: 'not_started' }, block: null });
-      m.joinWithSession.mockResolvedValue({ kind: 'joined', leagueId: 'L1', leagueName: 'Stock Scudetto' });
-      render(
-        <MemoryRouter initialEntries={[{ pathname: '/join/ABCDE23456', state: { signedIn: true } }]}>
-          <Routes><Route path="/join/:code" element={<JoinPage />} /></Routes>
-        </MemoryRouter>,
-      );
-      fireEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
-      expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument(); // the options, not a spinner into a join
-      expect(m.previewWithSession).not.toHaveBeenCalled();
-      expect(m.joinWithSession).not.toHaveBeenCalled();
-    });
-
     it('a session left over from before is ended when the options open; it never joins on its own', async () => {
       full();
       m.currentSession.mockReset();
@@ -379,37 +362,93 @@ describe('/join/:code', () => {
     });
   });
 
-  describe('ending the session when a sign-in return lands on a link that cannot be joined', () => {
+  describe('a sign-in return (Google / Apple / an email link) landing on a link the preview called refused or dead', () => {
+    // These all arrive through /auth/web-callback, which hands back `signedIn`. The no-session preview may say "full",
+    // so the FLOW (not a blind sign-out) must preview WITH the session: an existing member is told "You're already in".
     const renderWith = (state: unknown, path = '/join/ABCDE23456') =>
       render(
         <MemoryRouter initialEntries={[{ pathname: path, state }]}>
           <Routes><Route path="/join/:code" element={<JoinPage />} /></Routes>
         </MemoryRouter>,
       );
-
-    it('refused after a sign-in return: the session is ended (the flow never mounts to do it)', async () => {
-      answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'league_full' });
-      renderWith({ signedIn: true });
-      expect(await screen.findByRole('alert')).toHaveTextContent('is full');
-      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalledTimes(1));
+    const pl = (over: Record<string, unknown> = {}) => ({ name: 'Stock Scudetto', members: 6, max: 6, stakeMode: 'fixed_notional', notionalPerSlot: 2000, budgetAmount: null, leagueType: null, numWeeks: 14, durationDays: null, draftDate: '2026-10-03T23:00:00Z', draftStatus: 'not_started', ...over });
+    beforeEach(() => {
+      m.currentSession.mockResolvedValue({ userId: 'u1' });
+      m.readOwnUsername.mockResolvedValue('roberto');
     });
 
-    it('a dead link after a sign-in return: ended too (found:false, and a malformed code)', async () => {
-      answer(200, { found: false });
+    it('an existing MEMBER who met "full" and came back signed in is told "You\'re already in {league}." (not the refusal again, no loop)', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'league_full' });
+      // ORDER matters: in life a sign-out deletes the session, so ending it before the flow has previewed WITH it would
+      // make this person "signed out" before they are recognised as a member.
+      const order: string[] = [];
+      m.previewWithSession.mockImplementation(async () => { order.push('preview'); return { kind: 'found', league: pl(), block: 'already_member' }; });
+      m.signOutLocal.mockImplementation(async () => { order.push('signOut'); });
       renderWith({ signedIn: true });
-      await screen.findByRole('alert');
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto."));
+      await waitFor(() => expect(order).toContain('signOut'));
+      expect(order[0]).toBe('preview'); // the session is used first, ended after
+      expect(screen.getByText('6 of 6')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull(); // no way back into the same loop
+      expect(m.joinWithSession).not.toHaveBeenCalled();
       await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
-      cleanup();
-      m.signOutLocal.mockClear();
+    });
+
+    it('a NON-member gets the genuine refusal (the ruled line), no Sign in, no join, and the session is ended', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: 'league_full' });
+      const order: string[] = [];
+      m.previewWithSession.mockImplementation(async () => { order.push('preview'); return { kind: 'found', league: pl(), block: 'league_full' }; });
+      m.signOutLocal.mockImplementation(async () => { order.push('signOut'); });
+      renderWith({ signedIn: true });
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Stock Scudetto is full. Ask whoever invited you if they can make room.'));
+      await waitFor(() => expect(order).toContain('signOut'));
+      expect(order[0]).toBe('preview');
+      expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+      expect(m.joinWithSession).not.toHaveBeenCalled();
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
+    });
+
+    it('"not taking new players" is recognised the same way', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: 'draft_started' });
+      m.previewWithSession.mockResolvedValue({ kind: 'found', league: pl({ draftStatus: 'in_progress' }), block: 'already_member' });
+      renderWith({ signedIn: true });
+      await waitFor(() => expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent("You're already in Stock Scudetto."));
+    });
+
+    it('a new account (no username yet) is asked for one first, like any sign-in', async () => {
+      answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: 'league_full' });
+      m.readOwnUsername.mockResolvedValue(null);
+      m.checkUsernames.mockResolvedValue([{ username: 'x', status: 'available' }]);
+      renderWith({ signedIn: true, emailConfirmed: true });
+      expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Pick a username');
+      expect(screen.getByText('✓ EMAIL CONFIRMED')).toBeInTheDocument();
+    });
+
+    it('a dead link (found:false) after a sign-in return: the flow finds nothing to join, shows the dead panel (no heading, no Sign in) and ends the session', async () => {
+      answer(200, { found: false });
+      m.previewWithSession.mockResolvedValue({ kind: 'bad_code' });
+      renderWith({ signedIn: true });
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(WEB_COPY.inviteLinkDead));
+      expect(screen.queryByRole('heading')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+      await waitFor(() => expect(m.signOutLocal).toHaveBeenCalled());
+    });
+
+    it('a code that can\'t be one has nothing to decide: the session is ended directly, no flow, no calls', async () => {
+      const spy = vi.spyOn(globalThis, 'fetch');
       renderWith({ signedIn: true }, '/join/%3Cscript%3E');
       await waitFor(() => expect(m.signOutLocal).toHaveBeenCalledTimes(1));
+      expect(spy).not.toHaveBeenCalled();
+      expect(m.previewWithSession).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button')).toBeNull();
     });
 
-    it('a COLD visit to a refused link signs nobody out (there is nothing to end)', async () => {
+    it('a COLD visit to a refused link signs nobody out (there is nothing to end) and offers Sign in', async () => {
       answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: 'league_full' });
       renderWith(null);
       await screen.findByRole('alert');
       expect(m.signOutLocal).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     });
 
     it('a joinable link after a sign-in return is the flow\'s to finish, not ended here', async () => {

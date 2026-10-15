@@ -19,22 +19,27 @@ describe('cleanDisplay: text from outside, dropped into our own headline templat
     // the second review's list: invisible or bidi, and not caught by the first cut
     ['a\u061Cb', 'a b'], // Arabic letter mark
     ['soft\u00ADhyphen', 'soft hyphen'],
-    ['grapheme\u034Fjoiner', 'grapheme joiner'],
+    ['grapheme\u034Fjoiner', 'graphemejoiner'], // glue: attaches to its neighbour, removed
     ['mongolian\u180Evowel', 'mongolian vowel'],
     ['dep\u206Aformat', 'dep format'],
     ['fill\u115F\u1160\u3164\uFFA0ers', 'fill ers'], // Hangul fillers
     ['braille\u2800blank', 'braille blank'],
-    ['var\uFE0Fsel', 'var sel'], // variation selector
-    ['tag\u{E0041}char', 'tag char'], // tag character
-    ['sel\u{E0100}ect', 'sel ect'], // variation selector supplement
+    ['var\uFE0Fsel', 'varsel'], // variation selector: glue
+    ['tag\u{E0041}char', 'tagchar'], // tag character: glue
+    ['sel\u{E0100}ect', 'select'], // variation selector supplement: glue
     ['obj\uFFFCrepl', 'obj repl'],
     ['line\u2028sep\u2029para', 'line sep para'],
     ['non\u00A0breaking', 'non breaking'],
     // the third review's list
-    ['khmer\u17B4vowel', 'khmer vowel'],
-    ['mongolian\u180Bfvs\u180Fx', 'mongolian fvs x'],
+    ['khmer\u17B4vowel', 'khmervowel'],
+    ['mongolian\u180Bfvs\u180Fx', 'mongolianfvsx'],
+    ['mongolian\u180Evowel separator', 'mongolian vowel separator'], // U+180E is a SEPARATOR, not glue
     ['reserved\uFFF0special', 'reserved special'],
-    ['reserved\u{E0FFF}ignorable', 'reserved ignorable'],
+    ['reserved\u{E0FFF}ignorable', 'reservedignorable'],
+    // real names that use joiners and selectors must survive intact
+    ['\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645', '\u0645\u06CC\u062E\u0648\u0627\u0647\u0645'], // Persian: ZWNJ removed, the word is not split in two
+    ['I \u2764\uFE0F FC', 'I \u2764 FC'], // a heart with its emoji selector: not 'I \u2764  FC' with a hole
+    ['\u{1F468}\u200D\u{1F469}\u200D\u{1F467}', '\u{1F468}\u{1F469}\u{1F467}'], // a family emoji becomes its three people, adjacent
   ])('%j -> %j', (raw, want) => {
     expect(cleanDisplay(raw)).toBe(want);
   });
