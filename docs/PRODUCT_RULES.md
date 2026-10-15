@@ -660,8 +660,9 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   (2026-10-14, board `#call-ob-arrival`: **B**). The no-sign-in preview returns only the name,
   the inviter and why a link can't be used (the Planner's security ruling), so the arrival, in
   the app and on the web page, is "{inviter} invited you to {league}" (no inviter: "You're
-  invited to {league}"), then Continue with Apple, Continue with Google, Use email. No
-  Managers / Draft / Stakes / Season card before sign-in.
+  invited to {league}"; while the preview loads, or when it can't be reached: "You're invited to
+  a league", the B call's own fallback), then Continue with Apple, Continue with Google, Use
+  email. No Managers / Draft / Stakes / Season card before sign-in.
   - **The facts move to "You're in {league}"** (same call: **C1**): a card with Managers, Stakes
     and Season under the draft sentence in the app; the web page, which has no draft sentence,
     adds a Draft row. Not on the pre-draft Home.
