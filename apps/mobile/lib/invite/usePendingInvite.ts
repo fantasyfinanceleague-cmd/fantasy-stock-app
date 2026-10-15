@@ -5,8 +5,9 @@
 //
 // 'unavailable' covers a 429, a 5xx, a network failure, or the function not deployed. A signed-out
 // 'not_found' does NOT clear the invite: the definitive clear-with-explanation happens at 'ready',
-// inside W3's auto-join. There is no retry loop; retryPreview() fires only on a user tap.
-import type { PreviewLeague } from '../join/joinPreview';
+// inside W3's auto-join. Before sign-in the only data is the league's NAME, its INVITER and a refusal
+// REASON (Planner: the no-session endpoint returns nothing else); counts, dates and stakes appear after
+// sign-in, in the session preview inside auto-join. There is no retry loop; retryPreview() fires only on a user tap.
 
 export type InviteReason = 'league_full' | 'draft_started' | 'season_completed';
 
@@ -17,13 +18,6 @@ export type InvitePreview =
       name: string;
       inviter: string | null;
       reason: InviteReason | null;
-      /**
-       * PROPOSED extension (not in the Orchestrator's shape): the league's facts as preview-league
-       * returns them, already parsed by lib/join/joinPreview.parsePreviewLeague. With it the arrival
-       * shows the plan's Managers / Draft / Stakes / Season rows and the existing refusal copy; without
-       * it the rows are left out and a refusal falls back to the shipped "can't join right now" line.
-       */
-      league?: PreviewLeague | null;
     }
   | { kind: 'not_found' }
   | { kind: 'unavailable' };

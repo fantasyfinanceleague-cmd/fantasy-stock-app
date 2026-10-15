@@ -31,8 +31,7 @@ import { confirmedChipLabel } from '../lib/shell/confirmedChip.ts';
 import { CONFIRM_EMAIL_COPY } from '../constants/confirmEmailCopy.ts';
 import { ARRIVAL_COPY, arrivalTitle, arrivalView } from '../lib/invite/arrivalView.ts';
 import { INVITE_FIXTURES, inviteFixture } from '../lib/invite/inviteFixture.ts';
-import { JOIN_COPY, blockMessage } from '../lib/join/joinPreview.ts';
-import type { InvitePreview } from '../lib/invite/usePendingInvite.ts';
+import { JOIN_COPY } from '../lib/join/joinPreview.ts';
 import { parseCaptureKnobs } from '../lib/shell/captureKnobs.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -319,7 +318,7 @@ Deno.test('arrival: loading, not found and unavailable are the generic line with
   for (const k of ['loading', 'not_found', 'unavailable'] as const) {
     const v = view(k);
     assertEquals(v.title, "You're invited to a league", k);
-    assertEquals([v.canJoin, v.refusal, v.rows.length, v.avatarName], [true, null, 0, null], k);
+    assertEquals([v.canJoin, v.refusal, v.avatarName], [true, null, null], k);
   }
   assertEquals(ARRIVAL_COPY.generic, "You're invited to a league");
 });
@@ -331,31 +330,28 @@ Deno.test('arrival: only an unavailable preview offers Try again, with Join\'s o
   assertEquals(ARRIVAL_COPY.tryAgain, 'Try again');
 });
 
-Deno.test('arrival: a found league shows Managers / Draft / Stakes / Season, and a joinable one has no refusal', () => {
+Deno.test('arrival: before sign-in there are no facts, only the name, the inviter and the refusal', () => {
   const v = view('found');
-  assertEquals(v.rows.map((r) => r.label), ['Managers', 'Draft', 'Stakes', 'Season']);
+  assertEquals(Object.keys(v).sort(), ['avatarName', 'canJoin', 'refusal', 'retry', 'title', 'unreachable']);
   assertEquals([v.canJoin, v.refusal, v.avatarName], [true, null, 'Stock Scudetto']);
+  const types = code(SOURCES['lib/invite/usePendingInvite.ts']);
+  assert(!/league\??:|PreviewLeague/.test(types), 'the pending-invite shape carries no league facts');
 });
 
-Deno.test('arrival: a refusal is Join\'s own copy, replaces the sign-in buttons, and a full league reads N of N', () => {
-  const l = { name: 'Stock Scudetto', max: 6 };
+Deno.test('arrival: the three refusals are the Planner\'s pre-sign-in lines, verbatim, and replace the sign-in buttons', () => {
   const full = view('full');
-  assertEquals([full.canJoin, full.refusal], [false, blockMessage('league_full', l)]);
-  assertEquals(full.rows[0], { label: 'Managers', value: '6 of 6' });
-  assertEquals(view('drafting').refusal, blockMessage('draft_in_progress', l));
-  assertEquals(view('over').refusal, blockMessage('season_completed', l));
-  // A finished draft (completed) reads "has already drafted", not "drafting right now".
-  const base = inviteFixture('found').preview as Extract<InvitePreview, { kind: 'found' }>;
-  const drafted = arrivalView({ preview: { ...base, reason: 'draft_started', league: { ...base.league!, draftStatus: 'completed' } } });
-  assertEquals(drafted.refusal, blockMessage('draft_started', l));
+  assertEquals([full.canJoin, full.refusal], [false, 'Stock Scudetto is full. Ask whoever invited you if they can make room.']);
+  assertEquals(view('drafting').refusal, "Stock Scudetto isn't taking new players right now.");
+  assertEquals(view('over').refusal, "Stock Scudetto isn't taking new players right now.");
+  assertEquals([view('drafting').canJoin, view('over').canJoin], [false, false]);
+  for (const k of ['found', 'solo', 'loading', 'not_found', 'unavailable'] as const) assertEquals(view(k).refusal, null, k);
 });
 
-Deno.test('arrival: without the league facts a full league falls back to the shipped line (never a guessed count)', () => {
-  const v = arrivalView({ preview: { kind: 'found', name: 'Stock Scudetto', inviter: 'Roberto', reason: 'league_full' } });
-  assertEquals(v.refusal, JOIN_COPY.unknownBlock);
-  assertEquals([v.canJoin, v.rows.length], [false, 0]);
-  const over = arrivalView({ preview: { kind: 'found', name: 'Stock Scudetto', inviter: 'Roberto', reason: 'season_completed' } });
-  assertEquals(over.refusal, "Stock Scudetto's season is over. Ask your commissioner whether they're running it back.");
+Deno.test('arrival: never Join\'s counts or "can\'t join right now" line before sign-in', () => {
+  const src = code(SOURCES['lib/invite/arrivalView.ts']);
+  for (const w of ['blockMessage', 'previewView', 'unknownBlock', 'members', 'max']) assert(!src.includes(w), w);
+  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
+  assert(!/rows|Card/.test(screen), 'no facts rows signed out');
 });
 
 Deno.test('arrival: the capture knob parses only in a dev build and only a known state', () => {
