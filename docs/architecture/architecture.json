@@ -2,34 +2,13 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "708c968ce265b5ab715ae7f745873530529fa07c",
-    "commitShort": "708c968c",
+    "commit": "c5d81afb183f76d92f11d60f191577c9ed1d41a5",
+    "commitShort": "c5d81afb",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w4",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/ConfirmedEmailNotice.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/FirstTimeTip.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/UsernamePicker.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/invite/inviteFixture.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
-      }
-    ],
-    "timestamp": "2026-10-15T03:09:32Z",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-15T03:09:56Z",
     "sourceHash": "sha256:58a1c355f12172c680b6a04fe72796de9e86fb90c538b3610a320aeb61dc55d6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
