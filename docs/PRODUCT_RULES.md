@@ -656,6 +656,25 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
 - **The inviter's name** shows on the invite page and the link-arrival preview ("{Roberto}
   invited you to {Stock Scudetto}"); the inviter only, nobody else (recommendation taken;
   amends the 2026-10-11 "no commissioner name" rule for link arrivals only).
+- **Before sign-in the invite shows the league's name and the inviter, nothing else**
+  (2026-10-14, board `#call-ob-arrival`: **B**). The no-sign-in preview returns only the name,
+  the inviter and why a link can't be used (the Planner's security ruling), so the arrival, in
+  the app and on the web page, is "{inviter} invited you to {league}" (no inviter: "You're
+  invited to {league}"), then Continue with Apple, Continue with Google, Use email. No
+  Managers / Draft / Stakes / Season card before sign-in.
+  - **The facts move to "You're in {league}"** (same call: **C1**): a card with Managers, Stakes
+    and Season under the draft sentence in the app; the web page, which has no draft sentence,
+    adds a Draft row. Not on the pre-draft Home.
+  - **When the link can't be used**, the yellow warning panel replaces the buttons, with "Sign in"
+    under it (approved via the Planner), verbatim: "{league} is full. Ask whoever invited you if
+    they can make room." / "{league} isn't taking new players right now." / "This invite link
+    doesn't work anymore. Ask for a new one."
+  - **A dead link has no heading** (the Planner, 2026-10-14): that screen is only "This invite
+    link doesn't work anymore. Ask for a new one." and "Sign in".
+  - **"Ask whoever invited you" belongs to the invite-link flow only** (the Planner, 2026-10-14):
+    a "full" refusal after the join, when the friend arrived by link, also reads "{league} is
+    full. Ask whoever invited you if they can make room." Everywhere else (a typed code, and so
+    on) the shipped "Ask your commissioner if they can make room." stays.
 - **No theme choice in onboarding** (System by default, Profile › Appearance), and the game's
   unfamiliar ideas (the week window, dollars decide) are taught in place, one line, once, on
   the first pre-draft Home and in the first draft room, never on a launch card.

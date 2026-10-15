@@ -25,6 +25,8 @@ the landing disagree, this folder wins until Giorgio changes it.
 2. **Approved screens:** the key screens and every other screen, the reference the app is built from.
 3. **Archive:** every decided call, collapsed, newest first, stamped with the decision, the date and the PR that recorded it (`ARCHIVE` in `board.jsx`; the sections themselves live in `window.KSArchivedCalls` in `inventory-board.jsx`, `KSHomeCalm`, `KSRowOrder`). A call moves to the Archive the moment its decision is recorded in PRODUCT_RULES: remove it from `OPEN`, add its stamp to `ARCHIVE`.
 
+**Review notes go under the phone, never inside it** (Giorgio, 2026-10-14). A label drawn inside a device mock reads as something users will see: he read the "Can't be built: no data before sign-in" stamp on `#call-ob-arrival`'s A as UI ("Is that going to be popping up on the screen?"). So every phone and web frame shows only what the screen shows. A reviewer note is a caption under the frame, in the separate dashed `.b-annot` style (`fig(key, cap, node, note)` in `onboarding.jsx`), prefixed "Review note:" and written in plain words that name what it points at ("The box with Managers, Draft, Stakes and Season can't be filled before sign-in: privacy rule.").
+
 ## Using them
 
 - **Landing (3a):** port `screens.jsx` into `apps/web/src/pages/landing/` as TSX (drop the IIFE, `export` each screen, turn `data.js` into the landing's `sampleData.ts`). Use the foundation's `ScoreDigits` and `TugBar` where they exist. The phone shows these screens and nothing invented.
