@@ -11,6 +11,50 @@
       content="Stockpile is a fantasy-finance league game — draft stocks, compete with friends in head-to-head matchups, and climb the leaderboard."
     />
     <title>Stockpile</title>
+    <script>
+      // Onboarding W5: runs BEFORE the module bundle, so nothing the bundle
+      // loads (the supabase client is created on import, with
+      // detectSessionInUrl) ever sees an auth code or error in the URL.
+      // /join/* and /auth/confirm get no-referrer. On /auth/confirm the query
+      // and hash are dropped from the URL; the outcome survives in this
+      // history entry's state (a reload keeps it; a fresh visit has none).
+      // "confirmed" ONLY for a code with no error: an expired or used link
+      // arrives with error/error_code/error_description (query or hash).
+      // The code and the invite (?invite=) are kept IN MEMORY only, for the
+      // phone's "Open the app" link and the league name; never in the URL,
+      // history, storage or the DOM until that link is drawn. The path match
+      // ignores case and percent-encoding, as the router does.
+      // Tested in src/join/earlyScrub.test.ts.
+      (function () {
+        var path = window.location.pathname;
+        try { path = decodeURIComponent(path); } catch (e) {}
+        path = path.toLowerCase();
+        var isConfirm = /^\/auth\/confirm\/?$/.test(path);
+        if (!isConfirm && !/^\/join\//.test(path)) return;
+        var meta = document.createElement('meta');
+        meta.name = 'referrer';
+        meta.content = 'no-referrer';
+        document.head.appendChild(meta);
+        if (!isConfirm) return;
+        var q = new URLSearchParams(window.location.search);
+        var h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        var keys = ['error', 'error_code', 'error_description'];
+        var hasError = false;
+        for (var i = 0; i < keys.length; i++) {
+          if (q.has(keys[i]) || h.has(keys[i])) hasError = true;
+        }
+        var code = q.get('code');
+        var prior = window.history.state && window.history.state.authConfirm;
+        var outcome = hasError ? 'error' : code ? 'confirmed' : prior === 'confirmed' || prior === 'error' ? prior : 'none';
+        var fresh = outcome === 'confirmed' && !!code;
+        Object.defineProperty(window, '__stockpileAuthConfirm', {
+          value: Object.freeze({ code: fresh ? code : null, invite: fresh ? q.get('invite') : null }),
+          enumerable: false,
+          configurable: true,
+        });
+        window.history.replaceState({ authConfirm: outcome }, '', '/auth/confirm');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

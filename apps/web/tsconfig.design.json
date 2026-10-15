@@ -14,7 +14,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "types": ["vitest/globals", "node"]
+    "types": ["vitest/globals", "node", "vite/client"]
   },
-  "include": ["src/design/**/*.ts", "src/design/**/*.tsx", "src/brand.ts"]
+  "include": ["src/design/**/*.ts", "src/design/**/*.tsx", "src/brand.ts", "src/join/**/*.ts", "src/join/**/*.tsx", "vite-plugins/**/*.ts"]
 }

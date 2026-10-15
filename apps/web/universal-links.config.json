@@ -1,0 +1,11 @@
+{
+  "domain": "fantasy-stock-app.vercel.app",
+  "appleTeamId": "688SPM7BS6",
+  "iosBundleId": "com.stockpile.fantasystock",
+  "appScheme": "fantasystockapp",
+  "appStoreUrl": "__PLACEHOLDER__APP_STORE_URL",
+  "components": [
+    { "/": "/join/*", "comment": "invite links; the app validates the code" },
+    { "/": "/auth/confirm", "comment": "email-confirmation return (PKCE code in the query)" }
+  ]
+}

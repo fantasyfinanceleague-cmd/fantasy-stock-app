@@ -35,7 +35,7 @@ export default defineConfig([
   // and src/brand.ts only — the rest of apps/web stays JS/eslint-recommended
   // as above, untouched.
   {
-    files: ['src/design/**/*.{ts,tsx}', 'src/brand.ts'],
+    files: ['src/design/**/*.{ts,tsx}', 'src/brand.ts', 'src/join/**/*.{ts,tsx}', 'vite-plugins/**/*.ts'],
     extends: [
       ...tseslint.configs.recommended,
       reactHooks.configs['recommended-latest'],
