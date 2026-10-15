@@ -33,6 +33,34 @@ function load() {
 }
 load();
 
+// Get started follows the cards on the cold path. Skipping (or finishing) the cards marks them seen
+// at once (Skip is remembered forever; plan 2026-10-14), which would drop `get-started` from the
+// navigator with them: this in-memory flag keeps it reachable until the person leaves it.
+let getStartedOpen = false;
+
+/** Raised BEFORE router.replace('/get-started'); cleared by leaveGetStarted(). Not persisted. */
+export function openGetStarted(): void {
+  if (getStartedOpen) return;
+  getStartedOpen = true;
+  emit();
+}
+
+export function leaveGetStarted(): void {
+  if (!getStartedOpen) return;
+  getStartedOpen = false;
+  emit();
+}
+
+export function useGetStartedOpen(): boolean {
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    () => getStartedOpen
+  );
+}
+
 export function markOnboardingSeen(): void {
   seen = true;
   emit();

@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
 import { keepDots } from '@/lib/game/keepDots';
+import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
 } from '@/lib/join/joinFixtureGate';
@@ -226,7 +227,8 @@ export default function JoinLeagueScreen() {
   const view = league ? previewView(league, block) : null;
 
   if (step === 'joined' && league) {
-    return <Joined name={joinedName} draftDate={league.draftDate} onContinue={() => router.replace('/(tabs)')} />;
+    // The notifications ask comes right after joining (when it is due), then Home.
+    return <Joined name={joinedName} draftDate={league.draftDate} onContinue={() => void pushAskRouteFor('/(tabs)').then((to) => router.replace(to as never))} />;
   }
 
   if (step === 'preview' && view) {

@@ -12,7 +12,7 @@ import {
 const NAMES: IconName[] = [
   'chevronRight', 'chevronLeft', 'chevronDown', 'chevronUp', 'check', 'circle', 'info',
   'close', 'search', 'add', 'remove', 'share', 'trophy', 'lock', 'mail', 'alert', 'star', 'starFilled',
-  'checkCircle', 'pending',
+  'checkCircle', 'pending', 'bell',
   'tabHome', 'tabHomeSelected', 'tabMatchup', 'tabMatchupSelected', 'tabLeague', 'tabLeagueSelected', 'tabPortfolio', 'tabPortfolioSelected',
 ];
 
@@ -25,6 +25,7 @@ Deno.test('the name map is exhaustive and matches the spec table', () => {
   assertEquals(ICON_GLYPHS.check, 'checkmark');
   assertEquals(ICON_GLYPHS.circle, 'ellipse-outline');
   assertEquals(ICON_GLYPHS.info, 'information-circle-outline');
+  assertEquals(ICON_GLYPHS.bell, 'notifications-outline');
   assertEquals(ICON_GLYPHS.share, 'share-outline');
   assertEquals(ICON_GLYPHS.lock, 'lock-closed-outline');
   assertEquals(ICON_GLYPHS.mail, 'mail-outline');

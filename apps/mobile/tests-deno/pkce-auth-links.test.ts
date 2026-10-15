@@ -1401,7 +1401,7 @@ Deno.test('wiring: push setup and deep-link replay both WAIT for the recovery ho
   assert(sp.includes("event === 'SIGNED_IN' && session?.user && !notificationsSetup.current && !isRecoveryHold()"));
   const release = sp.slice(sp.indexOf('subscribeRecoverySession(() => {'));
   assert(release.includes('if (isRecoveryHold() || !id || notificationsSetup.current) return;'));
-  assert(release.includes('setupPushNotifications(id)'));
+  assert(release.includes('setupPushNotifications(id, false)'));
   assert(sp.includes('userIdRef.current = session?.user?.id ?? null;'));
   const layout = SOURCES['app/_layout.tsx'];
   assert(layout.includes('pendingRoute.authChanged(shownPhase, isRecoveryHold())'));

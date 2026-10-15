@@ -87,6 +87,8 @@ export const PAIRS: readonly ContrastPair[] = [
   ['text', 'warnTint', 'surface', 4.5, 'Text on the warn tint over a surface (no current use: the signups and bye notes read warnText since W4 Onboarding)'],
   // W4 Portfolio: the money sheet's warn panel (a refusal or a pre-review block) on the sheet's surface.
   ['warnText', 'warnTint', 'surface', 4.5, 'Money sheet warn panel (refusals, pre-review blocks)'],
+  // W4 Onboarding: the "✓ EMAIL CONFIRMED" chip above Pick a username (gain on its tint, on the page).
+  ['gain', 'gainTint', 'bg', 4.5, 'Email confirmed chip (on the page)'],
   ['live', 'inset', null, 3, 'Live dot inside a LIVE chip (graphic)'],
   ['text', 'line', null, 4.5, 'Initials on a neutral (other manager) avatar'],
   ['text2', 'line', null, 4.5, 'Neutral "?" avatar fallback'],

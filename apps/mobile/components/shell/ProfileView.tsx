@@ -36,10 +36,12 @@ export interface ProfileViewProps {
   onUsername: () => void;
   onChangePassword: () => void;
   onAppearance: () => void;
+  /** Opens the three onboarding cards, still (onboarding W4). */
+  onHowItWorks: () => void;
   onSignOut: () => void;
 }
 
-export function ProfileView({ username, email, onUsername, onChangePassword, onAppearance, onSignOut }: ProfileViewProps) {
+export function ProfileView({ username, email, onUsername, onChangePassword, onAppearance, onHowItWorks, onSignOut }: ProfileViewProps) {
   const { preference } = useTheme();
   const version = Constants.expoConfig?.version ?? '';
 
@@ -62,6 +64,8 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
         <Row label="Change password" onPress={onChangePassword} />
         <RowGap />
         <Row label="Appearance" value={APPEARANCE_LABEL[preference]} onPress={onAppearance} />
+        <RowGap />
+        <Row label="How it works" onPress={onHowItWorks} />
       </Card>
 
       <Card style={styles.card}>

@@ -29,6 +29,7 @@ import {
   type UsernameEvent,
   type UsernameState,
 } from '../lib/shell/usernameMachine.ts';
+import { isGamertagSafe, seededRng } from '../lib/shell/gamertag.ts';
 
 import migrationSql from '../../../supabase/migrations/20261007000000_username_write_path.sql' with { type: 'text' };
 
@@ -168,13 +169,8 @@ Deno.test('case-insensitive: with "roberto" taken, "Roberto" and "ROBERTO" are t
 // ── Suggestions ───────────────────────────────────────────────────────────
 
 Deno.test('suggestions: ≤ 9 (check_usernames caps at 10), unique case-insensitively, all format-valid, never the taken name', () => {
-  for (const [typed, email] of [
-    ['roberto', 'roberto.bianchi'],
-    ['Roberto', null],
-    ['a_very_long_username_x', 'someone'],
-    ['rob', 'r'],
-  ] as [string, string | null][]) {
-    const s = usernameSuggestions(typed, email, 26);
+  for (const typed of ['roberto', 'Roberto', 'a_very_long_username_x', 'rob', '✨']) {
+    const s = usernameSuggestions(typed, seededRng(7), 26);
     assertEquals(s.length > 0 && s.length <= 9, true, `${typed}: ${s.length}`);
     assertEquals(new Set(s.map((x) => x.toLowerCase())).size, s.length, typed);
     for (const c of s) {
@@ -184,11 +180,22 @@ Deno.test('suggestions: ≤ 9 (check_usernames caps at 10), unique case-insensit
   }
 });
 
-Deno.test('suggestions: deterministic for a seed, and they include the email-derived name', () => {
-  assertEquals(usernameSuggestions('roberto', 'roberto.bianchi', 26), usernameSuggestions('roberto', 'roberto.bianchi', 26));
-  const s = usernameSuggestions('roberto', 'roberto.bianchi', 26);
-  assertEquals(s.includes('roberto_26'), true);
-  assertEquals(s.includes('roberto_bianchi'), true);
+// Giorgio, 2026-10-14 ("let's not expose their first names"): a taken-name alternative is a digit
+// variant of what the user TYPED or a generated gamertag. There is no email input at all.
+Deno.test('suggestions: digit variants of the TYPED name, then gamertags; deterministic for an rng and a seed', () => {
+  assertEquals(usernameSuggestions('roberto', seededRng(7), 26), usernameSuggestions('roberto', seededRng(7), 26));
+  const s = usernameSuggestions('roberto', seededRng(7), 26);
+  assertEquals(s.slice(0, 4), ['roberto_26', 'roberto26', 'roberto_1', 'roberto_10']);
+  for (const tag of s.slice(4)) assertEquals(isGamertagSafe(tag), true, tag);
+  // A name with nothing to vary (all symbols) still gets alternatives: gamertags.
+  assertEquals(usernameSuggestions('✨', seededRng(7), 26).length, 9);
+});
+
+Deno.test('suggestions: the function takes no email, and the machine never mentions one', () => {
+  assertEquals(usernameSuggestions.length, 3);
+  const src = Deno.readTextFileSync(new URL('../lib/shell/usernameMachine.ts', import.meta.url));
+  const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  assertEquals(/emailLocal|\.email\b|user_metadata|raw_user_meta/.test(code), false);
 });
 
 Deno.test('suggestions: sanitising keeps only the username alphabet', () => {
@@ -198,7 +205,7 @@ Deno.test('suggestions: sanitising keeps only the username alphabet', () => {
 });
 
 Deno.test('suggestions: the 3 shown are the first available, in offer order', () => {
-  const offered = usernameSuggestions('roberto', 'roberto.bianchi', 26);
+  const offered = usernameSuggestions('roberto', seededRng(7), 26);
   const rows = fakeCheckUsernames(['roberto', 'roberto_26', offered[2]], null)(offered);
   const shown = pickAvailable(offered, rows);
   assertEquals(shown.length, 3);

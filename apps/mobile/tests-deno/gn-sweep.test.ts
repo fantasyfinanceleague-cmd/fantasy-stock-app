@@ -86,29 +86,36 @@ Deno.test('LeagueContext: classifies the reads, empties the lists on ANY non-ok 
 for (const [file, title] of [['app/(tabs)/index.tsx', 'Home'], ['app/(tabs)/league.tsx', 'League']] as const) {
   Deno.test(`${title}: the failed read shows the load-failed state with Try again (it re-reads), BEFORE "No leagues yet"`, () => {
     const src = code(SOURCES[file]);
-    const failed = src.indexOf("if (fallback === 'failed') {");
-    const empty = src.indexOf('heading="No leagues yet"');
+    const failed = src.indexOf("if (fallback === 'failed') return <LeaguesFailedState");
+    const empty = src.indexOf('<NoLeagueState');
     assert(failed > 0 && empty > failed, 'failed is decided before the empty state');
-    const block = src.slice(failed, src.indexOf('\n    );', failed)); // the placeholder's whole JSX
-    for (const s of [`title="${title}"`, 'showAvatar', 'heading={LEAGUES_LOAD_FAILED}', 'message={MONEY_COPY.loadRetryMessage}', 'actionLabel={MONEY_COPY.tryAgain}', 'onAction={refresh}', 'onRefresh={refresh}']) {
-      assert(block.includes(s), `${title}: ${s}`);
-    }
+    assert(src.includes(`<LeaguesFailedState title="${title}" onRefresh={refresh} />`));
+    assert(src.includes(`<NoLeagueState title="${title}" onRefresh={refresh} />`));
     assert(src.includes('leagueFallback({ loading, leagueCount:'));
     assert(src.includes('loadFailed'));
   });
 }
 
+// The one shared failed state (onboarding W4 moved the words out of Home and League).
+Deno.test('LeaguesFailedState: the load-failed heading, the retry line and Try again, which re-reads', () => {
+  const src = code(SOURCES['components/shell/NoLeagueState.tsx']);
+  const block = src.slice(src.indexOf('export function LeaguesFailedState'), src.indexOf('export function LeagueListGate'));
+  for (const s of ['showAvatar', 'heading={LEAGUES_LOAD_FAILED}', 'message={MONEY_COPY.loadRetryMessage}', 'actionLabel={MONEY_COPY.tryAgain}', 'onAction={onRefresh}', 'onRefresh={onRefresh}']) {
+    assert(block.includes(s), s);
+  }
+});
+
 Deno.test('Home: "No leagues yet" only on the empty fallback (not on !loading && 0, the old rule)', () => {
   const home = code(SOURCES['app/(tabs)/index.tsx']);
   assert(!home.includes('if (!loading && leagues.length === 0) {'));
-  assert(home.includes("if (fallback === 'empty') {"));
-  assert(home.indexOf("if (fallback === 'empty') {") < home.indexOf('heading="No leagues yet"'));
+  assert(home.includes("if (fallback === 'empty') return <NoLeagueState"));
+  assert(!home.includes('heading="No leagues yet"'), 'the words live in NoLeagueState, once');
 });
 
 Deno.test('the load-failed copy: Giorgio\'s approved title (2026-10-14), the existing retry line and Try again', async () => {
   assertEquals(LEAGUES_LOAD_FAILED, "Your leagues didn't load.");
   // One constant, shared by Home and League (never a second copy of the string).
-  for (const p of ['app/(tabs)/index.tsx', 'app/(tabs)/league.tsx']) assert(!SOURCES[p].includes("leagues didn't load"), p);
+  for (const p of ['app/(tabs)/index.tsx', 'app/(tabs)/league.tsx', 'components/shell/NoLeagueState.tsx']) assert(!SOURCES[p].includes("leagues didn't load"), p);
   const { COPY } = await import('../lib/money/moneyCopy.ts');
   assertEquals(COPY.tryAgain, 'Try again');
   assertEquals(COPY.loadRetryMessage, 'Check your connection, then try again.');

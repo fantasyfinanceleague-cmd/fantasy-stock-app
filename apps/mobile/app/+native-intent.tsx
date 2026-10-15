@@ -1,6 +1,7 @@
 import { isConfirmRoute } from '@/lib/auth/confirmLink';
 import { isRecoveryRoute } from '@/lib/recoveryLink';
 import { pendingRoute } from '@/lib/shell/pendingRoute';
+import { markOnboardingSeen } from '@/lib/shell/firstRun';
 
 // Phase 3b-1 — the first half of the signed-out deep-link resume.
 //
@@ -14,6 +15,9 @@ import { pendingRoute } from '@/lib/shell/pendingRoute';
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
   try {
     pendingRoute.record(path);
+    // A link arrival is the invited path: it never sees the cards (cold installs only; plan
+    // 2026-10-14), so the cards count as seen from here on.
+    if (pendingRoute.peek()) markOnboardingSeen();
   } catch (e) {
     // Throwing here can crash the app (expo-router's own warning); the
     // link still routes normally, it just won't be resumed.

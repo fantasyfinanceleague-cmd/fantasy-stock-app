@@ -11,6 +11,7 @@
  *   EXPO_PUBLIC_JOIN_AUTO=find|join        Join presses Find league (and then Join) by itself
  *   EXPO_PUBLIC_SIGNUP_PAUSED=1            Create account opens on the signups-paused refusal
  *   EXPO_PUBLIC_USERNAME_PREFILL=<name>    the username picker starts with this typed in
+ *   EXPO_PUBLIC_PUSH_ASK=1                 the notifications ask is due (a simulator has no push token)
  */
 import type { CreateStep } from '../game/createLeagueSteps';
 
@@ -24,9 +25,10 @@ export interface CaptureKnobs {
   joinAuto: 'find' | 'join' | null;
   signupPaused: boolean;
   usernamePrefill: string | null;
+  pushAsk: boolean;
 }
 
-export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null };
+export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null, pushAsk: false };
 
 export interface CaptureEnv {
   card?: string;
@@ -34,6 +36,7 @@ export interface CaptureEnv {
   joinAuto?: string;
   signupPaused?: string;
   usernamePrefill?: string;
+  pushAsk?: string;
 }
 
 /** Only a development build reads anything; an unrecognised value is ignored, never guessed. */
@@ -49,6 +52,7 @@ export function parseCaptureKnobs(isDev: boolean, env: CaptureEnv): CaptureKnobs
     joinAuto,
     signupPaused: env.signupPaused === '1',
     usernamePrefill: prefill,
+    pushAsk: env.pushAsk === '1',
   };
 }
 

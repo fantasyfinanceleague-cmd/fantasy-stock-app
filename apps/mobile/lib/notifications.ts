@@ -22,7 +22,7 @@ Notifications.setNotificationHandler({
 /**
  * Request notification permissions and get push token
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForPushNotifications(prompt = true): Promise<string | null> {
   // Only works on physical devices
   if (!Device.isDevice) {
     console.log('Push notifications require a physical device');
@@ -33,8 +33,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
-  // Request permissions if not granted
-  if (existingStatus !== 'granted') {
+  // Request permissions if not granted. Onboarding W4: only when asked to (prompt): the iOS prompt
+  // comes from the notifications ask after a league exists (lib/shell/pushAsk.ts), never from
+  // signing in, so a silent refresh registers a token only if permission was already given.
+  if (existingStatus !== 'granted' && prompt) {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
@@ -106,8 +108,8 @@ export async function removePushToken(userId: string): Promise<void> {
 /**
  * Register and save push token for a user
  */
-export async function setupPushNotifications(userId: string): Promise<void> {
-  const token = await registerForPushNotifications();
+export async function setupPushNotifications(userId: string, prompt = true): Promise<void> {
+  const token = await registerForPushNotifications(prompt);
   if (token) {
     await savePushToken(userId, token);
   }

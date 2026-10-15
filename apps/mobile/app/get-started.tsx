@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { GetStarted } from '@/components/shell/GetStarted';
-import { markOnboardingSeen } from '@/lib/shell/firstRun';
+import { leaveGetStarted, markOnboardingSeen } from '@/lib/shell/firstRun';
 import { pendingRoute } from '@/lib/shell/pendingRoute';
 
 // Phase 3b-1 — Get started (spec row 7; D1 ruling). The end of onboarding.
@@ -15,6 +15,7 @@ export default function GetStartedScreen() {
     if (resume) pendingRoute.record(resume);
     router.replace(to);
     markOnboardingSeen();
+    leaveGetStarted();
   };
   return (
     <AuthScaffold>

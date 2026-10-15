@@ -30,6 +30,7 @@ import {
   yourPickLine,
 } from '@/lib/game/autoStart';
 import { AutoStartBlockers } from '@/components/game/AutoStartBlockers';
+import { FirstTimeTip } from '@/components/shell/FirstTimeTip';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { PICK_A_TIME_HOME, SET_DRAFT_TIME, homeNoDateBlock, homeSetsDraftTime } from '@/lib/game/draftTimeSheet';
 import {
@@ -224,6 +225,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
 
   return (
     <>
+      {/* Onboarding W4: the week window, taught once in place on the first pre-draft Home. */}
+      <FirstTimeTip tip="weekWindow" />
       {view?.blockers ? (
         <AutoStartBlockers
           auto={auto}

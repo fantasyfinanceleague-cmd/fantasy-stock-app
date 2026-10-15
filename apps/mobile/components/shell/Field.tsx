@@ -31,17 +31,19 @@ export interface FieldProps extends Omit<TextInputProps, 'style' | 'placeholderT
   rules?: FieldRule[];
   /** Right-hand slot inside the box (the username availability state). */
   trailing?: ReactNode;
+  /** Drawn as chosen: the 2pt accent edge a focused field has, without focus (the pre-filled username, W4). */
+  chosen?: boolean;
 }
 
 export const Field = forwardRef<TextInput, FieldProps>(function Field(
-  { label, error, invalid = false, helper, rules, trailing, onFocus, onBlur, ...input },
+  { label, error, invalid = false, helper, rules, trailing, chosen = false, onFocus, onBlur, ...input },
   ref
 ) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const inError = !!error || invalid;
-  const emphasised = inError || focused;
-  const borderColor = inError ? colors.danger : focused ? colors.accent : colors.borderStrong;
+  const emphasised = inError || focused || chosen;
+  const borderColor = inError ? colors.danger : focused || chosen ? colors.accent : colors.borderStrong;
 
   return (
     <View style={styles.field}>

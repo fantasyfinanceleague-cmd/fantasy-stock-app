@@ -21,7 +21,8 @@ import { addNotificationListeners, removePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import { isRecoveryHold, isRecoverySession, setRecoveryInProgress, setRecoverySession, subscribeRecoverySession } from '@/lib/auth/recoverySession';
 import { verifierSlot } from '@/lib/auth/verifierStorage';
-import { createAuthLinkHandler } from '@/lib/auth/authLinkHandlers';
+import { createAuthLinkHandler, type AuthLinkOutcome } from '@/lib/auth/authLinkHandlers';
+import { raisesConfirmFailedNotice, setConfirmFailedNotice } from '@/lib/auth/confirmFailedNotice';
 import { createLinkDedupe } from '@/lib/auth/authLink';
 import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
@@ -31,7 +32,7 @@ import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
 import { MoneyHostProvider } from '@/components/money/MoneyHost';
 import { useMotion } from '@/components/sp/motion';
 import { takeSignInIntent } from '@/lib/shell/signInTransition';
-import { useOnboardingSeen } from '@/lib/shell/firstRun';
+import { useGetStartedOpen, useOnboardingSeen } from '@/lib/shell/firstRun';
 import { ThemeDipProvider } from '@/components/shell/ThemeDip';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
@@ -61,6 +62,7 @@ const ROOT = { flex: 1 } as const;
 function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { user, authPhase } = useSession();
   const onboardingSeen = useOnboardingSeen();
+  const getStartedOpen = useGetStartedOpen();
 
   // The phase the navigator renders. authPhase passes through 'unknown' not
   // only at cold start but on EVERY sign-in, while the new account's profile
@@ -182,16 +184,24 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
       dedupe: handledAuthLinks,
     });
 
+    // The one outcome the screens care about: a confirmation link reached THIS phone with a code the
+    // phone couldn't exchange, so Sign in says the email is confirmed (lib/auth/confirmFailedNotice.ts;
+    // plan Decisions row 16). Every other outcome, 'confirm-ignored' and 'confirm-wrong-type' included,
+    // leaves Sign in as it was.
+    const noteOutcome = (outcome: AuthLinkOutcome) => {
+      if (raisesConfirmFailedNotice(outcome)) setConfirmFailedNotice(true);
+    };
+
     // Get the initial URL if app was opened from a link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        void handleDeepLink(url).catch(() => console.warn('[auth] link handler failed', ''));
+        void handleDeepLink(url).then(noteOutcome).catch(() => console.warn('[auth] link handler failed', ''));
       }
     });
 
     // Listen for URL changes while app is running
     const subscription = Linking.addEventListener('url', (event) => {
-      void handleDeepLink(event.url).catch(() => console.warn('[auth] link handler failed', ''));
+      void handleDeepLink(event.url).then(noteOutcome).catch(() => console.warn('[auth] link handler failed', ''));
     });
 
     return () => {
@@ -265,6 +275,10 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                     going, so they land on sign-in (spec gate 9). */}
                 <Stack.Protected guard={!onboardingSeen && !pendingRoute.peek()}>
                   <Stack.Screen name="onboarding" options={crossfade} />
+                </Stack.Protected>
+                {/* Get started follows the cards on the cold path. It stays open after a Skip marks the
+                    cards seen (lib/shell/firstRun.ts openGetStarted), until the person leaves it. */}
+                <Stack.Protected guard={getStartedOpen || (!onboardingSeen && !pendingRoute.peek())}>
                   <Stack.Screen name="get-started" />
                 </Stack.Protected>
                 <Stack.Screen name="login" options={crossfade} />
@@ -284,6 +298,7 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="username" />
                   <Stack.Screen name="appearance" />
                   <Stack.Screen name="change-password" />
+                  <Stack.Screen name="notifications-ask" options={HIDDEN_HEADER} />
                   <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
                   <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />
                   <Stack.Screen name="league-settings" options={HIDDEN_HEADER_MODAL} />
