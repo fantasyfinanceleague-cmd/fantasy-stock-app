@@ -178,7 +178,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/AuthScaffold.tsx:36` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/shell/ConfirmEmailSent.tsx:67` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
 | `components/shell/ConfirmEmailSent.tsx:69` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
-| `components/shell/ConfirmedEmailNotice.tsx:37` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
+| `components/shell/ConfirmedEmailNotice.tsx:40` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
 | `components/shell/FirstTimeTip.tsx:27` | Pressable | onPress | `inline: () => dismissTip(tip)` | fn dismissTip |  |
 | `components/shell/GetStarted.tsx:44` | Choice | onPress | `onCreate` | prop onCreate (the caller's) |  |
 | `components/shell/GetStarted.tsx:45` | Choice | onPress | `onJoin` | prop onJoin (the caller's) |  |
@@ -215,11 +215,11 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ShellTabBar.tsx:151` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:152` | Pressable | onLongPress | `onLongPress` | prop onLongPress (the caller's) |  |
 | `components/shell/SocialSignIn.tsx:105` | Button | onPress | `inline: () => run('google')` | fn run | `busy === 'apple'` |
-| `components/shell/UsernamePicker.tsx:240` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
-| `components/shell/UsernamePicker.tsx:249` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
-| `components/shell/UsernamePicker.tsx:250` | Button | onPress | `startEditing` | fn startEditing |  |
-| `components/shell/UsernamePicker.tsx:256` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `!view.canContinue && buttonStatus === 'i` |
-| `components/shell/UsernamePicker.tsx:267` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
+| `components/shell/UsernamePicker.tsx:242` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
+| `components/shell/UsernamePicker.tsx:251` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
+| `components/shell/UsernamePicker.tsx:252` | Button | onPress | `startEditing` | fn startEditing |  |
+| `components/shell/UsernamePicker.tsx:258` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `!view.canContinue && buttonStatus === 'i` |
+| `components/shell/UsernamePicker.tsx:269` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/onboarding/OnboardingPager.tsx:77` | Pressable | onPress | `onSkip` | prop onSkip (the caller's) |  |
 | `components/shell/onboarding/OnboardingPager.tsx:247` | Button | onPress | `onNext` | prop onNext (the caller's) |  |
 | `components/sp/Button.tsx:114` | PressableScale | ... | `spread {...rest}` | props of rest | `!a11y.pressable` |

@@ -123,6 +123,8 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
   // DEV captures only: start with a name typed in (e.g. a taken one), as if the user had.
   useEffect(() => {
     if (CAPTURE.usernamePrefill && current === null) onChange(CAPTURE.usernamePrefill);
+    // ...and the EMAIL CONFIRMED chip, raised through the real store so keeping the name clears it.
+    if (CAPTURE.confirmed === 'chip') setEmailJustConfirmed(true);
     // Mount-only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -184,7 +186,7 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
   const picking = mode !== 'editing';
   return (
     <>
-      {firstRun && (confirmed || CAPTURE.confirmed === 'chip') ? <EmailConfirmedChip /> : null}
+      {firstRun && confirmed ? <EmailConfirmedChip /> : null}
       <View style={styles.heading}>
         <ScreenTitle>Pick a username</ScreenTitle>
         <Text variant="body" tone="secondary">

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { space } from '@/constants/tokens';
 import { Card } from '@/components/sp/Card';
@@ -24,8 +24,11 @@ import {
 const NOTICE_MAX_SCALE = 2;
 
 export function ConfirmedEmailNotice() {
-  const stored = useSyncExternalStore(subscribeConfirmFailedNotice, isConfirmFailedNotice);
-  const shown = stored || CAPTURE.confirmed === 'notice'; // DEV captures only (captureDev reads nothing in release)
+  const shown = useSyncExternalStore(subscribeConfirmFailedNotice, isConfirmFailedNotice);
+  // DEV captures only (captureDev reads nothing in release): the knob RAISES the notice once, through the real store, so dismissing it works.
+  useEffect(() => {
+    if (CAPTURE.confirmed === 'notice') setConfirmFailedNotice(true);
+  }, []);
   if (!shown) return null;
   return (
     <Card style={styles.card} accessibilityLiveRegion="polite">

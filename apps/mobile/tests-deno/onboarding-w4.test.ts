@@ -482,3 +482,12 @@ Deno.test('How it works: the thumbnail is tall enough for the FINAL scene (its w
   assert(height >= 96, 'the thumbnail is at least 96pt tall');
   assert(sceneWidth * scale <= 120, 'the scaled scene fits the thumbnail width');
 });
+
+Deno.test('capture knobs seed the real stores once (so a dismiss or a keep still acts), never override the screen', () => {
+  const notice = code(SOURCES['components/shell/ConfirmedEmailNotice.tsx']);
+  assert(notice.includes("if (CAPTURE.confirmed === 'notice') setConfirmFailedNotice(true);"));
+  assert(!/stored \|\| CAPTURE|confirmed \|\| CAPTURE/.test(notice), 'no OR-ing the knob into what is shown');
+  const picker = code(SOURCES['components/shell/UsernamePicker.tsx']);
+  assert(picker.includes("if (CAPTURE.confirmed === 'chip') setEmailJustConfirmed(true);"));
+  assert(picker.includes('{firstRun && confirmed ? <EmailConfirmedChip /> : null}'));
+});
