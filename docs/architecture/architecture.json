@@ -2,151 +2,55 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "16694781bce949c3768b710e1fd251100f44a038",
-    "commitShort": "16694781",
+    "commit": "3c613027ea1d8ba69e0eb9d38f21e2b5190ad674",
+    "commitShort": "3c613027",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/w8-dead-controls-part1",
+    "branch": "feat/onboarding-w2-auth",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/design-gallery.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/__tests__/StyledText-test.js"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ExternalLink.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/game/MatchScoreboard.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/LeagueCarousel.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/LeagueSwitcher.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/PerformanceChart.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/PLBreakdownModal.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/PortfolioChart.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/sp/game/Chyron.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/sp/game/Scoreboard.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/StatusBadge.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/StyledText.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/Themed.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/Banner.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/Button.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/Card.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/index.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/Screen.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/ui/SectionLabel.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/useColorScheme.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/useColorScheme.web.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/components/WeekNavigator.tsx"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/lib/game/matchScoreboardModel.ts"
+        "path": "apps/mobile/app/reset-password.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/money/usePortfolioData.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/lib/useHistoricalPL.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/tests-deno/game-match-scoreboard.test.ts"
+        "path": "apps/mobile/lib/auth/authFetch.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/large-text-layouts.test.ts"
+        "path": "apps/mobile/lib/auth/authLinkHandlers.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/manager-row.test.ts"
-      },
-      {
-        "code": "D",
-        "path": "apps/mobile/tests-deno/match-scoreboard-layout.test.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/no-op-handlers.test.ts"
+        "path": "apps/mobile/lib/auth/confirmLink.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+        "path": "apps/mobile/lib/auth/recoverySession.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/auth/verifierSlot.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/auth/verifierStorage.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/pkce-auth-links.test.ts"
       }
     ],
-    "timestamp": "2026-10-14T21:56:39Z",
-    "sourceHash": "sha256:f5ddc525e68b3862be6e1a3ca47920d39bfa20ca6ea1cd6e5d30033cf1f2a570",
+    "timestamp": "2026-10-15T00:52:22Z",
+    "sourceHash": "sha256:3bc320a95cad83a1a5ead4988503f4a6c441a895fdcb7b4a60589e4ecf28f420",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 21.7,
-    "ageDays": 0.9,
+    "ageHours": 24.6,
+    "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
@@ -17359,20 +17263,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/SessionProvider.tsx:141"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.SessionProvider->tbl.user_profiles#upsert",
-      "from": "ui.SessionProvider",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-upsert",
-      "payload": ".from('user_profiles').upsert()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/lib/SessionProvider.tsx:200"
+        "apps/mobile/lib/SessionProvider.tsx:180"
       ]
     },
     {
@@ -19825,7 +19716,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 262,
-    "edges": 638,
+    "edges": 637,
     "flows": 7,
     "drift": 29,
     "driftHigh": 0,
@@ -19995,8 +19886,7 @@
       "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
       "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
-      "apps/mobile/lib/SessionProvider.tsx:141 -> user_profiles.select",
-      "apps/mobile/lib/SessionProvider.tsx:200 -> user_profiles.upsert",
+      "apps/mobile/lib/SessionProvider.tsx:180 -> user_profiles.select",
       "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
       "apps/mobile/lib/categoryData.ts:113 -> symbols.select",

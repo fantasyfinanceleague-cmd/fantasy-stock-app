@@ -50,7 +50,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
       projectId: '762da87e-578d-4041-ae85-37d8aa312187', // Your EAS project ID
     });
 
-    console.log('Push token:', tokenData.data);
+    console.log('Push token obtained:', !!tokenData.data); // presence only: the token is a bearer for this device's pushes
     return tokenData.data;
   } catch (error) {
     console.error('Failed to get push token:', error);

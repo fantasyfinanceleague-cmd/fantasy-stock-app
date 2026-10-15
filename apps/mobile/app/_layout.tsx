@@ -17,10 +17,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { LeagueProvider } from '@/lib/LeagueContext';
 import { notificationRoute } from '@/lib/shell/notificationRoute';
-import { addNotificationListeners } from '@/lib/notifications';
+import { addNotificationListeners, removePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
-import { verifyAndConsumeRecoveryNonce, setRecoverySession } from '@/lib/recoveryNonce';
-import { parseRecoveryLink } from '@/lib/recoveryLink';
+import { isRecoveryHold, isRecoverySession, setRecoveryInProgress, setRecoverySession, subscribeRecoverySession } from '@/lib/auth/recoverySession';
+import { verifierSlot } from '@/lib/auth/verifierStorage';
+import { createAuthLinkHandler } from '@/lib/auth/authLinkHandlers';
+import { createLinkDedupe } from '@/lib/auth/authLink';
+import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
+import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
 import { SessionProvider, useSession } from '@/lib/SessionProvider';
 import { pendingRoute, type AuthPhase } from '@/lib/shell/pendingRoute';
 import { ShellOverlayProvider } from '@/components/shell/ShellOverlay';
@@ -38,6 +42,10 @@ export {
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
+
+// A cold-start auth link can arrive twice (getInitialURL AND the 'url' event); handle it once. A code is
+// single use, so a second exchange would fail (and flip a working password reset to "invalid").
+const handledAuthLinks = createLinkDedupe();
 
 // Rejects (harmlessly) when the splash is already gone, e.g. on a dev reload: handled.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -132,76 +140,59 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   useEffect(() => {
     if (shownPhase === lastPhase.current) return;
     lastPhase.current = shownPhase;
-    const target = pendingRoute.authChanged(shownPhase);
+    // While a password-recovery link is being exchanged (or its form is open) the link is KEPT, not replayed:
+    // supabase-js emits SIGNED_IN inside the exchange, and a pushed screen would land on top of the reset form.
+    const target = pendingRoute.authChanged(shownPhase, isRecoveryHold());
     if (target) {
       const t = setTimeout(() => router.push(target as never), 0);
       return () => clearTimeout(t);
     }
   }, [shownPhase]);
 
-  // Handle deep links for password reset
+  // ...and opened when the hold ends (the reset finished or was cancelled, or the link was refused).
   useEffect(() => {
-    // Handle URL when app is opened from a link
-    const handleDeepLink = async (event: { url: string }) => {
-      const parsed = parseRecoveryLink(event.url);
+    return subscribeRecoverySession(() => {
+      if (isRecoveryHold()) return;
+      const held = pendingRoute.releaseHold();
+      if (held) setTimeout(() => router.push(held as never), 0);
+    });
+  }, []);
 
-      if (parsed.kind === 'none') {
-        return;
-      }
-
-      if (parsed.kind === 'error') {
-        // Expired, already-used, or otherwise malformed link — Supabase
-        // redirected here with an error instead of tokens. Route to the
-        // invalid state rather than leaving reset-password with no session.
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Fixes F2 (deep-link session fixation): only set a session from a
-      // recovery link whose nonce matches one THIS device generated for a
-      // reset it requested. Fail closed — an attacker's crafted link (or a
-      // genuine link opened on a device that never requested the reset, or
-      // an older link superseded by a newer request) carries no matching
-      // nonce and is refused.
-      const nonceOk = await verifyAndConsumeRecoveryNonce(parsed.nonce);
-      if (!nonceOk) {
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Set the session with the tokens from the URL
-      const { error } = await supabase.auth.setSession({
-        access_token: parsed.accessToken,
-        refresh_token: parsed.refreshToken,
-      });
-
-      if (error) {
-        setRecoverySession(false);
-        router.replace('/reset-password?status=invalid');
-        return;
-      }
-
-      // Mark this session as a recovery session — reset-password.tsx's form
-      // state keys off this flag, not "is there any session at all", so a
-      // user who lands there some other way while signed in for an
-      // unrelated reason doesn't see the form. Cleared on Cancel or success.
-      setRecoverySession(true);
-
-      // Navigate to reset password screen
-      router.replace('/reset-password');
-    };
+  // The two email return links, both PKCE one-time codes (lib/supabase.ts flowType 'pkce'):
+  //   fantasystockapp://auth/confirm?code=…                  sign-up confirmation (onboarding W2)
+  //   fantasystockapp://reset-password?flow=pkce&code=…      password recovery
+  // supabase.auth.exchangeCodeForSession(code) succeeds only on the device that holds the code verifier
+  // stored when the flow began, so a forged, replayed or intercepted link fails. The decisions live in
+  // lib/auth/authLinkHandlers.ts (tested without React); this binds the real client, router and flags.
+  useEffect(() => {
+    const handleDeepLink = createAuthLinkHandler({
+      confirmEnabled: !SHELL_FIXTURE,
+      getSession: () => supabase.auth.getSession(),
+      exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+      readVerifier: verifierSlot.read,
+      writeVerifier: verifierSlot.write,
+      signOut: () => supabase.auth.signOut({ scope: 'local' }),
+      isRecoveryActive: isRecoverySession,
+      setRecoveryInProgress,
+      removePushToken,
+      setEmailJustConfirmed,
+      setRecoverySession,
+      replaceRoute: (path) => router.replace(path as never),
+      warn: (message, code) => console.warn(message, code),
+      dedupe: handledAuthLinks,
+    });
 
     // Get the initial URL if app was opened from a link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        handleDeepLink({ url });
+        void handleDeepLink(url).catch(() => console.warn('[auth] link handler failed', ''));
       }
     });
 
     // Listen for URL changes while app is running
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    const subscription = Linking.addEventListener('url', (event) => {
+      void handleDeepLink(event.url).catch(() => console.warn('[auth] link handler failed', ''));
+    });
 
     return () => {
       subscription.remove();

@@ -33,6 +33,16 @@ export function isSignupsPausedError(error: any): boolean {
 }
 
 /**
+ * Signing in to an account whose email was never confirmed (onboarding W2: confirmation is ON).
+ * Sign in then offers "Didn't receive it? Send again".
+ */
+export function isEmailNotConfirmedError(error: any): boolean {
+  const code = typeof error?.code === 'string' ? error.code : '';
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  return code === 'email_not_confirmed' || message.includes('email not confirmed');
+}
+
+/**
  * `productName` is brand.name (constants/brand.ts), passed in rather than
  * imported for the same Deno reason as the password sentence above. Without
  * it the paused message uses a neutral subject — never a hard-coded brand.
@@ -44,7 +54,7 @@ export function getAuthErrorMessage(error: any, weakPasswordMessage?: string, pr
   if (code === 'invalid_credentials' || message.includes('invalid login credentials')) {
     return 'Invalid email or password. Please try again.';
   }
-  if (code === 'email_not_confirmed' || message.includes('email not confirmed')) {
+  if (isEmailNotConfirmedError(error)) {
     return 'Please verify your email before signing in.';
   }
   if (code === 'user_already_exists' || message.includes('user already registered')) {

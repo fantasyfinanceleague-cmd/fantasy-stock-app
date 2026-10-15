@@ -1,3 +1,5 @@
+import { isConfirmRoute } from '@/lib/auth/confirmLink';
+import { isRecoveryRoute } from '@/lib/recoveryLink';
 import { pendingRoute } from '@/lib/shell/pendingRoute';
 
 // Phase 3b-1 — the first half of the signed-out deep-link resume.
@@ -17,5 +19,14 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
     // link still routes normally, it just won't be resumed.
     console.warn('[native-intent] could not record deep link', e);
   }
+  // Onboarding W2: the email-confirmation return (fantasystockapp://auth/confirm?code=…) is not a
+  // screen. The root layout's link handler reads it; the router just opens sign-in, which the
+  // guard swaps for the next step once (and only if) the code exchanges. Returning a fixed path
+  // also keeps the one-time code out of the router's params and navigation state.
+  if (isConfirmRoute(path)) return '/login';
+  // The password-reset link carries a one-time code too: open the plain screen, so the code stays out of
+  // the router's params (and its navigation state). app/_layout.tsx exchanges it from the link itself,
+  // and the screen reads only its own `status` param.
+  if (isRecoveryRoute(path)) return '/reset-password';
   return path;
 }

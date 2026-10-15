@@ -11,7 +11,7 @@
 //
 // Deliberately an ALLOWLIST, not a denylist. A resumed link runs after the
 // user has authenticated, so anything not explicitly listed here — auth
-// screens, the password-recovery link (which has its own nonce-checked
+// screens, the password-recovery link (which has its own code-exchange
 // handler in app/_layout.tsx), dev screens, unknown paths — is refused.
 
 /** Route → the query params that route actually reads (everything else is dropped). */
@@ -44,7 +44,7 @@ function toAppRelative(raw: string): { path: string; query: string } | null {
     return null;
   }
 
-  // The recovery link carries tokens in the fragment; no resumable route
+  // An old-style recovery link carries tokens in the fragment; no resumable route
   // uses one, and it must never be stored.
   if (url.hash) return null;
 

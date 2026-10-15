@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -14,10 +14,11 @@ import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { NewPasswordForm } from '@/components/shell/NewPasswordForm';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/recoveryNonce';
+import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from '@/lib/auth/recoverySession';
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { parseResetCaptureView } from '@/lib/shell/resetCaptureView';
+import { pendingRoute } from '@/lib/shell/pendingRoute';
 
 // DEV-only (design captures): render the form or success state without a recovery link.
 const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE, __DEV__);
@@ -31,17 +32,17 @@ const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE
 // resetScreenState() (lib/recoveryLink.ts):
 //
 //   - verifying: no `status=invalid` param yet, and the recovery-session
-//     flag (lib/recoveryNonce.ts) isn't set yet either. Covers the brief
-//     window on cold start where this route is showing (expo-router
+//     flag (lib/auth/recoverySession.ts) isn't set yet either. Covers the
+//     brief window on cold start where this route is showing (expo-router
 //     restored it from the link before anything else rendered) but the
-//     async nonce-check + setSession in _layout.tsx hasn't resolved — and
-//     also a URL that routes here by PATH but that _layout.tsx's parser
-//     doesn't recognize as a recovery link at all (a bare `?rn=` with no
-//     fragment, a truncated link, a future PKCE `?code=` redirect):
-//     _layout.tsx never sets a status OR the flag for those, so nothing
-//     but RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
-//   - invalid: the link was rejected (bad/replayed/mismatched nonce), was
-//     already used, has expired, or verifying simply timed out — no
+//     async code exchange in _layout.tsx hasn't resolved — and also a URL
+//     that routes here by PATH without the link handler ever seeing it
+//     (the app opened this route some other way): _layout.tsx sets neither
+//     a status nor the flag for those, so nothing but
+//     RESET_VERIFY_TIMEOUT_MS moves this screen off "verifying".
+//   - invalid: the link was rejected (a code that won't exchange: forged,
+//     replayed, from another device), was already used, has expired, or
+//     verifying simply timed out — no
 //     recovery session was set. There's nothing to recover from here; the
 //     user needs to request a new email.
 //   - form: the recovery flag is set, so this is a real recovery in
@@ -74,16 +75,35 @@ export default function ResetPasswordScreen() {
     elapsedMs: verifyTimedOut ? RESET_VERIFY_TIMEOUT_MS : 0,
   });
 
+  // A ref, not state: a second tap while the sign-out is still running must do nothing (not sign out twice).
+  const cancelling = useRef(false);
+
   async function handleCancel() {
+    if (cancelling.current) return;
+    cancelling.current = true;
     // Only end a session THIS screen created. A recovery link signs the
     // device in as a side effect of recovering it, so leaving via Cancel
     // should undo that — but a user who reached this screen some other
     // way while already signed in for an unrelated reason keeps their
     // real session; Cancel just takes them home.
     if (isRecoverySession()) {
-      setRecoverySession(false);
-      await signOut();
+      // Drop a deep link the recovery hold was keeping BEFORE the flag clears: ending the hold would otherwise
+      // open it while this recovery session is still signed in, a moment before the sign-out below.
+      pendingRoute.dropHeld();
+      // Sign out FIRST, with the recovery hold still up. Clearing the flag first would end the hold, and
+      // SessionProvider's deferred push setup would then register this about-to-be-signed-out account (and could
+      // raise the iOS permission prompt during Cancel) while signOut() is removing its token. By the time the flag
+      // clears below (the SIGNED_OUT handler already cleared it; this is idempotent) there is no user to set up.
+      try {
+        await signOut();
+      } catch {
+        // A rejected sign-out leaves the session as it was; there is nothing further to undo here.
+      } finally {
+        // Always clear the flag, so the hold ends and the screen can leave.
+        setRecoverySession(false);
+      }
     }
+    cancelling.current = false;
     router.replace('/');
   }
 

@@ -12,7 +12,7 @@ import { resolveTheme } from '@/components/sp/logic/theme';
 // nothing branches on a surface kind any more.
 //
 // Storage: @react-native-async-storage/async-storage was already a
-// dependency (lib/supabase.ts, lib/recoveryNonce.ts) — reused here rather
+// dependency (lib/supabase.ts) — reused here rather
 // than adding a new native module, which would force a new EAS build instead
 // of shipping this over-the-air. Guarded the same way lib/supabase.ts guards
 // it (native only, not during web/static rendering) since this app also
