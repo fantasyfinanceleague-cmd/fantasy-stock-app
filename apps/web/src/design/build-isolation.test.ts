@@ -88,7 +88,7 @@ describe('the paused route table (onboarding W5)', () => {
     const code = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''); // prose may name them; code may not
     const specifiers = [...code.matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
     expect(specifiers.length).toBeGreaterThan(3);
-    expect(specifiers.filter((x) => /supabase|onboardingAuth|JoinFlow/.test(x))).toEqual([]);
+    expect(specifiers.filter((x) => /supabase|onboardingAuth|JoinFlow|invite/i.test(x))).toEqual([]); // no invite, no preview call (decision 17)
     expect(code).not.toMatch(/exchangeCode|exchangeCodeForSession|signIn|signUp/);
   });
 });

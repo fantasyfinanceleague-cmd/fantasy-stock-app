@@ -95,9 +95,15 @@ export function cspScriptHash(scriptText: string): string {
   return `'sha256-${createHash('sha256').update(scriptText).digest('base64')}'`;
 }
 
-/** The text of the first classic inline <script> in a page (what the browser hashes), or null. */
-export function firstInlineScript(html: string): string | null {
-  return /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? null;
+/** The bare classic inline <script> blocks of a page (what the browser hashes), comments ignored. */
+export function inlineScripts(html: string): string[] {
+  return [...html.replace(/<!--[\s\S]*?-->/g, '').matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+}
+
+/** The ONE bare inline script (the URL scrub), or null when there are none or more than one. */
+export function soleInlineScript(html: string): string | null {
+  const scripts = inlineScripts(html);
+  return scripts.length === 1 ? scripts[0] : null;
 }
 
 /**
@@ -109,11 +115,14 @@ export function firstInlineScript(html: string): string | null {
  * the hash.
  */
 export function cspHashProblems(html: string, vercelJson: { headers?: { source: string; headers: { key: string; value: string }[] }[] }): string[] {
-  const script = firstInlineScript(html);
   // Fail CLOSED: the scrub and the CSP are a pair. A page with no bare inline <script> (the scrub was
-  // removed, or gained an attribute such as a nonce so this stops matching) would otherwise ship with
-  // the code-stripping silently gone.
-  if (script === null) return ['index.html has no bare inline <script>: the URL scrub (and the hash its CSP allows) is gone'];
+  // removed, or gained an attribute such as a nonce so this stops matching) would ship with the
+  // code-stripping silently gone; and with TWO, the one hash the CSP carries could be the wrong one,
+  // blocking the scrub. The scrub must be the only bare inline script.
+  const count = inlineScripts(html).length;
+  if (count === 0) return ['index.html has no bare inline <script>: the URL scrub (and the hash its CSP allows) is gone'];
+  if (count > 1) return [`index.html has ${count} bare inline <script> blocks: only the URL scrub may be one (each would need its own CSP hash)`];
+  const script = soleInlineScript(html) as string;
   const hash = cspScriptHash(script);
   const problems: string[] = [];
   for (const source of ['/join/:path*', '/auth/:path*']) {
@@ -130,8 +139,8 @@ export function placeholdersAllowed(env: Record<string, string | undefined>): bo
 
 export function universalLinks(
   config: UniversalLinksConfig,
-  env: Record<string, string | undefined> = process.env,
-  vercelJsonPath: string | null = null,
+  env: Record<string, string | undefined>,
+  vercelJsonPath: string,
 ): Plugin {
   const serveAasa = (req: { url?: string }, res: { setHeader(k: string, v: string): void; end(body: string): void; statusCode: number }, next: () => void) => {
     // Mounted at AASA_PATH, so the remaining url is "/" (optionally a query).
@@ -161,13 +170,11 @@ export function universalLinks(
     },
     generateBundle(_options, bundle) {
       this.emitFile({ type: 'asset', fileName: AASA_PATH.slice(1), source: aasaBody(config) });
-      if (vercelJsonPath) {
-        const page = bundle['index.html'] as { type: string; source?: string | Uint8Array } | undefined;
-        if (!page) this.error('index.html is not in the bundle: cannot verify the CSP hash of the URL scrub');
-        const html = typeof page.source === 'string' ? page.source : new TextDecoder().decode(page.source);
-        const problems = cspHashProblems(html, JSON.parse(readFileSync(vercelJsonPath, 'utf-8')));
-        if (problems.length) this.error(`vercel.json CSP is out of step with index.html:\n  - ${problems.join('\n  - ')}`);
-      }
+      const page = bundle['index.html'] as { type: string; source?: string | Uint8Array } | undefined;
+      if (!page) this.error('index.html is not in the bundle: cannot verify the CSP hash of the URL scrub');
+      const html = typeof page.source === 'string' ? page.source : new TextDecoder().decode(page.source);
+      const problems = cspHashProblems(html, JSON.parse(readFileSync(vercelJsonPath, 'utf-8')));
+      if (problems.length) this.error(`vercel.json CSP is out of step with index.html:\n  - ${problems.join('\n  - ')}`);
       const leaks = filesWithPlaceholders(bundle as Parameters<typeof filesWithPlaceholders>[0]);
       if (leaks.length === 0) return;
       const msg = `placeholder value(s) (${PLACEHOLDER_MARKER}…) would reach production in: ${leaks.join(', ')}. Relay the real values first.`;

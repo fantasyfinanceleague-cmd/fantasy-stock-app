@@ -1,20 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { readConfirmOutcome } from './confirmOutcome';
-import { fetchInvitePreview } from './invitePreview';
-import { normalizeInviteCode } from './inviteCode';
 import { openConfirmInAppUrl } from './config';
 import { takeHeld } from './heldLink';
 import { WEB_COPY } from './joinCopy';
-import { Busy, WebPage } from './JoinView';
+import { WebPage } from './JoinView';
 
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 
-/** What the inline script in index.html kept IN MEMORY (never the URL): the code, and a pending invite. */
-interface HeldLink { code: string | null; invite: string | null }
-function readHeldLink(): HeldLink {
-  const held = takeHeld<Partial<HeldLink>>('__stockpileAuthConfirm');
-  return { code: typeof held?.code === 'string' && held.code ? held.code : null, invite: typeof held?.invite === 'string' ? held.invite : null };
+/** What the inline script in index.html kept IN MEMORY (never the URL): the auth code. Nothing else. */
+function readHeldCode(): string | null {
+  const held = takeHeld<{ code?: unknown }>('__stockpileAuthConfirm');
+  return typeof held?.code === 'string' && held.code ? held.code : null;
 }
 
 /** A touch device, where the universal link may not have fired after GoTrue's redirect. */
@@ -30,28 +27,18 @@ function isTouchDevice(): boolean {
  * inline script in index.html has removed the code from the URL; only the
  * outcome is left, in history.state, and the code itself lives in memory.
  *
- * With a pending invite the line names the league ("...to finish joining
- * {league}"). The name comes only from the preview, never from the URL; an
- * unknown or refused invite (or any failure) gets the plain line, since there
- * is nothing to finish joining.
+ * The app's confirmation email carries NO invite (Planner, decision 17: a
+ * mistyped address would hand a stranger a join capability), so this page has
+ * no league to name and calls nothing: the line is the approved one, or the
+ * expired one. Any `invite` parameter that ever appears is stripped with the rest
+ * of the query by the inline script and never read here.
  *
  * A visit with no outcome (typed URL, a new tab) is not a confirmation, so it
  * goes to the landing rather than claiming one.
  */
 export default function ConfirmPage() {
   const [outcome] = useState(() => readConfirmOutcome(window.history.state));
-  const [held] = useState(readHeldLink);
-  const invite = outcome === 'confirmed' ? normalizeInviteCode(held.invite) : null;
-  const [league, setLeague] = useState<{ settled: boolean; name: string | null }>({ settled: invite === null, name: null });
-
-  useEffect(() => {
-    if (!invite) return;
-    const abort = new AbortController();
-    fetchInvitePreview(invite, { signal: abort.signal, timeoutMs: 3000 }).then((p) => {
-      if (!abort.signal.aborted) setLeague({ settled: true, name: p.kind === 'found' && !p.block ? p.name : null });
-    });
-    return () => abort.abort();
-  }, [invite]);
+  const [code] = useState(readHeldCode);
 
   if (outcome === 'none') return <Navigate to="/" replace />;
   if (outcome === 'error') {
@@ -61,17 +48,15 @@ export default function ConfirmPage() {
       </WebPage>
     );
   }
-  // Wait (briefly) for the league name rather than flash the plain line and swap it.
-  if (!league.settled) return <WebPage center><Busy /></WebPage>;
   return (
     <WebPage center>
       <span className="obw__disc" aria-hidden="true">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d={CHECK} /></svg>
       </span>
-      <h1 className="obw__title">{league.name ? WEB_COPY.confirmedWithInvite(league.name) : WEB_COPY.confirmed}</h1>
-      {held.code && isTouchDevice() ? (
+      <h1 className="obw__title">{WEB_COPY.confirmed}</h1>
+      {code && isTouchDevice() ? (
         <div className="obw__actions">
-          <a className="obw__line-btn" href={openConfirmInAppUrl(held.code)}>{WEB_COPY.openApp}</a>
+          <a className="obw__line-btn" href={openConfirmInAppUrl(code)}>{WEB_COPY.openApp}</a>
         </div>
       ) : null}
     </WebPage>

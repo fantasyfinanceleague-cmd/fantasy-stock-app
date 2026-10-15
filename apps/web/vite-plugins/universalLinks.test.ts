@@ -12,7 +12,8 @@ import {
   aasaBody,
   cspHashProblems,
   cspScriptHash,
-  firstInlineScript,
+  inlineScripts,
+  soleInlineScript,
   buildAasa,
   configProblems,
   filesWithPlaceholders,
@@ -21,6 +22,8 @@ import {
   type UniversalLinksConfig,
 } from './universalLinks';
 
+const VERCEL = fileURLToPath(new URL('../vercel.json', import.meta.url));
+const REAL_HTML = readFileSync(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf-8');
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf-8');
 
 const ready: UniversalLinksConfig = {
@@ -137,7 +140,7 @@ describe('the placeholder scan', () => {
   });
 
   it('fails the build on a placeholder config', () => {
-    const plugin = universalLinks({ ...ready, appleTeamId: '__PLACEHOLDER__APPLE_TEAM_ID' }, {});
+    const plugin = universalLinks({ ...ready, appleTeamId: '__PLACEHOLDER__APPLE_TEAM_ID' }, {}, VERCEL);
     const ctx = { error: (m: string) => { throw new Error(m); }, warn: () => {} };
     expect(() => (plugin.buildStart as unknown as (this: typeof ctx) => void).call(ctx)).toThrow(/appleTeamId/);
   });
@@ -149,11 +152,12 @@ describe('the placeholder scan', () => {
       warn: () => {},
       emitFile: (f: { fileName: string; source: string }) => { emitted.push(f); return 'id'; },
     };
-    const plugin = universalLinks(ready, {});
+    const plugin = universalLinks(ready, {}, VERCEL);
     const gen = plugin.generateBundle as unknown as (this: typeof ctx, o: unknown, b: unknown) => void;
-    expect(() => gen.call(ctx, {}, { 'a.js': { type: 'chunk', code: 'x' } })).not.toThrow();
-    expect(emitted).toEqual([{ type: 'asset', fileName: '.well-known/apple-app-site-association', source: aasaBody(ready) }]);
-    expect(() => gen.call(ctx, {}, { 'a.js': { type: 'chunk', code: '"__PLACEHOLDER__ x"' } })).toThrow(/a\.js/);
+    const page = { 'index.html': { type: 'asset', source: REAL_HTML } };
+    expect(() => gen.call(ctx, {}, { ...page, 'a.js': { type: 'chunk', code: 'x' } })).not.toThrow();
+    expect(emitted[0]).toEqual({ type: 'asset', fileName: '.well-known/apple-app-site-association', source: aasaBody(ready) });
+    expect(() => gen.call(ctx, {}, { ...page, 'a.js': { type: 'chunk', code: '"__PLACEHOLDER__ x"' } })).toThrow(/a\.js/);
   });
 });
 
@@ -161,7 +165,7 @@ describe('the dev / preview server', () => {
   it('serves the AASA as application/json, 200, no redirect', () => {
     let handler: ((req: { url?: string }, res: unknown, next: () => void) => void) | undefined;
     const server = { middlewares: { use: (path: string, fn: typeof handler) => { expect(path).toBe(AASA_PATH); handler = fn; } } };
-    (universalLinks(ready, {}).configureServer as unknown as (s: typeof server) => void)(server);
+    (universalLinks(ready, {}, VERCEL).configureServer as unknown as (s: typeof server) => void)(server);
     const headers: Record<string, string> = {};
     const res = { statusCode: 0, body: '', setHeader: (k: string, v: string) => { headers[k] = v; }, end(b: string) { this.body = b; } };
     handler!({ url: '/' }, res, () => { throw new Error('should not fall through'); });
@@ -230,7 +234,7 @@ describe('vercel.json', () => {
     });
 
     it("carries the SHA-256 of index.html's inline script", () => {
-      const script = firstInlineScript(read('../index.html'))!;
+      const script = soleInlineScript(read('../index.html'))!;
       for (const source of ['/join/:path*', '/auth/:path*']) expect(csp(source)).toContain(cspScriptHash(script));
     });
   });
@@ -242,9 +246,18 @@ describe('the CSP / inline-script guard (a stale hash would block the scrub in p
     headers: ['/join/:path*', '/auth/:path*'].map((source) => ({ source, headers: [{ key: 'Content-Security-Policy', value: `script-src 'self' ${hash}` }] })),
   });
 
-  it('only looks at a classic inline script, never the module tag', () => {
-    expect(firstInlineScript(html('var a=1;'))).toBe('var a=1;');
-    expect(firstInlineScript('<script type="module" src="/a.js"></script>')).toBeNull();
+  it('only looks at a classic inline script, never the module tag, and ignores HTML comments', () => {
+    expect(soleInlineScript(html('var a=1;'))).toBe('var a=1;');
+    expect(soleInlineScript('<script type="module" src="/a.js"></script>')).toBeNull();
+    expect(inlineScripts('<!-- <script>evil()</script> --><script>real()</script>')).toEqual(['real()']);
+  });
+
+  it('fails CLOSED when there is more than one bare inline script (the CSP carries one hash)', () => {
+    const two = '<head><script>var scrub=1;</script><script>var other=2;</script></head>';
+    const problems = cspHashProblems(two, vercelFor(cspScriptHash('var scrub=1;')));
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/2 bare inline <script> blocks/);
+    expect(soleInlineScript(two)).toBeNull();
   });
 
   it('passes when both paths carry the current hash', () => {
@@ -263,7 +276,7 @@ describe('the CSP / inline-script guard (a stale hash would block the scrub in p
   });
 
   it('is a build error when index.html is missing from the bundle', () => {
-    const plugin = universalLinks(ready, {}, fileURLToPath(new URL('../vercel.json', import.meta.url)));
+    const plugin = universalLinks(ready, {}, VERCEL);
     const ctx = { error: (m: string) => { throw new Error(m); }, warn: () => {}, emitFile: () => 'id' };
     const gen = plugin.generateBundle as unknown as (this: typeof ctx, o: unknown, b: unknown) => void;
     expect(() => gen.call(ctx, {}, { 'a.js': { type: 'chunk', code: 'x' } })).toThrow(/index\.html is not in the bundle/);
@@ -274,7 +287,7 @@ describe('the CSP / inline-script guard (a stale hash would block the scrub in p
   });
 
   it('is a hard error in the build, whatever LOCAL_ALLOW_PLACEHOLDERS says', () => {
-    const plugin = universalLinks(ready, { LOCAL_ALLOW_PLACEHOLDERS: '1' }, fileURLToPath(new URL('../vercel.json', import.meta.url)));
+    const plugin = universalLinks(ready, { LOCAL_ALLOW_PLACEHOLDERS: '1' }, VERCEL);
     const ctx = { error: (m: string) => { throw new Error(m); }, warn: () => {}, emitFile: () => 'id' };
     const gen = plugin.generateBundle as unknown as (this: typeof ctx, o: unknown, b: unknown) => void;
     expect(() => gen.call(ctx, {}, { 'index.html': { type: 'asset', source: html('var tampered=1;') } })).toThrow(/CSP is out of step/);

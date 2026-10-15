@@ -74,7 +74,7 @@ describe('/auth/confirm', () => {
   ])('a code that is not token-shaped (%s) is no code: nothing confirmed, nothing held', (_label, junk) => {
     const r = run(`/auth/confirm?code=${encodeURIComponent(junk)}`);
     expect(r.outcome).toBe('none');
-    expect(r.held).toEqual({ code: null, invite: null });
+    expect(r.held).toEqual({ code: null });
     expect(r.path).toBe('/auth/confirm');
   });
 
@@ -87,22 +87,22 @@ describe('/auth/confirm', () => {
     expect(run(`/auth/confirm?invite=ABCDE23456&code=${CODE}`).path).toBe('/auth/confirm');
   });
 
-  it('keeps the code and the invite IN MEMORY only, off the URL, state, storage and DOM', () => {
+  it('keeps ONLY the code in memory (never the URL, state, storage or DOM), and drops an invite param unread (decision 17)', () => {
     const r = run(`/auth/confirm?invite=ABCDE23456&code=${CODE}`);
-    expect(r.held).toEqual({ code: CODE, invite: 'ABCDE23456' });
+    expect(r.held).toEqual({ code: CODE });
+    expect(JSON.stringify(r.held)).not.toContain('ABCDE23456');
     expect(Object.keys(window)).not.toContain('__stockpileAuthConfirm'); // not enumerable
     expect(Object.isFrozen(r.held)).toBe(true);
-    expect(window.location.href).not.toContain(CODE);
-    expect(JSON.stringify(window.history.state)).not.toContain(CODE);
-    expect(JSON.stringify(window.history.state)).not.toContain('ABCDE23456');
-    expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain(CODE);
-    expect(document.documentElement.outerHTML).not.toContain(CODE);
+    expect(window.location.href).not.toMatch(new RegExp(`${CODE}|ABCDE23456|invite`));
+    expect(JSON.stringify(window.history.state)).not.toMatch(new RegExp(`${CODE}|ABCDE23456`));
+    expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toMatch(new RegExp(`${CODE}|ABCDE23456`));
+    expect(document.documentElement.outerHTML).not.toMatch(new RegExp(`${CODE}|ABCDE23456`));
   });
 
   it('holds nothing for an error link, a no-code visit or a reload', () => {
-    expect(run('/auth/confirm?error=access_denied&invite=ABCDE23456').held).toEqual({ code: null, invite: null });
-    expect(run('/auth/confirm?invite=ABCDE23456').held).toEqual({ code: null, invite: null });
-    expect(run('/auth/confirm', { authConfirm: 'confirmed' }).held).toEqual({ code: null, invite: null });
+    expect(run('/auth/confirm?error=access_denied&invite=ABCDE23456').held).toEqual({ code: null });
+    expect(run('/auth/confirm?invite=ABCDE23456').held).toEqual({ code: null });
+    expect(run('/auth/confirm', { authConfirm: 'confirmed' }).held).toEqual({ code: null });
   });
 
   it.each(['/Auth/Confirm', '/AUTH/CONFIRM/', '/auth/%63onfirm', '/auth/Con%46irm'])('%s is the same page as /auth/confirm (the router matches it)', (path) => {

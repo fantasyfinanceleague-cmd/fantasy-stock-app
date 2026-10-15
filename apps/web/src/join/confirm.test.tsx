@@ -47,7 +47,6 @@ describe('/auth/confirm', () => {
       </MemoryRouter>,
     );
   };
-  const preview = (body: unknown, status = 200) => vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(body), { status }));
 
   it('confirmed: the approved line, verbatim, with no network call and no button on a desktop', () => {
     const spy = vi.spyOn(globalThis, 'fetch');
@@ -75,32 +74,12 @@ describe('/auth/confirm', () => {
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 
-  it('with an invite: names the league, from the preview and never from the URL', async () => {
-    const spy = preview({ found: true, name: 'Stock Scudetto', inviter: 'roberto_b', reason: null });
-    arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: 'abcde23456' });
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      'Your email is confirmed. Open the app and sign in to finish joining Stock Scudetto.',
-    );
-    expect(JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string)).toEqual({ code: 'ABCDE23456' });
-    // the auth code is never sent anywhere
-    expect(JSON.stringify(spy.mock.calls)).not.toContain(CODE);
-  });
-
-  it.each([
-    ['a refused league', () => preview({ found: true, name: 'Stock Scudetto', inviter: null, reason: 'league_full' })],
-    ['an unknown code', () => preview({ found: false })],
-    ['a failed preview', () => preview({ error: 'unavailable' }, 500)],
-    ['a network error', () => vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('x'))],
-  ])('with an invite but %s: the plain line', async (_label, arrange) => {
-    arrange();
-    arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: 'ABCDE23456' });
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/^Your email is confirmed\. Open the app and sign in\.$/);
-  });
-
-  it('a junk invite is never sent to the preview', () => {
+  it('the app\'s email carries NO invite (decision 17): a stray one is ignored, nothing is called', () => {
     const spy = vi.spyOn(globalThis, 'fetch');
-    arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: '<script>' });
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(WEB_COPY.confirmed);
+    // even if the held object somehow carried an invite, the page never reads or uses it
+    arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: 'ABCDE23456' } as unknown as { code: string | null; invite: string | null });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Your email is confirmed\. Open the app and sign in\.$/);
+    expect(screen.queryByText(/finish joining|Stock Scudetto|ABCDE23456/)).toBeNull();
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -115,11 +94,5 @@ describe('/auth/confirm', () => {
     arrive(null);
     expect(screen.getByText('LANDING')).toBeInTheDocument();
     expect(screen.queryByText(WEB_COPY.confirmed)).toBeNull();
-  });
-
-  it('the pending-invite variant is the approved line', () => {
-    expect(WEB_COPY.confirmedWithInvite('Stock Scudetto')).toBe(
-      'Your email is confirmed. Open the app and sign in to finish joining Stock Scudetto.',
-    );
   });
 });

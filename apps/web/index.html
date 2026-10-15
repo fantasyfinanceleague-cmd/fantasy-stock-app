@@ -21,9 +21,10 @@
       // query and hash are dropped; the outcome survives in this history
       // entry's state (a reload keeps it; a fresh visit has none). "confirmed"
       // ONLY for a code with no error: an expired or used link arrives with
-      // error/error_code/error_description (query or hash). The code and the
-      // invite stay IN MEMORY only (a frozen, non-enumerable property), for the
-      // phone's "Open the app" link and the league name.
+      // error/error_code/error_description (query or hash). The code stays IN
+      // MEMORY only (a frozen, non-enumerable property), for the phone's "Open
+      // the app" link. The app's email carries no invite (decision 17), so an
+      // `invite` param here is stripped with the rest of the query and never read.
       //
       // /auth/web-callback (the WEB flow's email link or Google/Apple return):
       // the same custody. The page exchanges the code ITSELF, explicitly, so
@@ -74,7 +75,7 @@
         var outcome = hasError ? 'error' : code ? 'confirmed' : prior === 'confirmed' || prior === 'error' ? prior : 'none';
         var fresh = outcome === 'confirmed' && !!code;
         Object.defineProperty(window, '__stockpileAuthConfirm', {
-          value: Object.freeze({ code: fresh ? code : null, invite: fresh ? q.get('invite') : null }),
+          value: Object.freeze({ code: fresh ? code : null }),
           enumerable: false,
           configurable: true,
         });

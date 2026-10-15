@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import JoinPage, { joinStateFor, readHandoff } from './JoinPage';
 import { JoinView, inviteHeadline, initials, unbreakable, UNBROKEN_NAME_MAX } from './JoinView';
 import { normalizeInviteCode } from './inviteCode';
@@ -243,6 +243,27 @@ describe('/join/:code', () => {
     expect(await screen.findByRole('button', { name: WEB_COPY.continueApple })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^You're invited to a league$/);
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('the handoff is read ONCE and wiped from the history entry (a Back or reload must not reuse a "this visit signed in")', async () => {
+    answer(200, { found: true, name: 'Stock Scudetto', inviter: null, reason: null });
+    m.currentSession.mockResolvedValue({ userId: 'u1' });
+    m.readOwnUsername.mockResolvedValue('roberto');
+    m.previewWithSession.mockResolvedValue({ kind: 'found', league: { name: 'Stock Scudetto', members: 5, max: 6, stakeMode: null, notionalPerSlot: null, budgetAmount: null, leagueType: null, numWeeks: null, durationDays: null, draftDate: null, draftStatus: 'not_started' }, block: null });
+    m.joinWithSession.mockResolvedValue({ kind: 'joined', leagueId: 'L1', leagueName: 'Stock Scudetto' });
+    function Probe() {
+      const { state } = useLocation();
+      return <p data-testid="state">{JSON.stringify(state)}</p>;
+    }
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/join/ABCDE23456', state: { signedIn: true, emailConfirmed: true } }]}>
+        <Routes><Route path="/join/:code" element={<><JoinPage /><Probe /></>} /></Routes>
+      </MemoryRouter>,
+    );
+    // the flow DID receive it (this visit signed in: it carries straight on to the join)...
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/You're in/);
+    // ...and the entry no longer carries it
+    expect(screen.getByTestId('state')).toHaveTextContent('null');
   });
 
   it('a notice handed back by the web callback shows; junk router state is ignored', async () => {

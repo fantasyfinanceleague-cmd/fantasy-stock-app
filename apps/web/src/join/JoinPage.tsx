@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import JoinFlow, { type FlowHandoff, type FlowNotice } from './JoinFlow';
 import { normalizeInviteCode } from './inviteCode';
 import { fetchInvitePreview, type InvitePreview } from './invitePreview';
@@ -45,8 +45,21 @@ export function readHandoff(state: unknown): FlowHandoff | null {
  */
 export default function JoinPage() {
   const { code: raw } = useParams();
-  const { state } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const code = normalizeInviteCode(raw);
+  // Read ONCE, then wiped from the history entry: a handoff that said "this visit signed in"
+  // must not outlive the visit (Back or a reload into an old entry, on a shared computer,
+  // would otherwise carry an abandoned session straight on to the join). A reload mid-flow
+  // therefore reads as cold: the session ends and the person signs in again.
+  const [handoff] = useState(() => readHandoff(location.state));
+  useEffect(() => {
+    if (location.state !== null && location.state !== undefined) {
+      navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+    }
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [loaded, setLoaded] = useState<{ code: string; preview: InvitePreview } | null>(null);
 
   useEffect(() => {
@@ -61,7 +74,7 @@ export default function JoinPage() {
   const preview = loaded && loaded.code === code ? loaded.preview : null;
   const view = joinStateFor(raw, preview);
   if (view.kind === 'invited') {
-    return <JoinFlow key={view.code} code={view.code} name={view.name} inviter={view.inviter} handoff={readHandoff(state)} />;
+    return <JoinFlow key={view.code} code={view.code} name={view.name} inviter={view.inviter} handoff={handoff} />;
   }
   return <JoinView state={view} />;
 }

@@ -1,4 +1,4 @@
-import { cleanDisplay } from './displayText';
+import { cleanDisplay, MAX_INVITER_LENGTH } from './displayText';
 import { coerceBlock, type JoinBlock } from './joinCopy';
 import { INVITE_PREVIEW_URL, PUBLISHABLE_KEY } from './config';
 
@@ -33,7 +33,7 @@ export function parseInvitePreview(status: number, body: unknown): InvitePreview
   return {
     kind: 'found',
     name,
-    inviter: cleanDisplay(b.inviter),
+    inviter: cleanDisplay(b.inviter, MAX_INVITER_LENGTH),
     // An unknown reason from a newer server is a refusal we have no line for, never "joinable".
     block: reason === null || reason === undefined ? null : coerceBlock(reason),
   };

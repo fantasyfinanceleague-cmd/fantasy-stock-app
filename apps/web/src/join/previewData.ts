@@ -94,7 +94,8 @@ export function interpretJoin(data: unknown, invokeError: unknown): JoinOutcome 
   const league = rec(d.league);
   const id = league ? str(league.id) : null;
   if (d.ok === true) {
-    const name = league ? str(league.name) : null;
+    // Cleaned like every other name that reaches a headline: this one becomes "You're in {league}."
+    const name = league ? cleanDisplay(league.name) : null;
     if (!id || !name) return { kind: 'error', error: 'unreachable' };
     return { kind: 'joined', leagueId: id, leagueName: name };
   }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { takeHeld } from './heldLink';
+import { forgetHeld, takeHeld } from './heldLink';
 import { clearPendingInvite, getPendingInvite } from './pendingInvite';
 import { normalizeInviteCode } from './inviteCode';
 import { exchangeCode, signOutLocal } from './onboardingAuth';
@@ -69,30 +69,38 @@ export default function WebCallbackPage() {
     if (started.current) return; // StrictMode runs effects twice; a code exchanges once
     started.current = true;
     void (async () => {
-      const back = (state?: object) => invite
-        ? navigate(`/join/${invite}`, { replace: true, state })
-        : null;
-      // A reload (or a typed URL): nothing in memory. A live session continues from the join page.
+      /** Back to the join page with a handoff; false when there is no invite to go back to. */
+      const back = (state?: object): boolean => {
+        if (!invite) return false;
+        navigate(`/join/${invite}`, { replace: true, state });
+        return true;
+      };
+      // A reload (or a typed URL): nothing in memory. It goes back COLD (no handoff), so any live
+      // session is ended there and the person signs in again; a stored invite is never a sign-in.
       if (!held || (!held.code && !held.error)) {
-        if (invite) return navigate(`/join/${invite}`, { replace: true });
-        return navigate('/', { replace: true });
+        if (!back()) navigate('/', { replace: true });
+        return;
       }
       if (held.error || !held.code) {
         const notice = failureNotice(held.via, 'error-link', held.error);
         clearPendingInvite();
-        return back({ notice }) ?? setStuck(notice);
+        if (!back({ notice })) setStuck(notice);
+        return;
       }
       const { error } = await exchangeCode(held.code);
+      forgetHeld(); // the code is single-use and has been spent: drop our copy too
       if (error) {
         const notice = failureNotice(held.via, 'exchange-failed', false);
-        return back({ notice }) ?? setStuck(notice);
+        if (!back({ notice })) setStuck(notice);
+        return;
       }
       if (!invite) {
         // Signed in with nothing to join: the web's only job is the join, so end the session.
         await signOutLocal();
-        return navigate('/', { replace: true });
+        navigate('/', { replace: true });
+        return;
       }
-      return back({ emailConfirmed: held.via === 'email', signedIn: true });
+      back({ emailConfirmed: held.via === 'email', signedIn: true });
     })();
   }, [held, invite, navigate]);
 

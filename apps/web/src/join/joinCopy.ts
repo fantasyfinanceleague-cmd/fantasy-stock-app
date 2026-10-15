@@ -111,7 +111,6 @@ export const WEB_COPY = {
 
   // ── /auth/confirm: the app's email link opened on a device without the app (Decision 16) ──
   confirmed: 'Your email is confirmed. Open the app and sign in.',
-  confirmedWithInvite: (league: string) => `Your email is confirmed. Open the app and sign in to finish joining ${league}.`,
   confirmError: 'This link has expired. Open the app and sign in to get a new one.',
 
   // ── /auth/web-callback: the link from an email sent by THIS page, or an OAuth return ──
