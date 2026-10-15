@@ -1,0 +1,235 @@
+/* Archivo, self-hosted (SIL OFL, public/fonts/archivo/OFL.txt): the pages' CSP allows
+   no outside origin, so no web font service. Same TTFs as the app. */
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo/Archivo-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo/Archivo-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo/Archivo-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Archivo';
+  src: url('/fonts/archivo/Archivo-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The web invite + confirm pages (onboarding W5), Game Night, Light AND Dark
+   by the system setting (Decision 12: no theme choice here).
+
+   Token VALUES are the board's docs/design/screens/themes.css (itself the
+   app's constants/tokens/color.ts), same names; joinWeb.tokens.test.ts fails
+   if one drifts. Scoped to .obw, never :root, so nothing here can reach the
+   landing. Loaded only by the lazy /join and /auth/confirm chunks. */
+
+.obw {
+  color-scheme: light;
+  --c-bg: #F3F5FC;
+  --c-surface: #FDFEFF;
+  --c-inset: #E7EBF6;
+  --c-line: #D5DAEA;
+  --c-text: #0E142C;
+  --c-text-2: #505B72;
+  --c-accent: #00708E;
+  --c-you: #0064DC;
+  --c-on-you: #FAFCFE;
+  --c-gain: #006C47;
+  --c-gain-tint: rgba(0, 108, 71, 0.1);
+  --c-warn-tint: #FAE7B3;
+  --c-warn-line: #EFCC83;
+  --c-warn-text: #784900;
+  --c-secondary-border: #737A8D;
+  --c-primary-bg: #00708E;
+  --c-primary-fg: #FDFEFF;
+  --c-danger: #B7191C;
+}
+
+@media (prefers-color-scheme: dark) {
+  .obw {
+    color-scheme: dark;
+    --c-bg: #060A1F;
+    --c-surface: #0E132F;
+    --c-inset: #181F3E;
+    --c-line: #222C4C;
+    --c-text: #F3F5FB;
+    --c-text-2: #98A8C5;
+    --c-accent: #35EEFF;
+    --c-you: #0067DF;
+    --c-on-you: #FAFCFE;
+    --c-gain: #39EEBA;
+    --c-gain-tint: rgba(57, 238, 186, 0.12);
+    --c-warn-tint: rgba(244, 191, 63, 0.1);
+    --c-warn-line: rgba(244, 191, 63, 0.35);
+    --c-warn-text: #FAC547;
+    --c-secondary-border: #58698C;
+    --c-primary-bg: #35EEFF;
+    --c-primary-fg: #080D25;
+    --c-danger: #FB8371;
+  }
+}
+
+.obw {
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 20px 32px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  /* Archivo is self-hosted above; the system stack is only the fallback while it loads. */
+  font-family: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.obw *, .obw *::before, .obw *::after { box-sizing: border-box; }
+
+.obw__wordmark { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--c-text); }
+
+.obw__col { display: grid; gap: 18px; width: 100%; max-width: 420px; margin: 0 auto; }
+.obw__col--center { justify-items: center; text-align: center; gap: 16px; }
+.obw__body { flex: 1; padding-top: 18px; }
+
+@media (min-width: 720px) {
+  .obw { padding: 28px 40px; }
+  .obw__body { display: grid; place-items: center; padding: 0; }
+}
+
+/* ── The invite arrival (Giorgio, 2026-10-14: B; board frames 1 and 7) ──
+   Phone: the invite block is centred in the space between the wordmark and the
+   actions, and the actions sit at the bottom, in the thumb's reach. Desktop: one
+   centred column, the block above the actions. A dead link has no heading and no
+   actions: its panel and "Sign in" are centred on the page. */
+.obw__body--arrival { display: flex; flex-direction: column; }
+.obw__arrival {
+  flex: 1; display: grid; grid-template-rows: 1fr auto; gap: 18px;
+  width: 100%; max-width: 420px; margin: 0 auto;
+}
+.obw__arrival--dead { grid-template-rows: 1fr; }
+.obw__invite {
+  display: grid; gap: 16px; align-content: center; justify-items: center;
+  text-align: center; text-wrap: balance;
+}
+.obw__invite .obw__title { text-align: center; overflow-wrap: anywhere; }
+.obw__refuse { display: grid; gap: 16px; align-content: center; justify-items: stretch; text-align: center; }
+.obw__refuse .obw__warn { text-align: left; }
+.obw__bottom { display: grid; gap: 14px; }
+.obw__icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-inset); color: var(--c-text-2);
+}
+@media (min-width: 720px) {
+  .obw__body--arrival { align-items: center; justify-content: center; padding: 0; }
+  .obw__arrival { flex: none; grid-template-rows: auto auto; width: 400px; max-width: 100%; gap: 32px; }
+  .obw__arrival--dead { grid-template-rows: auto; }
+}
+
+.obw__title { margin: 0; font-size: 28px; line-height: 32px; font-weight: 800; color: var(--c-text); text-wrap: balance; }
+.obw__sub { margin: 0; font-size: 15px; line-height: 21px; color: var(--c-text-2); }
+
+.obw__av {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-you); color: var(--c-on-you);
+  font-size: 20px; font-weight: 800;
+}
+.obw__disc {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-you); color: var(--c-on-you);
+}
+
+.obw__card { background: var(--c-surface); box-shadow: inset 0 0 0 1px var(--c-line); border-radius: 14px; padding: 4px 16px; }
+.obw__card--wide { width: 100%; text-align: left; }
+.obw__row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 12px; font-size: 15px; }
+.obw__row dt { color: var(--c-text-2); }
+.obw__row dd { margin: 0; font-weight: 700; color: var(--c-text); text-align: right; }
+
+.obw__warn {
+  background: var(--c-warn-tint); box-shadow: inset 0 0 0 1px var(--c-warn-line);
+  border-radius: 14px; padding: 12px 14px;
+  font-size: 15px; line-height: 21px; font-weight: 600; color: var(--c-warn-text);
+}
+
+.obw__actions { display: grid; gap: 10px; justify-items: center; }
+
+.obw__store {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 50px; padding: 0 16px; border-radius: 10px;
+  background: var(--c-text); color: var(--c-bg); text-decoration: none;
+}
+.obw__store-text { display: grid; line-height: 1.05; text-align: left; }
+.obw__store-small { font-size: 10px; }
+.obw__store-big { font-size: 19px; font-weight: 700; }
+
+.obw__line-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; height: 50px; border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--c-secondary-border);
+  color: var(--c-text); font-size: 16px; font-weight: 700; text-decoration: none;
+}
+
+.obw a:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
+
+/* ── Sign-in, forms, chips (the board's web frames) ── */
+.obw__btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 50px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--c-primary-bg); color: var(--c-primary-fg);
+  font: inherit; font-size: 16px; font-weight: 700;
+}
+.obw__btn[disabled] { opacity: 0.55; cursor: default; }
+.obw__btn--apple { background: var(--c-text); color: var(--c-bg); }
+.obw__btn--line { background: transparent; color: var(--c-text); box-shadow: inset 0 0 0 1.5px var(--c-secondary-border); }
+.obw__btn:focus-visible, .obw__field input:focus-visible, .obw__link:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
+.obw__stack { display: grid; gap: 10px; width: 100%; }
+
+.obw__field { display: grid; gap: 6px; }
+.obw__field label { font-size: 13px; font-weight: 700; color: var(--c-text); text-transform: none; letter-spacing: normal; }
+.obw__field input {
+  height: 50px; padding: 0 14px; border: 0; border-radius: 12px;
+  background: var(--c-inset); color: var(--c-text); font: inherit; font-size: 17px;
+  box-shadow: inset 0 0 0 1.5px var(--c-line);
+}
+.obw__field input[aria-invalid='true'] { box-shadow: inset 0 0 0 1.5px var(--c-danger); }
+.obw__field input:focus { box-shadow: inset 0 0 0 1.5px var(--c-accent); }
+.obw__helper { margin: 0; font-size: 13px; line-height: 18px; color: var(--c-text-2); }
+.obw__error { margin: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--c-danger); }
+.obw__form { display: grid; gap: 14px; width: 100%; }
+.obw__rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; color: var(--c-text-2); }
+.obw__rules li[data-ok='true'] { color: var(--c-gain); }
+
+.obw__link {
+  appearance: none; background: none; border: 0; padding: 8px 0; cursor: pointer;
+  font: inherit; font-size: 15px; color: var(--c-text-2); text-align: center; text-decoration: none;
+}
+.obw__link b { color: var(--c-accent); }
+.obw__plain { margin: 0; font-size: 14px; line-height: 20px; color: var(--c-text-2); text-align: center; }
+.obw__chip {
+  justify-self: start; display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+  background: var(--c-gain-tint); color: var(--c-gain);
+}
+.obw__busy {
+  width: 28px; height: 28px; border-radius: 50%; margin: 24px auto;
+  box-shadow: inset 0 0 0 3px var(--c-line); border-top: 3px solid var(--c-accent);
+  animation: obw-spin 0.9s linear infinite;
+}
+@keyframes obw-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .obw__busy { animation: none; } }
+.obw__signout { justify-self: center; }

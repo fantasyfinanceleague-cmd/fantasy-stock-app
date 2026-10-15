@@ -11,6 +11,77 @@
       content="Stockpile is a fantasy-finance league game — draft stocks, compete with friends in head-to-head matchups, and climb the leaderboard."
     />
     <title>Stockpile</title>
+    <script>
+      // Onboarding W5: runs BEFORE the module bundle, so nothing the bundle
+      // loads (the supabase client is created on import, with
+      // detectSessionInUrl) ever sees an auth code or error in the URL.
+      // /join/*, /auth/confirm and /auth/web-callback get no-referrer.
+      //
+      // /auth/confirm (the APP's email link opened where the app is not):
+      // query and hash are dropped; the outcome survives in this history
+      // entry's state (a reload keeps it; a fresh visit has none). "confirmed"
+      // ONLY for a code with no error: an expired or used link arrives with
+      // error/error_code/error_description (query or hash). The code stays IN
+      // MEMORY only (a frozen, non-enumerable property), for the phone's "Open
+      // the app" link. The app's email carries no invite (decision 17), so an
+      // `invite` param here is stripped with the rest of the query and never read.
+      //
+      // /auth/web-callback (the WEB flow's email link or Google/Apple return):
+      // the same custody. The page exchanges the code ITSELF, explicitly, so
+      // no client ever reads the URL. Only booleans about an error are kept
+      // (never its text), and whether it was the signup gate's refusal.
+      //
+      // Path matching ignores case and percent-encoding, as the router does.
+      // Tested in src/join/earlyScrub.test.ts.
+      (function () {
+        var path = window.location.pathname;
+        try { path = decodeURIComponent(path); } catch (e) {}
+        path = path.toLowerCase();
+        var isConfirm = /^\/auth\/confirm\/?$/.test(path);
+        var isCallback = /^\/auth\/web-callback\/?$/.test(path);
+        if (!isConfirm && !isCallback && !/^\/join\//.test(path)) return;
+        var meta = document.createElement('meta');
+        meta.name = 'referrer';
+        meta.content = 'no-referrer';
+        document.head.appendChild(meta);
+        if (!isConfirm && !isCallback) return;
+        var q = new URLSearchParams(window.location.search);
+        var h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        var keys = ['error', 'error_code', 'error_description'];
+        var hasError = false;
+        for (var i = 0; i < keys.length; i++) {
+          if (q.has(keys[i]) || h.has(keys[i])) hasError = true;
+        }
+        // An auth code is a short opaque token: anything else is not one (and is never echoed).
+        var code = q.get('code');
+        if (code && !/^[A-Za-z0-9._~-]{8,200}$/.test(code)) code = null;
+        if (isCallback) {
+          var description = (q.get('error_description') || h.get('error_description') || '').toLowerCase();
+          var failure = hasError ? (description.indexOf('not open for new signups') !== -1 ? 'paused' : 'other') : false;
+          Object.defineProperty(window, '__stockpileWebCallback', {
+            value: Object.freeze({
+              code: hasError ? null : code,
+              invite: q.get('invite'),
+              via: q.get('via') === 'oauth' ? 'oauth' : 'email',
+              error: failure,
+            }),
+            enumerable: false,
+            configurable: true,
+          });
+          window.history.replaceState(null, '', '/auth/web-callback');
+          return;
+        }
+        var prior = window.history.state && window.history.state.authConfirm;
+        var outcome = hasError ? 'error' : code ? 'confirmed' : prior === 'confirmed' || prior === 'error' ? prior : 'none';
+        var fresh = outcome === 'confirmed' && !!code;
+        Object.defineProperty(window, '__stockpileAuthConfirm', {
+          value: Object.freeze({ code: fresh ? code : null }),
+          enumerable: false,
+          configurable: true,
+        });
+        window.history.replaceState({ authConfirm: outcome }, '', '/auth/confirm');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
