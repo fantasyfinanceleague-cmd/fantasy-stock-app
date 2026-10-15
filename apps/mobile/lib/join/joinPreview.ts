@@ -16,6 +16,7 @@
  */
 import { draftDateTimeLabel } from '../home/draftCountdown';
 import { stakesLine } from '../stakesLine';
+import { INVITE_COPY } from '../invite/inviteCopy';
 
 /** Why a league that exists still can't be joined. Mirrors previewJoinReason's
  * vocabulary (supabase/functions/preview-league/reason.ts) plus `left_league`,
@@ -163,9 +164,14 @@ export function draftRow(l: Pick<PreviewLeague, 'draftDate' | 'draftStatus'>): s
 }
 
 /** The refusal under the preview: board copy, naming the league. */
-export function blockMessage(block: JoinBlock, l: Pick<PreviewLeague, 'name' | 'max'>): string {
+/**
+ * `invited` is true inside the invite-arrival flow only (a pending invite): a full league then reads the
+ * Planner's "Ask whoever invited you" line; a typed code keeps "Ask your commissioner".
+ */
+export function blockMessage(block: JoinBlock, l: Pick<PreviewLeague, 'name' | 'max'>, opts: { invited?: boolean } = {}): string {
   switch (block) {
     case 'league_full':
+      if (opts.invited) return INVITE_COPY.full(l.name);
       return `${l.name} is full: ${l.max} of ${l.max} managers. Ask your commissioner if they can make room.`;
     case 'draft_started':
       return `${l.name} has already drafted, so it can't take new managers this season.`;
@@ -211,7 +217,7 @@ export interface PreviewView {
 }
 
 /** Board: Managers / Draft / Stakes / Season (Season dropped when the league has no length). */
-export function previewView(l: PreviewLeague, block: JoinBlock | null): PreviewView {
+export function previewView(l: PreviewLeague, block: JoinBlock | null, opts: { invited?: boolean } = {}): PreviewView {
   // A full league always reads "N of N", even if the count is a beat stale.
   const members = block === 'league_full' ? l.max : l.members;
   const rows: PreviewRow[] = [
@@ -225,7 +231,7 @@ export function previewView(l: PreviewLeague, block: JoinBlock | null): PreviewV
     name: l.name,
     rows,
     block,
-    message: block ? blockMessage(block, l) : null,
+    message: block ? blockMessage(block, l, opts) : null,
     action: previewAction(block),
     caption: block ? null : JOIN_COPY.leaveAnyTime,
   };

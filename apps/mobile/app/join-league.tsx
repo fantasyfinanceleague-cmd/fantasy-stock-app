@@ -15,6 +15,8 @@ import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { WarnPanel } from '@/components/sp/WarnPanel';
 import { useLeagueContext } from '@/lib/LeagueContext';
+import { useArrivalInvite } from '@/lib/invite/useArrivalInvite';
+import { fixtureJoinedRows, joinedFactRows } from '@/lib/join/joinedFacts';
 import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
@@ -77,6 +79,9 @@ async function callJoin(code: string): Promise<{ data: unknown; error: unknown }
 
 export default function JoinLeagueScreen() {
   const { refresh, setActiveLeagueId } = useLeagueContext();
+  // Inside the invite-arrival flow (a pending invite) a full league reads "Ask whoever invited you";
+  // a typed code keeps "Ask your commissioner" (Planner, 2026-10-14).
+  const invited = useArrivalInvite() !== null;
   // At accessibility sizes a preview row stacks (label over value), so a value never wraps a word
   // at a time beside its label (W4 Onboarding, XXXL: "Sat, Oct / 10 · / 7:00 PM / ET").
   const { fontScale } = useWindowDimensions();
@@ -91,6 +96,7 @@ export default function JoinLeagueScreen() {
   const [actionStatus, setActionStatus] = useState<ButtonStatus>('idle');
   const [actionError, setActionError] = useState<string | null>(null);
   const [joinedName, setJoinedName] = useState('');
+  const [joinedId, setJoinedId] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   // Drops the answer to a lookup the user has already walked away from.
   const request = useRef(0);
@@ -179,6 +185,7 @@ export default function JoinLeagueScreen() {
       setActiveLeagueId(outcome.leagueId);
     }
     setJoinedName(outcome.leagueName);
+    setJoinedId(JOIN_FIXTURE ? null : outcome.leagueId);
     setActionStatus('idle');
     setStep('joined');
   }
@@ -224,11 +231,11 @@ export default function JoinLeagueScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  const view = league ? previewView(league, block) : null;
+  const view = league ? previewView(league, block, { invited }) : null;
 
   if (step === 'joined' && league) {
     // The notifications ask comes right after joining (when it is due), then Home.
-    return <Joined name={joinedName} draftDate={league.draftDate} onContinue={() => void pushAskRouteFor('/(tabs)').then((to) => router.replace(to as never))} />;
+    return <Joined name={joinedName} draftDate={league.draftDate} leagueId={joinedId} fixtureLeague={JOIN_FIXTURE ? league : null} onContinue={() => void pushAskRouteFor('/(tabs)').then((to) => router.replace(to as never))} />;
   }
 
   if (step === 'preview' && view) {
@@ -312,7 +319,12 @@ export default function JoinLeagueScreen() {
 }
 
 /** Joined: the league's pre-draft Home is one tap away ("Go to the league"). */
-function Joined({ name, draftDate, onContinue }: { name: string; draftDate: string | null; onContinue: () => void }) {
+function Joined({ name, draftDate, leagueId, fixtureLeague, onContinue }: { name: string; draftDate: string | null; leagueId: string | null; fixtureLeague: PreviewLeague | null; onContinue: () => void }) {
+  // C1: the facts are read AFTER the join, as a member (the league and its member count in the context join() just refreshed), never from the preview.
+  const { leagues, sheetLeagues } = useLeagueContext();
+  const joined = leagueId ? leagues.find((l) => l.id === leagueId) : null;
+  const members = leagueId ? sheetLeagues.find((l) => l.id === leagueId)?.membersJoined ?? null : null;
+  const rows = joined ? joinedFactRows(joined, members) : fixtureLeague ? fixtureJoinedRows(fixtureLeague) : [];
   const { reduced, duration, easing } = useMotion();
   const pop = useSharedValue(reduced ? 1 : 0.8);
   useEffect(() => {
@@ -332,6 +344,20 @@ function Joined({ name, draftDate, onContinue }: { name: string; draftDate: stri
         <Text variant="body" tone="secondary" style={styles.centerText}>
           {v.body}
         </Text>
+        {rows.length > 0 ? (
+          <Card style={[styles.rows, styles.joinedRows]}>
+            {rows.map((row) => (
+              <View key={row.label} accessible accessibilityLabel={`${row.label}, ${row.value}`} style={styles.row}>
+                <Text variant="callout" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE}>
+                  {row.label}
+                </Text>
+                <Text variant="callout" numberOfLines={0} maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={styles.rowValue}>
+                  {keepDots(row.value)}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        ) : null}
         <View style={styles.centerButton}>
           <Button label="Go to the league" onPress={onContinue} />
         </View>
@@ -372,6 +398,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontFamily: type.headline.fontFamily,
     fontVariant: ['tabular-nums'],
+  },
+  joinedRows: {
+    alignSelf: 'stretch',
   },
   caption: {
     textAlign: 'center',

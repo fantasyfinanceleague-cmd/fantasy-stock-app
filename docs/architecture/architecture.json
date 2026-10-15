@@ -2,35 +2,39 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9f287b4319c06e7d653604c5c907d9c005256a01",
-    "commitShort": "9f287b43",
+    "commit": "c19e356e2d3def6cc7264c4b63c22e32b6287929",
+    "commitShort": "c19e356e",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w4",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/_layout.tsx"
+        "path": "apps/mobile/app/join-league.tsx"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/app/invite.tsx"
+        "code": "M",
+        "path": "apps/mobile/components/shell/AuthScaffold.tsx"
       },
       {
-        "code": "??",
+        "code": "M",
         "path": "apps/mobile/components/shell/InviteArrival.tsx"
       },
       {
+        "code": "M",
+        "path": "apps/mobile/lib/invite/arrivalView.ts"
+      },
+      {
         "code": "??",
-        "path": "apps/mobile/lib/invite/"
+        "path": "apps/mobile/lib/invite/inviteCopy.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/join/joinedFacts.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/shell/captureDev.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/shell/captureKnobs.ts"
+        "path": "apps/mobile/lib/join/joinPreview.ts"
       },
       {
         "code": "M",
@@ -41,15 +45,15 @@
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-15T02:31:34Z",
-    "sourceHash": "sha256:ffe9afdbfb9908743cd66aa068021f5583889455db9ea8b737ddb0aff32aca80",
+    "timestamp": "2026-10-15T02:49:06Z",
+    "sourceHash": "sha256:58a1c355f12172c680b6a04fe72796de9e86fb90c538b3610a320aeb61dc55d6",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 26.3,
+    "ageHours": 26.6,
     "ageDays": 1.1,
     "staleAfterDays": 14,
     "stale": false,
@@ -16774,7 +16778,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:74"
+        "apps/mobile/app/join-league.tsx:76"
       ]
     },
     {
@@ -16786,7 +16790,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:65"
+        "apps/mobile/app/join-league.tsx:67"
       ]
     },
     {
@@ -18186,7 +18190,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:65"
+            "apps/mobile/app/join-league.tsx:67"
           ]
         },
         {
@@ -18202,7 +18206,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:74"
+            "apps/mobile/app/join-league.tsx:76"
           ]
         },
         {
@@ -19747,8 +19751,8 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/join-league.tsx:65 -> preview-league",
-      "apps/mobile/app/join-league.tsx:74 -> join-league",
+      "apps/mobile/app/join-league.tsx:67 -> preview-league",
+      "apps/mobile/app/join-league.tsx:76 -> join-league",
       "apps/mobile/components/game/DraftRoom.tsx:212 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:236 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:281 -> validate-and-record-pick (via seamInvoke)",

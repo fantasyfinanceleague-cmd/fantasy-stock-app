@@ -29,9 +29,11 @@ import { PUSH_ASK_COPY, pushAskDestination, pushAskRoute, shouldPrePrompt, type 
 import { TIPS, tipVisible } from '../lib/shell/firstTimeTipPolicy.ts';
 import { confirmedChipLabel } from '../lib/shell/confirmedChip.ts';
 import { CONFIRM_EMAIL_COPY } from '../constants/confirmEmailCopy.ts';
-import { ARRIVAL_COPY, arrivalTitle, arrivalView } from '../lib/invite/arrivalView.ts';
+import { ARRIVAL_COPY, arrivalTitle, arrivalView, keepName, refusalLine } from '../lib/invite/arrivalView.ts';
+import { INVITE_COPY } from '../lib/invite/inviteCopy.ts';
+import { fixtureJoinedRows, joinedFactRows } from '../lib/join/joinedFacts.ts';
 import { INVITE_FIXTURES, inviteFixture } from '../lib/invite/inviteFixture.ts';
-import { JOIN_COPY } from '../lib/join/joinPreview.ts';
+import { JOIN_COPY, blockMessage, previewView, type PreviewLeague } from '../lib/join/joinPreview.ts';
 import { parseCaptureKnobs } from '../lib/shell/captureKnobs.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -302,56 +304,72 @@ Deno.test('Profile: a "How it works" row opens the sheet (the three cards, still
   assert(sheet.includes('How it works') && sheet.includes('still'));
 });
 
-// ── The signed-out invite arrival ────────────────────────────────────────────────
+// ── The signed-out invite arrival (Giorgio's B ruling) ────────────────────────────
 
 const view = (k: (typeof INVITE_FIXTURES)[number]) => arrivalView(inviteFixture(k));
+const NB = '\u00a0';
 
-Deno.test('arrival: "{inviter} invited you to {league}", or "You\'re invited to {league}" when the inviter is null', () => {
-  assertEquals(arrivalTitle('Stock Scudetto', 'Roberto'), 'Roberto invited you to Stock Scudetto');
-  assertEquals(arrivalTitle('Stock Scudetto', null), "You're invited to Stock Scudetto");
+Deno.test('arrival: "{inviter} invited you to {league}" over the inviter\'s initials; "You\'re invited to {league}" and the generic line over the league icon', () => {
+  assertEquals(view('found').title, `Roberto invited you to Stock${NB}Scudetto`);
+  assertEquals(view('found').mark, { kind: 'inviter', name: 'Roberto' });
+  assertEquals(view('solo').title, `You're invited to Stock${NB}Scudetto`);
+  assertEquals(view('solo').mark, { kind: 'league' });
   assertEquals(arrivalTitle(null, 'Roberto'), "You're invited to a league", 'no name: never a half-built sentence');
-  assertEquals(view('found').title, 'Roberto invited you to Stock Scudetto');
-  assertEquals(view('solo').title, "You're invited to Stock Scudetto");
-});
-
-Deno.test('arrival: loading, not found and unavailable are the generic line with every sign-in option, never an error page', () => {
-  for (const k of ['loading', 'not_found', 'unavailable'] as const) {
-    const v = view(k);
-    assertEquals(v.title, "You're invited to a league", k);
-    assertEquals([v.canJoin, v.refusal, v.avatarName], [true, null, null], k);
+  for (const k of ['loading', 'unavailable'] as const) {
+    assertEquals([view(k).title, view(k).mark], ["You're invited to a league", { kind: 'league' }], k);
   }
   assertEquals(ARRIVAL_COPY.generic, "You're invited to a league");
 });
 
-Deno.test('arrival: only an unavailable preview offers Try again, with Join\'s own unreachable line', () => {
+Deno.test('arrival: the league\'s name never breaks across lines (non-breaking spaces and a word joiner at hyphens)', () => {
+  assertEquals(keepName('Stock Scudetto'), `Stock${NB}Scudetto`);
+  assert(!arrivalTitle('Stock Scudetto', 'Roberto').includes('Stock Scudetto'));
+  assertEquals(keepName('Big Fish League'), `Big${NB}Fish${NB}League`);
+  assert(keepName('Wall-Street Bets').includes('-\u2060'), 'a hyphen between letters carries a word joiner');
+  assertEquals(keepName('Stock Scudetto').replace(/\u00a0/g, ' '), 'Stock Scudetto', 'the words are unchanged');
+});
+
+Deno.test('arrival: a dead link (not found) has NO heading: the refusal alone, then Sign in', () => {
+  const v = view('not_found');
+  assertEquals([v.title, v.mark, v.refusal, v.canJoin, v.retry], [null, { kind: 'none' }, "This invite link doesn't work anymore. Ask for a new one.", false, false]);
+});
+
+Deno.test('arrival: loading and unavailable keep every sign-in option, never an error page; only unavailable offers Try again', () => {
+  for (const k of ['loading', 'unavailable', 'found', 'solo'] as const) assertEquals([view(k).canJoin, view(k).refusal], [true, null], k);
   for (const k of INVITE_FIXTURES) assertEquals(view(k).retry, k === 'unavailable', k);
   assertEquals(view('unavailable').unreachable, JOIN_COPY.unreachable);
   for (const k of INVITE_FIXTURES) if (k !== 'unavailable') assertEquals(view(k).unreachable, null, k);
   assertEquals(ARRIVAL_COPY.tryAgain, 'Try again');
 });
 
-Deno.test('arrival: before sign-in there are no facts, only the name, the inviter and the refusal', () => {
-  const v = view('found');
-  assertEquals(Object.keys(v).sort(), ['avatarName', 'canJoin', 'refusal', 'retry', 'title', 'unreachable']);
-  assertEquals([v.canJoin, v.refusal, v.avatarName], [true, null, 'Stock Scudetto']);
-  const types = code(SOURCES['lib/invite/usePendingInvite.ts']);
-  assert(!/league\??:|PreviewLeague/.test(types), 'the pending-invite shape carries no league facts');
-});
-
-Deno.test('arrival: the three refusals are the Planner\'s pre-sign-in lines, verbatim, and replace the sign-in buttons', () => {
+Deno.test('arrival: the refusals are Giorgio\'s / the Planner\'s lines, verbatim, and replace the sign-in buttons', () => {
   const full = view('full');
   assertEquals([full.canJoin, full.refusal], [false, 'Stock Scudetto is full. Ask whoever invited you if they can make room.']);
-  assertEquals(view('drafting').refusal, "Stock Scudetto isn't taking new players right now.");
-  assertEquals(view('over').refusal, "Stock Scudetto isn't taking new players right now.");
-  assertEquals([view('drafting').canJoin, view('over').canJoin], [false, false]);
-  for (const k of ['found', 'solo', 'loading', 'not_found', 'unavailable'] as const) assertEquals(view(k).refusal, null, k);
+  for (const k of ['drafting', 'over'] as const) {
+    assertEquals([view(k).canJoin, view(k).refusal], [false, "Stock Scudetto isn't taking new players right now."], k);
+    assertEquals(view(k).title, `Roberto invited you to Stock${NB}Scudetto`, 'the heading stays above a refusal');
+  }
+  for (const k of ['found', 'solo', 'loading', 'unavailable'] as const) assertEquals(view(k).refusal, null, k);
 });
 
-Deno.test('arrival: never Join\'s counts or "can\'t join right now" line before sign-in', () => {
+Deno.test('arrival: the reason mapping matches previewJoinReason (invite_expired and anything unknown are a dead link)', () => {
+  assertEquals(refusalLine('league_full', 'X'), INVITE_COPY.full('X'));
+  assertEquals(refusalLine('draft_started', 'X'), INVITE_COPY.closed('X'));
+  assertEquals(refusalLine('season_completed', 'X'), INVITE_COPY.closed('X'));
+  assertEquals(refusalLine('invite_expired', 'X'), INVITE_COPY.dead);
+  assertEquals(refusalLine('something_new', 'X'), INVITE_COPY.dead);
+  // The function's own vocabulary (supabase/functions/preview-league/reason.ts), so a new reason is noticed here.
+  const reasons = ['already_member', 'season_completed', 'invite_expired', 'draft_started', 'league_full'];
+  const reasonSrc = Deno.readTextFileSync(new URL('../../../supabase/functions/preview-league/reason.ts', import.meta.url));
+  for (const r of reasons) assert(reasonSrc.includes(`'${r}'`), r);
+});
+
+Deno.test('arrival: before sign-in there are no facts: the shape carries only the name, the inviter and the reason', () => {
+  const types = code(SOURCES['lib/invite/usePendingInvite.ts']);
+  assert(!/league\??:|PreviewLeague/.test(types), 'the pending-invite shape carries no league facts');
   const src = code(SOURCES['lib/invite/arrivalView.ts']);
   for (const w of ['blockMessage', 'previewView', 'unknownBlock', 'members', 'max']) assert(!src.includes(w), w);
-  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
-  assert(!/rows|Card/.test(screen), 'no facts rows signed out');
+  assert(!/rows|Card/.test(code(SOURCES['components/shell/InviteArrival.tsx'])), 'no facts rows signed out');
 });
 
 Deno.test('arrival: the capture knob parses only in a dev build and only a known state', () => {
@@ -360,16 +378,72 @@ Deno.test('arrival: the capture knob parses only in a dev build and only a known
   assertEquals(parseCaptureKnobs(false, { invite: 'found' }).invite, null);
 });
 
-Deno.test('arrival: wired as the FIRST signed-out screen while an invite is pending; stub hook; screen acts on every tappable', () => {
+Deno.test('arrival: the layout centres the invite and docks the actions; wired first in the signed-out group', () => {
+  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
+  assert(screen.includes('<AuthScaffold centerBody footer='), 'invite centred above, actions in the footer');
+  assert(screen.includes('onPress={invite.retryPreview}'), 'Try again re-asks on a tap, never a loop');
+  assert(screen.includes("router.push('/create-account')") && screen.includes("router.push('/login')"));
+  assert(!/setInterval|setTimeout|useEffect/.test(screen), 'no polling or retry loop');
+  const scaffold = code(SOURCES['components/shell/AuthScaffold.tsx']);
+  assert(scaffold.includes("flexGrow: 1") && scaffold.includes("justifyContent: 'center'"));
   const layout = code(SOURCES['app/_layout.tsx']);
   const group = layout.slice(layout.indexOf('<Stack.Protected guard={!signedIn}>'));
   assert(group.indexOf('name="invite"') > -1 && group.indexOf('name="invite"') < group.indexOf('name="onboarding"'), 'invite comes before the cards');
   assert(layout.includes('<Stack.Protected guard={pendingInvite !== null}>') && layout.includes('useArrivalInvite()'));
-  const hook = code(SOURCES['lib/invite/usePendingInvite.ts']);
-  assert(hook.includes('return null;'), 'the stub never has a pending invite');
+  assert(code(SOURCES['lib/invite/usePendingInvite.ts']).includes('return null;'), 'the stub never has a pending invite');
   assert(code(SOURCES['lib/invite/useArrivalInvite.ts']).includes('FIXTURE ?? pending'));
-  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
-  assert(screen.includes('onPress={invite.retryPreview}'), 'Try again re-asks on a tap, never a loop');
-  assert(screen.includes("router.push('/create-account')") && screen.includes("router.push('/login')"));
-  assert(!/setInterval|setTimeout|useEffect/.test(screen), 'no polling or retry loop');
+});
+
+// ── "You're in {league}": the facts card (C1) and the invited-only "full" line ───────
+
+const LG: PreviewLeague = {
+  name: 'Stock Scudetto', members: 4, max: 6, stakeMode: 'fixed_notional', notionalPerSlot: 100, budgetAmount: null,
+  leagueType: 'matchup', numWeeks: 10, durationDays: null, draftDate: '2026-10-17T23:00:00Z', draftStatus: 'not_started',
+};
+const FACTS = { num_participants: 6, stake_mode: 'fixed_notional', notional_per_slot: 100, budget_amount: null, league_type: 'matchup', num_weeks: 10, duration_days: null };
+
+Deno.test('You\'re in: the card is Managers / Stakes / Season (no Draft row: the draft sentence stays)', () => {
+  const rows = joinedFactRows(FACTS, 6);
+  assertEquals(rows.map((r) => r.label), ['Managers', 'Stakes', 'Season']);
+  assertEquals(rows[0].value, '6 of 6');
+  assertEquals(rows[2].value, '10 weeks');
+  assert(!rows.some((r) => r.label === 'Draft'));
+});
+
+Deno.test('You\'re in: an unreadable member count drops Managers (never a guessed count); a league with no length drops Season', () => {
+  assertEquals(joinedFactRows(FACTS, null).map((r) => r.label), ['Stakes', 'Season']);
+  assertEquals(joinedFactRows({ ...FACTS, num_weeks: null, duration_days: null }, 6).map((r) => r.label), ['Managers', 'Stakes']);
+});
+
+Deno.test('You\'re in: a fixture reads the held preview with the new member added, capped at the league size', () => {
+  assertEquals(fixtureJoinedRows(LG)[0].value, '5 of 6');
+  assertEquals(fixtureJoinedRows({ ...LG, members: 6 })[0].value, '6 of 6');
+});
+
+Deno.test('You\'re in: the facts come from the member\'s league list after the join, not from the preview', () => {
+  const join = code(SOURCES['app/join-league.tsx']);
+  const joined = join.slice(join.indexOf('function Joined('), join.indexOf('const styles = StyleSheet.create'));
+  assert(joined.includes('useLeagueContext()') && joined.includes('joinedFactRows(joined, members)'));
+  assert(joined.includes('fixtureLeague ? fixtureJoinedRows(fixtureLeague)'), 'only a fixture falls back to the preview');
+  assert(join.includes('fixtureLeague={JOIN_FIXTURE ? league : null}'), 'a real join never passes the preview');
+  assert(join.includes('setJoinedId(JOIN_FIXTURE ? null : outcome.leagueId)'));
+});
+
+Deno.test('a full league: inside an invite the Planner\'s line; a typed code keeps "Ask your commissioner"', () => {
+  const l = { name: 'Stock Scudetto', max: 6 };
+  assertEquals(blockMessage('league_full', l, { invited: true }), 'Stock Scudetto is full. Ask whoever invited you if they can make room.');
+  assertEquals(blockMessage('league_full', l), 'Stock Scudetto is full: 6 of 6 managers. Ask your commissioner if they can make room.');
+  assertEquals(blockMessage('league_full', l, { invited: false }), blockMessage('league_full', l));
+  // Only the full line changes; every other refusal is the same in both flows.
+  for (const b of ['draft_started', 'draft_in_progress', 'season_completed', 'invite_expired', 'unknown'] as const) {
+    assertEquals(blockMessage(b, l, { invited: true }), blockMessage(b, l), b);
+  }
+  assertEquals(previewView(LG, 'league_full', { invited: true }).message, INVITE_COPY.full('Stock Scudetto'));
+  assertEquals(previewView(LG, 'league_full').message, blockMessage('league_full', LG));
+});
+
+Deno.test('a full league: Join keys the line on a pending invite, and the post-join refusal re-renders through it', () => {
+  const join = code(SOURCES['app/join-league.tsx']);
+  assert(join.includes('const invited = useArrivalInvite() !== null;'));
+  assert(join.includes('previewView(league, block, { invited })'));
 });

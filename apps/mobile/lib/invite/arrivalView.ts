@@ -1,42 +1,43 @@
 /**
- * What the signed-out invite arrival shows (onboarding W4; plan 2026-10-14 frame 1, Decision 7:
- * "{inviter} invited you to {league}", the inviter only). Pure (no React Native), so tests-deno
- * pins every state.
+ * What the signed-out invite arrival shows (onboarding W4; plan 2026-10-14 frame 1, Decision 7;
+ * Giorgio's B ruling, 2026-10-14). Pure (no React Native), so tests-deno pins every state.
  *
  * BEFORE sign-in the only data is the league's name, its inviter and a refusal reason (the
  * no-session endpoint returns nothing else: the Planner's security condition). So there are no
- * counts, dates, stakes or rows here; those appear after sign-in, in the session preview inside
- * auto-join, which owns the definitive refusal ("N of N" and the rest, lib/join/joinPreview.ts).
- * The refusal lines below are the Planner's pre-sign-in wording, the same lines the web page uses.
+ * counts, dates, stakes or rows here; those appear after sign-in (the "You're in" card, and the
+ * session preview inside auto-join, which owns the definitive refusal).
  *
- * The preview never blocks and never errors: while it loads, or when it is not found or
- * unavailable, the screen is the generic "You're invited to a league" with the sign-in buttons,
- * and nothing is cleared.
+ *   inviter + name  → "{inviter} invited you to {league}" over the inviter's initials
+ *   name only       → "You're invited to {league}" over the league icon
+ *   nothing usable  → "You're invited to a league" over the league icon (loading, unavailable)
+ *   a dead link     → NO heading: the refusal alone, then "Sign in" (Planner)
+ *
+ * The preview never blocks and never errors: loading and unavailable are the generic heading with
+ * every sign-in option, and nothing is cleared.
  */
+import { keepHyphens } from '../game/keepDots';
 import { JOIN_COPY } from '../join/joinPreview';
 import { COPY as MONEY_COPY } from '../money/moneyCopy';
-import type { InviteReason, PendingInvite } from './usePendingInvite';
+import { INVITE_COPY } from './inviteCopy';
+import type { PendingInvite } from './usePendingInvite';
 
 export const ARRIVAL_COPY = {
   generic: "You're invited to a league",
   signIn: 'Sign in',
   useEmail: 'Use email',
   tryAgain: MONEY_COPY.tryAgain,
-  /** The three signed-out refusals, one place (Planner, 2026-10-14). A finished season reads like a started draft. */
-  refusal: {
-    league_full: (name: string) => `${name} is full. Ask whoever invited you if they can make room.`,
-    draft_started: (name: string) => `${name} isn't taking new players right now.`,
-    season_completed: (name: string) => `${name} isn't taking new players right now.`,
-  } satisfies Record<InviteReason, (name: string) => string>,
 } as const;
 
+/** What sits above the heading: the inviter's initials, the league icon, or nothing (a dead link). */
+export type ArrivalMark = { kind: 'inviter'; name: string } | { kind: 'league' } | { kind: 'none' };
+
 export interface ArrivalView {
-  title: string;
-  /** The league's name for its initial disc; null = the generic glyph (no name is known). */
-  avatarName: string | null;
+  /** null = no heading at all (a dead link). */
+  title: string | null;
+  mark: ArrivalMark;
   /** The refusal (WarnPanel), or null. */
   refusal: string | null;
-  /** The sign-in buttons show only when the league can take a new manager. */
+  /** The sign-in buttons show only when the link can still be used. */
   canJoin: boolean;
   /** Caption under the title when the preview was unavailable; null otherwise. */
   unreachable: string | null;
@@ -44,18 +45,40 @@ export interface ArrivalView {
   retry: boolean;
 }
 
+/** The league's name never breaks across lines: spaces are non-breaking, hyphens carry a word joiner. */
+export function keepName(name: string): string {
+  return keepHyphens(name.replace(/ /g, ' '));
+}
+
 export function arrivalTitle(name: string | null, inviter: string | null): string {
   if (!name) return ARRIVAL_COPY.generic;
-  return inviter ? `${inviter} invited you to ${name}` : `You're invited to ${name}`;
+  return inviter ? `${inviter} invited you to ${keepName(name)}` : `You're invited to ${keepName(name)}`;
+}
+
+/** The refusal line for a reason (the contract's three, and invite_expired / anything unknown = a dead link). */
+export function refusalLine(reason: string, name: string): string {
+  switch (reason) {
+    case 'league_full':
+      return INVITE_COPY.full(name);
+    case 'draft_started':
+    case 'season_completed':
+      return INVITE_COPY.closed(name);
+    default:
+      return INVITE_COPY.dead;
+  }
 }
 
 export function arrivalView(invite: Pick<PendingInvite, 'preview'>): ArrivalView {
   const p = invite.preview;
+  if (p.kind === 'not_found') {
+    // A dead link: the refusal alone (no heading), then Sign in.
+    return { title: null, mark: { kind: 'none' }, refusal: INVITE_COPY.dead, canJoin: false, unreachable: null, retry: false };
+  }
   if (p.kind !== 'found') {
     const unavailable = p.kind === 'unavailable';
     return {
       title: ARRIVAL_COPY.generic,
-      avatarName: null,
+      mark: { kind: 'league' },
       refusal: null,
       canJoin: true,
       unreachable: unavailable ? JOIN_COPY.unreachable : null,
@@ -64,8 +87,8 @@ export function arrivalView(invite: Pick<PendingInvite, 'preview'>): ArrivalView
   }
   return {
     title: arrivalTitle(p.name, p.inviter),
-    avatarName: p.name,
-    refusal: p.reason ? ARRIVAL_COPY.refusal[p.reason](p.name) : null,
+    mark: p.inviter ? { kind: 'inviter', name: p.inviter } : { kind: 'league' },
+    refusal: p.reason ? refusalLine(p.reason, p.name) : null,
     canJoin: p.reason === null,
     unreachable: null,
     retry: false,

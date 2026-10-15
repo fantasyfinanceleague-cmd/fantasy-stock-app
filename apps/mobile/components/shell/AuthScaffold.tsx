@@ -18,9 +18,11 @@ export interface AuthScaffoldProps {
   /** Docked under the body; lifted above the keyboard when it opens. */
   footer?: ReactNode;
   back?: { label: string; onPress: () => void };
+  /** Centre the body in the space above the footer (the invite arrival); it scrolls when it is taller. */
+  centerBody?: boolean;
 }
 
-export const AuthScaffold = forwardRef<ScrollView, AuthScaffoldProps>(function AuthScaffold({ children, footer, back }, ref) {
+export const AuthScaffold = forwardRef<ScrollView, AuthScaffoldProps>(function AuthScaffold({ children, footer, back, centerBody }, ref) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -42,7 +44,7 @@ export const AuthScaffold = forwardRef<ScrollView, AuthScaffoldProps>(function A
       <ScrollView
         ref={ref}
         style={styles.fill}
-        contentContainerStyle={[styles.body, { paddingBottom: footer ? space[5] : insets.bottom + space[8] }]}
+        contentContainerStyle={[styles.body, centerBody && styles.bodyCentered, { paddingBottom: footer ? space[5] : insets.bottom + space[8] }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
@@ -69,6 +71,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[6],
     paddingTop: space[5],
     gap: space[6],
+  },
+  bodyCentered: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   footer: {
     paddingHorizontal: space[6],

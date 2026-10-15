@@ -48,9 +48,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/forgot-password.tsx:135` | EmptyState | onAction | `backToSignIn` | route replace('/login') |  |
 | `app/forgot-password.tsx:137` | EmptyState | onSecondaryAction | `inline: () => { setSent(false); handleResetPassword(); }` | state setSent |  |
 | `app/forgot-password.tsx:170` | Button | onPress | `handleResetPassword` | fn handleResetPassword |  |
-| `app/join-league.tsx:273` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
-| `app/join-league.tsx:287` | Button | onPress | `find` | fn find | `!trimmed` |
-| `app/join-league.tsx:336` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
+| `app/join-league.tsx:280` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
+| `app/join-league.tsx:294` | Button | onPress | `find` | fn find | `!trimmed` |
+| `app/join-league.tsx:362` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
 | `app/league-settings.tsx:160` | LeaveLeagueRow | onPress | `inline: () => { setLeaveError(null); setLeaveOpen(true); }` | sheet setLeaveOpen(true) |  |
 | `app/league-settings.tsx:329` | Button | onPress | `handleSave` | route back; alert |  |
 | `app/league-settings.tsx:364` | SegmentedControl | onChange | `inline: (v) => setPickSeconds(Number(v))` | state setPickSeconds |  |
@@ -175,7 +175,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/money/TradeReviewPanel.tsx:174` | Button | onPress | `onRetry` | prop onRetry (the caller's) |  |
 | `components/shell/AppearancePicker.tsx:38` | ThemeOption | onPress | `inline: () => changeAppearance(o.id)` | fn changeAppearance |  |
 | `components/shell/AppearancePicker.tsx:52` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
-| `components/shell/AuthScaffold.tsx:34` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
+| `components/shell/AuthScaffold.tsx:36` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/shell/ConfirmEmailSent.tsx:67` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
 | `components/shell/ConfirmEmailSent.tsx:69` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
 | `components/shell/ConfirmedEmailNotice.tsx:34` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
@@ -185,9 +185,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/GetStarted.tsx:47` | Pressable | onPress | `onSignIn` | prop onSignIn (the caller's) |  |
 | `components/shell/GetStarted.tsx:69` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/HowItWorksSheet.tsx:35` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
-| `components/shell/InviteArrival.tsx:51` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
-| `components/shell/InviteArrival.tsx:61` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
-| `components/shell/InviteArrival.tsx:64` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
+| `components/shell/InviteArrival.tsx:37` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
+| `components/shell/InviteArrival.tsx:42` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
+| `components/shell/InviteArrival.tsx:68` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
 | `components/shell/LeaguePill.tsx:60` | PressableScale | onPress | `openLeagueSheet` | fn openLeagueSheet (from a hook or import) |  |
 | `components/shell/LeagueSheet.tsx:143` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
 | `components/shell/LeagueSheet.tsx:163` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
