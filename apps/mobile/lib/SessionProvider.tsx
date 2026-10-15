@@ -8,6 +8,7 @@ import { withVerifierKept } from './auth/verifierSlot';
 import { setEmailJustConfirmed } from './auth/emailConfirmed';
 import { setConfirmFailedNotice } from './auth/confirmFailedNotice';
 import { buildConfirmRedirect } from './auth/confirmLink';
+import { setLiveSession } from './auth/liveSession';
 import { pkceCryptoReady } from './auth/pkceCrypto';
 import { confirmationCooldown, RESEND_TOO_SOON } from './auth/resendCooldown';
 import { removeLegacyAuthKeys } from './auth/legacyAuthKeys';
@@ -97,6 +98,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // DEV-only fixture (lib/shell/devFixture.ts): a local fake session.
       // supabase.auth is never touched, so nothing signs in or out for real.
       setUser(fixtureStartsSignedOut(SHELL_FIXTURE) ? null : FIXTURE_USER);
+      setLiveSession(fixtureStartsSignedOut(SHELL_FIXTURE) ? null : FIXTURE_USER.id);
       setLoading(false);
       return;
     }
@@ -110,6 +112,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       userIdRef.current = session?.user?.id ?? null;
+      setLiveSession(session?.user?.id ?? null); // synchronous and ahead of the React state (lib/auth/liveSession.ts)
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -123,6 +126,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        setLiveSession(session?.user?.id ?? null); // the instant the session appears or ends (lib/auth/liveSession.ts)
         // Use functional updates to avoid unnecessary re-renders
         // that can cause native-stack to reconfigure and dismiss the keyboard
         setSession(prev => prev?.access_token === session?.access_token ? prev : session);
@@ -219,6 +223,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (SHELL_FIXTURE) {
       await wait(FIXTURE_NETWORK_MS);
       setUser(FIXTURE_USER);
+      setLiveSession(FIXTURE_USER.id);
       return { error: null };
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -230,8 +235,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       await wait(FIXTURE_NETWORK_MS);
       return { error: { message: FIXTURE_SIGNUPS_PAUSED_MESSAGE }, needsConfirmation: false };
     }
-    // Email confirmation is ON (plan 2026-10-14): signUp() returns no session, and the email's link returns
-    // into the app with a one-time code (lib/auth/confirmLink.ts) that only THIS device can exchange: with
+    // Email confirmation is ON (plan 2026-10-14): signUp() returns no session, and the email's link is the https
+    // universal link https://<domain>/auth/confirm?code=... (lib/auth/confirmLink.ts; it carries no invite code,
+    // decision 17), opened by the app when it is installed. Its one-time code only THIS device can exchange: with
     // flowType 'pkce' supabase-js stores a code verifier here before the request and sends its challenge.
     // No username travels any more: the handle_new_user_profile trigger (20261005000001) still creates
     // the profile row (username NULL), and the pick-username gate asks for one.
@@ -258,6 +264,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             const res = await supabase.auth.signUp({
               email,
               password,
+              // The https universal link (W3), plain: no invite code in the email (decision 17).
               options: { emailRedirectTo: buildConfirmRedirect() },
             });
             if (!res.error && !res.data?.session) confirmationCooldown.markSent(email);
@@ -302,6 +309,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (SHELL_FIXTURE) {
       setUser(null);
       setSession(null);
+      setLiveSession(null);
       return;
     }
     // Remove push token before signing out

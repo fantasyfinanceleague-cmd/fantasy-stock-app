@@ -17,6 +17,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.stockpile.fantasystock",
       "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:fantasy-stock-app.vercel.app"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },

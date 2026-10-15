@@ -3,7 +3,7 @@
 //   deno test supabase/functions/preview-league/reason.test.ts
 
 import { assertEquals } from 'jsr:@std/assert';
-import { previewJoinReason, type PreviewLeagueInput } from './reason.ts';
+import { isInviteExpired, previewJoinReason, type PreviewLeagueInput } from './reason.ts';
 
 function base(overrides: Partial<PreviewLeagueInput> = {}): PreviewLeagueInput {
   return {
@@ -177,4 +177,16 @@ Deno.test('room: index.ts hands the league\'s draft_date to the reason', async (
   // the preview would invite a join the RPC refuses for the room's whole hour.
   const src = await Deno.readTextFile(new URL('./index.ts', import.meta.url));
   assertEquals(/draftDate:\s*league\.draft_date\b/.test(src), true);
+});
+
+Deno.test('isInviteExpired: a league\'s own code is never expired; a league_invites code is dead when not pending or past expiry', () => {
+  const now = new Date('2026-10-20T12:00:00Z');
+  assertEquals(isInviteExpired(null, now), false);
+  assertEquals(isInviteExpired({ status: 'pending', expiresAt: null }, now), false);
+  assertEquals(isInviteExpired({ status: 'pending', expiresAt: '2026-10-21T00:00:00Z' }, now), false);
+  assertEquals(isInviteExpired({ status: 'pending', expiresAt: '2026-10-19T00:00:00Z' }, now), true);
+  for (const status of ['accepted', 'declined', 'expired']) assertEquals(isInviteExpired({ status, expiresAt: null }, now), true, status);
+  // season_completed outranks invite_expired in the reason order; the expiry check must not depend on the reason
+  const r = previewJoinReason(base({ seasonStatus: 'completed', invite: { status: 'accepted', expiresAt: null } }), now);
+  assertEquals(r.reason, 'season_completed');
 });

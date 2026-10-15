@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { previewJoinReason } from './reason.ts';
+import { lookupInviter, inviterReader } from './inviter.ts';
+import { isInviteExpired, previewJoinReason } from './reason.ts';
 import { previewLeagueBody } from './shape.ts';
 
 // ---- CORS / response helpers (same pattern as place-order) -----------------
@@ -85,10 +86,10 @@ Deno.serve(async (req: Request) => {
     }
     if (!league) return json({ found: false, reason: 'invalid_code' }, 200);
 
-    // No commissioner name (Giorgio, 2026-10-11, board #call-join-commissioner A):
-    // before joining, the commissioner is a user not in the caller's league, and
-    // ruling A (2026-10-08) allows no information about such users. The name is
-    // not looked up at all, so it cannot reach the response by accident.
+    // Before 2026-10-14 this response named nobody (Giorgio, 2026-10-11, board #call-join-commissioner A).
+    // Since then it names the INVITER only, for a code that resolved to a league (decision 7): the
+    // commissioner's username, looked up in ./inviter.ts, the one profile read in this function. The handler
+    // itself still looks no one up (supabase/tests/preview_league_names_nobody.test.ts).
 
     // Current member count.
     const { count: memberCount } = await admin
@@ -113,9 +114,15 @@ Deno.serve(async (req: Request) => {
       numParticipants: league.num_participants,
     });
 
+    // A dead invite names no one: tested on the invite itself, not on `reason` (season_completed outranks
+    // invite_expired in the reason order, which would have named the commissioner for a dead code on a finished league).
+    const inviter = isInviteExpired(invite ? { status: invite.status, expiresAt: invite.expires_at } : null, new Date())
+      ? null
+      : await lookupInviter(league.commissioner_id, inviterReader(admin));
+
     // Return ONLY the displayed fields (explicit pick list in shape.ts) — no
     // id / commissioner_id / invite_code.
-    return json(previewLeagueBody(league, current, { joinable, reason }), 200);
+    return json(previewLeagueBody(league, current, { joinable, reason }, inviter), 200);
   } catch (_e) {
     return json({ error: 'unhandled', message: 'Something went wrong. Please try again.' }, 500);
   }

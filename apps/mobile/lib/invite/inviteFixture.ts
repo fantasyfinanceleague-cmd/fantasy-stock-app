@@ -4,7 +4,7 @@
  * unprompted. Pure; lib/shell/captureKnobs.ts parses the value, lib/invite/useArrivalInvite.ts
  * reads it under `__DEV__` only, so a release bundle never builds one.
  */
-import type { InvitePreview, PendingInvite } from './usePendingInvite';
+import type { InvitePreview, PendingInvite } from './pendingInviteTypes';
 
 export type InviteFixtureKind = 'found' | 'solo' | 'full' | 'drafting' | 'over' | 'loading' | 'not_found' | 'unavailable' | 'long';
 export const INVITE_FIXTURES: readonly InviteFixtureKind[] = ['found', 'solo', 'full', 'drafting', 'over', 'loading', 'not_found', 'unavailable', 'long'];

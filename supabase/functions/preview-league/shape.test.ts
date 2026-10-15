@@ -43,6 +43,7 @@ Deno.test('exact league key set: no id / commissioner_id / invite_code / interna
     'draft_date',
     'draft_status',
     'duration_days',
+    'inviter',
     'league_type',
     'name',
     'notional_per_slot',
@@ -76,4 +77,12 @@ Deno.test('a missing per-slot value is null, not undefined', () => {
   assertEquals(body.league.notional_per_slot, null);
   // JSON must carry the key (undefined would be dropped silently).
   assertEquals('notional_per_slot' in JSON.parse(JSON.stringify(body)).league, true);
+});
+
+Deno.test('W3: inviter is the ONE name in the preview (the commissioner\'s username), null by default, nothing else about them', () => {
+  assertEquals(previewLeagueBody(ROW as PreviewLeagueRow, 6, OK).league.inviter, null);
+  const body = previewLeagueBody(ROW as PreviewLeagueRow, 6, OK, 'Roberto');
+  assertEquals(body.league.inviter, 'Roberto');
+  const serialised = JSON.stringify(body);
+  for (const secret of [ROW.id, ROW.commissioner_id, ROW.invite_code]) assertEquals(serialised.includes(secret), false);
 });

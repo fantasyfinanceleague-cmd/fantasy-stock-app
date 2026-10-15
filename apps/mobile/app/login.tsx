@@ -14,6 +14,7 @@ import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { ConfirmEmailSent } from '@/components/shell/ConfirmEmailSent';
 import { ConfirmedEmailNotice } from '@/components/shell/ConfirmedEmailNotice';
+import { usePendingInvite } from '@/lib/invite/usePendingInvite';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { SocialSignIn } from '@/components/shell/SocialSignIn';
@@ -49,6 +50,7 @@ export default function SignInScreen() {
   const [status, setStatus] = useState<ButtonStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [unconfirmed, setUnconfirmed] = useState(false);
+  const invite = usePendingInvite(); // the league named on "Check your email" when a link brought the person here
   const [sentTo, setSentTo] = useState<string | null>(null);
   const resending = useRef(false);
   const passwordRef = useRef<TextInput>(null);
@@ -98,6 +100,7 @@ export default function SignInScreen() {
     return (
       <ConfirmEmailSent
         email={sentTo}
+        league={invite?.leagueName ?? null}
         onResend={() => signUp(sentTo, password)}
         onBack={() => {
           setSentTo(null);

@@ -15,9 +15,10 @@ import type { AuthResult } from '@/lib/SessionProvider';
 
 // Onboarding W2 — "Check your email" after an email sign-up (plan 2026-10-14: email confirmation
 // ON; "the forgot-password pattern"). The words are Giorgio's approved copy, in
-// constants/confirmEmailCopy.ts. The email's link returns into the app
-// (lib/auth/confirmLink.ts) and the flow continues from there; confirming on another device
-// leaves the person to sign in here with their password.
+// constants/confirmEmailCopy.ts. The email's link is the https universal link
+// (lib/auth/confirmLink.ts; no invite code rides on it, decision 17): with the app installed it opens the app
+// and the flow continues from there; confirming on another device lands on the web app's /auth/confirm page, and
+// the person signs in here with their password.
 //
 // "Send again" is the parent's: it repeats signUp() for the same address (SessionProvider explains why
 // supabase.auth.resend() is not used with PKCE), so it needs the password the parent already holds.

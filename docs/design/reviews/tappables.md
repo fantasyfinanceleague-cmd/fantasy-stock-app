@@ -30,9 +30,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/(tabs)/matchup.tsx:291` | LoadFailure | onRetry | `roster.retry` | prop roster.retry |  |
 | `app/(tabs)/matchup.tsx:426` | LoadFailure | onRetry | `roster.retry` | prop roster.retry |  |
 | `app/+not-found.tsx:37` | Button | onPress | `goHome` | route replace('/') |  |
-| `app/create-account.tsx:125` | Button | onPress | `inline: () => router.replace('/login')` | route replace('/login') |  |
-| `app/create-account.tsx:128` | Button | onPress | `handleCreate` | fn handleCreate |  |
-| `app/create-account.tsx:129` | Pressable | onPress | `inline: () => router.replace('/login')` | route replace('/login') |  |
+| `app/create-account.tsx:127` | Button | onPress | `inline: () => router.replace('/login')` | route replace('/login') |  |
+| `app/create-account.tsx:130` | Button | onPress | `handleCreate` | fn handleCreate |  |
+| `app/create-account.tsx:131` | Pressable | onPress | `inline: () => router.replace('/login')` | route replace('/login') |  |
 | `app/create-league.tsx:317` | ChoiceRow | onPress | `inline: () => patch({ type: t.value })` | fn patch |  |
 | `app/create-league.tsx:375` | ChoiceRow | onPress | `inline: () => patch({ durationDays: d.value })` | fn patch |  |
 | `app/create-league.tsx:396` | SegmentedControl | onChange | `inline: (v) => patch({ pickSeconds: Number(v) })` | fn patch |  |
@@ -48,9 +48,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/forgot-password.tsx:135` | EmptyState | onAction | `backToSignIn` | route replace('/login') |  |
 | `app/forgot-password.tsx:137` | EmptyState | onSecondaryAction | `inline: () => { setSent(false); handleResetPassword(); }` | state setSent |  |
 | `app/forgot-password.tsx:170` | Button | onPress | `handleResetPassword` | fn handleResetPassword |  |
-| `app/join-league.tsx:281` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
-| `app/join-league.tsx:295` | Button | onPress | `find` | fn find | `!trimmed` |
-| `app/join-league.tsx:363` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
+| `app/join-league.tsx:496` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
+| `app/join-league.tsx:510` | Button | onPress | `find` | fn find | `!trimmed` |
+| `app/join-league.tsx:578` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
 | `app/league-settings.tsx:160` | LeaveLeagueRow | onPress | `inline: () => { setLeaveError(null); setLeaveOpen(true); }` | sheet setLeaveOpen(true) |  |
 | `app/league-settings.tsx:329` | Button | onPress | `handleSave` | route back; alert |  |
 | `app/league-settings.tsx:364` | SegmentedControl | onChange | `inline: (v) => setPickSeconds(Number(v))` | state setPickSeconds |  |
@@ -60,10 +60,10 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/league-settings.tsx:488` | SlotBuilder | onChange | `inline: (next) => { setSlots(next); setSlotsError(null); }` | state setSlots | `isLocked` |
 | `app/league-settings.tsx:525` | SettingRow | onPress | `inline: transferAllowed(membershipWindow) ? () => { setLeaveError(nu` | sheet setTransferOpen(true) |  |
 | `app/league-settings.tsx:567` | Button | onPress | `inline: () => void Share.share({ message: inviteShareMessage(code) }` | share sheet |  |
-| `app/login.tsx:158` | Pressable | onPress | `handleResend` | fn handleResend |  |
-| `app/login.tsx:165` | Pressable | onPress | `inline: () => router.push('/forgot-password')` | route push('/forgot-password') |  |
-| `app/login.tsx:174` | Button | onPress | `handleSignIn` | sheet setConfirmFailedNotice(false) |  |
-| `app/login.tsx:175` | Pressable | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
+| `app/login.tsx:161` | Pressable | onPress | `handleResend` | fn handleResend |  |
+| `app/login.tsx:168` | Pressable | onPress | `inline: () => router.push('/forgot-password')` | route push('/forgot-password') |  |
+| `app/login.tsx:177` | Button | onPress | `handleSignIn` | sheet setConfirmFailedNotice(false) |  |
+| `app/login.tsx:178` | Pressable | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
 | `app/pick-username.tsx:15` | UsernamePickerExit | onPress | `signOut` | fn signOut (from a hook or import) |  |
 | `app/reset-password.tsx:125` | EmptyState | onAction | `inline: () => router.replace('/')` | route replace('/') |  |
 | `app/reset-password.tsx:139` | Pressable | onPress | `handleCancel` | route replace('/') |  |
@@ -176,8 +176,8 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/AppearancePicker.tsx:38` | ThemeOption | onPress | `inline: () => changeAppearance(o.id)` | fn changeAppearance |  |
 | `components/shell/AppearancePicker.tsx:52` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/AuthScaffold.tsx:36` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
-| `components/shell/ConfirmEmailSent.tsx:67` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
-| `components/shell/ConfirmEmailSent.tsx:69` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
+| `components/shell/ConfirmEmailSent.tsx:68` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
+| `components/shell/ConfirmEmailSent.tsx:70` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
 | `components/shell/ConfirmedEmailNotice.tsx:40` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
 | `components/shell/FirstTimeTip.tsx:27` | Pressable | onPress | `inline: () => dismissTip(tip)` | fn dismissTip |  |
 | `components/shell/GetStarted.tsx:44` | Choice | onPress | `onCreate` | prop onCreate (the caller's) |  |

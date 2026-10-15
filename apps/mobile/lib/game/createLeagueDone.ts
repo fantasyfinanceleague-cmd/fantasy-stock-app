@@ -35,7 +35,5 @@ export const CREATE_FAILED = {
   message: 'Check your connection, then try again.',
 } as const;
 
-/** The share sheet's text: the League tab lobby's wording. */
-export function inviteShareMessage(code: string): string {
-  return `Join my league with code ${code}`;
-}
+/** The share sheet's text: one function for every Share (lib/invite/inviteLink.ts), the code and the invite link. */
+export { inviteShareMessage } from '../invite/inviteLink';

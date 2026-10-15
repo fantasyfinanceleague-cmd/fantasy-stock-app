@@ -44,6 +44,8 @@ export interface PreviewLeagueBody {
     num_weeks: number | null;
     draft_date: string | null;
     draft_status: string;
+    /** The commissioner's username, or null (Onboarding W3, decision 7). The only person ever named here. */
+    inviter: string | null;
   };
 }
 
@@ -51,6 +53,7 @@ export function previewLeagueBody(
   league: PreviewLeagueRow,
   currentMembers: number,
   result: { joinable: boolean; reason: PreviewReason },
+  inviter: string | null = null,
 ): PreviewLeagueBody {
   return {
     found: true,
@@ -69,6 +72,7 @@ export function previewLeagueBody(
       num_weeks: league.num_weeks,
       draft_date: league.draft_date,
       draft_status: league.draft_status,
+      inviter,
     },
   };
 }

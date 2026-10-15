@@ -65,6 +65,18 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/preview-league/index.ts"
 
+# Onboarding W3 (Planner ruling, 2026-10-14): the NO-SESSION league preview behind the invite link, for the web
+# /join page and the apps' signed-out arrival screen. verify_jwt = false because the caller has no session; the
+# function reads no JWT at all and returns ONLY {found, name, inviter, reason}. It is limited per IP and by
+# code-MISS counts (public.invite_preview_lookup, service_role only; 20261124000000), and every response takes a
+# fixed minimum time. preview-league above is unchanged: it stays session-only. A verify_jwt flip may not take on
+# first deploy (CLAUDE.md): after deploying, confirm a no-credential POST reaches OUR code ({"found":false}),
+# not the gateway's 401 (docs/security/invite-preview-effect-test.sql).
+[functions.invite-preview]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/invite-preview/index.ts"
+
 # RLS-hardening (preview/join pair): atomic server-side JOIN. verify_jwt=true. The
 # mutation runs in join_league_by_code (SECURITY DEFINER, EXECUTE granted to
 # service_role ONLY), so league_members inserts + league_invites accept-updates

@@ -53,15 +53,22 @@ const glob = (pattern: string) =>
 
 // ── the redirect and the link's shape ─────────────────────────────────────
 
-Deno.test('confirm redirect: the scheme, no query and no secret; the dashboard pattern matches it', () => {
-  assertEquals(AUTH_LINK_BASES[0], 'fantasystockapp://');
-  assertEquals(buildConfirmRedirect(), 'fantasystockapp://auth/confirm');
-  assertEquals(APP_JSON.expo.scheme + '://', AUTH_LINK_BASES[0]); // app.json's scheme, or the email goes nowhere
-  // The exact Redirect URL pattern the hand-back tells Giorgio to add, and the broader F2 one.
-  assert(glob('fantasystockapp://auth/confirm**').test(buildConfirmRedirect()));
-  assert(glob('fantasystockapp://**').test(buildConfirmRedirect()));
-  // What GoTrue redirects to once it adds the code still matches the same pattern.
-  assert(glob('fantasystockapp://auth/confirm**').test(`${buildConfirmRedirect()}?code=${CODE}`));
+Deno.test('confirm redirect: the https universal link, no secret; the dashboard pattern matches it (W3)', () => {
+  assertEquals(AUTH_LINK_BASES[0], 'fantasystockapp://'); // the scheme stays first: password reset pins it
+  assertEquals(AUTH_LINK_BASES[1], 'https://fantasy-stock-app.vercel.app/');
+  assertEquals(buildConfirmRedirect(), 'https://fantasy-stock-app.vercel.app/auth/confirm');
+  assertEquals(APP_JSON.expo.scheme + '://', AUTH_LINK_BASES[0]); // app.json's scheme, or the fallback goes nowhere
+  // The Redirect URL entry is the EXACT URL (decision 17: no query rides on it). GoTrue validates the redirect_to it
+  // was given, then appends ?code=..., so the exact entry matches; if a real email shows it does not, the fallback
+  // entry is `<exact>?*` (never `**`).
+  const exact = 'https://fantasy-stock-app.vercel.app/auth/confirm';
+  assertEquals(buildConfirmRedirect(), exact);
+  const fallback = (url: string) => url.startsWith(exact + '?') && url.length > exact.length + 1;
+  assert(fallback(`${buildConfirmRedirect()}?code=${CODE}`));
+  assertFalse(fallback(`${exact}x?code=${CODE}`));
+  // NO invite code in the email (Planner decision 17): the function takes no argument at all
+  assertEquals(buildConfirmRedirect.length, 0);
+  assertEquals((buildConfirmRedirect as (x?: string) => string)('K7Q2XRM3PA'), 'https://fantasy-stock-app.vercel.app/auth/confirm');
 });
 
 Deno.test('isConfirmLink: the registered origins sign in, in a release build', () => {

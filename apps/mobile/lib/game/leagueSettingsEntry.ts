@@ -54,7 +54,5 @@ export function inviteShareDraftTime(statusRead: boolean, serverStartsAt: string
   return statusRead ? serverStartsAt : (leagueDraftDate ?? null);
 }
 
-/** What Share sends (unchanged from the member's row). */
-export function inviteShareMessage(code: string): string {
-  return `Join my league with code ${code}`;
-}
+/** What Share sends: Giorgio's sentence, then the invite link (decision 2). One function for every Share. */
+export { inviteShareMessage } from '../invite/inviteLink';
