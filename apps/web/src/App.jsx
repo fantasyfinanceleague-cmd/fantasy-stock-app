@@ -52,18 +52,23 @@ const APP_PAUSED = true;
 // that path renders its own separate <Routes> tree below.
 const DesignGallery = import.meta.env.DEV ? lazy(() => import("./design/gallery/DesignGallery")) : null;
 
-// ── Onboarding W5: the invite link and the confirm-email page ──────────────
+// ── Onboarding W5: the invite link, web sign-in and confirm-email pages ──────
 // docs/plans/2026-10-14-onboarding.md: "Behind APP_PAUSED it is the ONLY
-// unpaused route besides the landing." Both are public (no Layout, no
-// Protected, no sign-in) and lazy, so the landing's code path gains only these
-// route entries; their chunks load only on these paths. The same two pages
-// serve the unpaused app, which retires the old signed-in-only JoinLeague
-// route: the invite link must behave the same either side of the switch.
+// unpaused route besides the landing." All three are public (no Layout, no
+// Protected) and lazy, so the landing's code path gains only these route
+// entries; their chunks load only on these paths. The same pages serve the
+// unpaused app (the old signed-in-only join route is gone): the invite link
+// must behave the same either side of the switch.
 // build-isolation.test.ts pins the paused route table to exactly these.
 const JoinPage = lazy(() => import("./join/JoinPage"));
 const ConfirmPage = lazy(() => import("./join/ConfirmPage"));
+const WebCallbackPage = lazy(() => import("./join/WebCallbackPage"));
 const joinRoute = <Route path="/join/:code" element={<Suspense fallback={null}><JoinPage /></Suspense>} />;
 const confirmRoute = <Route path="/auth/confirm" element={<Suspense fallback={null}><ConfirmPage /></Suspense>} />;
+// The WEB flow's own return (email link or Google/Apple): its PKCE verifier is in
+// THIS browser, so unlike /auth/confirm it exchanges. NOT in the apple-app-site-
+// association, so iOS never hands it to the app.
+const webCallbackRoute = <Route path="/auth/web-callback" element={<Suspense fallback={null}><WebCallbackPage /></Suspense>} />;
 
 function App() {
   if (DesignGallery && window.location.pathname === "/design") {
@@ -84,6 +89,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         {joinRoute}
         {confirmRoute}
+        {webCallbackRoute}
         {/* Any other URL (/login, /signup, /dashboard, app routes, …) → landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -105,6 +111,7 @@ function App() {
       <Route path="/league/:leagueId" element={<Layout><Protected><LeagueDetail /></Protected></Layout>} />
       {joinRoute}
       {confirmRoute}
+      {webCallbackRoute}
       <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
       <Route path="/matchup" element={<Layout><Protected><Matchup /></Protected></Layout>} />
       <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />

@@ -1,40 +1,41 @@
-# Onboarding W5: web invite + confirm pages, captures (`feat/onboarding-w5-web-join`)
+# Onboarding W5: web invite, sign-in and confirm pages, captures (`feat/onboarding-w5-web-join`)
 
-Plan: `docs/plans/2026-10-14-onboarding.md` (W5; Decisions 10 and 16). Board: section 7, "The
-web invite page" (`docs/design/screens/onboarding.jsx`, `Arrival` / `YoureIn` / `Desktop` with
-`web`).
+Plan: `docs/plans/2026-10-14-onboarding.md` (W5; Decisions 7, 8, 10, 16). Board: section 7, "The web
+invite page" (`docs/design/screens/onboarding.jsx`, `Arrival` / `Username` / `YoureIn` / `Desktop`
+with `web`). Copy: all in `apps/web/src/join/joinCopy.ts`, one module, for the gate to read.
 
 **The images are NOT in the repo.** They are in
 `~/fantasy-stock-design-review/feat-onboarding-w5-web-join/` on Giorgio's machine.
 
-## How they were taken
+## How they were taken (2026-10-14)
 
-These were taken on 2026-10-14.
-- **Build:** a local `vite build` of the branch with `APP_PAUSED = true` as committed, then served by `vite preview`.
-- **Browser:** headless Chromium (Playwright), 375×812 (phone) and 1280×800 (desktop). Light and Dark come from `prefers-color-scheme`.
-- **Local-only settings:**
-  - `LOCAL_ALLOW_PLACEHOLDERS=1`: the production build refuses to finish while a placeholder remains (see below). This flag lets a local build through, and it is ignored on Vercel.
-  - Fake `VITE_SUPABASE_*` values: the worktree has no `.env.local`, and the pages make no Supabase call.
-
-## What these pages are today (the first slice, 2026-10-14)
-
-- **No web sign-in yet.** The Planner ruled the FULL flow (sign-in, preview, join, "You're in…") for this branch. Its design is with the Orchestrator for approval, so the slice shown here has no sign-in.
-- **`/join/<code>` asks the no-session `invite-preview` function (W3) for the league name and inviter.** It is not deployed yet, so these captures show the fallback, "You're invited to a league". Any failure of that call (network, 429, 500, a bad body) falls back to it, never to an error page.
-- **Placeholder copy is visible on purpose.** `__PLACEHOLDER__ Open in the app` is a label still waiting for approval. The production build fails while one is in the bundle.
-- **Refusal states are not captured**, as they need a preview. Each is covered by `src/join/join.test.tsx`, and `joinCopy.parity.test.ts` checks the lines against the app's.
-- **Fonts:** the pages use the system font stack. Their CSP allows no outside origin (the shared main stylesheet's Google Fonts `@import` is blocked on these paths, on purpose).
+- **Live captures** (`join-*`, `confirm-*`): a local `vite build` of the branch with `APP_PAUSED = true`
+  as committed, served with `vercel.json`'s headers applied (the CSP included), driven in headless
+  Chromium (Playwright) at 375×812. Light and Dark come from `prefers-color-scheme`.
+- **Contact sheets** (`sheet-*`): the real screen components rendered with fixed props by a throwaway
+  harness (not committed), because the signed-in screens need a live Supabase, Apple and Google to
+  reach. Each frame is 375×812 (`sheet-desktop-*`: 1000×640). Fonts are the self-hosted Archivo.
+- Local-only settings: `LOCAL_ALLOW_PLACEHOLDERS=1` (the production build refuses to finish while the
+  App Store URL is a placeholder; the flag is ignored on Vercel) and fake `VITE_SUPABASE_*` values.
+- `invite-preview` (W3) is not deployed yet, so the live `/join` captures show its fallback headline,
+  "You're invited to a league". The sheets show the real names ("Roberto B. invited you to…").
 
 ## Captures
 
-| File | Shows | URL |
-|---|---|---|
-| `join-valid-phone-{light,dark}.png`, `join-valid-desktop-{light,dark}.png` | A well-formed code: "Open in the app" (custom scheme `fantasystockapp://join/ABCDE23456`; label PROPOSED) and the App Store badge | `/join/abcde23456` |
-| `join-badcode-phone-{light,dark}.png` | Not a code: the app's approved line, in place, no network call, no way onward | `/join/%3Cscript%3E` |
-| `confirm-ok-phone-{light,dark}.png`, `confirm-ok-desktop-{light,dark}.png` | The approved line (Decision 16). The URL is already `/auth/confirm` with no code | `/auth/confirm?code=<uuid>` |
-| `confirm-error-phone-{light,dark}.png` | An expired or used link: never the "confirmed" line. NOTE: these were taken BEFORE the Planner's line arrived, so they show the placeholder; the page now says "This link has expired. Open the app and sign in to get a new one." Retake with the next slice | `/auth/confirm?error=access_denied&error_code=otp_expired` (query) and `#error=…` (hash) |
+| File | Shows |
+|---|---|
+| `sheet-A-{light,dark}.png` | Invite with inviter · invite with the preview unavailable · invite with a notice (expired web link) · Create account · Sign in with the unconfirmed-email line and "Send again" (and the plain-text "Forgot your password? Reset it in the app.") |
+| `sheet-B-{light,dark}.png` | Check your email · Pick a username (the "✓ EMAIL CONFIRMED" chip, pre-filled gamertag, Keep / Change, "Not you? Sign out") · "You're in {league}." + Get the app · "You're already in {league}." · a refusal before sign-in ("{league} is full. Ask whoever invited you…", no facts) |
+| `sheet-C-{light,dark}.png` | Refusals AFTER sign-in, with the facts rows and the app's full lines: drafting · full · season over · then the dead-link line and the transport-failure line with "Not you? Sign out" |
+| `sheet-desktop-{light,dark}.png` | The invite and "You're in" at desktop width |
+| `join-signin-phone-light.png` | The live build: `/join/<code>` with the preview unavailable, self-hosted Archivo loaded under the CSP |
+| `join-confirmed-signin-phone-{light,dark}.png` | The live web callback: a link opened where the code verifier isn't (no exchange possible) lands on Sign in with "Your email is confirmed. Sign in with your password." |
+| `confirm-ok-phone-{light,dark}.png` | `/auth/confirm` (the app's email link on a device without the app): the approved line. The URL is already bare |
+| `confirm-error-phone-{light,dark}.png` | The same page for an expired link: "This link has expired. Open the app and sign in to get a new one." |
 
 Also checked in the same session, with no images:
-- `/auth/confirm` with no outcome (a fresh visit) goes to the landing.
-- `/dashboard` while paused goes to the landing.
-- `/.well-known/apple-app-site-association` answers 200 as `application/json`, with no `Location` header.
-- `history.state` is `{authConfirm, idx}`, with no code anywhere in the DOM or storage.
+- The web callback with the real supabase-js: the code never appears in the DOM, `history.state` or
+  storage; a failed exchange hands back a known notice word, never a message.
+- `/auth/confirm` with no outcome (a fresh visit) goes to the landing; `/dashboard` while paused goes to the landing.
+- The pages' only console errors are the shared main stylesheet's Google Fonts `@import` (blocked by
+  the CSP on these paths, on purpose; no request is made) and the not-yet-deployed `invite-preview`.

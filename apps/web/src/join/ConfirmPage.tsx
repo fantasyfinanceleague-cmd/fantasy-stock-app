@@ -4,8 +4,8 @@ import { readConfirmOutcome } from './confirmOutcome';
 import { fetchInvitePreview } from './invitePreview';
 import { normalizeInviteCode } from './inviteCode';
 import { openConfirmInAppUrl } from './config';
-import { PENDING_COPY, WEB_COPY } from './joinCopy';
-import { WebPage } from './JoinView';
+import { WEB_COPY } from './joinCopy';
+import { Busy, WebPage } from './JoinView';
 
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
 
@@ -61,7 +61,7 @@ export default function ConfirmPage() {
     );
   }
   // Wait (briefly) for the league name rather than flash the plain line and swap it.
-  if (!league.settled) return <WebPage center><div aria-busy="true" /></WebPage>;
+  if (!league.settled) return <WebPage center><Busy /></WebPage>;
   return (
     <WebPage center>
       <span className="obw__disc" aria-hidden="true">
@@ -70,7 +70,7 @@ export default function ConfirmPage() {
       <h1 className="obw__title">{league.name ? WEB_COPY.confirmedWithInvite(league.name) : WEB_COPY.confirmed}</h1>
       {held.code && isTouchDevice() ? (
         <div className="obw__actions">
-          <a className="obw__line-btn" href={openConfirmInAppUrl(held.code)}>{PENDING_COPY.openInApp}</a>
+          <a className="obw__line-btn" href={openConfirmInAppUrl(held.code)}>{WEB_COPY.openApp}</a>
         </div>
       ) : null}
     </WebPage>

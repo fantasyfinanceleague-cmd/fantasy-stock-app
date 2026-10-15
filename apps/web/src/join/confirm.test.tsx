@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ConfirmPage from './ConfirmPage';
 import { readConfirmOutcome } from './confirmOutcome';
-import { PENDING_COPY, WEB_COPY } from './joinCopy';
+import { WEB_COPY } from './joinCopy';
 
 describe('readConfirmOutcome', () => {
   it.each([
@@ -58,7 +58,7 @@ describe('/auth/confirm', () => {
 
   it('a touch device with a code: "Open the app" to the app\'s confirm link', () => {
     arrive({ authConfirm: 'confirmed' }, { code: CODE, invite: null }, true);
-    expect(screen.getByRole('link', { name: PENDING_COPY.openInApp })).toHaveAttribute('href', `fantasystockapp://auth/confirm?code=${CODE}`);
+    expect(screen.getByRole('link', { name: WEB_COPY.openApp })).toHaveAttribute('href', `fantasystockapp://auth/confirm?code=${CODE}`);
   });
 
   it('a touch device after a reload (the code is gone from memory): the line, no button', () => {

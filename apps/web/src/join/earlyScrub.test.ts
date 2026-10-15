@@ -13,6 +13,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m
 
 function run(url: string, priorState: unknown = null) {
   delete (window as unknown as Record<string, unknown>).__stockpileAuthConfirm;
+  delete (window as unknown as Record<string, unknown>).__stockpileWebCallback;
   window.history.replaceState(priorState, '', url);
   document.head.querySelectorAll('meta[name="referrer"]').forEach((m) => m.remove());
   new Function(scripts[0])();
@@ -110,6 +111,80 @@ describe('/auth/confirm', () => {
   it('a new link wins over an older outcome in state', () => {
     expect(run('/auth/confirm?error=access_denied', { authConfirm: 'confirmed' }).outcome).toBe('error');
     expect(run(`/auth/confirm?code=${CODE}`, { authConfirm: 'error' }).outcome).toBe('confirmed');
+  });
+});
+
+type Held = { code: string | null; invite: string | null; via: string; error: false | string };
+const heldCallback = () => (window as unknown as { __stockpileWebCallback?: Held }).__stockpileWebCallback ?? null;
+const runCallback = (url: string, priorState: unknown = null) => {
+  delete (window as unknown as Record<string, unknown>).__stockpileWebCallback;
+  delete (window as unknown as Record<string, unknown>).__stockpileAuthConfirm;
+  window.history.replaceState(priorState, '', url);
+  document.head.querySelectorAll('meta[name="referrer"]').forEach((mm) => mm.remove());
+  new Function(scripts[0])();
+  return { path: window.location.pathname + window.location.search + window.location.hash, held: heldCallback(), referrer: document.head.querySelector('meta[name="referrer"]')?.getAttribute('content') ?? null };
+};
+
+describe('/auth/web-callback (the web flow\'s own return: this page exchanges, so the code is kept for it)', () => {
+  it('an email link: the code and invite move into memory, the URL is bare', () => {
+    const r = runCallback(`/auth/web-callback?invite=ABCDE23456&via=email&code=${CODE}`);
+    expect(r.path).toBe('/auth/web-callback');
+    expect(r.held).toEqual({ code: CODE, invite: 'ABCDE23456', via: 'email', error: false });
+    expect(r.referrer).toBe('no-referrer');
+    expect(Object.keys(window)).not.toContain('__stockpileWebCallback');
+    expect(Object.isFrozen(r.held)).toBe(true);
+    expect(window.location.href).not.toContain(CODE);
+    expect(JSON.stringify(window.history.state)).not.toContain(CODE);
+    expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain(CODE);
+    expect(document.documentElement.outerHTML).not.toContain(CODE);
+  });
+
+  it('an OAuth return says so; anything else is email', () => {
+    expect(runCallback(`/auth/web-callback?invite=A1B2C3&via=oauth&code=${CODE}`).held?.via).toBe('oauth');
+    expect(runCallback(`/auth/web-callback?invite=A1B2C3&via=sms&code=${CODE}`).held?.via).toBe('email');
+    expect(runCallback(`/auth/web-callback?invite=A1B2C3&code=${CODE}`).held?.via).toBe('email');
+  });
+
+  it.each([
+    ['a query error', '/auth/web-callback?via=email&invite=ABCDE23456&error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired', 'other'],
+    ['a hash error', '/auth/web-callback?via=oauth&invite=ABCDE23456#error=access_denied&error_description=User+denied', 'other'],
+    ['the signup gate', '/auth/web-callback?via=oauth&invite=ABCDE23456&error=server_error&error_description=Stockpile+is+not+open+for+new+signups+yet', 'paused'],
+    ['the signup gate, in the hash, any case', '/auth/web-callback?via=oauth#error_description=NOT%20OPEN%20FOR%20NEW%20SIGNUPS', 'paused'],
+  ])('%s: only the KIND of failure is kept, never its text, and never a code', (_label, url, kind) => {
+    const r = runCallback(url);
+    expect(r.held?.error).toBe(kind);
+    expect(r.held?.code).toBeNull();
+    expect(JSON.stringify(r.held)).not.toMatch(/expired|denied|signups|access_denied/i);
+    expect(r.path).toBe('/auth/web-callback');
+  });
+
+  it('an error beats a code that came with it', () => {
+    const r = runCallback(`/auth/web-callback?invite=ABCDE23456&code=${CODE}&error=access_denied`);
+    expect(r.held).toEqual({ code: null, invite: 'ABCDE23456', via: 'email', error: 'other' });
+  });
+
+  it('a visit with no code and no error holds neither', () => {
+    expect(runCallback('/auth/web-callback?invite=ABCDE23456').held).toEqual({ code: null, invite: 'ABCDE23456', via: 'email', error: false });
+  });
+
+  it.each(['/Auth/Web-Callback', '/AUTH/WEB-CALLBACK/', '/auth/web%2Dcallback'])('%s is the same page', (path) => {
+    const r = runCallback(`${path}?code=${CODE}&invite=ABCDE23456`);
+    expect(r.path).toBe('/auth/web-callback');
+    expect(r.held?.code).toBe(CODE);
+  });
+
+  it('does not touch /auth/confirm\'s own state, and /auth/confirm does not hold a web callback', () => {
+    const c = run(`/auth/confirm?code=${CODE}`);
+    expect(c.outcome).toBe('confirmed');
+    expect(heldCallback()).toBeNull();
+    const w = runCallback(`/auth/web-callback?code=${CODE}`);
+    expect(w.held?.code).toBe(CODE);
+    expect((window as unknown as Record<string, unknown>).__stockpileAuthConfirm).toBeUndefined();
+  });
+
+  it('/auth/web-callbackx and /auth/web-callback/extra are left alone', () => {
+    expect(runCallback(`/auth/web-callbackx?code=${CODE}`).held).toBeNull();
+    expect(runCallback(`/auth/web-callback/extra?code=${CODE}`).path).toBe(`/auth/web-callback/extra?code=${CODE}`);
   });
 });
 

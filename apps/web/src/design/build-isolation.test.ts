@@ -42,30 +42,53 @@ describe('the paused route table (onboarding W5)', () => {
     [...app.matchAll(/const (\w+) = <Route path="([^"]+)"/g)].map((m) => [m[1], m[2]]),
   );
 
-  it('is exactly /, /join/:code, /auth/confirm and the catch-all back to /', () => {
+  it('is exactly /, /join/:code, /auth/confirm, /auth/web-callback and the catch-all back to /', () => {
     expect(pausedStart).toBeGreaterThan(0);
     const literal = [...pausedBlock.matchAll(/<Route path="([^"]+)"/g)].map((m) => m[1]);
     const referenced = [...pausedBlock.matchAll(/\{(\w+Route)\}/g)].map((m) => routeConsts[m[1]]);
-    expect([...literal, ...referenced].sort()).toEqual(['*', '/', '/auth/confirm', '/join/:code']);
+    expect([...literal, ...referenced].sort()).toEqual(['*', '/', '/auth/confirm', '/auth/web-callback', '/join/:code']);
     expect(pausedBlock).toMatch(/<Route path="\*" element=\{<Navigate to="\/" replace \/>\} \/>/);
   });
 
   it('loads the onboarding pages lazily (never in the landing chunk), public (no Protected/Layout)', () => {
     expect(app).toMatch(/const JoinPage = lazy\(\(\) => import\("\.\/join\/JoinPage"\)\);/);
     expect(app).toMatch(/const ConfirmPage = lazy\(\(\) => import\("\.\/join\/ConfirmPage"\)\);/);
+    expect(app).toMatch(/const WebCallbackPage = lazy\(\(\) => import\("\.\/join\/WebCallbackPage"\)\);/);
     expect(app).not.toMatch(/^import .* from ['"]\.\/join\//m);
-    for (const name of ['joinRoute', 'confirmRoute']) {
+    for (const name of ['joinRoute', 'confirmRoute', 'webCallbackRoute']) {
       const line = app.split('\n').find((l) => l.startsWith(`const ${name} =`)) ?? '';
       expect(line).not.toMatch(/Protected|Layout/);
     }
   });
 
-  it('the onboarding pages never import the supabase client (no auth exchange, no session)', () => {
+  // Only the sign-in flow and the web callback may reach Supabase, and only through
+  // onboardingAuth (the one file that imports supabase-js). /auth/confirm, the invite
+  // preview and every pure module never do: the app's email link must never exchange
+  // a code or create a session.
+  it('only the web sign-in flow reaches supabase, and only through onboardingAuth', () => {
     const dir = fileURLToPath(new URL('../join/', import.meta.url));
     const files = readdirSync(dir).filter((f) => /\.(ts|tsx)$/.test(f) && !/\.test\./.test(f));
-    expect(files.length).toBeGreaterThan(3);
+    expect(files.length).toBeGreaterThan(8);
+    const mayUseAuth = new Set(['JoinFlow.tsx', 'WebCallbackPage.tsx']);
+    const importsSupabase = /(from|import\()\s*['"][^'"]*supabase/i;
+    const importsAuth = /(from|import\()\s*['"]\.\/onboardingAuth['"]/;
     for (const f of files) {
-      expect(readFileSync(dir + f, 'utf-8')).not.toMatch(/(from|import\()\s*['"][^'"]*supabase/i);
+      const text = readFileSync(dir + f, 'utf-8');
+      if (f === 'onboardingAuth.ts') {
+        expect(text).toMatch(/from '@supabase\/supabase-js'/);
+        continue;
+      }
+      expect({ file: f, supabase: importsSupabase.test(text) }).toEqual({ file: f, supabase: false });
+      expect({ file: f, auth: importsAuth.test(text) && !mayUseAuth.has(f) }).toEqual({ file: f, auth: false });
     }
+  });
+
+  it('the app\'s /auth/confirm page imports nothing that can create a session', () => {
+    const raw = readFileSync(fileURLToPath(new URL('../join/ConfirmPage.tsx', import.meta.url)), 'utf-8');
+    const code = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''); // prose may name them; code may not
+    const specifiers = [...code.matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
+    expect(specifiers.length).toBeGreaterThan(3);
+    expect(specifiers.filter((x) => /supabase|onboardingAuth|JoinFlow/.test(x))).toEqual([]);
+    expect(code).not.toMatch(/exchangeCode|exchangeCodeForSession|signIn|signUp/);
   });
 });
