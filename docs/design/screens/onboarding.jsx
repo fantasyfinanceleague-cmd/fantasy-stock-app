@@ -1,7 +1,7 @@
 // Onboarding, as planned (docs/plans/2026-10-14-onboarding.md, "The board brief (W1)").
 // Design Lead, 2026-10-14. Game Night, Light AND Dark. Every string is Giorgio's, the plan's
-// (approved), or already shipped; anything else is flagged NEW. Two calls wait on Giorgio:
-// the card scenes (A/B) and the username style (A/B/C).
+// (approved), or already shipped; anything else is flagged NEW. Three calls, all decided
+// 2026-10-14 and archived in board.jsx: the card scenes, the username style, the invite arrival.
 
 (function () {
   const { Device, Icon, ICON } = window.KSKit;
@@ -33,10 +33,10 @@
   const Disc = ({ d, fill = 'var(--c-inset)', ink = 'var(--c-text)', size = 64 }) => (
     <span style={{ width: size, height: size, borderRadius: '50%', background: fill, color: ink, display: 'grid', placeItems: 'center', justifySelf: 'center' }}><Icon d={d} size={size * 0.45} width={2.2} /></span>
   );
-  /** The preview rows; `block` swaps in what that refusal's league really shows (shipped values). */
-  const Facts = ({ block }) => (
+  /** The facts card frame 1 had before sign-in (Archive only: nothing can fill it then). */
+  const Facts = () => (
     <div className="dr-a-card" style={{ padding: '4px 16px' }}>
-      {[['Managers', block === 'full' ? '6 of 6' : LG.managers], ['Draft', block === 'started' ? 'In progress' : block === 'over' ? 'Done' : LG.draft], ['Stakes', LG.stakes], ['Season', LG.season]].map(([k, v]) => (
+      {[['Managers', LG.managers], ['Draft', LG.draft], ['Stakes', LG.stakes], ['Season', LG.season]].map(([k, v]) => (
         <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, gap: 12 }}>
           <span className="dr-call dr-muted" style={{ fontSize: 15 }}>{k}</span>
           <span className="dr-call" style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>{v}</span>
@@ -65,20 +65,16 @@
     </span>
   );
 
-  // 1 · Invite arrival (the app, and the web page)
-  function Arrival({ t, web, block }) {
-    const msg = {
-      started: `${LG.name} is drafting right now, so it can't take new managers this season.`,
-      full: `${LG.name} is full: 6 of 6 managers. Ask your commissioner if they can make room.`,
-      over: `${LG.name}'s season is over. Ask your commissioner whether they're running it back.`,
-    }[block];
+  // 1-A · The invite arrival as first approved (2026-10-14), before the preview was limited to
+  // {name, inviter, reason}. Archive only: superseded by ArrivalB the same day.
+  function Arrival({ t, web }) {
     return (
-      <Page t={t} top={web ? 40 : 56} label={`${web ? 'Web' : 'App'} invite arrival${block ? `, ${block}` : ''}, ${t}`}>
+      <Page t={t} top={web ? 40 : 56} label={`${web ? 'Web' : 'App'} invite arrival, as first approved, ${t}`}>
         {web ? <Wordmark /> : null}
         <Av init={LG.init} size={56} />
         <Title>{LG.inviter} invited you to {LG.name}</Title>
-        <Facts block={block} />
-        {block ? <><Warn>{msg}</Warn><AppStore /></> : <SignIns />}
+        <Facts />
+        <SignIns />
       </Page>
     );
   }
@@ -103,20 +99,7 @@
     );
   }
 
-  // 3 · "You're in {league}", then the pre-draft Home with the week-window tip
-  function YoureIn({ t, web }) {
-    return (
-      <Page t={t} top={web ? 40 : 120} gap={16} label={`You're in, ${web ? 'web' : 'app'}, ${t}`}>
-        {web ? <Wordmark /> : null}
-        <Disc d={ICON.check} fill="var(--c-you)" ink="var(--c-on-you)" size={72} />
-        <span style={{ textAlign: 'center', display: 'grid', gap: 8 }}>
-          <Title>{web ? `You're in ${LG.name}.` : `You're in ${LG.name}`}</Title>
-          <Sub>{web ? 'Get the app to draft and play.' : `The draft is ${LG.draft}. The draft order is set an hour before.`}</Sub>
-        </span>
-        {web ? <AppStore /> : <Btn>Go to the league</Btn>}
-      </Page>
-    );
-  }
+  // 3 · "You're in {league}" (YoureIn, below with the arrival), then the pre-draft Home with the week-window tip
   function PreDraftTip({ t }) {
     return (
       <Th t={t}>
@@ -252,24 +235,130 @@
     );
   }
 
-  // 7 · The web page at desktop width (the phone-width frames reuse 1-3)
-  function Desktop({ t }) {
+  // ── 1 and 7 · The invite arrival (Giorgio, 2026-10-14: B). Before sign-in the no-session preview
+  // returns only {name, inviter, reason}, so the page shows the league's name and the inviter and
+  // nothing else. The facts move to "You're in" (C1). ──
+  const B_REFUSE = {
+    full: `${LG.name} is full. Ask whoever invited you if they can make room.`,
+    closed: `${LG.name} isn't taking new players right now.`,
+    dead: "This invite link doesn't work anymore. Ask for a new one.",
+  };
+  /** Heading by what the preview returned: the inviter and the name, or the name only. */
+  const inviteTitle = (who) => who === 'name' ? `You're invited to ${LG.name}` : `${LG.inviter} invited you to ${LG.name}`;
+  /** The invite block sits centred above the actions; the actions keep the thumb's reach at the bottom.
+   * 786 = the 874pt phone less the status bar (54) and the home indicator (34); the -66 hands back
+   * the Device's own 100pt bottom pad so the frame stays 874pt tall. */
+  /** A dead link has no heading (the Planner, 2026-10-14): the panel and "Sign in", centred. */
+  function ArrivalB({ t, web, who = 'both', block }) {
+    const dead = block === 'dead';
+    const refusal = block ? <div style={{ display: 'grid', gap: 16, alignContent: 'center' }}><Warn>{B_REFUSE[block]}</Warn><Link pre="">Sign in</Link></div> : null;
     return (
       <Th t={t}>
-        <div style={{ width: 600, height: 384, overflow: 'hidden', borderRadius: 14, boxShadow: '0 0 0 1px var(--d-rim)' }} role="img" aria-label={`Web invite page, desktop, ${t}`}>
+        <Device noTabs full label={`${web ? 'Web' : 'App'} invite arrival${block ? `, refusal ${block}` : ''}${who === 'name' ? ', no inviter' : ''}, ${t}`}>
+          <div style={{ padding: `${web ? 40 : 56}px ${G}px 24px`, minHeight: 786, marginBottom: -66, boxSizing: 'border-box', display: 'grid', gridTemplateRows: `${web ? 'auto ' : ''}1fr${dead ? '' : ' auto'}`, gap: 18 }}>
+            {web ? <Wordmark /> : null}
+            {dead ? refusal : <>
+              <div style={{ display: 'grid', gap: 16, alignContent: 'center', justifyItems: 'center', textAlign: 'center', textWrap: 'balance' }}>
+                {who === 'both' ? <Av init={LG.init} size={64} /> : <Disc d={ICON.league} ink="var(--c-text-2)" size={64} />}
+                <Title>{inviteTitle(who)}</Title>
+              </div>
+              {refusal || <SignIns />}
+            </>}
+          </div>
+        </Device>
+      </Th>
+    );
+  }
+  function DesktopB({ t }) {
+    return (
+      <Th t={t}>
+        <div style={{ width: 600, height: 384, overflow: 'hidden', borderRadius: 14, boxShadow: '0 0 0 1px var(--d-rim)' }} role="img" aria-label={`Web invite page, desktop, name and inviter only, ${t}`}>
           <div style={{ width: 1000, height: 640, transform: 'scale(0.6)', transformOrigin: 'top left', background: 'var(--c-bg)', padding: '28px 40px', boxSizing: 'border-box', display: 'grid', gridTemplateRows: 'auto 1fr' }}>
             <Wordmark />
             <div style={{ display: 'grid', placeItems: 'center' }}>
-              <div style={{ width: 420, display: 'grid', gap: 16 }}>
-                <Av init={LG.init} size={56} />
-                <Title>{LG.inviter} invited you to {LG.name}</Title>
-                <Facts />
+              <div style={{ width: 400, display: 'grid', gap: 18 }}>
+                <span style={{ display: 'grid', gap: 16, justifyItems: 'center', textAlign: 'center', marginBottom: 14 }}><Av init={LG.init} size={64} /><Title>{inviteTitle('both')}</Title></span>
                 <SignIns />
               </div>
             </div>
           </div>
         </div>
       </Th>
+    );
+  }
+  /** The facts once the friend is a member (readable under the league's own rules). */
+  const JOINED = { managers: '6 of 6' };
+  const FactRows = ({ rows }) => (
+    <div className="dr-a-card" style={{ padding: '4px 16px' }}>
+      {rows.map(([k, v]) => (
+        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44, gap: 12 }}>
+          <span className="dr-call dr-muted" style={{ fontSize: 15 }}>{k}</span>
+          <span className="dr-call" style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+  /** "You're in" carries the facts (C1): the app keeps its draft sentence (so no Draft row); the web page has none, so it keeps the row. */
+  function YoureIn({ t, web }) {
+    const rows = [['Managers', JOINED.managers], ...(web ? [['Draft', LG.draft]] : []), ['Stakes', LG.stakes], ['Season', LG.season]];
+    return (
+      <Page t={t} top={web ? 40 : 96} gap={18} label={`You're in with the league's facts, ${web ? 'web' : 'app'}, ${t}`}>
+        {web ? <Wordmark /> : null}
+        <Disc d={ICON.check} fill="var(--c-you)" ink="var(--c-on-you)" size={72} />
+        <span style={{ textAlign: 'center', display: 'grid', gap: 8 }}>
+          <Title>{web ? `You're in ${LG.name}.` : `You're in ${LG.name}`}</Title>
+          <Sub>{web ? 'Get the app to draft and play.' : `The draft is ${LG.draft}. The draft order is set an hour before.`}</Sub>
+        </span>
+        <FactRows rows={rows} />
+        {web ? <AppStore /> : <Btn>Go to the league</Btn>}
+      </Page>
+    );
+  }
+  /** C2 (not picked) · the facts as a card on the pre-draft Home, under the draft card. */
+  function PreDraftFacts({ t }) {
+    return (
+      <Th t={t}>
+        <Device tab="home" full label={`Pre-draft Home with the league's facts, ${t}`}>
+          <Head chip={<span className="dr-chip"><span className="dr-dot" />Pre-draft</span>} />
+          <div style={{ padding: `0 ${G}px 24px`, display: 'grid', gap: 16 }}>
+            <div className="dr-a-card" style={{ padding: 18, display: 'grid', gap: 8 }}>
+              <span className="dr-tag" style={{ color: 'var(--c-live-text)' }}>Draft</span>
+              <span className="dr-score" style={{ fontSize: 32, lineHeight: '36px' }}>2d 06h 40m</span>
+              <span className="dr-call" style={{ fontWeight: 700 }}>{LG.draft}</span>
+              <span className="dr-cap">60-second picks · 6 rounds</span>
+              <Btn style={{ marginTop: 6 }}>Build your queue</Btn>
+            </div>
+            <FactRows rows={[['Managers', JOINED.managers], ['Stakes', LG.stakes], ['Season', LG.season]]} />
+          </div>
+        </Device>
+      </Th>
+    );
+  }
+  /** Reviewer notes sit under the phone, never inside it (Giorgio, 2026-10-14: a stamp drawn in
+   * the mock read as something users would see). */
+  const NOTE_A = "The box with Managers, Draft, Stakes and Season can't be filled before sign-in: privacy rule.";
+  function CallArrival({ archived }) {
+    const quad = (key, cap, F, note) => ['dark', 'light'].map((t) => fig(`${key}${t}`, `${cap} · ${t === 'dark' ? 'Dark' : 'Light'}`, <F t={t} />, note));
+    return (
+      <Sec id="call-ob-arrival" n="1.3" title={archived ? 'Decided: B with C1, the invite arrival before sign-in' : 'Your call: the invite arrival before sign-in'}
+        intro={<>Frame 1 (and the web page, frame 7) was approved with the league's facts under the invite: Managers, Draft, Stakes, Season. Before someone signs in, the app may only ask the server for the league's name, the inviter and why a link can't be used (the Planner's security ruling for the no-sign-in preview), so nothing can fill those facts at that point. A couldn't ship; B is what can. The facts move to the first moment the friend is signed in and a member (C1 or C2).</>}
+        notes={<>
+          <li><b>A · as first approved:</b> the invite, the four facts, then the sign-in buttons. The facts card is the part nothing can fill before sign-in.</li>
+          <li><b>B:</b> "{'{inviter}'} invited you to {'{league}'}" over the inviter's initials, then Continue with Apple, Continue with Google, Use email. Nothing else. The invite sits centred and the three buttons at the bottom, within the thumb's reach. With no inviter: "You're invited to {'{league}'}", with the league icon in place of initials.</li>
+          <li><b>B · when the link can't be used:</b> the warning panel in the buttons' place, then "Sign in": "{'{league}'} is full. Ask whoever invited you if they can make room." / "{'{league}'} isn't taking new players right now." / "This invite link doesn't work anymore. Ask for a new one." A dead link has no heading (the Planner, 2026-10-14).</li>
+          <li><b>C1:</b> "You're in {'{league}'}" gains a card with Managers, Stakes and Season; the web page adds a Draft row because it has no draft sentence. <b>C2:</b> the same card under the draft card on the pre-draft Home.</li>
+          <li><b>Recommended: B, with C1.</b> "You're in" is one screen after the old frame and answers the same question at the first moment the app can: what did I just join? C2 would change the approved, built Home.</li>
+          {archived ? <li><b>Decided by Giorgio (2026-10-14): B, with C1.</b> The Planner added two copy rulings the same day: a dead link shows only the panel and "Sign in"; and inside the invite-link flow a "full" refusal after the join also says "Ask whoever invited you", while the shipped "Ask your commissioner" stays everywhere else.</li> : null}
+        </>}>
+        <h3 className="b-sub">A · as first approved (can't ship: no data before sign-in)</h3>
+        <Grid>{[...quad('aa', 'A · app', Arrival, NOTE_A), ...quad('aw', 'A · web', (p) => <Arrival {...p} web />, NOTE_A)]}</Grid>
+        <h3 className="b-sub">B · the name and the inviter, then the three sign-ins</h3>
+        <Grid>{[...quad('ba', 'B · app', ArrivalB), ...quad('bw', 'B · web', (p) => <ArrivalB {...p} web />)]}</Grid>
+        <h3 className="b-sub">C1 · "You're in" carries the facts (app, then web)</h3>
+        <Grid>{[...quad('c1a', "C1 · You're in · app", YoureIn), ...quad('c1w', "C1 · You're in · web", (p) => <YoureIn {...p} web />)]}</Grid>
+        <h3 className="b-sub">C2 · a card on the pre-draft Home</h3>
+        <Grid>{quad('c2', 'C2 · pre-draft Home', PreDraftFacts)}</Grid>
+      </Sec>
     );
   }
 
@@ -345,8 +434,8 @@
   }
 
   // ── Layout helpers ──
-  const fig = (key, cap, node) => (
-    <figure key={key} className="b-fig b-fig--inv" style={{ margin: 0 }}><Fit>{node}</Fit><figcaption><b>{cap}</b></figcaption></figure>
+  const fig = (key, cap, node, note) => (
+    <figure key={key} className="b-fig b-fig--inv" style={{ margin: 0 }}><Fit>{node}</Fit><figcaption><b>{cap}</b>{note ? <span className="b-annot">Review note: {note}</span> : null}</figcaption></figure>
   );
   const pair = (key, cap, F) => [fig(`${key}d`, `${cap} · Dark`, <F t="dark" />), fig(`${key}l`, `${cap} · Light`, <F t="light" />)];
   const Sec = ({ id, n, title, intro, notes, children }) => (
@@ -409,20 +498,25 @@
   function Frames() {
     return (
       <Sec id="onboarding-w1" n="1.3" title="Onboarding, as planned (2026-10-14): the frames"
-        intro={<>The plan's board brief, frames 1 to 10, in Game Night, Light and Dark. The flow: an invited friend taps the link, lands on the invite, signs in with one tap, keeps the suggested username, and is in the league; then the notifications ask. A cold install sees the cards and Get started. Giorgio picked the cards (B) and the username style (a gamertag, never a name) on 2026-10-14; both calls are in the Archive.</>}
+        intro={<>The plan's board brief, frames 1 to 10, in Game Night, Light and Dark. The flow: an invited friend taps the link, lands on the invite, signs in with one tap, keeps the suggested username, and is in the league; then the notifications ask. A cold install sees the cards and Get started. Giorgio picked the cards (B), the username style (a gamertag, never a name) and the invite arrival (B, with the facts on "You're in": C1) on 2026-10-14; all three calls are in the Archive.</>}
         notes={<>
           <li><b>Copy:</b> "{'{inviter}'} invited you to {'{league}'}", "Continue with Apple / Google", "Use email", "Keep / Change", "You're in {'{league}'}. Get the app to draft and play.", the notifications line, the week-window line and "How it works" are the approved plan's words. Everything else is shipped copy except what's marked NEW.</li>
           <li><b>Approved by Giorgio (2026-10-14, via the Planner: "fine"):</b> "Not now" under the notifications ask (a decline there is never pre-prompted again; Settings still reaches it).</li>
           <li><b>Approved (2026-10-14):</b> Check your email after an email sign-up, "We sent a link to {'{email}'}. Tap it to finish joining {'{league}'}." with an invite, or "… Tap it to finish creating your account." with none; and the "Email confirmed" chip on the return.</li>
           <li><b>The week-window tip</b> follows PRODUCT_RULES "Generic scoring copy" (onboarding says "best performance wins", never "biggest dollar gain"): "Your week runs Monday's open to Friday's close. Best performance wins." The plan's draft line ("Best dollar gain wins.") is not used.</li>
-          <li><b>The "started" refusal on the web page:</b> since your 2026-10-14 rule ("once the draft room opens… the league is considered started"), the refusal for an open room reuses the shipped "is drafting right now" line, which is only exactly true once picks begin. Drawn as shipped; one line to settle at the build.</li>
+          <li><b>Before sign-in, the league's name and the inviter only</b> (Giorgio, 2026-10-14: B). When the link can't be used, the warning panel and "Sign in" (approved via the Planner): "{'{league}'} is full. Ask whoever invited you if they can make room." / "{'{league}'} isn't taking new players right now." (the room has opened, or the season is over) / "This invite link doesn't work anymore. Ask for a new one." (no heading). A "full" refusal after the join, in this flow only, uses the same "whoever invited you" line.</li>
+          <li><b>The facts are on "You're in"</b> (Giorgio, 2026-10-14: C1): Managers, Stakes, Season; the web page adds Draft.</li>
           <li><b>Reference:</b> the plan names Yahoo's "Marvin has invited you…" screen; I don't have that screenshot, so frame 1 stands without its reference. Send it and I'll pair them.</li>
         </>}>
-        <h3 className="b-sub">1 · Invite arrival, in the app (the inviter's name only; nobody else)</h3>
-        <Grid>{pair('a1', 'Invite arrival', Arrival)}</Grid>
+        <h3 className="b-sub">1 · Invite arrival, in the app: the league's name and the inviter, nothing else before sign-in (Giorgio, 2026-10-14: B)</h3>
+        <Grid>{pair('a1', 'Invite arrival', ArrivalB)}</Grid>
+        <Grid>{pair('a2', 'Invite arrival · no inviter', (p) => <ArrivalB {...p} who="name" />)}</Grid>
+        <Grid>{pair('a3', 'Refusal: full', (p) => <ArrivalB {...p} block="full" />)}</Grid>
+        <Grid>{pair('a4', 'Refusal: not taking new players', (p) => <ArrivalB {...p} block="closed" />)}</Grid>
+        <Grid>{pair('a5', 'Refusal: a dead link', (p) => <ArrivalB {...p} block="dead" />)}</Grid>
         <h3 className="b-sub">2 · Pick a username, pre-filled with a gamertag (Giorgio, 2026-10-14): an adjective or word, an animal, digits; never the first name</h3>
         {['dark', 'light'].map((t) => <Grid key={t}>{GAMERTAGS.map((g) => fig(`u${t}${g}`, `${g} · ${t === 'dark' ? 'Dark' : 'Light'}`, <Username t={t} value={g} />))}</Grid>)}
-        <h3 className="b-sub">3 · You're in, then the pre-draft Home with the week-window tip (once, dismissable)</h3>
+        <h3 className="b-sub">3 · You're in, with the league's facts (Giorgio, 2026-10-14: C1), then the pre-draft Home with the week-window tip (once, dismissable)</h3>
         <Grid>{pair('y1', "You're in", YoureIn)}</Grid>
         <Grid>{pair('h1', 'Pre-draft Home, the tip', PreDraftTip)}</Grid>
         <h3 className="b-sub">4 · The notifications ask (after joining or creating a league), then the iOS sheet</h3>
@@ -433,14 +527,14 @@
         <h3 className="b-sub">6 · Get started (cold install only)</h3>
         <Grid>{pair('g1', 'Get started', GetStarted)}</Grid>
         <h3 className="b-sub">7 · The web invite page: phone width (arrival, username, You're in + Get the app, three refusals) and desktop</h3>
-        <Grid>{pair('w1', 'Web · arrival', (p) => <Arrival {...p} web />)}</Grid>
+        <Grid>{pair('w1', 'Web · arrival', (p) => <ArrivalB {...p} web />)}</Grid>
         <Grid>{pair('w2', 'Web · username', (p) => <Username {...p} web value="HelpfulHornet151" />)}</Grid>
         <Grid>{pair('w3', "Web · You're in + Get the app", (p) => <YoureIn {...p} web />)}</Grid>
-        <Grid>{pair('w4', 'Web · refusal: drafting', (p) => <Arrival {...p} web block="started" />)}</Grid>
-        <Grid>{pair('w5', 'Web · refusal: full', (p) => <Arrival {...p} web block="full" />)}</Grid>
-        <Grid>{pair('w6', 'Web · refusal: season over', (p) => <Arrival {...p} web block="over" />)}</Grid>
+        <Grid>{pair('w4', 'Web · refusal: full', (p) => <ArrivalB {...p} web block="full" />)}</Grid>
+        <Grid>{pair('w5', 'Web · refusal: not taking new players', (p) => <ArrivalB {...p} web block="closed" />)}</Grid>
+        <Grid>{pair('w6', 'Web · refusal: a dead link', (p) => <ArrivalB {...p} web block="dead" />)}</Grid>
         <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 600px))', marginBottom: 18 }}>
-          {['dark', 'light'].map((t) => <figure key={t} className="b-fig b-fig--inv" style={{ margin: 0, maxWidth: 600 }}><Desktop t={t} /><figcaption><b>Web · desktop · {t === 'dark' ? 'Dark' : 'Light'}</b></figcaption></figure>)}
+          {['dark', 'light'].map((t) => <figure key={t} className="b-fig b-fig--inv" style={{ margin: 0, maxWidth: 600 }}><DesktopB t={t} /><figcaption><b>Web · desktop · {t === 'dark' ? 'Dark' : 'Light'}</b></figcaption></figure>)}
         </div>
         <h3 className="b-sub">8 · "How it works" in Profile, and its sheet (the three cards, still; scenes follow your pick)</h3>
         <Grid>{pair('f1', 'Profile', Profile)}</Grid>
@@ -455,7 +549,8 @@
     );
   }
 
-  window.KSOnboarding = () => <Frames />; // both calls decided (2026-10-14), archived in board.jsx
+  window.KSOnboarding = () => <Frames />; // all three calls decided (2026-10-14), archived in board.jsx
   window.KSObCardsArchived = () => <CallCards archived />;
   window.KSObUsernameArchived = () => <CallUsername archived />;
+  window.KSObArrivalArchived = () => <CallArrival archived />;
 })();
