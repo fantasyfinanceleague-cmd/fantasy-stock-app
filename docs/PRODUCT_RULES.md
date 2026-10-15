@@ -685,7 +685,9 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
   - **The draft-room line** (the Planner, 2026-10-14), verbatim: "Out of time? We pick for you:
     your queue first, then the best stock that fits your league's rules." Shown the first time
     someone enters any draft room, in the same first-time tip above the board; it goes away on
-    a tap of its × or on that person's first pick, and never shows again.
+    a tap of its × or on that person's first pick, and never shows again. "First pick" means
+    the first pick recorded for them, an auto-pick included (the line explains auto-picks); a
+    refused pick does not count (Design Lead, onboarding W4 gate, 2026-10-15).
 - **One no-league empty state on every tab** (Home, Matchup, League, Portfolio): Create a
   league / Join with a code (recommendation taken).
 
