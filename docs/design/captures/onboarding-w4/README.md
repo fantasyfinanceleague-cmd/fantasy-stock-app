@@ -7,16 +7,17 @@ A preliminary set from the middle of the build is in `…/feat-onboarding-w4-pre
 superseded and not part of the review.
 
 **Builds.** Rebased on `origin/main` `e3dadc36` (#278, the Design Lead's arrival redraw board; main
-had not moved when this was written). Three commits carry the shots, and the later two never touch a
-pixel of the earlier frames:
+had not moved when this was written). Four commits carry the shots, and the later three never touch a
+pixel of the frames shot before them (except the one state they re-shot, X06):
 
 | Build | What it is | Shot on it |
 |---|---|---|
 | **`af84a87f`** | The full W4 build (all screens below) | All 182 stills except the How it works sheet (20:11–20:57 PDT), and `rec-01`…`rec-07` |
 | `64213957` | + How it works thumbnails 96 pt (the FINAL scene's winner line was clipped at 88 pt) | `rec-08`, `rec-09`, `rec-10` and the whole S01 sheet set |
 | **`1b825edb`** | + the DEV-only capture knobs raise the real notice/chip stores once (so a dismiss and a keep act on camera). No release code path changed | `rec-11`, `rec-12`, `rec-13`, `R01`, `R02`, `T01`, and the S01 clean-launch frames |
+| **`b89aeb92`** | + a dead link centres its panel and Sign in (the decided board) | **X06 only** (12 stills, re-shot 21:30 PDT; the before-centring set is in `…-prelim/x06-before-centring/`) |
 
-`HowItWorksSheet.tsx` is on no still before S01, and the knob change is `__DEV__`-only, so the set
+`HowItWorksSheet.tsx` is on no still before S01, the knob change is `__DEV__`-only, and the dead-link change is inside the `!view.title` branch that only X06 reaches, so the set
 is one build in every pixel that matters. The status bar is pinned at 9:41; times above are the real ones
 (file times). Two sims, both mine: **W4 Onboarding 17e** and **W4 Onboarding 17 Pro**, both Expo Go on a
 dead Supabase port (fixtures only), shut down at hand-back.
@@ -50,7 +51,7 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 | X03 | …nothing usable (the preview was unavailable) | 17e + 17 Pro L | The generic "You're invited to a league", Join's "Couldn't reach the league…" line, **Try again** (a tap, never a loop), every sign-in option still there |
 | X04 | Refusal: full | 17e + 17 Pro at L / XL / XXXL | WarnPanel + "Sign in" in the buttons' place: "Stock Scudetto is full. Ask whoever invited you if they can make room." |
 | X05 | Refusal: not taking players (draft started or season over) | 17e + 17 Pro L | "Stock Scudetto isn't taking new players right now." |
-| X06 | A dead link | 17e + 17 Pro at L / XL / XXXL | **No heading** (the Planner): the WarnPanel "This invite link doesn't work anymore. Ask for a new one." and "Sign in" alone at the bottom. The upper screen is empty by that ruling; flagged below |
+| X06 | A dead link | 17e + 17 Pro at L / XL / XXXL | **No heading** (the Planner) and **centred** (the decided board, Giorgio's B): the WarnPanel "This invite link doesn't work anymore. Ask for a new one." and "Sign in" sit in the middle of the screen, since with no invite block above them docking them would leave an empty phone. Every other arrival state keeps the invite centred and the actions docked |
 | X07 | You're in {league} + the facts card (C1) | 17e + 17 Pro at L / XL / XXXL | Managers `7 of 8`, Stakes, Season; the draft sentence stays, so no Draft row. Read after the join, as a member (here, a fixture reads the held preview with one member added) |
 | X08, X09 | A full league at join: typed code / invited | 17e L (+ X09 XL), 17 Pro L | X08 keeps "Ask your commissioner…"; X09 (a pending invite) reads "Ask whoever invited you…" |
 | X10 | Stress: a 39-character league and a 26-character inviter | 17e L / XXXL, 17 Pro L | The lead sentence wraps; the name stays whole by shrinking to fit; both initials on the disc |
@@ -84,7 +85,7 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 
 | Check | Result |
 |---|---|
-| Mobile deno suite | 2254 passed, 0 failed (45 tests in `onboarding-w4.test.ts`; the stale structure pins in `gn-sweep`, `league-game-night`, `pkce-auth-links`, `onboarding-game-night` updated, intent kept) |
+| Mobile deno suite | 2255 passed, 0 failed (46 tests in `onboarding-w4.test.ts`; the stale structure pins in `gn-sweep`, `league-game-night`, `pkce-auth-links`, `onboarding-game-night` updated, intent kept) |
 | Root suite | 1021 passed (566 steps), 0 failed |
 | `tsc` (fresh `npm ci`, no `.expo`, `--incremental false`) | 0 errors |
 | Lint | 0 errors, 8 warnings (all pre-existing files; none mine) |
@@ -119,9 +120,6 @@ layout; a clean launch at any size is correct (S01 was shot that way). Not new i
 measure), left. Minor (P3) at XXXL the suggested name is capped (22 pt) beside labels at the system scale, so
 the name reads smaller than its label: the price of never truncating the thing the person keeps. Minor
 (P3) at XXXL on a very long league name the fit shrinks it to ~0.4× (X10), below the lead line.
-**For the Design Lead:** the dead-link arrival (X06) has no heading by the Planner's ruling, so the
-page is a warning panel and a link at the bottom with the upper two-thirds empty; the board draws it
-with the generic heading and the league icon. Built as ruled; say if you want the board's version.
 
 ## §4 Every tappable element
 
