@@ -33,10 +33,12 @@ export interface FieldProps extends Omit<TextInputProps, 'style' | 'placeholderT
   trailing?: ReactNode;
   /** Drawn as chosen: the 2pt accent edge a focused field has, without focus (the pre-filled username, W4). */
   chosen?: boolean;
+  /** An explicit text size (and no system scaling): a fitted value, e.g. a suggested username shrunk to stay on one line. */
+  inputFontSize?: number;
 }
 
 export const Field = forwardRef<TextInput, FieldProps>(function Field(
-  { label, error, invalid = false, helper, rules, trailing, chosen = false, onFocus, onBlur, ...input },
+  { label, error, invalid = false, helper, rules, trailing, chosen = false, inputFontSize, onFocus, onBlur, ...input },
   ref
 ) {
   const { colors } = useTheme();
@@ -76,7 +78,8 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.input, { color: colors.text }]}
+          style={[styles.input, { color: colors.text }, inputFontSize ? { fontSize: inputFontSize } : null]}
+          allowFontScaling={inputFontSize ? false : undefined}
           {...input}
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}

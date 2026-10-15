@@ -12,6 +12,7 @@ import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { Field } from '@/components/shell/Field';
+import { FittedTitle } from '@/components/shell/FittedTitle';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { WarnPanel } from '@/components/sp/WarnPanel';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -20,7 +21,7 @@ import { fixtureJoinedRows, joinedFactRows } from '@/lib/join/joinedFacts';
 import { supabase } from '@/lib/supabase';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
-import { keepDots } from '@/lib/game/keepDots';
+import { dotStartsLine, keepDots } from '@/lib/game/keepDots';
 import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
@@ -340,9 +341,9 @@ function Joined({ name, draftDate, leagueId, fixtureLeague, onContinue }: { name
         <Animated.View style={popStyle}>
           <Icon name="check" size="medallion" tone="onYou" discTone="you" />
         </Animated.View>
-        <ScreenTitle style={styles.centerText}>{v.title}</ScreenTitle>
+        <FittedTitle lead={v.lead} name={v.name} label={v.title} />
         <Text variant="body" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={styles.centerText}>
-          {v.body}
+          {dotStartsLine(v.body)}
         </Text>
         {rows.length > 0 ? (
           <Card style={[styles.rows, styles.joinedRows]}>

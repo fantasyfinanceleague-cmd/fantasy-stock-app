@@ -38,6 +38,9 @@ import { readFunctionRefusal } from '@/lib/functionRefusal';
 import { ownPickClockQuiet, setForegroundQuiet } from '@/lib/foregroundQuiet';
 import { useIsFocused } from '@react-navigation/native';
 import { turnState } from '@/lib/game/draftRefusals';
+import { FirstTimeTip } from '@/components/shell/FirstTimeTip';
+import { dismissTip } from '@/lib/shell/firstTimeTip';
+import { dismissesOnFirstPick } from '@/lib/shell/firstTimeTipPolicy';
 import { TURN_SIGNAL_START, flashSteps, flashTextAtStepStart, nextLastTenBuzz, nextTurnSignal, settleCrossedMidpoint } from '@/lib/game/yourTurn';
 
 export interface DraftRoomProps {
@@ -192,6 +195,11 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   // U-06: the board's roster strip (Home's grid), "1 of 6 · $2,000 per slot" or, in a budget-cap league, what's left.
   const mine = myDraftedSoFar(room.picks, room.order, myUserId);
+  // The first-time tip ("Out of time? We pick for you…") goes away on the person's first recorded pick, theirs or the auto-pick's.
+  const picksMade = mine.symbols.length;
+  useEffect(() => {
+    if (dismissesOnFirstPick(picksMade)) dismissTip('outOfTime');
+  }, [picksMade]);
   const caption = rosterCaption(mine.symbols.length, rounds, { stakeMode, notionalPerSlot, budgetLeft: budgetLeft(effectiveBudgetCap(stakeMode, budgetAmount), mine.prices) });
   // UX rule 10: how far away your next pick is (the snake, from Home's draftTurn).
   const picksAway = m > 0 && myUserId ? picksUntilTurn(room.order, room.pickCount, rounds, myUserId) : -1;
@@ -298,6 +306,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     }
     // U-09: the clock card's "You took …" line comes from the re-read board (what
     // the server recorded), not from this answer.
+    dismissTip('outOfTime'); // the first pick ends the tip at once, before the re-read lands
     setSelected(null);
     setSearch('');
     room.refresh();
@@ -346,6 +355,8 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
 
   return (
     <View style={styles.stack}>
+      {/* The first time in ANY draft room (lobby or live): one line, above the board, once per device. */}
+      <FirstTimeTip tip="outOfTime" />
       {/* The clock card (§9C; the board's Draft room frame). Your turn at rest: the accent
           tint with a 2 pt live edge, the ring running down, "You're on the clock" in liveText.
           The flash is a live layer over the tint, under the text; it never takes a touch.

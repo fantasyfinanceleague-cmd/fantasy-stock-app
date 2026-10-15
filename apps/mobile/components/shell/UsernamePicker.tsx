@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
-import { space } from '@/constants/tokens';
+import { space, type } from '@/constants/tokens';
+import { fittedFontSize } from '@/lib/shell/fitText';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Chip } from '@/components/sp/Chip';
 import { Text } from '@/components/sp/Text';
@@ -54,9 +55,7 @@ import { CAPTURE } from '@/lib/shell/captureDev';
 
 const CHECK_DEBOUNCE_MS = 350;
 /** Longest the first-run screen waits for a generated name before it is just the form. */
-export /** 1.3× (22pt): the longest gamertag, in the box beside its check, fits one line on the smallest phone. */
-const SUGGESTED_NAME_MAX_SCALE = 1.3;
-const SUGGEST_TIMEOUT_MS = 6000;
+export const SUGGEST_TIMEOUT_MS = 6000;
 
 /** suggesting: asking the server for a free gamertag; suggested: Keep / Change; editing: the form. */
 type Mode = 'suggesting' | 'suggested' | 'editing';
@@ -82,6 +81,12 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
   const firstRun = current === null;
   const confirmed = useSyncExternalStore(subscribeEmailJustConfirmed, isEmailJustConfirmed);
   const [mode, setMode] = useState<Mode>(firstRun && !CAPTURE.usernamePrefill ? 'suggesting' : 'editing');
+  // The suggested tag's size: the system size, shrunk only as needed (fitText.ts). null = the field's own.
+  const { fontScale } = useWindowDimensions();
+  const systemSize = type.body.fontSize * fontScale;
+  const [fieldWidth, setFieldWidth] = useState(0);
+  const [tagWidth, setTagWidth] = useState(0);
+  const suggestedFit = mode === 'suggested' && tagWidth > 0 && fieldWidth > 0 ? fittedFontSize(systemSize, tagWidth, fieldWidth) : undefined;
 
   // First run: ask the server for a free gamertag. A fixture capture is deterministic (a seeded
   // source); a real run is random. The generated name is checked by check_usernames BEFORE it is
@@ -194,6 +199,20 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
         </Text>
       </View>
 
+      {/* The probe: the suggested tag's one-line width at the SYSTEM size, never shown. */}
+      {mode === 'suggested' ? (
+        <View style={styles.probeBox} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Text
+            variant="body"
+            allowFontScaling={false}
+            numberOfLines={1}
+            style={[styles.probe, { fontSize: systemSize }]}
+            onTextLayout={(e) => setTagWidth(e.nativeEvent.lines[0]?.width ?? 0)}
+          >
+            {value}
+          </Text>
+        </View>
+      ) : null}
       <Field
         ref={inputRef}
         label="Username"
@@ -208,9 +227,11 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
         autoFocus={mode === 'editing' && !firstRun}
         editable={!picking}
         chosen={mode === 'suggested'}
-        // A suggested name is the thing being kept, so it must show whole at every text size (the longest
-        // gamertag is 19 characters); typing keeps the system scale.
-        maxFontSizeMultiplier={mode === 'suggested' ? SUGGESTED_NAME_MAX_SCALE : undefined}
+        // A suggested name is the thing being kept, so it shows whole at every text size: the system size,
+        // shrunk only as far as THIS tag needs to stay on one line (22pt floor, lib/shell/fitText.ts).
+        // Typing keeps the system scale.
+        inputFontSize={suggestedFit}
+        onLayout={(e) => setFieldWidth(e.nativeEvent.layout.width)}
         maxLength={40}
         error={view.error}
         helper={firstRun && picking ? HELPER_CHANGE_LATER : undefined}
@@ -275,6 +296,17 @@ export function UsernamePickerExit({ label, onPress }: { label: string; onPress:
 }
 
 const styles = StyleSheet.create({
+  // A zero-height box with the 4000pt probe inside: it measures and is never seen or widens the page.
+  probeBox: {
+    height: 0,
+    overflow: 'hidden',
+  },
+  probe: {
+    position: 'absolute',
+    opacity: 0,
+    width: 4000,
+    fontFamily: type.body.fontFamily,
+  },
   heading: {
     gap: space[2],
   },

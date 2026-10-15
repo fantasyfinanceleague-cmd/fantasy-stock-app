@@ -296,6 +296,9 @@ export function interpretJoin(data: unknown, invokeError: unknown): JoinOutcome 
 
 export interface JoinedView {
   title: string;
+  /** The heading split for the screen: the lead wraps, the name is fitted (components/shell/FittedTitle.tsx). */
+  lead: string;
+  name: string;
   body: string;
 }
 
@@ -304,6 +307,8 @@ export function joinedView(leagueName: string, draftDate: string | null): Joined
   const when = draftDateTimeLabel(draftDate);
   return {
     title: `You're in ${leagueName}`,
+    lead: "You're in",
+    name: leagueName,
     body: when
       ? `The draft is ${when}. The draft order is set an hour before.`
       : JOIN_COPY.joinedNoDate,

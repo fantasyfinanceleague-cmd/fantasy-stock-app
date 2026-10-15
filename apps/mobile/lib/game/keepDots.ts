@@ -28,3 +28,8 @@ export function keepDots(line: string, keepWhole = KEEP_WHOLE): string {
     .map((s) => (s.length <= keepWhole ? s.replace(/ /g, NBSP) : s))
     .join(`${NBSP}· `);
 }
+
+/** A "·" starts a line and never ends one (onboarding W4, "Sat, Oct 10 · / 7:00 PM ET"): a no-break space BEFORE every dot. */
+export function dotStartsLine(line: string): string {
+  return line.replace(/ · /g, `${NBSP}· `);
+}

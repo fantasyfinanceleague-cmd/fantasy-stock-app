@@ -35,6 +35,9 @@ import { fixtureJoinedRows, joinedFactRows } from '../lib/join/joinedFacts.ts';
 import { INVITE_FIXTURES, inviteFixture } from '../lib/invite/inviteFixture.ts';
 import { JOIN_COPY, blockMessage, previewView, type PreviewLeague } from '../lib/join/joinPreview.ts';
 import { parseCaptureKnobs } from '../lib/shell/captureKnobs.ts';
+import { GAMERTAG_FLOOR_PT, NAME_MIN_SCALE, fittedFontSize, nameLines } from '../lib/shell/fitText.ts';
+import { dotStartsLine } from '../lib/game/keepDots.ts';
+import { dismissesOnFirstPick } from '../lib/shell/firstTimeTipPolicy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
 /** Source without comments, so a guard never passes on a comment that names the thing. */
@@ -310,12 +313,12 @@ const view = (k: (typeof INVITE_FIXTURES)[number]) => arrivalView(inviteFixture(
 const NB = '\u00a0';
 
 Deno.test('arrival: "{inviter} invited you to {league}" over the inviter\'s initials; "You\'re invited to {league}" and the generic line over the league icon', () => {
-  assertEquals(view('found').title, `Roberto invited you to Stock${NB}Scudetto`);
-  assertEquals(view('found').titleParts, { lead: 'Roberto invited you to', name: `Stock${NB}Scudetto` });
-  assertEquals(view('solo').titleParts, { lead: "You're invited to", name: `Stock${NB}Scudetto` });
+  assertEquals(view('found').title, `Roberto invited you to Stock Scudetto`);
+  assertEquals(view('found').titleParts, { lead: 'Roberto invited you to', name: `Stock Scudetto` });
+  assertEquals(view('solo').titleParts, { lead: "You're invited to", name: `Stock Scudetto` });
   assertEquals(view('loading').titleParts, { lead: "You're invited to a league", name: null });
   assertEquals(view('found').mark, { kind: 'inviter', name: 'Roberto' });
-  assertEquals(view('solo').title, `You're invited to Stock${NB}Scudetto`);
+  assertEquals(view('solo').title, `You're invited to Stock Scudetto`);
   assertEquals(view('solo').mark, { kind: 'league' });
   assertEquals(arrivalTitle(null, 'Roberto'), "You're invited to a league", 'no name: never a half-built sentence');
   for (const k of ['loading', 'unavailable'] as const) {
@@ -324,12 +327,10 @@ Deno.test('arrival: "{inviter} invited you to {league}" over the inviter\'s init
   assertEquals(ARRIVAL_COPY.generic, "You're invited to a league");
 });
 
-Deno.test('arrival: the league\'s name never breaks across lines (non-breaking spaces and a word joiner at hyphens)', () => {
-  assertEquals(keepName('Stock Scudetto'), `Stock${NB}Scudetto`);
-  assert(!arrivalTitle('Stock Scudetto', 'Roberto').includes('Stock Scudetto'));
-  assertEquals(keepName('Big Fish League'), `Big${NB}Fish${NB}League`);
+Deno.test('arrival: the league name keeps its hyphens whole; its spaces stay breakable (the screen fits or wraps it)', () => {
+  assertEquals(keepName('Stock Scudetto'), 'Stock Scudetto');
   assert(keepName('Wall-Street Bets').includes('-\u2060'), 'a hyphen between letters carries a word joiner');
-  assertEquals(keepName('Stock Scudetto').replace(/\u00a0/g, ' '), 'Stock Scudetto', 'the words are unchanged');
+  assertEquals(keepName('Wall-Street Bets').replace(/\u2060/g, ''), 'Wall-Street Bets', 'the words are unchanged');
 });
 
 Deno.test('arrival: a dead link (not found) has NO heading: the refusal alone, then Sign in', () => {
@@ -350,7 +351,7 @@ Deno.test('arrival: the refusals are Giorgio\'s / the Planner\'s lines, verbatim
   assertEquals([full.canJoin, full.refusal], [false, 'Stock Scudetto is full. Ask whoever invited you if they can make room.']);
   for (const k of ['drafting', 'over'] as const) {
     assertEquals([view(k).canJoin, view(k).refusal], [false, "Stock Scudetto isn't taking new players right now."], k);
-    assertEquals(view(k).title, `Roberto invited you to Stock${NB}Scudetto`, 'the heading stays above a refusal');
+    assertEquals(view(k).title, `Roberto invited you to Stock Scudetto`, 'the heading stays above a refusal');
   }
   for (const k of ['found', 'solo', 'loading', 'unavailable'] as const) assertEquals(view(k).refusal, null, k);
 });
@@ -384,7 +385,7 @@ Deno.test('arrival: the capture knob parses only in a dev build and only a known
 Deno.test('arrival: the layout centres the invite and docks the actions; wired first in the signed-out group', () => {
   const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
   assert(screen.includes('<AuthScaffold centerBody footer='), 'invite centred above, actions in the footer');
-  assert(screen.includes('numberOfLines={1} adjustsFontSizeToFit'), 'the league name is fitted to one line, so it never breaks even at the largest size');
+  assert(screen.includes('<FittedTitle lead={view.titleParts.lead}'), 'the heading is the shared lead + fitted name');
   assert(screen.includes('onPress={invite.retryPreview}'), 'Try again re-asks on a tap, never a loop');
   assert(screen.includes("router.push('/create-account')") && screen.includes("router.push('/login')"));
   assert(!/setInterval|setTimeout|useEffect/.test(screen), 'no polling or retry loop');
@@ -454,14 +455,11 @@ Deno.test('a full league: Join keys the line on a pending invite, and the post-j
 
 // ── Large text: nothing the person must read is clipped or turned into a column of words ──
 
-Deno.test('large text: the suggested name never truncates, and the tip and the notice are capped so they stay cards', () => {
+Deno.test('large text: the suggested name is FITTED (system size, shrunk only as needed, 22pt floor); the tip and the notice are capped', () => {
   const picker = code(SOURCES['components/shell/UsernamePicker.tsx']);
-  assert(picker.includes("maxFontSizeMultiplier={mode === 'suggested' ? SUGGESTED_NAME_MAX_SCALE : undefined}"));
-  const scale = Number(/SUGGESTED_NAME_MAX_SCALE = ([\d.]+);/.exec(picker)![1]);
-  // The longest tag at 17pt x the cap and 0.55 em per character, against the narrowest supported phone (375pt):
-  // the field is the screen less 2x24 margins, 2x17 padding and the check's 36pt.
-  const longest = Math.max(...ADJECTIVES.map((a) => a.length)) + Math.max(...ANIMALS.map((a) => a.length)) + 3;
-  assert(longest * 17 * scale * 0.55 <= 375 - 48 - 34 - 36, `a ${longest}-char gamertag at ${scale}x must fit one line`);
+  assert(picker.includes('inputFontSize={suggestedFit}') && picker.includes('fittedFontSize(systemSize, tagWidth, fieldWidth)'));
+  assert(!picker.includes('SUGGESTED_NAME_MAX_SCALE'), 'the flat cap is gone');
+  assert(code(SOURCES['components/shell/Field.tsx']).includes('allowFontScaling={inputFontSize ? false : undefined}'));
   assert(code(SOURCES['components/shell/FirstTimeTip.tsx']).includes('maxFontSizeMultiplier={TIP_MAX_SCALE}'));
   assert(code(SOURCES['components/shell/ConfirmedEmailNotice.tsx']).includes('maxFontSizeMultiplier={NOTICE_MAX_SCALE}'));
 });
@@ -469,7 +467,7 @@ Deno.test('large text: the suggested name never truncates, and the tip and the n
 Deno.test('arrival: the stress fixture (a long league name and inviter) still splits into a wrapping lead and a one-line name', () => {
   const v = view('long');
   assertEquals(v.titleParts?.lead, 'Gianluigi Bartolomeo-Ricci invited you to');
-  assert(!v.titleParts!.name!.includes(' '), 'the name carries no breaking space');
+  assertEquals(v.titleParts!.name, 'The Wall Street Wolves of Provo Valley', 'the name is whole, with breakable spaces');
   assertEquals(v.mark, { kind: 'inviter', name: 'Gianluigi Bartolomeo-Ricci' });
   assertEquals([v.canJoin, v.refusal], [true, null]);
 });
@@ -500,4 +498,97 @@ Deno.test('arrival: a dead link CENTRES its panel and Sign in (no empty phone); 
   // The docked layout is still what every state with a heading uses.
   assert(screen.includes('<AuthScaffold centerBody footer={<View style={styles.actions}>{actions}</View>}>'));
   for (const k of INVITE_FIXTURES) assertEquals(view(k).title === null, k === 'not_found', k);
+});
+
+// ── Design Lead gate on cd9a7b71 ─────────────────────────────────────────────────
+
+Deno.test('gate 1: the inviter\'s disc is NEUTRAL (inset + text), never the "you" blue', () => {
+  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
+  assert(screen.includes('<Avatar name={view.mark.name} size={DISC} tone="neutral" />'));
+});
+
+Deno.test('gate 2: a league name is ONE line down to 0.75x, then 2 lines at spaces (3 only when 2 cannot hold it), never below 0.75x', () => {
+  assertEquals(NAME_MIN_SCALE, 0.75);
+  assertEquals(nameLines(300, 342), 1, 'it fits as is');
+  assertEquals(nameLines(342 / 0.75, 342), 1, 'it fits exactly at 0.75x');
+  assertEquals(nameLines(342 / 0.75 + 1, 342), 2, 'one point past: it wraps at spaces');
+  assertEquals(nameLines(342 * 2 * 0.9 / 0.75, 342), 2, 'two lines hold it at 0.75x');
+  assertEquals(nameLines(342 * 2 * 0.9 / 0.75 + 1, 342), 3);
+  assertEquals([nameLines(0, 342), nameLines(500, 0)], [1, 1], 'unmeasured: one line, never a guess');
+  // "Stock Scudetto" (~14 characters) stays on one line at Large and XL; the DL's long example wraps.
+  const w = (chars: number, size: number) => chars * size * 0.52;
+  assertEquals(nameLines(w(14, 34), 342), 1, 'Large');
+  assertEquals(nameLines(w(14, 54), 342), 1, 'XL: the display style tops at 1.6x');
+  assertEquals(nameLines(w(38, 34), 342), 2, '"The Wall Street Wolves / of Provo Valley" at Large');
+});
+
+Deno.test('gate 2: "You\'re in {league}" breaks BEFORE the name, with the same fit', () => {
+  const join = code(SOURCES['app/join-league.tsx']);
+  assert(join.includes('<FittedTitle lead={v.lead} name={v.name} label={v.title} />'));
+  const fitted = code(SOURCES['components/shell/FittedTitle.tsx']);
+  assert(fitted.includes('numberOfLines={lines} adjustsFontSizeToFit minimumFontScale={NAME_MIN_SCALE}'));
+  assert(fitted.includes('onTextLayout=') && fitted.includes('nameLines(natural, available)'));
+  assert(code(SOURCES['lib/join/joinPreview.ts']).includes('lead: "You\'re in",'));
+});
+
+Deno.test('gate 3: Sign in and Try again take the WarnPanel\'s cap, so a link never outranks its message', () => {
+  const screen = code(SOURCES['components/shell/InviteArrival.tsx']);
+  assertEquals(screen.split('maxFontSizeMultiplier={WARN_TEXT_MAX_SCALE}').length - 1, 2);
+  assert(code(SOURCES['components/sp/WarnPanel.tsx']).includes('maxFontSizeMultiplier={WARN_TEXT_MAX_SCALE}'));
+});
+
+Deno.test('gate 4: a suggested gamertag keeps the SYSTEM size and shrinks only as needed, with a 22pt floor', () => {
+  assertEquals(fittedFontSize(17, 100, 270), 17, 'fits: the system size, however large');
+  assertEquals(fittedFontSize(53, 280, 270), 53 * 266 / 280, 'a little too wide: shrunk by exactly the overshoot');
+  assertEquals(fittedFontSize(53, 900, 270), GAMERTAG_FLOOR_PT, 'never under the floor');
+  assertEquals(fittedFontSize(17, 400, 270), 22 > 17 ? 17 : 22, 'at a small system size the floor never ENLARGES');
+  assertEquals(fittedFontSize(17, 0, 270), 17, 'unmeasured: the system size');
+  // The 19-character worst case fits one line at the floor on the narrowest phone (375pt: field less margins, padding, the check).
+  const longest = Math.max(...ADJECTIVES.map((a) => a.length)) + Math.max(...ANIMALS.map((a) => a.length)) + 3;
+  assert(longest * GAMERTAG_FLOOR_PT * 0.55 <= 375 - 48 - 34 - 36, `${longest} chars at ${GAMERTAG_FLOOR_PT}pt`);
+});
+
+Deno.test('gate 5: the arrival\'s display lines push out a lone last word ("league" orphan)', () => {
+  assert(code(SOURCES['components/shell/FittedTitle.tsx']).includes('lineBreakStrategyIOS="push-out"'));
+});
+
+Deno.test('gate 6: a "·" starts a line and never ends one (a no-break space BEFORE each dot)', () => {
+  assertEquals(dotStartsLine('The draft is Sat, Oct 10 · 7:00 PM ET. The draft order is set an hour before.'), 'The draft is Sat, Oct 10\u00a0· 7:00 PM ET. The draft order is set an hour before.');
+  assertEquals(dotStartsLine('a · b · c'), 'a\u00a0· b\u00a0· c');
+  assertEquals(dotStartsLine('no dots'), 'no dots');
+  assert(code(SOURCES['app/join-league.tsx']).includes('{dotStartsLine(v.body)}'));
+});
+
+// ── The draft-room first-time tip (the Planner, 2026-10-15) ──────────────────────
+
+Deno.test('draft-room tip: the Planner\'s words verbatim, in the copy constants, with its own storage key', () => {
+  assertEquals(TIPS.outOfTime.text, "Out of time? We pick for you: your queue first, then the best stock that fits your league's rules.");
+  assert((TIPS.outOfTime.key as string) !== (TIPS.weekWindow.key as string) && /^sp\.tip\.[a-z-]+\.v1$/.test(TIPS.outOfTime.key), 'one flag per device, separate from the Home tip');
+});
+
+Deno.test('draft-room tip: shown once, dismissed on tap, never re-shown after a relaunch (the stored flag decides)', () => {
+  assertEquals(tipVisible(null), true, 'first time in any room: shown');
+  assertEquals(tipVisible('1'), false, 'dismissed (tap or first pick) and stored: gone');
+  assertEquals(tipVisible(undefined), false, 'not read yet: never flashed');
+  assertEquals(tipVisible('error'), false, 'a failed read never nags');
+  const tip = code(SOURCES['components/shell/FirstTimeTip.tsx']);
+  assert(tip.includes('dismissTip(tip)'), 'the tap dismisses through the same store as the Home tip');
+  const store = code(SOURCES['lib/shell/firstTimeTip.ts']);
+  assert(store.includes("AsyncStorage.setItem(key, '1')") && store.includes('AsyncStorage.getItem(key)'), 'persisted: a relaunch reads the flag');
+});
+
+Deno.test('draft-room tip: dismissed on the first pick (a manual pick or the auto-pick made for them)', () => {
+  assertEquals([dismissesOnFirstPick(0), dismissesOnFirstPick(1), dismissesOnFirstPick(7)], [false, true, true]);
+  const room = code(SOURCES['components/game/DraftRoom.tsx']);
+  assert(room.includes("if (dismissesOnFirstPick(picksMade)) dismissTip('outOfTime');"), 'a recorded pick of theirs ends it');
+  const draft = room.slice(room.indexOf('const draft = async'), room.indexOf('if (room.status === \'error\')'));
+  assert(draft.includes("dismissTip('outOfTime');"), 'a successful manual pick ends it at once');
+  assert(draft.indexOf("dismissTip('outOfTime')") > draft.indexOf('r.reason !== null'), 'a refused pick does not');
+});
+
+Deno.test('draft-room tip: above the board, the same primitive as Home, for everyone (no commissioner case)', () => {
+  const room = code(SOURCES['components/game/DraftRoom.tsx']);
+  const stack = room.slice(room.indexOf('<View style={styles.stack}>'));
+  assert(stack.indexOf('<FirstTimeTip tip="outOfTime" />') > -1 && stack.indexOf('<FirstTimeTip tip="outOfTime" />') < stack.indexOf('<Card style={[styles.card'), 'first in the stack, above the clock card and the board');
+  assert(!/isCommissioner[^\n]*FirstTimeTip|FirstTimeTip[^\n]*isCommissioner/.test(room), 'no special case for a commissioner');
 });

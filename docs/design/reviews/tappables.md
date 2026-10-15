@@ -48,9 +48,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/forgot-password.tsx:135` | EmptyState | onAction | `backToSignIn` | route replace('/login') |  |
 | `app/forgot-password.tsx:137` | EmptyState | onSecondaryAction | `inline: () => { setSent(false); handleResetPassword(); }` | state setSent |  |
 | `app/forgot-password.tsx:170` | Button | onPress | `handleResetPassword` | fn handleResetPassword |  |
-| `app/join-league.tsx:280` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
-| `app/join-league.tsx:294` | Button | onPress | `find` | fn find | `!trimmed` |
-| `app/join-league.tsx:362` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
+| `app/join-league.tsx:281` | Button | onPress | `primary.onPress` | prop primary.onPress | `view.action === 'join_disabled'` |
+| `app/join-league.tsx:295` | Button | onPress | `find` | fn find | `!trimmed` |
+| `app/join-league.tsx:363` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
 | `app/league-settings.tsx:160` | LeaveLeagueRow | onPress | `inline: () => { setLeaveError(null); setLeaveOpen(true); }` | sheet setLeaveOpen(true) |  |
 | `app/league-settings.tsx:329` | Button | onPress | `handleSave` | route back; alert |  |
 | `app/league-settings.tsx:364` | SegmentedControl | onChange | `inline: (v) => setPickSeconds(Number(v))` | state setPickSeconds |  |
@@ -89,10 +89,10 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/DraftDateSheet.tsx:96` | Pressable | onPress | `inline: () => setAndroidPicking(true)` | state setAndroidPicking |  |
 | `components/game/DraftDateSheet.tsx:103` | Button | onPress | `inline: () => run({ type: 'confirm', nowMs: Date.now() })` | fn run |  |
 | `components/game/DraftDateSheet.tsx:105` | Pressable | onPress | `inline: () => run({ type: 'set_later' })` | fn run |  |
-| `components/game/DraftRoom.tsx:310` | Button | onPress | `room.refresh` | prop room.refresh |  |
-| `components/game/DraftRoom.tsx:409` | SymbolSearchField | onSelect | `onSelect` | fn onSelect |  |
-| `components/game/DraftRoom.tsx:417` | Button | onPress | `draft` | fn draft | `pending` |
-| `components/game/DraftRoom.tsx:455` | Button | onPress | `room.refresh` | prop room.refresh |  |
+| `components/game/DraftRoom.tsx:319` | Button | onPress | `room.refresh` | prop room.refresh |  |
+| `components/game/DraftRoom.tsx:420` | SymbolSearchField | onSelect | `onSelect` | fn onSelect |  |
+| `components/game/DraftRoom.tsx:428` | Button | onPress | `draft` | fn draft | `pending` |
+| `components/game/DraftRoom.tsx:466` | Button | onPress | `room.refresh` | prop room.refresh |  |
 | `components/game/LeagueRenewal.tsx:47` | Button | onPress | `inline: () => setRetry((n) => n + 1)` | state setRetry |  |
 | `components/game/LeaveLeagueSheets.tsx:28` | Pressable | onPress | `inline: view.enabled ? onPress : undefined` | fn onPress (conditional) | `!view.enabled` |
 | `components/game/LeaveLeagueSheets.tsx:70` | Button | onPress | `onLeave` | prop onLeave (the caller's) | `busy` |
@@ -185,9 +185,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/GetStarted.tsx:47` | Pressable | onPress | `onSignIn` | prop onSignIn (the caller's) |  |
 | `components/shell/GetStarted.tsx:69` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/HowItWorksSheet.tsx:36` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
-| `components/shell/InviteArrival.tsx:37` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
-| `components/shell/InviteArrival.tsx:42` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
-| `components/shell/InviteArrival.tsx:89` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
+| `components/shell/InviteArrival.tsx:38` | Button | onPress | `inline: () => router.push('/create-account')` | route push('/create-account') |  |
+| `components/shell/InviteArrival.tsx:43` | Pressable | onPress | `inline: () => router.push('/login')` | route push('/login') |  |
+| `components/shell/InviteArrival.tsx:80` | Pressable | onPress | `invite.retryPreview` | prop invite.retryPreview |  |
 | `components/shell/LeaguePill.tsx:60` | PressableScale | onPress | `openLeagueSheet` | fn openLeagueSheet (from a hook or import) |  |
 | `components/shell/LeagueSheet.tsx:143` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
 | `components/shell/LeagueSheet.tsx:163` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
@@ -215,11 +215,11 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ShellTabBar.tsx:151` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:152` | Pressable | onLongPress | `onLongPress` | prop onLongPress (the caller's) |  |
 | `components/shell/SocialSignIn.tsx:105` | Button | onPress | `inline: () => run('google')` | fn run | `busy === 'apple'` |
-| `components/shell/UsernamePicker.tsx:242` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
-| `components/shell/UsernamePicker.tsx:251` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
-| `components/shell/UsernamePicker.tsx:252` | Button | onPress | `startEditing` | fn startEditing |  |
-| `components/shell/UsernamePicker.tsx:258` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `!view.canContinue && buttonStatus === 'i` |
-| `components/shell/UsernamePicker.tsx:269` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
+| `components/shell/UsernamePicker.tsx:263` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
+| `components/shell/UsernamePicker.tsx:272` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
+| `components/shell/UsernamePicker.tsx:273` | Button | onPress | `startEditing` | fn startEditing |  |
+| `components/shell/UsernamePicker.tsx:279` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `!view.canContinue && buttonStatus === 'i` |
+| `components/shell/UsernamePicker.tsx:290` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/onboarding/OnboardingPager.tsx:77` | Pressable | onPress | `onSkip` | prop onSkip (the caller's) |  |
 | `components/shell/onboarding/OnboardingPager.tsx:247` | Button | onPress | `onNext` | prop onNext (the caller's) |  |
 | `components/sp/Button.tsx:114` | PressableScale | ... | `spread {...rest}` | props of rest | `!a11y.pressable` |

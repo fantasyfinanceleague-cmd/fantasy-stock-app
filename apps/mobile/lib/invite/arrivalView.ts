@@ -47,9 +47,9 @@ export interface ArrivalView {
   retry: boolean;
 }
 
-/** The league's name never breaks across lines: spaces are non-breaking, hyphens carry a word joiner. */
+/** A hyphenated name keeps each hyphen's word whole (a word joiner after it). Its SPACES stay breakable: the screen fits the name on one line down to 0.75x and wraps at spaces past that (components/shell/FittedTitle.tsx). */
 export function keepName(name: string): string {
-  return keepHyphens(name.replace(/ /g, ' '));
+  return keepHyphens(name);
 }
 
 /**

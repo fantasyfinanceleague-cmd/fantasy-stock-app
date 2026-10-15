@@ -2,22 +2,79 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c5d81afb183f76d92f11d60f191577c9ed1d41a5",
-    "commitShort": "c5d81afb",
+    "commit": "cd9a7b7170cd8aebe3d55863d1457949232eff8a",
+    "commitShort": "cd9a7b71",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w4",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-15T03:09:56Z",
-    "sourceHash": "sha256:58a1c355f12172c680b6a04fe72796de9e86fb90c538b3610a320aeb61dc55d6",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/DraftRoom.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/shell/Field.tsx"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/components/shell/FittedTitle.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/shell/InviteArrival.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/shell/UsernamePicker.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/WarnPanel.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/keepDots.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/invite/arrivalView.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/join/joinPreview.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/shell/firstTimeTipPolicy.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/shell/fitText.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+      }
+    ],
+    "timestamp": "2026-10-15T19:59:11Z",
+    "sourceHash": "sha256:9d9877b395ae317980778b171e0776daa63d4c837f8d9529cb9ae908ce92d3b7",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 26.9,
-    "ageDays": 1.1,
+    "ageHours": 43.7,
+    "ageDays": 1.8,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
@@ -15992,9 +16049,9 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('validate-and-record-pick')",
       "callSites": [
-        "apps/mobile/components/game/DraftRoom.tsx:212",
-        "apps/mobile/components/game/DraftRoom.tsx:236",
-        "apps/mobile/components/game/DraftRoom.tsx:281"
+        "apps/mobile/components/game/DraftRoom.tsx:220",
+        "apps/mobile/components/game/DraftRoom.tsx:244",
+        "apps/mobile/components/game/DraftRoom.tsx:289"
       ],
       "via": [
         "seamInvoke"
@@ -16741,7 +16798,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('join-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:76"
+        "apps/mobile/app/join-league.tsx:77"
       ]
     },
     {
@@ -16753,7 +16810,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('preview-league')",
       "callSites": [
-        "apps/mobile/app/join-league.tsx:67"
+        "apps/mobile/app/join-league.tsx:68"
       ]
     },
     {
@@ -18153,7 +18210,7 @@
           "edge": "e.ui.join-league->fn.preview-league",
           "detail": "Screen posts the code for a display-only preview. Rate-limited per-user and per-IP.",
           "files": [
-            "apps/mobile/app/join-league.tsx:67"
+            "apps/mobile/app/join-league.tsx:68"
           ]
         },
         {
@@ -18169,7 +18226,7 @@
           "edge": "e.ui.join-league->fn.join-league",
           "detail": "On confirm, the join is performed server-side. verify_jwt=true, so the caller identity is the gateway-verified JWT.",
           "files": [
-            "apps/mobile/app/join-league.tsx:76"
+            "apps/mobile/app/join-league.tsx:77"
           ]
         },
         {
@@ -19714,11 +19771,11 @@
       "validate-and-record-pick[]"
     ],
     "invokes": [
-      "apps/mobile/app/join-league.tsx:67 -> preview-league",
-      "apps/mobile/app/join-league.tsx:76 -> join-league",
-      "apps/mobile/components/game/DraftRoom.tsx:212 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:236 -> validate-and-record-pick (via seamInvoke)",
-      "apps/mobile/components/game/DraftRoom.tsx:281 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/app/join-league.tsx:68 -> preview-league",
+      "apps/mobile/app/join-league.tsx:77 -> join-league",
+      "apps/mobile/components/game/DraftRoom.tsx:220 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:244 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/components/game/DraftRoom.tsx:289 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:120 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:79 -> draft-control (via seamInvoke)",

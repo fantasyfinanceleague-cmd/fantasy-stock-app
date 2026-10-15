@@ -7,8 +7,9 @@ import { Avatar } from '@/components/sp/Avatar';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
+import { FittedTitle } from '@/components/shell/FittedTitle';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { WarnPanel } from '@/components/sp/WarnPanel';
+import { WARN_TEXT_MAX_SCALE, WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { SocialSignIn } from '@/components/shell/SocialSignIn';
 import { ARRIVAL_COPY, arrivalView } from '@/lib/invite/arrivalView';
@@ -40,7 +41,7 @@ export function InviteArrival({ invite }: { invite: PendingInvite }) {
     <>
       {view.refusal ? <WarnPanel text={view.refusal} /> : null}
       <Pressable onPress={() => router.push('/login')} accessibilityRole="link" style={styles.link}>
-        <Text variant="body" color={colors.accent} style={styles.bold}>
+        <Text variant="body" maxFontSizeMultiplier={WARN_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>
           {ARRIVAL_COPY.signIn}
         </Text>
       </Pressable>
@@ -63,23 +64,13 @@ export function InviteArrival({ invite }: { invite: PendingInvite }) {
       {view.title ? (
         <View style={styles.block}>
           {view.mark.kind === 'inviter' ? (
-            <Avatar name={view.mark.name} size={DISC} />
+            <Avatar name={view.mark.name} size={DISC} tone="neutral" />
           ) : (
             <View style={[styles.disc, { backgroundColor: colors.inset }]}>
               <Icon name="trophy" size="title" tone="text2" />
             </View>
           )}
-          {/* The lead wraps; the league's name sits on its own line and shrinks to fit it, so it never breaks (even at XXXL). */}
-          <View accessible accessibilityRole="header" accessibilityLabel={view.title} style={styles.heading}>
-            <Text variant="display" numberOfLines={0} style={styles.title}>
-              {view.titleParts?.lead}
-            </Text>
-            {view.titleParts?.name ? (
-              <Text variant="display" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4} style={styles.title}>
-                {view.titleParts.name}
-              </Text>
-            ) : null}
-          </View>
+          {view.titleParts ? <FittedTitle lead={view.titleParts.lead} name={view.titleParts.name} label={view.title ?? ''} /> : null}
           {view.unreachable ? (
             <Text variant="body" tone="secondary" style={styles.title}>
               {view.unreachable}
@@ -87,7 +78,7 @@ export function InviteArrival({ invite }: { invite: PendingInvite }) {
           ) : null}
           {view.retry ? (
             <Pressable onPress={invite.retryPreview} accessibilityRole="button" style={styles.link}>
-              <Text variant="body" color={colors.accent} style={styles.bold}>
+              <Text variant="body" maxFontSizeMultiplier={WARN_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>
                 {ARRIVAL_COPY.tryAgain}
               </Text>
             </Pressable>
