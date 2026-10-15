@@ -8,7 +8,6 @@ import Dashboard from "./pages/Dashboard";
 import DraftPage from "./pages/DraftPage";
 import Leagues from './pages/Leagues';
 import LeagueDetail from './pages/LeagueDetail';
-import { JoinLeague } from './pages/JoinLeague';
 import PortfolioPage from './pages/PortfolioPage';
 import Leaderboard from './pages/Leaderboard';
 import Matchup from './pages/Matchup';
@@ -53,6 +52,19 @@ const APP_PAUSED = true;
 // that path renders its own separate <Routes> tree below.
 const DesignGallery = import.meta.env.DEV ? lazy(() => import("./design/gallery/DesignGallery")) : null;
 
+// ── Onboarding W5: the invite link and the confirm-email page ──────────────
+// docs/plans/2026-10-14-onboarding.md: "Behind APP_PAUSED it is the ONLY
+// unpaused route besides the landing." Both are public (no Layout, no
+// Protected, no sign-in) and lazy, so the landing's code path gains only these
+// route entries; their chunks load only on these paths. The same two pages
+// serve the unpaused app, which retires the old signed-in-only JoinLeague
+// route: the invite link must behave the same either side of the switch.
+// build-isolation.test.ts pins the paused route table to exactly these.
+const JoinPage = lazy(() => import("./join/JoinPage"));
+const ConfirmPage = lazy(() => import("./join/ConfirmPage"));
+const joinRoute = <Route path="/join/:code" element={<Suspense fallback={null}><JoinPage /></Suspense>} />;
+const confirmRoute = <Route path="/auth/confirm" element={<Suspense fallback={null}><ConfirmPage /></Suspense>} />;
+
 function App() {
   if (DesignGallery && window.location.pathname === "/design") {
     return (
@@ -62,13 +74,16 @@ function App() {
     );
   }
 
-  // Paused: serve only the landing page; send every other path back to it.
+  // Paused: serve only the landing page and the two onboarding pages; send
+  // every other path back to the landing.
   if (APP_PAUSED) {
     return (
       <Routes>
         {/* Render the landing page directly (not via Home, which would
             redirect a logged-in session into the dashboard). */}
         <Route path="/" element={<LandingPage />} />
+        {joinRoute}
+        {confirmRoute}
         {/* Any other URL (/login, /signup, /dashboard, app routes, …) → landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -88,7 +103,8 @@ function App() {
       <Route path="/draft" element={<Layout><Protected><DraftPage /></Protected></Layout>} />
       <Route path="/leagues" element={<Layout><Protected><Leagues /></Protected></Layout>} />
       <Route path="/league/:leagueId" element={<Layout><Protected><LeagueDetail /></Protected></Layout>} />
-      <Route path="/join/:code" element={<Layout><Protected><JoinLeague /></Protected></Layout>} />
+      {joinRoute}
+      {confirmRoute}
       <Route path="/portfolio" element={<Layout><Protected><PortfolioPage /></Protected></Layout>} />
       <Route path="/matchup" element={<Layout><Protected><Matchup /></Protected></Layout>} />
       <Route path="/leaderboard" element={<Layout><Protected><Leaderboard /></Protected></Layout>} />

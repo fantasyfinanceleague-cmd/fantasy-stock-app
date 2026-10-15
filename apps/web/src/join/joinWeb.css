@@ -1,0 +1,118 @@
+/* The web invite + confirm pages (onboarding W5), Game Night, Light AND Dark
+   by the system setting (Decision 12: no theme choice here).
+
+   Token VALUES are the board's docs/design/screens/themes.css (itself the
+   app's constants/tokens/color.ts), same names; joinWeb.tokens.test.ts fails
+   if one drifts. Scoped to .obw, never :root, so nothing here can reach the
+   landing. Loaded only by the lazy /join and /auth/confirm chunks. */
+
+.obw {
+  color-scheme: light;
+  --c-bg: #F3F5FC;
+  --c-surface: #FDFEFF;
+  --c-inset: #E7EBF6;
+  --c-line: #D5DAEA;
+  --c-text: #0E142C;
+  --c-text-2: #505B72;
+  --c-accent: #00708E;
+  --c-you: #0064DC;
+  --c-on-you: #FAFCFE;
+  --c-gain: #006C47;
+  --c-gain-tint: rgba(0, 108, 71, 0.1);
+  --c-warn-tint: #FAE7B3;
+  --c-warn-line: #EFCC83;
+  --c-warn-text: #784900;
+  --c-secondary-border: #737A8D;
+}
+
+@media (prefers-color-scheme: dark) {
+  .obw {
+    color-scheme: dark;
+    --c-bg: #060A1F;
+    --c-surface: #0E132F;
+    --c-inset: #181F3E;
+    --c-line: #222C4C;
+    --c-text: #F3F5FB;
+    --c-text-2: #98A8C5;
+    --c-accent: #35EEFF;
+    --c-you: #0067DF;
+    --c-on-you: #FAFCFE;
+    --c-gain: #39EEBA;
+    --c-gain-tint: rgba(57, 238, 186, 0.12);
+    --c-warn-tint: rgba(244, 191, 63, 0.1);
+    --c-warn-line: rgba(244, 191, 63, 0.35);
+    --c-warn-text: #FAC547;
+    --c-secondary-border: #58698C;
+  }
+}
+
+.obw {
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 40px 20px 32px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  /* System stack, no web font: these pages load no third-party CSS (security
+     review, 2026-10-14: no outside origin sees a page carrying a code). */
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.obw *, .obw *::before, .obw *::after { box-sizing: border-box; }
+
+.obw__wordmark { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--c-text); }
+
+.obw__col { display: grid; gap: 18px; width: 100%; max-width: 420px; margin: 0 auto; }
+.obw__col--center { justify-items: center; text-align: center; gap: 16px; }
+.obw__body { padding-top: 18px; }
+
+@media (min-width: 720px) {
+  .obw { display: grid; grid-template-rows: auto 1fr; padding: 28px 40px; }
+  .obw__body { display: grid; place-items: center; padding: 0; }
+}
+
+.obw__title { margin: 0; font-size: 28px; line-height: 32px; font-weight: 800; color: var(--c-text); text-wrap: balance; }
+.obw__sub { margin: 0; font-size: 15px; line-height: 21px; color: var(--c-text-2); }
+
+.obw__av {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-you); color: var(--c-on-you);
+  font-size: 20px; font-weight: 800;
+}
+.obw__disc {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--c-you); color: var(--c-on-you);
+}
+
+.obw__card { background: var(--c-surface); box-shadow: inset 0 0 0 1px var(--c-line); border-radius: 14px; padding: 4px 16px; }
+.obw__row { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 12px; font-size: 15px; }
+.obw__row dt { color: var(--c-text-2); }
+.obw__row dd { margin: 0; font-weight: 700; color: var(--c-text); text-align: right; }
+
+.obw__warn {
+  background: var(--c-warn-tint); box-shadow: inset 0 0 0 1px var(--c-warn-line);
+  border-radius: 14px; padding: 12px 14px;
+  font-size: 15px; line-height: 21px; font-weight: 600; color: var(--c-warn-text);
+}
+
+.obw__actions { display: grid; gap: 10px; justify-items: center; }
+
+.obw__store {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 50px; padding: 0 16px; border-radius: 10px;
+  background: var(--c-text); color: var(--c-bg); text-decoration: none;
+}
+.obw__store-text { display: grid; line-height: 1.05; text-align: left; }
+.obw__store-small { font-size: 10px; }
+.obw__store-big { font-size: 19px; font-weight: 700; }
+
+.obw__line-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; height: 50px; border-radius: 12px;
+  box-shadow: inset 0 0 0 1.5px var(--c-secondary-border);
+  color: var(--c-text); font-size: 16px; font-weight: 700; text-decoration: none;
+}
+
+.obw a:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
