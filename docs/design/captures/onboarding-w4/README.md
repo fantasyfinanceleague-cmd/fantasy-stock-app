@@ -1,21 +1,22 @@
 # Onboarding W4 on Game Night: gate captures (`feat/onboarding-w4`)
 
 **Screenshots stay out of the repo (Giorgio, 2026-10-14).** Every still, recording and frame
-sheet is in **`~/fantasy-stock-design-review/feat-onboarding-w4/`** (182 stills, 13 recordings
+sheet is in **`~/fantasy-stock-design-review/feat-onboarding-w4/`** (180 stills, 13 recordings
 with a de-duplicated frame sheet each, `accent-split.txt` + the script). This file is the index.
 A preliminary set from the middle of the build is in `…/feat-onboarding-w4-prelim/`; it is
 superseded and not part of the review.
 
 **Builds.** Rebased on `origin/main` `e3dadc36` (#278, the Design Lead's arrival redraw board; main
-had not moved when this was written). Four commits carry the shots, and the later three never touch a
-pixel of the frames shot before them (except the one state they re-shot, X06):
+had not moved when this was written). Six commits carry the shots. The earlier frames the later ones did not change were left; every frame the later ones DID change was re-shot, and the superseded versions are in `superseded-pre-gate/` (outside the set):
 
 | Build | What it is | Shot on it |
 |---|---|---|
-| **`af84a87f`** | The full W4 build (all screens below) | All 182 stills except the How it works sheet (20:11–20:57 PDT), and `rec-01`…`rec-07` |
+| **`af84a87f`** | The full W4 build (all screens below) | The first full set (20:11–20:57 PDT; the frames later commits changed were re-shot, see below), except the How it works sheet, and `rec-01`…`rec-07` |
 | `64213957` | + How it works thumbnails 96 pt (the FINAL scene's winner line was clipped at 88 pt) | `rec-08`, `rec-09`, `rec-10` and the whole S01 sheet set |
 | **`1b825edb`** | + the DEV-only capture knobs raise the real notice/chip stores once (so a dismiss and a keep act on camera). No release code path changed | `rec-11`, `rec-12`, `rec-13`, `R01`, `R02`, `T01`, and the S01 clean-launch frames |
 | **`b89aeb92`** | + a dead link centres its panel and Sign in (the decided board) | **X06 only** (12 stills, re-shot 21:30 PDT; the before-centring set is in `…-prelim/x06-before-centring/`) |
+| **`24b54e8c`** | + the Design Lead's gate fixes (neutral inviter disc; league-name fit; links at the WarnPanel's cap; fitted gamertag; push-out) and the draft-room first-time tip | The re-gate set: **X01–X06, X10 at L and XXXL, X07 L/XXXL (re-shot on the next row), W01 and W02 at XL/XXXL**, both phones, both themes, plus **D01** |
+| **`12599265`** | + a dot starts a line (the no-break space goes AFTER the dot) | **X07** (8 stills) |
 
 `HowItWorksSheet.tsx` is on no still before S01, the knob change is `__DEV__`-only, and the dead-link change is inside the `!view.title` branch that only X06 reaches, so the set
 is one build in every pixel that matters. The status bar is pinned at 9:41; times above are the real ones
@@ -37,7 +38,7 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 
 | # | State | Frames | Shows |
 |---|---|---|---|
-| W01 | Pick a username, first run (a generated tag) | 17e + 17 Pro at L / XL / XXXL | "FrostyCrane249" pre-filled, the field's check, "You can change it later in Profile.", **Keep** the one accent pill, **Change** a secondary; Sign out under. The seed is fixed (151) so the frames repeat. At XL and XXXL the tag shows whole: the suggested name's text is capped at 1.3× (22 pt) so the longest possible tag (19 characters) still fits one line on the narrowest phone; the labels around it stay at the system scale |
+| W01 | Pick a username, first run (a generated tag) | 17e + 17 Pro at L / XL / XXXL | "FrostyCrane249" pre-filled, the field's check, "You can change it later in Profile.", **Keep** the one accent pill, **Change** a secondary; Sign out under. The seed is fixed (151) so the frames repeat. **The tag takes the SYSTEM size and shrinks only as far as it needs to stay on one line** (a hidden probe measures it; floor 22 pt, which holds the 19-character worst case on the narrowest phone). At XL and XXXL on the 17e/17 Pro it fits at the system size, so it is the same size as the labels around it |
 | W02 | Same, with the EMAIL CONFIRMED chip | 17e L / XL, 17 Pro L | The chip above the title: `gainTint` pill, drawn check, the approved words; sits on `bg` (pair added and tested at 4.5:1) |
 | W03 | A taken name | 17e + 17 Pro L | "roberto" taken → the error, the rules, "Available" chips (typed variants first: `roberto26`, `roberto_1`, `roberto_3`; never anything from the email) |
 | W04 | Push pre-prompt | 17e + 17 Pro at L / XL / XXXL | A bell on an `accentTint` disc, Giorgio's line, **Continue** the one primary, "Not now" a 44 pt text link under it. Drawn above where the iOS sheet appears |
@@ -46,16 +47,17 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 | W07–W09 | League / Matchup / Portfolio, no leagues | 17e L / XL, 17 Pro L | The SAME state as Home, each with its own title and the header, pill and tab bar around it. Matchup and Portfolio were blank before (a 1.3 must-fix) |
 | W10 | Pre-draft Home with the week-window tip | 17e + 17 Pro at L / XL / XXXL | "Your week runs Monday's open to Friday's close. Best performance wins." in a rimmed card, the info icon in the accent, a 44 pt ×. Capped at 2× |
 | W11 | Profile with the "How it works" row | 17e L / XL, 17 Pro L | The row after Appearance, a chevron |
-| **X01** | **Invite arrival** (inviter + league) | 17e + 17 Pro at L / XL / XXXL | The inviter's initial on a disc, "Roberto invited you to Stock Scudetto" **centred in the space above the actions**; Apple, Google, Use email docked at the bottom (Giorgio's B). The league's name sits on its own line and is fitted to one line, so it never breaks (non-breaking spaces alone did not hold at XXXL) |
+| **X01** | **Invite arrival** (inviter + league) | 17e + 17 Pro at L / XXXL | The inviter's initial on a **neutral** disc (`inset` + `text`, as on the board; it was the "you" blue), "Roberto invited you to / Stock Scudetto" centred above Apple, Google, Use email docked at the bottom. **The name is one line at L and XXXL** (it shrinks to ~0.84× at XXXL); the lead wraps and ends without a lone word |
 | X02 | …no inviter | 17e + 17 Pro L | The league icon on an `inset` disc, "You're invited to Stock Scudetto" |
-| X03 | …nothing usable (the preview was unavailable) | 17e + 17 Pro L | The generic "You're invited to a league", Join's "Couldn't reach the league…" line, **Try again** (a tap, never a loop), every sign-in option still there |
-| X04 | Refusal: full | 17e + 17 Pro at L / XL / XXXL | WarnPanel + "Sign in" in the buttons' place: "Stock Scudetto is full. Ask whoever invited you if they can make room." |
+| X03 | …nothing usable (the preview was unavailable) | 17e + 17 Pro L | The generic "You're invited to / a league" (the orphan "league" is gone: `lineBreakStrategyIOS` push-out), Join's "Couldn't reach the league…" line, **Try again** (capped at 1.6×; a tap, never a loop), every sign-in option still there |
+| X04 | Refusal: full | 17e + 17 Pro at L / XXXL | WarnPanel + "Sign in" in the buttons' place: "Stock Scudetto is full. Ask whoever invited you if they can make room." **"Sign in" is capped at the panel's 1.6×**, so it never outranks its message |
 | X05 | Refusal: not taking players (draft started or season over) | 17e + 17 Pro L | "Stock Scudetto isn't taking new players right now." |
-| X06 | A dead link | 17e + 17 Pro at L / XL / XXXL | **No heading** (the Planner) and **centred** (the decided board, Giorgio's B): the WarnPanel "This invite link doesn't work anymore. Ask for a new one." and "Sign in" sit in the middle of the screen, since with no invite block above them docking them would leave an empty phone. Every other arrival state keeps the invite centred and the actions docked |
-| X07 | You're in {league} + the facts card (C1) | 17e + 17 Pro at L / XL / XXXL | Managers `7 of 8`, Stakes, Season; the draft sentence stays, so no Draft row. Read after the join, as a member (here, a fixture reads the held preview with one member added) |
+| X06 | A dead link | 17e + 17 Pro at L / XXXL | **No heading** (the Planner) and **centred** (the decided board): the panel and "Sign in" (capped at 1.6×) in the middle of the screen |
+| X07 | You're in {league} + the facts card (C1) | 17e + 17 Pro at L / XXXL | "You're in / Serie A Traders": **the heading breaks BEFORE the name**, which is fitted the same way as on the arrival. The draft sentence puts each "·" at the START of a line ("Sat, Oct 10 / · 7:00 PM ET"): see the note below. Managers `7 of 8`, Stakes, Season; no Draft row; read after the join as a member |
 | X08, X09 | A full league at join: typed code / invited | 17e L (+ X09 XL), 17 Pro L | X08 keeps "Ask your commissioner…"; X09 (a pending invite) reads "Ask whoever invited you…" |
-| X10 | Stress: a 39-character league and a 26-character inviter | 17e L / XXXL, 17 Pro L | The lead sentence wraps; the name stays whole by shrinking to fit; both initials on the disc |
+| X10 | Stress: a 39-character league and a 26-character inviter | 17e + 17 Pro at L / XXXL | The league name wraps at spaces, never mid-word, at ≥ 0.75×: **2 lines at L** ("The Wall Street / Wolves of Provo Valley"), **3 lines at XXXL** (2 cannot hold it at 0.75× at that size; see the note below). The lead wraps; the disc carries both initials |
 | S01 | How it works sheet | 17e + 17 Pro at L (dark, light), XL (light), XXXL (dark) | Three rows: a still draft board, the Scoreboard with a lead change, the FINAL; the lines are Giorgio's. XL and XXXL were shot from a clean launch (see the P3 below) |
+| **D01** | **Draft room, first time** (nobody has picked) | 17e + 17 Pro at L / XXXL | The first-time tip above the board and the clock card, the same card as Home's week-window line: "Out of time? We pick for you: your queue first, then the best stock that fits your league's rules." (the Planner's words), info icon, 44 pt ×. Capped at 2×, so at XXXL it is a six-line card. The clock numbers differ between frames because the ring animates (the matrix flags these frames "unsettled" for that reason; each is a real moment of the same fixture, `DRAFT_ROOM_FIXTURE=theirs_first`) |
 | R01, R02 | **Reduce Motion** | 17e L | "You're in" without the pop; the sheet's vignettes at their final frame |
 | T01 | The tip after a relaunch | 17e L dark | Gone (it was dismissed, and the choice persisted) |
 
@@ -78,14 +80,14 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 
 ## Measurements and accent
 
-- **Accent by area** (`accent-split.txt`, the script `accent_split.py`; the same metric and the same 75% rule for "the screen's one primary" as the earlier W4 sets, ΔRGB 45, every 2nd pixel). **182 frames: all `ok`; none over 5% without the primary; the highest total is 5.74%, and it is the primary pill alone (W01/W02 at 17e L: rest 0.01%). The highest "rest" is 1.52% (the How it works sheet in Light, which has no primary pill by design).** Screens with no accent pill (the sheet, the refusals, the dead link) read 0% primary by design.
+- **Accent by area** (`accent-split.txt`, the script `accent_split.py`; the same metric and the same 75% rule for "the screen's one primary" as the earlier W4 sets, ΔRGB 45, every 2nd pixel). **180 frames: all `ok`; none over 5% without the primary; the highest total is 5.74%, and it is the primary pill alone (W01/W02 at 17e L: rest 0.01%). The highest "rest" is 1.52% (the How it works sheet in Light, which has no primary pill by design).** Screens with no accent pill (the sheet, the refusals, the dead link) read 0% primary by design.
 - **Wrapping.** The XL and XXXL frames were read one contact sheet at a time for W01, W02, W04 to W11, X01, X04, X06, X07, X09, X10 and S01 (both devices where shot); X02, X03, X05, X08, R01 and R02 are Large only. What the reading found and fixed: a league name that broke at XXXL, a truncated gamertag at XL, an uncapped tip and Sign in line, and the clipped thumbnail. In the final set no word breaks mid-letter, the league's name is never split, the gamertag shows whole, and the tip, the notice and the "You're in" sentence are capped at 2× so each stays a card. Only X07 at XXXL on the 17e scrolls (to Go to the league), as the earlier W4 sets did at that size.
 
 ## §5 mechanical checks
 
 | Check | Result |
 |---|---|
-| Mobile deno suite | 2255 passed, 0 failed (46 tests in `onboarding-w4.test.ts`; the stale structure pins in `gn-sweep`, `league-game-night`, `pkce-auth-links`, `onboarding-game-night` updated, intent kept) |
+| Mobile deno suite | 2266 passed, 0 failed (57 tests in `onboarding-w4.test.ts`; the stale structure pins in `gn-sweep`, `league-game-night`, `pkce-auth-links`, `onboarding-game-night` updated, intent kept) |
 | Root suite | 1021 passed (566 steps), 0 failed |
 | `tsc` (fresh `npm ci`, no `.expo`, `--incremental false`) | 0 errors |
 | Lint | 0 errors, 8 warnings (all pre-existing files; none mine) |
@@ -95,7 +97,7 @@ The file name is `<id>-<state>-<device>-<size>-<theme>.png`; device `17e` or `17
 | No-op handlers | `no-op-handlers.test.ts` green; `docs/design/reviews/tappables.md` regenerated (219 tappables, 0 findings) and committed. The fixture's retry was a `noop`; it is now a real dev log |
 | Generated, never hand-merged | `sourceManifest.generated.ts`, `docs/architecture/*` (regenerated after the rebase), `tappables.md`, the board (`build.mjs`, unchanged by the rebase) |
 | gitleaks | clean on every commit |
-| Mutations (from copies, restored) | 10 + 6 + 8, all caught: the notice raised by `confirm-ignored`; a re-ask after "Not now"; the tip shown on a failed read; an open redirect through `next`; the chip not cleared on Keep; a gamertag that reads an email; Skip not remembered; Matchup ungated; a link not counting as seen; the chip glyph not stripped; and for the arrival: the name breaking, a dead link with a heading, the invited line ignored, "full" reading "closed", an expired link not dead, a Draft row, the preview feeding "You're in", the body not centred, polling |
+| Mutations (from copies, restored) | 10 + 6 + 8 + 13, all caught (the last 13: the inviter disc back to the "you" tone; the fit's 0.75× floor lowered; "You're in" unsplit; a link uncapped; the flat gamertag cap back; the gamertag floor removed; the push-out removed; a dot at the end of a line; the draft-room tip never dismissed on a pick; no dismissal effect; the tip below the board; the tip sharing Home's storage key; a REFUSED pick dismissing it; two of those first hit the wrong line and were redone), and the earlier ones: the notice raised by `confirm-ignored`; a re-ask after "Not now"; the tip shown on a failed read; an open redirect through `next`; the chip not cleared on Keep; a gamertag that reads an email; Skip not remembered; Matchup ungated; a link not counting as seen; the chip glyph not stripped; and for the arrival: the name breaking, a dead link with a heading, the invited line ignored, "full" reading "closed", an expired link not dead, a Draft row, the preview feeding "You're in", the body not centred, polling |
 
 ## §2 Reference check
 
@@ -117,9 +119,7 @@ initial carry the identity) · Earned 4 · Variety 4. No score under 3.
 Punch list (by hand): minor (P3) **changing the text size live with a sheet open** (Settings → Display
 while the app is open on Profile) can leave the sheet's header clipped ("How it w") until the next
 layout; a clean launch at any size is correct (S01 was shot that way). Not new in W4 (the Sheet's
-measure), left. Minor (P3) at XXXL the suggested name is capped (22 pt) beside labels at the system scale, so
-the name reads smaller than its label: the price of never truncating the thing the person keeps. Minor
-(P3) at XXXL on a very long league name the fit shrinks it to ~0.4× (X10), below the lead line.
+measure), left. Notes from the gate round: (1) **A league name that cannot fit two lines at 0.75×** (X10 at XXXL) takes a third line, still at spaces and still ≥ 0.75×: two lines would need a size under the floor. The rule is one line to 0.75×, else 2, and 3 only then. (2) **The dot.** The gate said a no-break space BEFORE every "·" so the dot starts a line. A no-break space before the dot glues it to the end of the previous word, so the break falls AFTER the dot (the frame still showed "Oct 10 ·" ending a line). I put the no-break space AFTER the dot instead (a normal space before it), which is what makes it start a line; X07 shows it. The same "·" in the Stakes row of the facts card still ends a line at XXXL (that row uses `keepDots`, the Join preview's rule, not touched here). (3) The draft-room tip has tests and a mutation but no tap recording yet; its dismissal paths (tap, first pick) are source- and policy-pinned.
 
 ## §4 Every tappable element
 
