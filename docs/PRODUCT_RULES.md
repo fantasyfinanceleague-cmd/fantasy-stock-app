@@ -679,6 +679,13 @@ Research: [`design/reviews/onboarding-best-practices-2026-10-14.md`](design/revi
 - **No theme choice in onboarding** (System by default, Profile › Appearance), and the game's
   unfamiliar ideas (the week window, dollars decide) are taught in place, one line, once, on
   the first pre-draft Home and in the first draft room, never on a launch card.
+  - **The pre-draft Home line:** "Your week runs Monday's open to Friday's close. Best
+    performance wins." (the plan's line, with its ending set by "Generic scoring copy" above:
+    onboarding says "best performance wins", never "best dollar gain").
+  - **The draft-room line** (the Planner, 2026-10-14), verbatim: "Out of time? We pick for you:
+    your queue first, then the best stock that fits your league's rules." Shown the first time
+    someone enters any draft room, in the same first-time tip above the board; it goes away on
+    a tap of its × or on that person's first pick, and never shows again.
 - **One no-league empty state on every tab** (Home, Matchup, League, Portfolio): Create a
   league / Join with a code (recommendation taken).
 
