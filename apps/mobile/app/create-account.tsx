@@ -58,6 +58,8 @@ export default function CreateAccountScreen() {
   const { reduced } = useMotion();
   const scrollRef = useRef<ScrollView>(null);
   const passwordRef = useRef<TextInput>(null);
+  // A ref, not the `status` state: two taps in one frame both read the same stale value.
+  const creating = useRef(false);
 
   const passwordRules = PASSWORD_REQUIREMENTS.map((r) => ({ label: r.label, ok: r.test(password) }));
 
@@ -80,7 +82,7 @@ export default function CreateAccountScreen() {
   }, []);
 
   async function handleCreate() {
-    if (status !== 'idle') return;
+    if (status !== 'idle' || creating.current) return;
     if (!email || !password) {
       setFormError('Please enter email and password');
       return;
@@ -93,7 +95,9 @@ export default function CreateAccountScreen() {
     setFormError(null);
     setStatus('loading');
     markSignInIntent();
+    creating.current = true;
     const result = await signUp(email.trim(), password);
+    creating.current = false;
 
     if (result.error) {
       clearSignInIntent();

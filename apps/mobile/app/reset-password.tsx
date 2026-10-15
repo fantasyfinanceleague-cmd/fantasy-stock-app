@@ -18,6 +18,7 @@ import { isRecoverySession, setRecoverySession, subscribeRecoverySession } from 
 import { resetScreenState, RESET_VERIFY_TIMEOUT_MS } from '@/lib/recoveryLink';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { parseResetCaptureView } from '@/lib/shell/resetCaptureView';
+import { pendingRoute } from '@/lib/shell/pendingRoute';
 
 // DEV-only (design captures): render the form or success state without a recovery link.
 const CAPTURE_VIEW = parseResetCaptureView(process.env.EXPO_PUBLIC_RESET_CAPTURE, __DEV__);
@@ -81,6 +82,9 @@ export default function ResetPasswordScreen() {
     // way while already signed in for an unrelated reason keeps their
     // real session; Cancel just takes them home.
     if (isRecoverySession()) {
+      // Drop a deep link the recovery hold was keeping BEFORE the flag clears: ending the hold would otherwise
+      // open it while this recovery session is still signed in, a moment before the sign-out below.
+      pendingRoute.dropHeld();
       setRecoverySession(false);
       await signOut();
     }

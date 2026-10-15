@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "0408ecfa1923a2937cf90ec9c6d29dd61a43ffa4",
-    "commitShort": "0408ecfa",
+    "commit": "80c1affee2bbd810a674622cdddc403e0c2c2feb",
+    "commitShort": "80c1affe",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/onboarding-w2-auth",
     "dirty": true,
@@ -14,15 +14,11 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/+native-intent.tsx"
+        "path": "apps/mobile/app/create-account.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/app/forgot-password.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/app/login.tsx"
       },
       {
         "code": "M",
@@ -33,24 +29,28 @@
         "path": "apps/mobile/components/shell/ConfirmEmailSent.tsx"
       },
       {
+        "code": "??",
+        "path": "apps/mobile/lib/auth/authFetch.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/auth/authLink.ts"
+      },
+      {
         "code": "M",
         "path": "apps/mobile/lib/auth/authLinkHandlers.ts"
       },
       {
-        "code": "??",
-        "path": "apps/mobile/lib/auth/legacyAuthKeys.ts"
-      },
-      {
         "code": "M",
-        "path": "apps/mobile/lib/auth/pkceCrypto.ts"
+        "path": "apps/mobile/lib/auth/recoverySession.ts"
       },
       {
         "code": "??",
-        "path": "apps/mobile/lib/auth/resendCooldown.ts"
+        "path": "apps/mobile/lib/auth/verifierSlot.ts"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/lib/recoveryLink.ts"
+        "code": "??",
+        "path": "apps/mobile/lib/auth/verifierStorage.ts"
       },
       {
         "code": "M",
@@ -58,7 +58,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/shell/resumeTarget.ts"
+        "path": "apps/mobile/lib/shell/pendingRoute.ts"
       },
       {
         "code": "M",
@@ -70,23 +70,19 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/recoveryLink.test.ts"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-14T22:25:57Z",
-    "sourceHash": "sha256:fcb4d682b7192a4a34564ee3915b6e167cebe0503fd72e19f4fd0beb998165c3",
+    "timestamp": "2026-10-15T00:37:27Z",
+    "sourceHash": "sha256:3bc320a95cad83a1a5ead4988503f4a6c441a895fdcb7b4a60589e4ecf28f420",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 22.2,
-    "ageDays": 0.9,
+    "ageHours": 24.4,
+    "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
@@ -17299,7 +17295,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/SessionProvider.tsx:162"
+        "apps/mobile/lib/SessionProvider.tsx:180"
       ]
     },
     {
@@ -19922,7 +19918,7 @@
       "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
       "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
-      "apps/mobile/lib/SessionProvider.tsx:162 -> user_profiles.select",
+      "apps/mobile/lib/SessionProvider.tsx:180 -> user_profiles.select",
       "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
       "apps/mobile/lib/categoryData.ts:113 -> symbols.select",

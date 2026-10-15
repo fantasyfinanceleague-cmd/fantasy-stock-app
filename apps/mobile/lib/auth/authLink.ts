@@ -52,8 +52,8 @@ export function linkIsPath(url: string | null | undefined, path: string, dev: bo
   return rel !== null && rel.replace(/\/+$/, '') === path;
 }
 
-/** A GoTrue auth code is a UUID. Anything else (empty, huge, odd characters) is not a code. */
-const CODE_SHAPE = /^[A-Za-z0-9._~-]{8,200}$/;
+/** A GoTrue PKCE auth code is a UUID. Anything else (empty, huge, odd characters) is not a code. */
+const CODE_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type LinkOutcome =
   /** A well-formed one-time code, read from the QUERY only. */
@@ -112,6 +112,14 @@ export function createLinkDedupe(max = 20) {
       seen.push(key);
       if (seen.length > max) seen.shift();
       return true;
+    },
+    /**
+     * Forget a key, so the SAME link may be handled again. Used only when the exchange failed on the
+     * network (nothing reached GoTrue, the code is not spent): the genuine link can then be retried.
+     */
+    release(key: string): void {
+      const at = seen.indexOf(key);
+      if (at !== -1) seen.splice(at, 1);
     },
   };
 }

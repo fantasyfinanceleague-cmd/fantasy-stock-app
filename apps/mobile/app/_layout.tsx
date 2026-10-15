@@ -19,7 +19,8 @@ import { LeagueProvider } from '@/lib/LeagueContext';
 import { notificationRoute } from '@/lib/shell/notificationRoute';
 import { addNotificationListeners, removePushToken } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
-import { isRecoverySession, setRecoverySession } from '@/lib/auth/recoverySession';
+import { isRecoveryHold, isRecoverySession, setRecoveryInProgress, setRecoverySession, subscribeRecoverySession } from '@/lib/auth/recoverySession';
+import { verifierSlot } from '@/lib/auth/verifierStorage';
 import { createAuthLinkHandler } from '@/lib/auth/authLinkHandlers';
 import { createLinkDedupe } from '@/lib/auth/authLink';
 import { setEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
@@ -139,12 +140,23 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
   useEffect(() => {
     if (shownPhase === lastPhase.current) return;
     lastPhase.current = shownPhase;
-    const target = pendingRoute.authChanged(shownPhase);
+    // While a password-recovery link is being exchanged (or its form is open) the link is KEPT, not replayed:
+    // supabase-js emits SIGNED_IN inside the exchange, and a pushed screen would land on top of the reset form.
+    const target = pendingRoute.authChanged(shownPhase, isRecoveryHold());
     if (target) {
       const t = setTimeout(() => router.push(target as never), 0);
       return () => clearTimeout(t);
     }
   }, [shownPhase]);
+
+  // ...and opened when the hold ends (the reset finished or was cancelled, or the link was refused).
+  useEffect(() => {
+    return subscribeRecoverySession(() => {
+      if (isRecoveryHold()) return;
+      const held = pendingRoute.releaseHold();
+      if (held) setTimeout(() => router.push(held as never), 0);
+    });
+  }, []);
 
   // The two email return links, both PKCE one-time codes (lib/supabase.ts flowType 'pkce'):
   //   fantasystockapp://auth/confirm?code=…                  sign-up confirmation (onboarding W2)
@@ -157,8 +169,11 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
       confirmEnabled: !SHELL_FIXTURE,
       getSession: () => supabase.auth.getSession(),
       exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+      readVerifier: verifierSlot.read,
+      writeVerifier: verifierSlot.write,
       signOut: () => supabase.auth.signOut({ scope: 'local' }),
       isRecoveryActive: isRecoverySession,
+      setRecoveryInProgress,
       removePushToken,
       setEmailJustConfirmed,
       setRecoverySession,
@@ -170,13 +185,13 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     // Get the initial URL if app was opened from a link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        handleDeepLink(url);
+        void handleDeepLink(url).catch(() => console.warn('[auth] link handler failed', ''));
       }
     });
 
     // Listen for URL changes while app is running
     const subscription = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
+      void handleDeepLink(event.url).catch(() => console.warn('[auth] link handler failed', ''));
     });
 
     return () => {

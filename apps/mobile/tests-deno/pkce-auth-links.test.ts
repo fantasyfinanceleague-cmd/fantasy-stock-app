@@ -27,6 +27,18 @@ import { isRecoveryExchange, isRecoveryRoute } from '../lib/recoveryLink.ts';
 import { createAuthLinkHandler, type AuthLinkDeps, type ExchangeResult } from '../lib/auth/authLinkHandlers.ts';
 import { createResendCooldown, RESEND_COOLDOWN_MS, RESEND_TOO_SOON } from '../lib/auth/resendCooldown.ts';
 import { LEGACY_AUTH_KEYS, removeLegacyAuthKeys } from '../lib/auth/legacyAuthKeys.ts';
+import { AUTH_FETCH_TIMEOUT_MS, createAuthFetch } from '../lib/auth/authFetch.ts';
+import {
+  AUTH_STORAGE_KEY,
+  classifyVerifier,
+  RECOVERY_VERIFIER_MARKERS,
+  restoreVerifierIfAbsent,
+  verifierKey,
+  withVerifierKept,
+  withVerifierLock,
+  type VerifierSlot,
+} from '../lib/auth/verifierSlot.ts';
+import { isRecoveryHold, isRecoveryInProgress, isRecoverySession, setRecoveryInProgress, setRecoverySession, subscribeRecoverySession } from '../lib/auth/recoverySession.ts';
 import { getAuthErrorMessage } from '../lib/authErrors.ts';
 import { fillWithRandomBytes, hasWebCrypto, installPkceCrypto, pkceCryptoReady, pkceReady, Utf8TextEncoder } from '../lib/auth/pkceCrypto.ts';
 import { isEmailJustConfirmed, setEmailJustConfirmed, subscribeEmailJustConfirmed } from '../lib/auth/emailConfirmed.ts';
@@ -205,24 +217,75 @@ Deno.test('just-confirmed flag: subscribable, idempotent, and cleared on sign-ou
   assert(sp.slice(sp.indexOf("event === 'SIGNED_OUT'")).includes('setEmailJustConfirmed(false)'));
 });
 
-// ── the handler: every outcome, with a fake client ────────────────────────
+// ── the handler: every outcome, with a fake client AND a fake verifier slot ──
 
 const exchangeOk = (redirectType: string | null, id = 'user-1'): ExchangeResult =>
   ({ data: { session: { access_token: 't' }, user: { id }, redirectType }, error: null }) as unknown as ExchangeResult;
-const exchangeFailed = (code = 'flow_state_not_found'): ExchangeResult => ({ data: { session: null, user: null }, error: { code } });
+const exchangeFailed = (code = 'flow_state_not_found', name?: string): ExchangeResult => ({
+  data: { session: null, user: null },
+  error: { code, name },
+});
+const exchangeNoSession: ExchangeResult = { data: { session: null, user: null }, error: null };
+
+// What auth-js stores: JSON-encoded "<verifier>" (sign-up) or "<verifier>/<MARKER>" (reset).
+const SIGNUP_SLOT = JSON.stringify('9f8e7d6c5b4a39281706f5e4d3c2b1a0');
+const RESET_SLOT = JSON.stringify('9f8e7d6c5b4a39281706f5e4d3c2b1a0/PASSWORD_RECOVERY');
+const RESET_SLOT_NEW = JSON.stringify('9f8e7d6c5b4a39281706f5e4d3c2b1a0/recovery');
 
 function harness(
-  o: { session?: boolean; exchange?: ExchangeResult; confirmEnabled?: boolean; keepPushError?: boolean; recoveryOpen?: boolean; signOutError?: boolean } = {}
+  o: {
+    /** A counter shared across harnesses, to see whether exchanges overlap (the lock is module-wide). */
+    counter?: { live: number; max: number };
+    session?: boolean;
+    /** getSession answers 'no session' this many times, then 'a session exists' (somebody signed in while we waited). */
+    sessionAppearsAfter?: number;
+    exchange?: ExchangeResult;
+    throws?: boolean;
+    confirmEnabled?: boolean;
+    keepPushError?: boolean;
+    recoveryOpen?: boolean;
+    signOutError?: boolean;
+    /** The stored verifier item; default: the matching kind for whichever link is handled. */
+    verifier?: string | null;
+    /** Runs inside the exchange, after auth-js would have deleted the slot (simulates a newer flow). */
+    duringExchange?: (set: (raw: string | null) => void) => void;
+  } = {}
 ) {
   const calls: string[] = [];
   const exchanged: string[] = [];
+  let stored: string | null = null;
+  let loaded = false;
+  let sessionCalls = 0;
+  const counter = o.counter ?? { live: 0, max: 0 };
+  const dedupe = createLinkDedupe();
   const deps: AuthLinkDeps = {
     confirmEnabled: o.confirmEnabled ?? true,
-    getSession: async () => ({ data: { session: o.session ? { access_token: 'existing' } : null } }),
+    getSession: async () => {
+      sessionCalls++;
+      const appeared = o.sessionAppearsAfter !== undefined && sessionCalls > o.sessionAppearsAfter;
+      return { data: { session: o.session || appeared ? { access_token: 'existing' } : null } };
+    },
+    readVerifier: async () => {
+      if (!loaded) {
+        loaded = true;
+        stored = o.verifier !== undefined ? o.verifier : currentUrl.includes('reset-password') ? RESET_SLOT : SIGNUP_SLOT;
+      }
+      return stored;
+    },
+    writeVerifier: async (raw) => {
+      calls.push('write');
+      stored = raw;
+    },
     exchangeCodeForSession: async (code) => {
       exchanged.push(code);
       calls.push('exchange');
-      await Promise.resolve();
+      counter.live++;
+      counter.max = Math.max(counter.max, counter.live);
+      await new Promise((r) => setTimeout(r, 1)); // a real request takes time: overlapping callers would interleave here
+      counter.live--;
+      stored = null; // auth-js deletes the verifier after EVERY attempt, success or failure
+      o.duringExchange?.((raw) => (stored = raw));
+      if (o.throws) throw new Error('network down');
       return o.exchange ?? exchangeOk(null);
     },
     signOut: async () => {
@@ -230,6 +293,7 @@ function harness(
       return { error: o.signOutError ? { code: 'network' } : null };
     },
     isRecoveryActive: () => !!o.recoveryOpen,
+    setRecoveryInProgress: (v) => void calls.push(`hold:${v}`),
     removePushToken: async (id) => {
       calls.push(`removePushToken:${id}`);
       if (o.keepPushError) throw new Error('boom');
@@ -238,9 +302,24 @@ function harness(
     setRecoverySession: (v) => void calls.push(`recovery:${v}`),
     replaceRoute: (p) => void calls.push(`route:${p}`),
     warn: () => void calls.push('warn'),
-    dedupe: createLinkDedupe(),
+    dedupe,
   };
-  return { handle: createAuthLinkHandler(deps), calls, exchanged };
+  let currentUrl = '';
+  const inner = createAuthLinkHandler(deps);
+  return {
+    handle: (url: string) => {
+      currentUrl = url;
+      return inner(url);
+    },
+    calls,
+    exchanged,
+    slot: () => stored,
+    setSlot: (raw: string | null) => {
+      loaded = true;
+      stored = raw;
+    },
+    maxConcurrentExchanges: () => counter.max,
+  };
 }
 const CONFIRM_URL = `fantasystockapp://auth/confirm?code=${CODE}`;
 const RESET_URL = `fantasystockapp://reset-password?flow=pkce&code=${CODE}`;
@@ -258,26 +337,68 @@ Deno.test('confirm: with a session already present nothing is exchanged (the ver
   assertEquals(h.calls, []);
 });
 
-Deno.test('confirm: another device / a spent, expired or forged code: the exchange is refused and nothing else happens', async () => {
+Deno.test('confirm: NO verifier here (another device, already spent): refused WITHOUT an exchange, quietly', async () => {
+  for (const verifier of [null, '', JSON.stringify(''), JSON.stringify('/PASSWORD_RECOVERY')]) {
+    const h = harness({ verifier });
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed', String(verifier));
+    assertEquals(h.exchanged, [], 'nothing reaches GoTrue, so nothing is consumed');
+    assertEquals(h.calls, ['warn']);
+  }
+});
+
+Deno.test('confirm: a pending PASSWORD RESET (either marker spelling) is left untouched by a confirm link', async () => {
+  for (const verifier of [RESET_SLOT, RESET_SLOT_NEW, JSON.stringify('abc/unknown-marker')]) {
+    const h = harness({ verifier });
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-wrong-type', verifier);
+    assertEquals(h.exchanged, [], 'refused BEFORE any exchange, so no session can exist and the reset verifier survives');
+    assertEquals(h.slot(), verifier);
+    assertFalse(h.calls.includes('signOut'));
+  }
+});
+
+Deno.test('confirm: a forged / spent / expired code is refused, and the genuine pending verifier is RESTORED (a junk link cannot burn it)', async () => {
   for (const code of ['flow_state_not_found', 'validation_failed', 'bad_code_verifier', '']) {
     const h = harness({ exchange: exchangeFailed(code) });
     assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed', code);
-    assertEquals(h.calls, ['exchange', 'warn'], code); // no flag, no sign-out, no route change
+    assertEquals(h.slot(), SIGNUP_SLOT, `auth-js deleted it; the app put it back (${code})`);
+    assertEquals(h.calls, ['exchange', 'write', 'warn'], code); // no flag, no sign-out, no route change
   }
-  // An exchange that reports success but hands back no session is a failure too.
-  const odd = harness({ exchange: { data: { session: null, user: null }, error: null } });
+  const odd = harness({ exchange: exchangeNoSession });
   assertEquals(await odd.handle(CONFIRM_URL), 'confirm-failed');
+  assertEquals(odd.slot(), SIGNUP_SLOT);
   assertFalse(odd.calls.includes('confirmed:true'));
 });
 
-Deno.test('confirm: a RECOVERY code on the confirm path is signed back out and is not "email confirmed"', async () => {
+Deno.test('restore never overwrites a NEWER verifier (a successful new flow wrote its own meanwhile)', async () => {
+  const newer = JSON.stringify('1111111111111111/PASSWORD_RECOVERY');
+  const h = harness({ exchange: exchangeFailed(), duringExchange: (set) => set(newer) });
+  assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed');
+  assertEquals(h.slot(), newer);
+  assertFalse(h.calls.includes('write'));
+});
+
+Deno.test('confirm: a failure on the NETWORK releases the dedupe mark (the genuine link can be retried); a definitive refusal does not', async () => {
+  for (const [label, h] of [
+    ['AuthRetryableFetchError', harness({ exchange: exchangeFailed('', 'AuthRetryableFetchError') })],
+    ['a throw', harness({ throws: true })],
+  ] as const) {
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed', label);
+    assertEquals(h.slot(), SIGNUP_SLOT, `${label}: the verifier is restored`);
+    assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed', `${label}: tried AGAIN, not 'duplicate'`);
+    assertEquals(h.exchanged.length, 2, label);
+  }
+  const definitive = harness({ exchange: exchangeFailed('flow_state_not_found') });
+  assertEquals(await definitive.handle(CONFIRM_URL), 'confirm-failed');
+  assertEquals(await definitive.handle(CONFIRM_URL), 'duplicate', 'a definitive refusal is not retried');
+});
+
+Deno.test('confirm: BACKSTOP: a recovery exchange that gets through the slot check is still signed back out', async () => {
   const h = harness({ exchange: exchangeOk('PASSWORD_RECOVERY', 'attacker-or-owner') });
   assertEquals(await h.handle(CONFIRM_URL), 'confirm-wrong-type');
   assertEquals(h.calls, ['exchange', 'warn', 'removePushToken:attacker-or-owner', 'signOut']);
-  // Even if dropping the push token throws, the sign-out still happens.
-  const h2 = harness({ exchange: exchangeOk('PASSWORD_RECOVERY'), keepPushError: true });
+  const h2 = harness({ exchange: exchangeOk('recovery'), keepPushError: true });
   assertEquals(await h2.handle(CONFIRM_URL), 'confirm-wrong-type');
-  assert(h2.calls.includes('signOut'));
+  assert(h2.calls.includes('signOut'), 'even if dropping the push token throws');
 });
 
 Deno.test('confirm: an error redirect, a link with no code, and the dev fixture exchange nothing', async () => {
@@ -285,6 +406,7 @@ Deno.test('confirm: an error redirect, a link with no code, and the dev fixture 
     'fantasystockapp://auth/confirm?error=access_denied&error_code=otp_expired',
     'fantasystockapp://auth/confirm',
     'fantasystockapp://auth/confirm?code=short',
+    `fantasystockapp://auth/confirm?code=${'a'.repeat(36)}`, // not a UUID
     'fantasystockapp://auth/confirm?cn=abc#access_token=AT&refresh_token=RT&type=signup', // a pre-PKCE link
   ]) {
     const h = harness();
@@ -308,24 +430,67 @@ Deno.test('dedupe: the same link delivered twice at once is exchanged ONCE (getI
   assertFalse(r.calls.includes('route:/reset-password?status=invalid'), 'a duplicate must not flip a working reset to invalid');
 });
 
-Deno.test('recovery: a PASSWORD_RECOVERY exchange sets the flag and opens the form', async () => {
-  const h = harness({ exchange: exchangeOk('PASSWORD_RECOVERY') });
-  assertEquals(await h.handle(RESET_URL), 'recovery-form');
-  assertEquals(h.calls, ['exchange', 'recovery:true', 'route:/reset-password']);
-});
-
-Deno.test('recovery: fail closed: an expired / used / forged / other-device code lands on the invalid screen with no flag', async () => {
-  for (const code of ['flow_state_not_found', 'validation_failed', 'bad_code_verifier', '']) {
-    const h = harness({ exchange: exchangeFailed(code) });
-    assertEquals(await h.handle(RESET_URL), 'recovery-invalid', code);
-    assertEquals(h.calls, ['exchange', 'recovery:false', 'route:/reset-password?status=invalid'], code);
+Deno.test('recovery: a PASSWORD_RECOVERY exchange (either spelling) sets the flag, opens the form, and holds around the exchange', async () => {
+  for (const [slot, type] of [[RESET_SLOT, 'PASSWORD_RECOVERY'], [RESET_SLOT_NEW, 'recovery']] as const) {
+    const h = harness({ verifier: slot, exchange: exchangeOk(type) });
+    assertEquals(await h.handle(RESET_URL), 'recovery-form', type);
+    // The hold is up BEFORE the exchange (SIGNED_IN fires inside it) and only drops AFTER the flag is set.
+    assertEquals(h.calls, ['hold:true', 'exchange', 'recovery:true', 'route:/reset-password', 'hold:false'], type);
   }
 });
 
-Deno.test('recovery: a SIGN-UP code presented on the reset path is refused AND signed back out', async () => {
+Deno.test('recovery: the hold drops on EVERY exit (success, refusal, wrong type, throw)', async () => {
+  const exits: [string, ReturnType<typeof harness>][] = [
+    ['refused', harness({ exchange: exchangeFailed() })],
+    ['no session', harness({ exchange: exchangeNoSession })],
+    ['wrong type', harness({ exchange: exchangeOk(null) })],
+    ['throw', harness({ throws: true })],
+    ['network', harness({ exchange: exchangeFailed('', 'AuthRetryableFetchError') })],
+  ];
+  for (const [label, h] of exits) {
+    await h.handle(RESET_URL);
+    const up = h.calls.indexOf('hold:true');
+    const down = h.calls.lastIndexOf('hold:false');
+    assert(up > -1 && down > up, `${label}: hold raised and dropped`);
+    assertEquals(h.calls.filter((c) => c === 'hold:true').length, h.calls.filter((c) => c === 'hold:false').length, label);
+  }
+  // A refusal BEFORE the exchange never raises it.
+  const pre = harness({ verifier: null });
+  await pre.handle(RESET_URL);
+  assertFalse(pre.calls.some((c) => c.startsWith('hold:')));
+});
+
+Deno.test('recovery: fail closed: an expired / used / forged code lands on the invalid screen with no flag, and the pending reset verifier is restored', async () => {
+  for (const code of ['flow_state_not_found', 'validation_failed', 'bad_code_verifier', '']) {
+    const h = harness({ exchange: exchangeFailed(code) });
+    assertEquals(await h.handle(RESET_URL), 'recovery-invalid', code);
+    assertEquals(h.slot(), RESET_SLOT, `restored (${code})`);
+    assertEquals(h.calls, ['hold:true', 'exchange', 'write', 'recovery:false', 'route:/reset-password?status=invalid', 'hold:false'], code);
+  }
+});
+
+Deno.test('recovery: NO reset verifier here (another device / spent / the pending flow is a sign-up): refused WITHOUT an exchange', async () => {
+  for (const verifier of [null, '', SIGNUP_SLOT, JSON.stringify('abc/unknown-marker')]) {
+    const h = harness({ verifier });
+    assertEquals(await h.handle(RESET_URL), 'recovery-invalid', String(verifier));
+    assertEquals(h.exchanged, [], 'no exchange: no session can exist and a pending sign-up verifier is not burned');
+    assertEquals(h.slot(), verifier);
+    assertEquals(h.calls, ['recovery:false', 'route:/reset-password?status=invalid']);
+  }
+});
+
+Deno.test('recovery: a failure on the NETWORK releases the dedupe mark and restores the verifier', async () => {
+  const h = harness({ exchange: exchangeFailed('', 'AuthRetryableFetchError') });
+  assertEquals(await h.handle(RESET_URL), 'recovery-invalid');
+  assertEquals(h.slot(), RESET_SLOT);
+  assertEquals(await h.handle(RESET_URL), 'recovery-invalid', 'retried, not duplicate');
+  assertEquals(h.exchanged.length, 2);
+});
+
+Deno.test('recovery: BACKSTOP: a session of the wrong type that gets through the slot check is refused AND signed back out', async () => {
   const h = harness({ exchange: exchangeOk(null, 'someone') });
   assertEquals(await h.handle(RESET_URL), 'recovery-invalid');
-  assertEquals(h.calls, ['exchange', 'removePushToken:someone', 'signOut', 'recovery:false', 'route:/reset-password?status=invalid']);
+  assertEquals(h.calls, ['hold:true', 'exchange', 'removePushToken:someone', 'signOut', 'recovery:false', 'route:/reset-password?status=invalid', 'hold:false']);
   assertFalse(h.calls.includes('recovery:true'));
 });
 
@@ -351,6 +516,13 @@ Deno.test('recovery: works with a session already present (a reset is how a lock
   assertEquals(h.exchanged, [CODE]);
 });
 
+Deno.test('recovery: a GOOD code still exchanges while a reset form is open (a fresh reset replaces the open one)', async () => {
+  const h = harness({ recoveryOpen: true, exchange: exchangeOk('PASSWORD_RECOVERY') });
+  assertEquals(await h.handle(RESET_URL), 'recovery-form');
+  assertEquals(h.exchanged, [CODE]);
+  assert(h.calls.includes('recovery:true'));
+});
+
 Deno.test('recovery: a dead or crafted link must not close a genuine reset that is already open', async () => {
   for (const url of [
     'fantasystockapp://reset-password?flow=pkce&error=access_denied&error_code=otp_expired',
@@ -361,22 +533,31 @@ Deno.test('recovery: a dead or crafted link must not close a genuine reset that 
     assertEquals(await h.handle(url), 'recovery-ignored', url);
     assertEquals(h.calls, [], url); // no flag change, no route change
   }
-  // ...but a code still exchanges (a fresh reset replaces the open one), and with no reset open it goes invalid.
-  const fresh = harness({ recoveryOpen: true, exchange: exchangeOk('PASSWORD_RECOVERY') });
-  assertEquals(await fresh.handle(RESET_URL), 'recovery-form');
 });
 
-Deno.test('recovery: a well-formed JUNK code while a genuine reset is open is ignored too; a wrong-type session is still signed out', async () => {
-  const open = harness({ recoveryOpen: true, exchange: exchangeFailed('bad_code_verifier') });
-  assertEquals(await open.handle(RESET_URL), 'recovery-ignored');
-  assertEquals(open.calls, ['exchange'], 'the open form keeps its flag and its route');
+Deno.test('recovery: a well-formed JUNK code while a genuine reset is open is ignored too (before AND after the slot check)', async () => {
+  // The genuine exchange already spent its verifier, so the slot is empty: refused without an exchange.
+  const spent = harness({ recoveryOpen: true, verifier: null });
+  assertEquals(await spent.handle(RESET_URL), 'recovery-ignored');
+  assertEquals(spent.calls, []);
+  // A pending reset verifier is still there (a second reset requested): a failing exchange is ignored too.
+  const failing = harness({ recoveryOpen: true, exchange: exchangeFailed('bad_code_verifier') });
+  assertEquals(await failing.handle(RESET_URL), 'recovery-ignored');
+  assertEquals(failing.slot(), RESET_SLOT, 'and its verifier is put back');
+  assertFalse(failing.calls.includes('route:/reset-password?status=invalid'));
   // With nothing open the same failure still fails closed.
   const closed = harness({ recoveryOpen: false, exchange: exchangeFailed('bad_code_verifier') });
   assertEquals(await closed.handle(RESET_URL), 'recovery-invalid');
-  // ...and a confirmation code (a REAL session of the wrong type) is signed out even with a reset open.
-  const wrong = harness({ recoveryOpen: true, exchange: exchangeOk(null, 'someone') });
-  assertEquals(await wrong.handle(RESET_URL), 'recovery-invalid');
-  assert(wrong.calls.includes('signOut'));
+});
+
+Deno.test('recovery: an exchange that resolves { error: null, session: null } with a reset open is IGNORED, with NO sign-out', async () => {
+  const h = harness({ recoveryOpen: true, exchange: exchangeNoSession });
+  assertEquals(await h.handle(RESET_URL), 'recovery-ignored');
+  assertFalse(h.calls.includes('signOut'), 'there is no session to sign out');
+  assertFalse(h.calls.some((c) => c.startsWith('removePushToken')));
+  const closed = harness({ recoveryOpen: false, exchange: exchangeNoSession });
+  assertEquals(await closed.handle(RESET_URL), 'recovery-invalid');
+  assertFalse(closed.calls.includes('signOut'));
 });
 
 Deno.test('wrong-type refusals use a local sign-out and say so when it fails (a refusal must not silently leave a session)', async () => {
@@ -430,9 +611,25 @@ Deno.test('pkceCrypto: installs getRandomValues + SHA-256 digest where there is 
   assertEquals(real.crypto, denoCrypto);
   // A partial one (no subtle) is completed, keeping what it had.
   const partial: Record<string, unknown> = { crypto: { getRandomValues: () => 1, other: 'kept' } };
+  // BEFORE install it is NOT a complete WebCrypto (no subtle). Asserted from the object itself, not only through
+  // hasWebCrypto, so a checker that ignored `subtle` could not pass this vacuously.
+  assertEquals(typeof (partial.crypto as { subtle?: unknown }).subtle, 'undefined');
+  assertFalse(hasWebCrypto(partial));
+  assertFalse(hasWebCrypto({ crypto: { getRandomValues: () => 1 } }));
+  assertFalse(hasWebCrypto({ crypto: { subtle: { digest: () => 1 } } }), 'and getRandomValues is required too');
+  assertFalse(hasWebCrypto({ crypto: { getRandomValues: () => 1, subtle: {} } }), 'subtle.digest is required');
   installPkceCrypto(partial, nativeDeps);
+  // AFTER install, independently of hasWebCrypto: the pieces are really there and really work.
+  const installed = partial.crypto as { other: string; getRandomValues: unknown; subtle: { digest: (a: string, d: BufferSource) => Promise<ArrayBuffer> } };
+  assertEquals(typeof installed.subtle.digest, 'function');
+  assertEquals(typeof installed.getRandomValues, 'function');
+  assertEquals(installed.other, 'kept');
+  const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+  assertEquals(
+    hex(await installed.subtle.digest('SHA-256', new TextEncoder().encode('abc'))),
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', // the FIPS 180-2 SHA-256("abc") vector
+  );
   assert(hasWebCrypto(partial));
-  assertEquals((partial.crypto as { other: string }).other, 'kept');
 });
 
 Deno.test('pkceCrypto: a TextEncoder shim for engines without one (UTF-8, including non-ASCII)', () => {
@@ -535,7 +732,7 @@ try {
   console.warn('[pkce-auth-links] @supabase/auth-js not installed: the real-client PKCE tests are SKIPPED');
 }
 
-function realClient(storageItems = new Map<string, string>()) {
+function realClient(storageItems = new Map<string, string>(), opts: { failSignup?: boolean; failToken?: boolean } = {}) {
   const requests: { path: string; body: Json }[] = [];
   const user = { id: 'user-1', aud: 'authenticated', email: 'ada@example.com', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' };
   const fakeFetch = (input: string | URL | Request, init?: RequestInit) => {
@@ -544,8 +741,14 @@ function realClient(storageItems = new Map<string, string>()) {
     requests.push({ path: url.pathname + url.search, body });
     const ok = (json: unknown) => Promise.resolve(new Response(JSON.stringify(json), { status: 200, headers: { 'content-type': 'application/json' } }));
     if (url.pathname.endsWith('/recover')) return ok({});
-    if (url.pathname.endsWith('/signup')) return ok(user);
-    if (url.pathname.endsWith('/token')) return ok({ access_token: 'a.b.c', token_type: 'bearer', expires_in: 3600, refresh_token: 'r', user });
+    if (url.pathname.endsWith('/signup')) {
+      if (opts.failSignup) return Promise.resolve(new Response(JSON.stringify({ code: 429, error_code: 'over_email_send_rate_limit', msg: 'rate limit' }), { status: 429, headers: { 'content-type': 'application/json' } }));
+      return ok(user);
+    }
+    if (url.pathname.endsWith('/token')) {
+      if (opts.failToken) return Promise.resolve(new Response(JSON.stringify({ code: 400, error_code: 'flow_state_not_found', msg: 'invalid flow state' }), { status: 400, headers: { 'content-type': 'application/json' } }));
+      return ok({ access_token: 'a.b.c', token_type: 'bearer', expires_in: 3600, refresh_token: 'r', user });
+    }
     return Promise.resolve(new Response('{}', { status: 404 }));
   };
   const client = new GoTrueClient!({
@@ -668,7 +871,7 @@ Deno.test('resend cooldown: enforced INSIDE signUp (every caller covered) and fo
   const check = signUp.indexOf('confirmationCooldown.remainingMs(email) > 0');
   assert(check > -1 && check < signUp.indexOf('supabase.auth.signUp('), 'the floor is checked BEFORE anything is sent');
   assert(signUp.includes('{ ...RESEND_TOO_SOON }'));
-  assert(signUp.includes('if (!data?.session) confirmationCooldown.markSent(email);'), 'a successful send marks the address');
+  assert(signUp.includes('if (!res.error && !res.data?.session) confirmationCooldown.markSent(email);'), 'a successful send marks the address');
   // No caller needs its own copy of the rule: Create account, Check your email and Sign in all go through signUp.
   for (const f of ['components/shell/ConfirmEmailSent.tsx', 'app/login.tsx', 'app/create-account.tsx']) {
     assertFalse(SOURCES[f].includes('confirmationCooldown'), `${f} relies on signUp's floor`);
@@ -678,6 +881,8 @@ Deno.test('resend cooldown: enforced INSIDE signUp (every caller covered) and fo
   const resetCheck = fp.indexOf('resetCooldown.remainingMs(email) > 0');
   assert(resetCheck > -1 && resetCheck < fp.indexOf('resetPasswordForEmail('), 'the reset floor is checked first');
   assert(fp.indexOf('resetCooldown.markSent(email)') > fp.indexOf('resetPasswordForEmail('), 'and marked only after a send');
+  assert(fp.includes('if (!r.error) resetCooldown.markSent(email);'), 'a SUCCESSFUL send marks the floor (not only the throw path)');
+  assertEquals(fp.split('resetCooldown.remainingMs(email) > 0').length - 1, 2, 'checked on the fast path AND again inside the critical section');
   assert(fp.includes('setError(getAuthErrorMessage(RESEND_TOO_SOON));'));
   assertFalse(fp.includes('confirmationCooldown'), 'a reset email never blocks a sign-up email, or the reverse');
 });
@@ -761,6 +966,392 @@ Deno.test('legacy nonce keys are cleared on upgraded devices, best effort, never
   assert(SOURCES['lib/SessionProvider.tsx'].includes('removeLegacyAuthKeys(require('));
 });
 
+// ── the verifier slot ────────────────────────────────────────────────────
+
+Deno.test('verifier slot: the key, and every stored shape classified (sign-up / reset under BOTH marker spellings / unknown / absent)', () => {
+  assertEquals(AUTH_STORAGE_KEY, 'fantasy-finance-auth');
+  assertEquals(verifierKey(), 'fantasy-finance-auth-code-verifier');
+  assertEquals(verifierKey('x'), 'x-code-verifier');
+  assertEquals(classifyVerifier(JSON.stringify('abc123')), { kind: 'signup' });
+  assertEquals(classifyVerifier('abc123'), { kind: 'signup' }, 'an unencoded value works too');
+  assertEquals(classifyVerifier(JSON.stringify('abc123/PASSWORD_RECOVERY')), { kind: 'recovery' }); // auth-js 2.89
+  assertEquals(classifyVerifier(JSON.stringify('abc123/recovery')), { kind: 'recovery' }); // auth-js 2.108
+  assertEquals(classifyVerifier('abc123/recovery'), { kind: 'recovery' });
+  assertEquals(classifyVerifier(JSON.stringify('abc123/')), { kind: 'signup' }, 'an empty marker is a plain verifier');
+  for (const unknown of ['abc/magiclink', 'abc/RECOVERY', 'abc/password_recovery', 'abc/x/y']) {
+    assertEquals(classifyVerifier(JSON.stringify(unknown)), { kind: 'unknown' }, unknown);
+  }
+  for (const absent of [null, undefined, '', JSON.stringify(''), JSON.stringify('/PASSWORD_RECOVERY'), JSON.stringify(5), 'null']) {
+    assertEquals(classifyVerifier(absent as string | null), { kind: 'absent' }, String(absent));
+  }
+  for (const marker of RECOVERY_VERIFIER_MARKERS) assertEquals(classifyVerifier(JSON.stringify(`v/${marker}`)), { kind: 'recovery' });
+  assert(SOURCES['lib/supabase.ts'].includes('storageKey: AUTH_STORAGE_KEY'), 'the client and the slot name one key');
+});
+
+function memorySlot(initial: string | null) {
+  let stored = initial;
+  const log: string[] = [];
+  const slot: VerifierSlot = {
+    read: async () => stored,
+    write: async (raw) => {
+      log.push('write');
+      stored = raw;
+    },
+  };
+  return { slot, log, get: () => stored, set: (v: string | null) => (stored = v) };
+}
+
+Deno.test('verifier slot: restore puts the snapshot back only into an EMPTY slot, never over a newer one, never throws', async () => {
+  const empty = memorySlot(null);
+  assertEquals(await restoreVerifierIfAbsent(empty.slot, 'snap'), true);
+  assertEquals(empty.get(), 'snap');
+  const newer = memorySlot('newer');
+  assertEquals(await restoreVerifierIfAbsent(newer.slot, 'snap'), false);
+  assertEquals(newer.get(), 'newer');
+  assertEquals(await restoreVerifierIfAbsent(memorySlot(null).slot, null), false, 'nothing to restore');
+  assertEquals(await restoreVerifierIfAbsent(memorySlot(null).slot, ''), false);
+  const broken: VerifierSlot = { read: async () => { throw new Error('x'); }, write: async () => { throw new Error('y'); } };
+  assertEquals(await restoreVerifierIfAbsent(broken, 'snap'), false);
+});
+
+Deno.test('verifier slot: withVerifierKept restores after a FAILED call or a throw, and leaves a SUCCESSFUL new flow alone', async () => {
+  const OLD = JSON.stringify('old/PASSWORD_RECOVERY');
+  // Failed call: auth-js deleted the slot (the library does that on error); the guard puts the old one back.
+  const failed = memorySlot(OLD);
+  const r1 = await withVerifierKept(failed.slot, async () => { failed.set(null); return { error: 'rate limited' }; }, (r) => !!r.error);
+  assertEquals(r1, { error: 'rate limited' });
+  assertEquals(failed.get(), OLD);
+  // Thrown: restored, and the throw still propagates to the caller.
+  const thrown = memorySlot(OLD);
+  let caught = false;
+  try {
+    await withVerifierKept(thrown.slot, async () => { thrown.set(null); throw new Error('storage'); }, () => true);
+  } catch { caught = true; }
+  assert(caught);
+  assertEquals(thrown.get(), OLD);
+  // Success: the new flow's verifier stays; the old one is superseded on purpose.
+  const ok = memorySlot(OLD);
+  await withVerifierKept(ok.slot, async () => { ok.set(JSON.stringify('fresh')); return { error: null }; }, (r) => !!r.error);
+  assertEquals(ok.get(), JSON.stringify('fresh'));
+  // Failed but a NEWER value is present: left alone.
+  const newer = memorySlot(OLD);
+  await withVerifierKept(newer.slot, async () => { newer.set('newer'); return { error: 'x' }; }, (r) => !!r.error);
+  assertEquals(newer.get(), 'newer');
+  // Nothing pending before: a failure restores nothing.
+  const none = memorySlot(null);
+  await withVerifierKept(none.slot, async () => ({ error: 'x' }), (r) => !!r.error);
+  assertEquals([none.get(), none.log], [null, []]);
+});
+
+Deno.test({
+  name: 'real supabase-js: the verifier slot key, both flows\' shapes, and the library\'s deletions are exactly what the guard assumes',
+  ignore: GoTrueClient === null,
+  async fn() {
+    const { client, storageItems, requests } = realClient();
+    // Make the server refuse the next sign-up (rate limit) so auth-js takes its error path.
+    await client.resetPasswordForEmail('ada@example.com');
+    const key = verifierKey('test-auth');
+    const resetRaw = storageItems.get(key)!;
+    assert(resetRaw, `auth-js stores under ${key}`);
+    assertEquals(classifyVerifier(resetRaw), { kind: 'recovery' }, 'the INSTALLED library\'s reset marker is one the app recognises');
+    const marker = (JSON.parse(resetRaw) as string).split('/')[1];
+    assert(RECOVERY_VERIFIER_MARKERS.includes(marker), `installed marker ${marker}`);
+
+    // Its sign-up verifier carries no marker.
+    const second = realClient();
+    await second.client.signUp({ email: 'ada@example.com', password: 'pw' });
+    assertEquals(classifyVerifier(second.storageItems.get(key)!), { kind: 'signup' });
+
+    // The problem, against the real library: a FAILED sign-up deletes the pending reset's verifier ...
+    const failing = realClient(new Map([[key, resetRaw]]), { failSignup: true });
+    const bare = await failing.client.signUp({ email: 'x@example.com', password: 'pw' });
+    assert(bare.error !== null, 'the server refused');
+    assertFalse(failing.storageItems.has(key), 'auth-js deleted the pending verifier on the error path');
+    // ... and the guard restores it.
+    const guarded = realClient(new Map([[key, resetRaw]]), { failSignup: true });
+    const slot: VerifierSlot = {
+      read: async () => guarded.storageItems.get(key) ?? null,
+      write: async (raw) => void guarded.storageItems.set(key, raw),
+    };
+    const res = await withVerifierKept(slot, () => guarded.client.signUp({ email: 'x@example.com', password: 'pw' }), (r) => !!r.error);
+    assert(res.error !== null);
+    assertEquals(guarded.storageItems.get(key), resetRaw, 'the pending reset survives a failed sign-up');
+    assert(requests.length > 0);
+
+    // A failed EXCHANGE deletes it too, and the full handler (real client) puts it back.
+    const live = realClient(new Map([[key, resetRaw]]), { failToken: true });
+    const handler = createAuthLinkHandler({
+      confirmEnabled: true,
+      getSession: async () => ({ data: { session: null } }),
+      exchangeCodeForSession: (c) => live.client.exchangeCodeForSession(c) as unknown as Promise<ExchangeResult>,
+      readVerifier: async () => live.storageItems.get(key) ?? null,
+      writeVerifier: async (raw) => void live.storageItems.set(key, raw),
+      signOut: async () => ({ error: null }),
+      isRecoveryActive: () => false,
+      setRecoveryInProgress: () => {},
+      removePushToken: async () => {},
+      setEmailJustConfirmed: () => {},
+      setRecoverySession: () => {},
+      replaceRoute: () => {},
+      warn: () => {},
+      dedupe: createLinkDedupe(),
+    });
+    assertEquals(await handler(RESET_URL), 'recovery-invalid');
+    assertEquals(live.storageItems.get(key), resetRaw, 'a junk code does not burn the genuine pending reset');
+    // And with NO reset pending, the handler never reaches the network at all.
+    const empty = realClient(new Map());
+    const noNet = createAuthLinkHandler({
+      confirmEnabled: true,
+      getSession: async () => ({ data: { session: null } }),
+      exchangeCodeForSession: (c) => empty.client.exchangeCodeForSession(c) as unknown as Promise<ExchangeResult>,
+      readVerifier: async () => empty.storageItems.get(key) ?? null,
+      writeVerifier: async () => {},
+      signOut: async () => ({ error: null }),
+      isRecoveryActive: () => false,
+      setRecoveryInProgress: () => {},
+      removePushToken: async () => {},
+      setEmailJustConfirmed: () => {},
+      setRecoverySession: () => {},
+      replaceRoute: () => {},
+      warn: () => {},
+      dedupe: createLinkDedupe(),
+    });
+    assertEquals(await noNet(RESET_URL), 'recovery-invalid');
+    assertEquals(empty.requests.length, 0);
+  },
+});
+
+Deno.test('code shape: a GoTrue PKCE auth code is a UUID, in either case; nothing else is a code', () => {
+  const upper = CODE.toUpperCase();
+  assertEquals(readLinkOutcome(`fantasystockapp://auth/confirm?code=${upper}`), { kind: 'code', code: upper });
+  for (const bad of ['a'.repeat(36), 'a'.repeat(8), 'g0f1e2d3-4b5a-6978-8796-a5b4c3d2e1f0', `${CODE}0`, CODE.slice(1), CODE.replace(/-/g, ''), `${CODE} `, ` ${CODE}`]) {
+    assertEquals(readLinkOutcome(`fantasystockapp://auth/confirm?code=${encodeURIComponent(bad)}`), { kind: 'empty' }, bad);
+  }
+});
+
+// ── one queue for everything that touches the slot ───────────────────────
+
+Deno.test('verifier lock: callers run strictly one after another, in order; a rejection never blocks the next', async () => {
+  const order: string[] = [];
+  const job = (name: string, ms: number, fail = false) =>
+    withVerifierLock(async () => {
+      order.push(`${name}:start`);
+      await new Promise((r) => setTimeout(r, ms));
+      order.push(`${name}:end`);
+      if (fail) throw new Error(name);
+      return name;
+    });
+  const results = await Promise.allSettled([job('a', 10), job('b', 1, true), job('c', 1)]);
+  assertEquals(order, ['a:start', 'a:end', 'b:start', 'b:end', 'c:start', 'c:end']);
+  assertEquals(results.map((r) => r.status), ['fulfilled', 'rejected', 'fulfilled']);
+});
+
+Deno.test('verifier lock: two OVERLAPPING sign-ups cannot restore a stale snapshot over the newer verifier (the race)', async () => {
+  // A fake of auth-js: it writes its new verifier first, and DELETES the slot when its request fails.
+  const box = memorySlot(JSON.stringify('S1'));
+  const signUp = (verifier: string, ok: boolean) => async () => {
+    box.set(JSON.stringify(verifier));
+    await new Promise((r) => setTimeout(r, 2));
+    if (!ok) box.set(null);
+    return { error: ok ? null : 'rate limited' };
+  };
+  const [first, second] = await Promise.all([
+    withVerifierKept(box.slot, signUp('S2', true), (r) => !!r.error), // succeeds: the delivered email carries S2's challenge
+    withVerifierKept(box.slot, signUp('S3', false), (r) => !!r.error), // fails: auth-js deletes the slot
+  ]);
+  assertEquals([first.error, second.error], [null, 'rate limited']);
+  // Serialized: the failing call's snapshot was S2 (the latest), so S2 is what comes back, never the stale S1.
+  assertEquals(box.get(), JSON.stringify('S2'));
+});
+
+Deno.test('verifier lock: the link handler\'s read + exchange is one critical section (no two exchanges overlap, even across handlers)', async () => {
+  const counter = { live: 0, max: 0 };
+  const a = harness({ exchange: exchangeFailed(), counter });
+  const b = harness({ exchange: exchangeFailed(), counter });
+  const c = harness({ exchange: exchangeFailed(), counter }); // its own slot: a pending password reset
+  await Promise.all([
+    a.handle(CONFIRM_URL),
+    a.handle('fantasystockapp://auth/confirm?code=11111111-2222-3333-4444-555555555555'),
+    b.handle('fantasystockapp://auth/confirm?code=22222222-3333-4444-5555-666666666666'),
+    c.handle(RESET_URL),
+  ]);
+  assertEquals(a.exchanged.length + b.exchanged.length + c.exchanged.length, 4, 'all four really exchanged');
+  assertEquals(counter.max, 1, 'never two exchanges in flight at once');
+  // Without the lock the same four calls DO overlap (this is the control that proves the counter can see overlap).
+  const control = { live: 0, max: 0 };
+  await Promise.all([1, 2, 3].map(async () => { control.live++; control.max = Math.max(control.max, control.live); await new Promise((r) => setTimeout(r, 1)); control.live--; }));
+  assertEquals(control.max, 3);
+});
+
+Deno.test('pre-check refusals release the dedupe mark: nothing was spent, so a re-tap of the genuine link may proceed', async () => {
+  const h = harness({ verifier: null });
+  assertEquals(await h.handle(CONFIRM_URL), 'confirm-failed');
+  h.setSlot(SIGNUP_SLOT); // the slot comes back (e.g. a failed sign-up's restore finished)
+  assertEquals(await h.handle(CONFIRM_URL), 'confirm-signed-in', 'the same URL is handled again, not "duplicate"');
+  const r = harness({ verifier: SIGNUP_SLOT, exchange: exchangeOk('PASSWORD_RECOVERY') });
+  assertEquals(await r.handle(RESET_URL), 'recovery-invalid'); // a sign-up verifier is pending: refused before any exchange
+  r.setSlot(RESET_SLOT);
+  assertEquals(await r.handle(RESET_URL), 'recovery-form');
+  const w = harness({ verifier: RESET_SLOT });
+  assertEquals(await w.handle(CONFIRM_URL), 'confirm-wrong-type');
+  w.setSlot(SIGNUP_SLOT);
+  assertEquals(await w.handle(CONFIRM_URL), 'confirm-signed-in');
+});
+
+Deno.test('confirm: a session that appears WHILE the link waits for the lock is never replaced (re-checked right before the exchange)', async () => {
+  const h = harness({ sessionAppearsAfter: 1 }); // the first check (before the queue) sees nobody; the second sees a sign-in
+  assertEquals(await h.handle(CONFIRM_URL), 'confirm-ignored');
+  assertEquals(h.exchanged, [], 'no exchange: the verifier is not spent either');
+  assertEquals(h.slot(), SIGNUP_SLOT);
+  assertFalse(h.calls.includes('confirmed:true'));
+  // And with nobody signing in, the same link still exchanges.
+  const ok = harness({});
+  assertEquals(await ok.handle(CONFIRM_URL), 'confirm-signed-in');
+  const src = SOURCES['lib/auth/authLinkHandlers.ts'];
+  const lockAt = src.indexOf('await withVerifierLock(async () => {');
+  assert(src.indexOf('await deps.getSession()', lockAt) > lockAt, 'the second session check is INSIDE the critical section');
+});
+
+Deno.test('auth fetch: only /auth/v1/ requests are aborted after the timeout; a hung one ENDS so the queue frees; the timer is cleared', async () => {
+  assertEquals(AUTH_FETCH_TIMEOUT_MS, 25_000);
+  const timers: { fn: () => void; ms: number; cleared: boolean }[] = [];
+  const deps = {
+    setTimeout: (fn: () => void, ms: number) => { const t = { fn, ms, cleared: false }; timers.push(t); return t; },
+    clearTimeout: (h: unknown) => { (h as { cleared: boolean }).cleared = true; },
+    AbortController,
+  };
+  // A fetch that never answers on its own but honours its signal (as the real one does).
+  const hung = (_: unknown, init?: { signal?: AbortSignal }) =>
+    new Promise((_res, rej) => init?.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError'))));
+  const f = createAuthFetch(hung, 25_000, deps);
+  const pending = f('https://x.supabase.co/auth/v1/signup', { method: 'POST' });
+  assertEquals(timers.length, 1);
+  assertEquals(timers[0].ms, 25_000);
+  timers[0].fn(); // the timeout fires
+  let name = '';
+  await pending.catch((e: Error) => (name = e.name));
+  assertEquals(name, 'AbortError', 'the hung request ENDS');
+  assert(timers[0].cleared, 'and its timer is cleared');
+  // A fast request: passes through, timer cleared, no abort.
+  const fast = createAuthFetch(async () => 'ok', 25_000, deps);
+  assertEquals(await fast('https://x.supabase.co/auth/v1/token?grant_type=pkce'), 'ok');
+  assert(timers[1].cleared);
+  // Everything else is untouched: no timer at all.
+  const before = timers.length;
+  const seen: unknown[] = [];
+  const other = createAuthFetch(async (i: unknown, n: unknown) => (seen.push([i, n]), 'rest'), 25_000, deps);
+  assertEquals(await other('https://x.supabase.co/rest/v1/user_profiles', { method: 'GET' }), 'rest');
+  assertEquals(await other('https://x.supabase.co/functions/v1/join-league'), 'rest');
+  assertEquals(timers.length, before);
+  assertEquals((seen[0] as unknown[])[1], { method: 'GET' });
+  // The caller's own signal still aborts.
+  const own = new AbortController();
+  const g = createAuthFetch(hung, 25_000, deps);
+  const p2 = g(new URL('https://x.supabase.co/auth/v1/recover'), { signal: own.signal });
+  own.abort();
+  let n2 = '';
+  await p2.catch((e: Error) => (n2 = e.name));
+  assertEquals(n2, 'AbortError');
+  // Wiring: only the auth client gets it, and the timeout is the exported constant.
+  const client = SOURCES['lib/supabase.ts'];
+  assert(client.includes('global: { fetch: authFetch }') && client.includes('AUTH_FETCH_TIMEOUT_MS'));
+});
+
+// ── the recovery hold, and what waits on it ──────────────────────────────
+
+Deno.test('recovery hold: in-progress OR an open form holds; either ending notifies; nothing holds by default', () => {
+  assertFalse(isRecoveryHold());
+  let notified = 0;
+  const off = subscribeRecoverySession(() => notified++);
+  setRecoveryInProgress(true);
+  assert(isRecoveryHold() && isRecoveryInProgress() && !isRecoverySession());
+  setRecoveryInProgress(true); // no change
+  assertEquals(notified, 1);
+  setRecoverySession(true); // the flag takes over
+  setRecoveryInProgress(false);
+  assert(isRecoveryHold(), 'the open form still holds');
+  setRecoverySession(false);
+  assertFalse(isRecoveryHold());
+  assertEquals(notified, 4);
+  off();
+});
+
+Deno.test('pending route: a held deep link is KEPT while a reset is in progress, released once, and dropped on sign-out', () => {
+  const p = createPendingRoute();
+  p.authChanged('signedOut');
+  p.record('fantasystockapp:///join-league');
+  assertEquals(p.authChanged('ready', true), null, 'not replayed over the reset form');
+  assertEquals(p.peek(), null);
+  assertEquals(p.releaseHold(), '/join-league', 'handed back when the hold ends');
+  assertEquals(p.releaseHold(), null, 'once');
+  // Without a hold the behaviour is unchanged.
+  const q = createPendingRoute();
+  q.authChanged('signedOut');
+  q.record('fantasystockapp:///join-league');
+  assertEquals(q.authChanged('ready'), '/join-league');
+  // A cancelled reset (sign-out) ends the held link with the session.
+  const r = createPendingRoute();
+  r.authChanged('signedOut');
+  r.record('fantasystockapp:///create-league');
+  r.authChanged('ready', true);
+  r.authChanged('signedOut');
+  assertEquals(r.releaseHold(), null);
+  // Cancel drops a kept link explicitly, before the hold ends.
+  const d = createPendingRoute();
+  d.authChanged('signedOut');
+  d.record('fantasystockapp:///create-league');
+  d.authChanged('ready', true);
+  d.dropHeld();
+  assertEquals(d.releaseHold(), null);
+  // A hold with nothing recorded holds nothing.
+  const t = createPendingRoute();
+  t.authChanged('signedOut');
+  assertEquals(t.authChanged('ready', true), null);
+  assertEquals(t.releaseHold(), null);
+});
+
+Deno.test('wiring: push setup and deep-link replay both WAIT for the recovery hold, and run when it ends', () => {
+  const sp = SOURCES['lib/SessionProvider.tsx'];
+  assert(sp.includes("event === 'SIGNED_IN' && session?.user && !notificationsSetup.current && !isRecoveryHold()"));
+  const release = sp.slice(sp.indexOf('subscribeRecoverySession(() => {'));
+  assert(release.includes('if (isRecoveryHold() || !id || notificationsSetup.current) return;'));
+  assert(release.includes('setupPushNotifications(id)'));
+  assert(sp.includes('userIdRef.current = session?.user?.id ?? null;'));
+  const layout = SOURCES['app/_layout.tsx'];
+  assert(layout.includes('pendingRoute.authChanged(shownPhase, isRecoveryHold())'));
+  assert(layout.includes('pendingRoute.releaseHold()') && layout.includes('if (isRecoveryHold()) return;'));
+});
+
+Deno.test('wiring: Cancel drops the kept link BEFORE the hold ends; sign-out drops it; handler rejections are caught; double taps are guarded by refs', () => {
+  const rp = SOURCES['app/reset-password.tsx'];
+  const cancel = rp.slice(rp.indexOf('async function handleCancel'), rp.indexOf('async function updatePassword'));
+  assert(cancel.indexOf('pendingRoute.dropHeld()') > -1 && cancel.indexOf('pendingRoute.dropHeld()') < cancel.indexOf('setRecoverySession(false)'));
+  assert(cancel.indexOf('setRecoverySession(false)') < cancel.indexOf('await signOut()'));
+  const sp = SOURCES['lib/SessionProvider.tsx'];
+  const out = sp.slice(sp.indexOf("event === 'SIGNED_OUT'"), sp.indexOf("event === 'SIGNED_OUT'") + 700);
+  assert(out.indexOf('pendingRoute.dropHeld()') > -1 && out.indexOf('pendingRoute.dropHeld()') < out.indexOf('setRecoverySession(false)'));
+  const layout = SOURCES['app/_layout.tsx'];
+  assertEquals(layout.split("handleDeepLink(").length - 1 >= 2, true);
+  assertEquals(layout.split(".catch(() => console.warn('[auth] link handler failed', ''))").length - 1, 2, 'both delivery paths catch');
+  assert(SOURCES['components/shell/ConfirmEmailSent.tsx'].includes('if (inFlight.current) return;'));
+  assert(/\} finally \{\s*inFlight\.current = false;/.test(SOURCES['components/shell/ConfirmEmailSent.tsx']), 'released in a finally, so a throwing onResend cannot wedge the guard');
+  assert(SOURCES['app/create-account.tsx'].includes("if (status !== 'idle' || creating.current) return;"));
+  assert(SOURCES['app/create-account.tsx'].includes('creating.current = false;'));
+});
+
+Deno.test('wiring: sign-up and reset keep the pending verifier on failure, and hold their floor on a throw', () => {
+  const sp = SOURCES['lib/SessionProvider.tsx'];
+  const signUp = sp.slice(sp.indexOf('const signUp = useCallback'), sp.indexOf('const fixtureSocial'));
+  assert(signUp.includes('withVerifierKept('));
+  assert(signUp.includes('(r) => r.tooSoon || !!r.res.error'), 'an ERROR result triggers the restore');
+  assert(signUp.indexOf('withVerifierKept(') < signUp.indexOf('supabase.auth.signUp('));
+  assert(/catch \(e\) \{[^}]*confirmationCooldown\.markSent\(email\);[^}]*throw e;/.test(signUp), 'a throw may follow a request that went out: the throw path itself holds the floor');
+  const fp = SOURCES['app/forgot-password.tsx'];
+  assert(fp.includes('withVerifierKept(') && fp.indexOf('withVerifierKept(') < fp.indexOf('supabase.auth.resetPasswordForEmail('));
+  assert(fp.includes('(x) => x.tooSoon || !!x.r.error'), 'an ERROR result triggers the restore');
+  assert(/catch \(e\) \{[^}]*resetCooldown\.markSent\(email\);[^}]*throw e;/.test(fp), 'the throw path itself holds the floor');
+});
+
 // ── wiring ────────────────────────────────────────────────────────────────
 
 Deno.test('wiring: the client is PKCE, and the crypto shim is installed before the client is created', () => {
@@ -841,5 +1432,14 @@ Deno.test('wiring: the layout binds the tested handler, with the dev fixture off
   // The handler never signs in from a token and always checks the session before it exchanges a confirm code.
   const h = SOURCES['lib/auth/authLinkHandlers.ts'];
   assertFalse(h.includes('setSession'));
-  assert(h.indexOf('deps.getSession()') < h.indexOf('deps.exchangeCodeForSession(action.code)'));
+  const getSession = h.indexOf('deps.getSession()');
+  const readSlot = h.indexOf('await deps.readVerifier()');
+  const exchangeCall = h.indexOf('await exchange(url, action.code, snapshot)');
+  assert(getSession > -1 && readSlot > getSession && exchangeCall > readSlot, 'session check -> slot read -> exchange');
+  // Both link kinds read the slot before any exchange can happen.
+  assertEquals(h.split('await deps.readVerifier()').length - 1, 2);
+  assert(h.indexOf('await deps.readVerifier()', readSlot + 1) < h.indexOf('await exchange(url, parsed.code, snapshot)'));
+  // The layout hands the handler the real slot and the hold.
+  assert(layout.includes('readVerifier: verifierSlot.read,') && layout.includes('writeVerifier: verifierSlot.write,'));
+  assert(layout.includes('setRecoveryInProgress,'));
 });

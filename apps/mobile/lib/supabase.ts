@@ -5,6 +5,8 @@ import { digest, getRandomBytes } from 'expo-crypto';
 import type { CryptoDigestAlgorithm } from 'expo-crypto';
 
 import { fillWithRandomBytes, installPkceCrypto } from './auth/pkceCrypto';
+import { AUTH_FETCH_TIMEOUT_MS, createAuthFetch } from './auth/authFetch';
+import { AUTH_STORAGE_KEY } from './auth/verifierSlot';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 // Phase 3a: legacy anon key -> new publishable key (anon drop-in replacement).
@@ -30,7 +32,16 @@ if (
   console.error('[auth] PKCE crypto is unavailable on this build; sign-up and password reset are disabled');
 }
 
+// Auth requests (only) are aborted after AUTH_FETCH_TIMEOUT_MS so a hung one cannot hold the PKCE verifier queue
+// forever (lib/auth/authFetch.ts).
+const authFetch = createAuthFetch((input, init) => fetch(input, init), AUTH_FETCH_TIMEOUT_MS, {
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  clearTimeout: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  AbortController,
+});
+
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+  global: { fetch: authFetch },
   auth: {
     storage: storage,
     autoRefreshToken: true,
@@ -39,6 +50,6 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     // Email links (confirmation, password reset) return a one-time CODE, exchanged on this device with the
     // verifier stored when the flow began (app/_layout.tsx). Replaces tokens-in-the-URL plus a nonce.
     flowType: 'pkce',
-    storageKey: 'fantasy-finance-auth',
+    storageKey: AUTH_STORAGE_KEY, // also names the PKCE verifier slot (lib/auth/verifierSlot.ts)
   },
 });

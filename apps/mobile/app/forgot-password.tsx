@@ -16,6 +16,8 @@ import { supabase } from '@/lib/supabase';
 import { buildRecoveryRedirect } from '@/lib/recoveryLink';
 import { pkceCryptoReady } from '@/lib/auth/pkceCrypto';
 import { resetCooldown, RESEND_TOO_SOON } from '@/lib/auth/resendCooldown';
+import { verifierSlot } from '@/lib/auth/verifierStorage';
+import { withVerifierKept } from '@/lib/auth/verifierSlot';
 import { FIXTURE_NETWORK_MS, SHELL_FIXTURE } from '@/lib/shell/devFixture';
 
 // Phase 3b-1 — Forgot password + "Check your email" (spec row 4; board
@@ -77,9 +79,33 @@ export default function ForgotPasswordScreen() {
       return;
     }
     try {
-      const res = await supabase.auth.resetPasswordForEmail(email, { redirectTo: buildRecoveryRedirect() });
-      resetError = res.error;
+      // The ONE stored verifier is shared with a pending sign-up, and auth-js deletes it when this call fails:
+      // keep it (lib/auth/verifierSlot.ts). A successful new reset supersedes the old flow, on purpose.
+      // The floor is re-checked and marked INSIDE the critical section (same reasoning as SessionProvider.signUp):
+      // two overlapping requests cannot both pass it, and a throw holds the floor too.
+      const res = await withVerifierKept(
+        verifierSlot,
+        async () => {
+          if (resetCooldown.remainingMs(email) > 0) return { tooSoon: true as const };
+          try {
+            const r = await supabase.auth.resetPasswordForEmail(email, { redirectTo: buildRecoveryRedirect() });
+            if (!r.error) resetCooldown.markSent(email);
+            return { tooSoon: false as const, r };
+          } catch (e) {
+            resetCooldown.markSent(email);
+            throw e;
+          }
+        },
+        (x) => x.tooSoon || !!x.r.error
+      );
+      if (res.tooSoon) {
+        setStatus('idle');
+        setError(getAuthErrorMessage(RESEND_TOO_SOON));
+        return;
+      }
+      resetError = res.r.error;
     } catch {
+      // (The floor was already held inside the critical section: see above.)
       setStatus('idle');
       setError('Could not start a secure password reset on this device. Please try again.');
       return;
@@ -93,7 +119,6 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    resetCooldown.markSent(email);
     setSent(true);
   }
 

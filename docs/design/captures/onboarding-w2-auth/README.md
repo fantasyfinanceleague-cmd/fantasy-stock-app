@@ -54,3 +54,9 @@ shim, sign-in privacy, copy, the signup hook) were each killed.
 The email links now carry a one-time code (`flowType: 'pkce'`), exchanged on the device that holds the
 code verifier. Cross-device confirmation falls back to signing in with the password. "Send again" repeats
 `signUp()` (supabase's `resend()` sends no code challenge, so its email would be an implicit-flow link).
+
+The ONE stored verifier (shared by sign-up and password reset) is protected: the link handler reads it before
+any exchange and refuses a junk or wrong-flow code without spending it, sign-up / reset / exchange all run in
+one queue and restore the verifier when they fail, a recovery hold keeps push prompts and deep-link replay off
+the reset form, and auth requests (only) time out after 25 s so a hung one cannot hold the queue
+(`lib/auth/verifierSlot.ts`, `authLinkHandlers.ts`, `authFetch.ts`).

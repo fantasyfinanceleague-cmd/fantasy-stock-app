@@ -45,3 +45,31 @@ export function subscribeRecoverySession(listener: RecoveryFlagListener): () => 
     recoveryFlagListeners.delete(listener);
   };
 }
+
+// ---------------------------------------------------------------------------
+// The recovery HOLD: "a password-recovery link is being exchanged, or its form is open"
+// ---------------------------------------------------------------------------
+//
+// supabase-js emits SIGNED_IN inside every code exchange, BEFORE this module's flag is set. Without a hold,
+// that SIGNED_IN would (a) let pendingRoute replay a recorded deep link and push it OVER the reset form, and
+// (b) start setupPushNotifications, which can raise the iOS permission prompt on top of the form. So the
+// link handler raises `inProgress` before the exchange and drops it when the exchange is settled (the flag
+// above takes over on success). Both consumers wait on `isRecoveryHold()` and run when it ends.
+
+let recoveryInProgress = false;
+
+/** Raised by the link handler around a recovery code exchange; dropped on EVERY exit. */
+export function setRecoveryInProgress(value: boolean): void {
+  if (recoveryInProgress === value) return;
+  recoveryInProgress = value;
+  recoveryFlagListeners.forEach((listener) => listener());
+}
+
+export function isRecoveryInProgress(): boolean {
+  return recoveryInProgress;
+}
+
+/** True while a recovery link is being exchanged OR a recovery form is open. */
+export function isRecoveryHold(): boolean {
+  return recoveryInProgress || recoveryFlag;
+}

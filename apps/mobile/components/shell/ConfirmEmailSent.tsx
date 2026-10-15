@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -39,12 +39,21 @@ export function ConfirmEmailSent({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A ref, not the `sending` state: two taps in one frame both read the same stale state value.
+  const inFlight = useRef(false);
+
   async function resend() {
-    if (sending) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     setSending(true);
-    const { error: resendError } = await onResend();
-    setSending(false);
+    let resendError: Awaited<ReturnType<typeof onResend>>['error'] = null;
+    try {
+      ({ error: resendError } = await onResend());
+    } finally {
+      inFlight.current = false;
+      setSending(false);
+    }
     if (resendError) setError(getAuthErrorMessage(resendError, undefined, brand.name));
   }
 

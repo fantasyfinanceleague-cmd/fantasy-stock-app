@@ -2,7 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { setupPushNotifications, removePushToken } from './notifications';
-import { setRecoverySession } from './auth/recoverySession';
+import { isRecoveryHold, setRecoverySession, subscribeRecoverySession } from './auth/recoverySession';
+import { verifierSlot } from './auth/verifierStorage';
+import { withVerifierKept } from './auth/verifierSlot';
 import { setEmailJustConfirmed } from './auth/emailConfirmed';
 import { buildConfirmRedirect } from './auth/confirmLink';
 import { pkceCryptoReady } from './auth/pkceCrypto';
@@ -10,7 +12,7 @@ import { confirmationCooldown, RESEND_TOO_SOON } from './auth/resendCooldown';
 import { removeLegacyAuthKeys } from './auth/legacyAuthKeys';
 import { signInWithApple as nativeAppleSignIn, signInWithGoogle as nativeGoogleSignIn, signOutOfGoogle } from './auth/socialSignIn';
 import type { SocialSignInResult } from './auth/socialOutcome';
-import type { AuthPhase } from './shell/pendingRoute';
+import { pendingRoute, type AuthPhase } from './shell/pendingRoute';
 import {
   FIXTURE_EMAIL,
   FIXTURE_EMAIL_OVERRIDE,
@@ -87,6 +89,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // someone else can't briefly show the previous account's gate decision.
   const [profileFor, setProfileFor] = useState<string | null>(null);
   const notificationsSetup = useRef(false);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (SHELL_FIXTURE) {
@@ -105,6 +108,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      userIdRef.current = session?.user?.id ?? null;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -127,11 +131,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         });
         setLoading(false);
 
-        // Register for push notifications on sign in
-        if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current) {
+        // Register for push notifications on sign in, but not while a password-recovery link is being exchanged
+        // or its form is open: supabase-js emits SIGNED_IN inside the code exchange, and the iOS permission
+        // prompt must not land on top of the reset form. The effect below runs it when the hold ends.
+        if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current && !isRecoveryHold()) {
           notificationsSetup.current = true;
           setupPushNotifications(session.user.id);
         }
+        userIdRef.current = session?.user?.id ?? null;
 
         // Reset flag on sign out
         if (event === 'SIGNED_OUT') {
@@ -140,6 +147,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           // reset-password.tsx's own Cancel/success handlers (e.g. a
           // sign-out elsewhere in the app) must not leave the flag
           // stuck true for whatever session comes next.
+          pendingRoute.dropHeld(); // a link kept by a recovery hold ends with the session
           setRecoverySession(false);
           setEmailJustConfirmed(false); // the "just confirmed" chip belongs to one sign-in
         }
@@ -147,6 +155,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Push setup that a recovery hold deferred (see the SIGNED_IN handler above) runs when the hold ends.
+  useEffect(() => {
+    return subscribeRecoverySession(() => {
+      const id = userIdRef.current;
+      if (isRecoveryHold() || !id || notificationsSetup.current) return;
+      notificationsSetup.current = true;
+      setupPushNotifications(id);
+    });
   }, []);
 
   const userId = user?.id ?? null;
@@ -220,21 +238,42 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // supersedes the earlier email, as GoTrue's own resend does).
     // Never on the weak fallback (Math.random + the "plain" method) that auth-js uses without a WebCrypto.
     if (!pkceCryptoReady()) return { error: { message: '', code: PKCE_CRYPTO_UNAVAILABLE }, needsConfirmation: false };
-    // The floor for ANY repeat to this address, whoever asks (lib/auth/resendCooldown.ts): a repeat inside
-    // GoTrue's interval would fail AND destroy the verifier the first email needs. The existing
-    // "Too many attempts" line words it.
-    if (confirmationCooldown.remainingMs(email) > 0) return { error: { ...RESEND_TOO_SOON }, needsConfirmation: false };
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: buildConfirmRedirect() },
-      });
+      // The ONE stored verifier is shared with a pending password reset, and auth-js deletes it when this call
+      // fails: keep it (lib/auth/verifierSlot.ts). A successful new sign-up supersedes the old flow, on purpose.
+      // The floor check, the call and the floor mark all run INSIDE the same critical section as the snapshot,
+      // so two overlapping calls (a double tap) cannot both pass the check or restore a stale snapshot.
+      const result = await withVerifierKept(
+        verifierSlot,
+        async () => {
+          // The floor for ANY repeat to this address, whoever asks (lib/auth/resendCooldown.ts): a repeat inside
+          // GoTrue's interval would fail AND destroy the verifier the first email needs. The existing
+          // "Too many attempts" line words it.
+          if (confirmationCooldown.remainingMs(email) > 0) return { tooSoon: true as const };
+          try {
+            const res = await supabase.auth.signUp({
+              email,
+              password,
+              options: { emailRedirectTo: buildConfirmRedirect() },
+            });
+            if (!res.error && !res.data?.session) confirmationCooldown.markSent(email);
+            return { tooSoon: false as const, res };
+          } catch (e) {
+            // A throw is either supabase-js's storage write BEFORE the request, or something after it was sent;
+            // they cannot be told apart from here. Hold the floor either way: the cost of being wrong is waiting a
+            // minute, whereas a repeat after a request that DID go out would hit GoTrue's rate limit and orphan
+            // that email.
+            confirmationCooldown.markSent(email);
+            throw e;
+          }
+        },
+        (r) => r.tooSoon || !!r.res.error
+      );
+      if (result.tooSoon) return { error: { ...RESEND_TOO_SOON }, needsConfirmation: false };
+      const { data, error } = result.res;
       if (error) return { error: { message: error.message, code: error.code }, needsConfirmation: false };
-      if (!data?.session) confirmationCooldown.markSent(email);
       return { error: null, needsConfirmation: !data?.session };
     } catch {
-      // supabase-js writes the verifier to storage BEFORE the request; a storage failure throws out of it.
       return { error: { message: '', code: PKCE_STORAGE_UNAVAILABLE }, needsConfirmation: false };
     }
   }, []);

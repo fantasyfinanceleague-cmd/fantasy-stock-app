@@ -25,14 +25,23 @@ export type AuthPhase = 'unknown' | 'signedOut' | 'gated' | 'ready';
 export interface PendingRoute {
   /** Store a raw incoming link, if it is resumable and the user can't open it yet. */
   record(raw: string): void;
-  /** Report the new auth phase; returns the path to open now, if any. */
-  authChanged(phase: AuthPhase): string | null;
+  /**
+   * Report the new auth phase; returns the path to open now, if any. While `hold` is true (a password-recovery
+   * link is being exchanged, or its form is open) the link is KEPT instead of opened, so a replay can't push a
+   * screen over the reset form; releaseHold() hands it back once the hold ends.
+   */
+  authChanged(phase: AuthPhase, hold?: boolean): string | null;
+  /** The link kept by a hold, once: call when the hold ends. */
+  releaseHold(): string | null;
+  /** Forget a kept link without opening it (the reset was cancelled / the person is being signed out). */
+  dropHeld(): void;
   peek(): string | null;
 }
 
 export function createPendingRoute(): PendingRoute {
   let phase: AuthPhase = 'unknown';
   let target: string | null = null;
+  let held: string | null = null;
 
   return {
     record(raw) {
@@ -40,16 +49,29 @@ export function createPendingRoute(): PendingRoute {
       const resolved = resolveResumeTarget(raw);
       if (resolved) target = resolved; // latest valid link wins; a rejected one erases nothing
     },
-    authChanged(next) {
+    authChanged(next, hold = false) {
       const prev = phase;
       phase = next;
       if (next === 'ready') {
         const resume = prev === 'signedOut' || prev === 'gated' ? target : null;
         target = null;
+        if (hold && resume) {
+          held = resume;
+          return null;
+        }
         return resume;
       }
+      if (next === 'signedOut') held = null; // a cancelled reset ends the held link with the session
       if (next === 'signedOut' && prev === 'ready') target = null; // start clean after sign-out
       return null;
+    },
+    releaseHold() {
+      const out = held;
+      held = null;
+      return out;
+    },
+    dropHeld() {
+      held = null;
     },
     peek() {
       return target;
