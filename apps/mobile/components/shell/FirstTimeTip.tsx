@@ -12,13 +12,16 @@ import { TIPS, type TipId } from '@/lib/shell/firstTimeTipPolicy';
 // a rimmed card with the drawn info icon in the accent, one line, and a 44pt × that hides it for
 // good on this device. One line, never a tour (the research and the plan both say so).
 
+/** The tip is one line of help, never the loudest thing on Home: capped so it stays a card, not a page (XXXL clipped it). */
+const TIP_MAX_SCALE = 2;
+
 export function FirstTimeTip({ tip }: { tip: TipId }) {
   const visible = useTipVisible(tip);
   if (!visible) return null;
   return (
     <Card style={styles.card}>
       <Icon name="info" size="body" tone="accent" />
-      <Text variant="body" style={styles.text}>
+      <Text variant="body" maxFontSizeMultiplier={TIP_MAX_SCALE} style={styles.text}>
         {TIPS[tip].text}
       </Text>
       <Pressable onPress={() => dismissTip(tip)} accessibilityRole="button" accessibilityLabel="Dismiss" style={styles.dismiss}>

@@ -54,7 +54,9 @@ import { CAPTURE } from '@/lib/shell/captureDev';
 
 const CHECK_DEBOUNCE_MS = 350;
 /** Longest the first-run screen waits for a generated name before it is just the form. */
-export const SUGGEST_TIMEOUT_MS = 6000;
+export /** 1.3× (22pt): the longest gamertag, in the box beside its check, fits one line on the smallest phone. */
+const SUGGESTED_NAME_MAX_SCALE = 1.3;
+const SUGGEST_TIMEOUT_MS = 6000;
 
 /** suggesting: asking the server for a free gamertag; suggested: Keep / Change; editing: the form. */
 type Mode = 'suggesting' | 'suggested' | 'editing';
@@ -204,6 +206,9 @@ export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
         autoFocus={mode === 'editing' && !firstRun}
         editable={!picking}
         chosen={mode === 'suggested'}
+        // A suggested name is the thing being kept, so it must show whole at every text size (the longest
+        // gamertag is 19 characters); typing keeps the system scale.
+        maxFontSizeMultiplier={mode === 'suggested' ? SUGGESTED_NAME_MAX_SCALE : undefined}
         maxLength={40}
         error={view.error}
         helper={firstRun && picking ? HELPER_CHANGE_LATER : undefined}

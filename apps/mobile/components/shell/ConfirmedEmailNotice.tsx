@@ -20,6 +20,9 @@ import {
 // so it is a plain rimmed Card with a drawn ✓ (not the warn panel). Shown once; the next sign-in
 // attempt or the × clears it. The × is a 44pt target.
 
+/** One sentence of information above the form: capped so it stays a card at XXXL (it wrapped to a column of words). */
+const NOTICE_MAX_SCALE = 2;
+
 export function ConfirmedEmailNotice() {
   const stored = useSyncExternalStore(subscribeConfirmFailedNotice, isConfirmFailedNotice);
   const shown = stored || CAPTURE.confirmed === 'notice'; // DEV captures only (captureDev reads nothing in release)
@@ -27,7 +30,7 @@ export function ConfirmedEmailNotice() {
   return (
     <Card style={styles.card} accessibilityLiveRegion="polite">
       <Icon name="checkCircle" size="body" tone="gain" />
-      <Text variant="body" style={styles.text}>
+      <Text variant="body" maxFontSizeMultiplier={NOTICE_MAX_SCALE} style={styles.text}>
         {CONFIRM_FAILED_NOTICE}
       </Text>
       <Pressable

@@ -451,3 +451,25 @@ Deno.test('a full league: Join keys the line on a pending invite, and the post-j
   assert(join.includes('const invited = useArrivalInvite() !== null;'));
   assert(join.includes('previewView(league, block, { invited })'));
 });
+
+// ── Large text: nothing the person must read is clipped or turned into a column of words ──
+
+Deno.test('large text: the suggested name never truncates, and the tip and the notice are capped so they stay cards', () => {
+  const picker = code(SOURCES['components/shell/UsernamePicker.tsx']);
+  assert(picker.includes("maxFontSizeMultiplier={mode === 'suggested' ? SUGGESTED_NAME_MAX_SCALE : undefined}"));
+  const scale = Number(/SUGGESTED_NAME_MAX_SCALE = ([\d.]+);/.exec(picker)![1]);
+  // The longest tag at 17pt x the cap and 0.55 em per character, against the narrowest supported phone (375pt):
+  // the field is the screen less 2x24 margins, 2x17 padding and the check's 36pt.
+  const longest = Math.max(...ADJECTIVES.map((a) => a.length)) + Math.max(...ANIMALS.map((a) => a.length)) + 3;
+  assert(longest * 17 * scale * 0.55 <= 375 - 48 - 34 - 36, `a ${longest}-char gamertag at ${scale}x must fit one line`);
+  assert(code(SOURCES['components/shell/FirstTimeTip.tsx']).includes('maxFontSizeMultiplier={TIP_MAX_SCALE}'));
+  assert(code(SOURCES['components/shell/ConfirmedEmailNotice.tsx']).includes('maxFontSizeMultiplier={NOTICE_MAX_SCALE}'));
+});
+
+Deno.test('arrival: the stress fixture (a long league name and inviter) still splits into a wrapping lead and a one-line name', () => {
+  const v = view('long');
+  assertEquals(v.titleParts?.lead, 'Gianluigi Bartolomeo-Ricci invited you to');
+  assert(!v.titleParts!.name!.includes(' '), 'the name carries no breaking space');
+  assertEquals(v.mark, { kind: 'inviter', name: 'Gianluigi Bartolomeo-Ricci' });
+  assertEquals([v.canJoin, v.refusal], [true, null]);
+});

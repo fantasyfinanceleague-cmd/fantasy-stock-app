@@ -6,10 +6,13 @@
  */
 import type { InvitePreview, PendingInvite } from './usePendingInvite';
 
-export type InviteFixtureKind = 'found' | 'solo' | 'full' | 'drafting' | 'over' | 'loading' | 'not_found' | 'unavailable';
-export const INVITE_FIXTURES: readonly InviteFixtureKind[] = ['found', 'solo', 'full', 'drafting', 'over', 'loading', 'not_found', 'unavailable'];
+export type InviteFixtureKind = 'found' | 'solo' | 'full' | 'drafting' | 'over' | 'loading' | 'not_found' | 'unavailable' | 'long';
+export const INVITE_FIXTURES: readonly InviteFixtureKind[] = ['found', 'solo', 'full', 'drafting', 'over', 'loading', 'not_found', 'unavailable', 'long'];
 
 const NAME = 'Stock Scudetto';
+/** The stress case: a long league name and a long inviter, to prove the heading and the name's fit. */
+const LONG_NAME = 'The Wall Street Wolves of Provo Valley';
+const LONG_INVITER = 'Gianluigi Bartolomeo-Ricci';
 
 /** The fixture's Try again: a dev log line (the real hook re-asks preview-league, a user tap each time). */
 function logRetry(): void {
@@ -23,6 +26,7 @@ export function inviteFixture(kind: InviteFixtureKind, retry: () => void = logRe
     : kind === 'full' ? { kind: 'found', name: NAME, inviter: 'Roberto', reason: 'league_full' }
     : kind === 'drafting' ? { kind: 'found', name: NAME, inviter: 'Roberto', reason: 'draft_started' }
     : kind === 'over' ? { kind: 'found', name: NAME, inviter: 'Roberto', reason: 'season_completed' }
+    : kind === 'long' ? { kind: 'found', name: LONG_NAME, inviter: LONG_INVITER, reason: null }
     : kind === 'loading' ? { kind: 'loading' }
     : kind === 'not_found' ? { kind: 'not_found' }
     : { kind: 'unavailable' };
