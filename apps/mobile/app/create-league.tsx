@@ -87,6 +87,7 @@ import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { CAPTURE } from '@/lib/shell/captureDev';
 import { createFixtureStep } from '@/lib/shell/captureKnobs';
 import { keepDots, keepHyphens } from '@/lib/game/keepDots';
+import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 interface WizardState {
@@ -586,7 +587,7 @@ export default function CreateLeagueWizard() {
       <SetupScaffold
         title={createdTitle(created.name)}
         subtitle={CREATED_LINE}
-        footer={<Button label={GO_TO_LEAGUE} onPress={() => router.replace('/(tabs)/league')} />}
+        footer={<Button label={GO_TO_LEAGUE} onPress={() => void pushAskRouteFor('/(tabs)/league').then((to) => router.replace(to as never))} />}
       >
         {/* The pre-draft Home invite-code card (board). */}
         <SetupCard style={styles.codeCard}>

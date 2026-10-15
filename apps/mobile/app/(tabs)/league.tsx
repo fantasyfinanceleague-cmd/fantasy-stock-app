@@ -7,6 +7,7 @@ import { radius, space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
+import { LeaguesFailedState, NoLeagueState } from '@/components/shell/NoLeagueState';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { StandingsRowView, StandingsTable, useStandingsLayout } from '@/components/game/StandingsTable';
@@ -298,37 +299,10 @@ export default function LeagueScreen() {
 
   // The league list didn't load (gn-sweep): say so, with Try again (and the pull). Never
   // "No leagues yet" to someone whose read failed.
-  if (fallback === 'failed') {
-    return (
-      <PhasePlaceholder
-        title="League"
-        showAvatar
-        icon={() => <Icon name="alert" size="title" tone="text2" />}
-        heading={LEAGUES_LOAD_FAILED}
-        message={MONEY_COPY.loadRetryMessage}
-        actionLabel={MONEY_COPY.tryAgain}
-        onAction={refresh}
-        onRefresh={refresh}
-      />
-    );
-  }
+  if (fallback === 'failed') return <LeaguesFailedState title="League" onRefresh={refresh} />;
 
-  // No leagues (a read that SUCCEEDED with none): Home's own empty state, word for word, so both buttons go somewhere real (W4;
-  // the old "Standings are on the way … in the next update" was stale copy).
-  return (
-    <PhasePlaceholder
-      title="League"
-      showAvatar
-      icon={() => <Icon name="trophy" size="title" tone="text2" />}
-      heading="No leagues yet"
-      message="Create or join a league to get started."
-      actionLabel="Create a league"
-      onAction={() => router.push('/create-league')}
-      secondaryActionLabel="Join with a code"
-      onSecondaryAction={() => router.push('/join-league')}
-      onRefresh={refresh}
-    />
-  );
+  // No leagues (a read that SUCCEEDED with none): the one no-league state, the same on every tab.
+  return <NoLeagueState title="League" onRefresh={refresh} />;
 }
 
 /** UX rule 7: your row pinned over the bottom of the standings, the SAME row component on

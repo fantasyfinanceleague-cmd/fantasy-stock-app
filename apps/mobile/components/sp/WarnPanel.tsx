@@ -12,11 +12,14 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // Moved to sp/ in W4 Onboarding: the same panel carries Join's refusals and Create account's
 // signups-paused line, so a refusal looks the same on every surface.
 
+/** The panel's text cap; the links that sit with it (Sign in, Try again) take the same cap so they never outrank the message. */
+export const WARN_TEXT_MAX_SCALE = 1.6;
+
 export function WarnPanel({ text }: { text: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.warn, { backgroundColor: colors.warnTint, borderColor: colors.warnLine }]}>
-      <Text variant="callout" maxFontSizeMultiplier={1.6} color={colors.warnText} accessibilityRole="alert" style={styles.text}>{text}</Text>
+      <Text variant="callout" maxFontSizeMultiplier={WARN_TEXT_MAX_SCALE} color={colors.warnText} accessibilityRole="alert" style={styles.text}>{text}</Text>
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { isRecoveryHold, setRecoverySession, subscribeRecoverySession } from './
 import { verifierSlot } from './auth/verifierStorage';
 import { withVerifierKept } from './auth/verifierSlot';
 import { setEmailJustConfirmed } from './auth/emailConfirmed';
+import { setConfirmFailedNotice } from './auth/confirmFailedNotice';
 import { buildConfirmRedirect } from './auth/confirmLink';
 import { pkceCryptoReady } from './auth/pkceCrypto';
 import { confirmationCooldown, RESEND_TOO_SOON } from './auth/resendCooldown';
@@ -116,7 +117,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // Register for push notifications on initial load if logged in
       if (session?.user && !notificationsSetup.current) {
         notificationsSetup.current = true;
-        setupPushNotifications(session.user.id);
+        setupPushNotifications(session.user.id, false);
       }
     });
 
@@ -136,9 +137,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // prompt must not land on top of the reset form. The effect below runs it when the hold ends.
         if (event === 'SIGNED_IN' && session?.user && !notificationsSetup.current && !isRecoveryHold()) {
           notificationsSetup.current = true;
-          setupPushNotifications(session.user.id);
+          setupPushNotifications(session.user.id, false);
         }
         userIdRef.current = session?.user?.id ?? null;
+
+        // Any sign-in ends the "your email is confirmed, sign in" line on Sign in (W4).
+        if (event === 'SIGNED_IN') setConfirmFailedNotice(false);
 
         // Reset flag on sign out
         if (event === 'SIGNED_OUT') {
@@ -163,7 +167,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const id = userIdRef.current;
       if (isRecoveryHold() || !id || notificationsSetup.current) return;
       notificationsSetup.current = true;
-      setupPushNotifications(id);
+      setupPushNotifications(id, false);
     });
   }, []);
 

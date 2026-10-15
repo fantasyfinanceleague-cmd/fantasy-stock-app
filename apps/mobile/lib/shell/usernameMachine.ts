@@ -11,6 +11,7 @@
 // "Taken" is case-insensitive on the server; the client never decides it.
 
 import { firstFailingRule, USERNAME_RE, usernameRuleChecks, type UsernameRuleCheck } from './usernameRules';
+import { gamertagCandidates, type Rng } from './gamertag';
 
 export const MSG_TAKEN = 'This username is already taken.';
 export const MSG_NOT_ALLOWED = 'Username is not allowed';
@@ -38,11 +39,16 @@ export type UsernameEvent =
   | { type: 'input'; value: string; contentOk: boolean; current: string | null }
   | { type: 'check-result'; seq: number; status: ServerStatus; suggestions?: string[] }
   | { type: 'check-failed'; seq: number }
+  /** A generated gamertag the server already reported available (lib/shell/gamertag.ts): Keep is enabled at once. */
+  | { type: 'suggested'; value: string }
   | { type: 'submit' }
   | { type: 'submit-result'; seq: number; result: 'ok' | 'taken' | 'invalid'; suggestions?: string[] }
   | { type: 'submit-failed'; seq: number };
 
 export const initialUsernameState: UsernameState = { kind: 'empty', seq: 0 };
+
+/** The line under the pre-filled field (Giorgio, 2026-10-14, approved with the plan). */
+export const HELPER_CHANGE_LATER = 'You can change it later in Profile.';
 
 /** Continue is enabled when the name could be saved: known available, or unknown because the check failed. */
 export function canSubmit(state: UsernameState): boolean {
@@ -75,6 +81,13 @@ export function usernameReducer(state: UsernameState, event: UsernameEvent): Use
     case 'check-failed':
       if (state.kind !== 'checking' || event.seq !== state.seq) return state;
       return { kind: 'check-failed', seq: state.seq, candidate: state.candidate };
+
+    case 'suggested': {
+      const candidate = event.value.trim();
+      // Defensive: the generator only emits safe tags, but a bad one must never reach Keep.
+      if (!candidate || firstFailingRule(candidate)) return { kind: 'empty', seq: state.seq + 1 };
+      return { kind: 'available', seq: state.seq + 1, candidate };
+    }
 
     case 'submit':
       if (!canSubmit(state)) return state;
@@ -168,28 +181,20 @@ function fit(base: string, suffix: string): string {
 }
 
 /**
- * Up to 9 distinct, format-valid candidates for check_usernames (its cap is
- * 10), derived from what the user typed and, when available, their email's
- * local part. Deterministic for a given `seed` (e.g. the two-digit year), so
- * the same input always offers the same names. The taken name itself is
- * never offered back, in any case.
+ * Up to 9 distinct, format-valid candidates for check_usernames (its cap is 10) for a name that
+ * turned out to be TAKEN: digit variants of what the user TYPED, then generated gamertags
+ * (lib/shell/gamertag.ts). Never derived from the email address or from anything a sign-in
+ * provider shares (Giorgio, 2026-10-14: "let's not expose their first names"): the typed name is
+ * the only person-derived input, and it is the person's own. Deterministic for a given `rng` and
+ * `seed` (the two-digit year), so tests pin it. The taken name itself is never offered back.
  */
-export function usernameSuggestions(typed: string, emailLocal: string | null, seed: number): string[] {
-  const base = sanitizeUsernameBase(typed) || sanitizeUsernameBase(emailLocal ?? '') || 'player';
-  const alt = sanitizeUsernameBase(emailLocal ?? '');
+export function usernameSuggestions(typed: string, rng: Rng, seed: number): string[] {
+  const base = sanitizeUsernameBase(typed);
   const yy = String(Math.abs(seed) % 100).padStart(2, '0');
-  const raw = [
-    fit(base, `_${yy}`),
-    fit(base, yy),
-    alt && alt.toLowerCase() !== base.toLowerCase() ? fit(alt, '') : '',
-    fit(base, '_1'),
-    alt ? fit(alt, `_${yy}`) : '',
-    fit(base, `_${(Math.abs(seed) % 9) + 2}`),
-    fit(base, '_fs'),
-    fit(base, `${yy}_`),
-    fit(base, '_x'),
-    fit(base, '_hq'),
-  ];
+  const variants = base
+    ? [fit(base, `_${yy}`), fit(base, yy), fit(base, '_1'), fit(base, `_${(Math.abs(seed) % 9) + 2}`)]
+    : [];
+  const raw = [...variants, ...gamertagCandidates(rng, 9)];
   const taken = typed.trim().toLowerCase();
   const seen = new Set<string>();
   const out: string[] = [];

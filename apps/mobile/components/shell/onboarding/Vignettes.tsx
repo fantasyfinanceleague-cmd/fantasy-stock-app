@@ -31,22 +31,25 @@ import { FINAL, ROSTER_PICKS, VERSUS, versusSides } from '@/components/shell/onb
 
 export interface VignetteProps {
   active: boolean;
+  /** The final frame, no motion: "How it works" in Profile shows each scene as a thumbnail (W4). */
+  still?: boolean;
 }
 
 // ── 1. Roster filling ────────────────────────────────────────────────────
 
-export function RosterVignette({ active }: VignetteProps) {
+export function RosterVignette({ active, still }: VignetteProps) {
   return (
     <View style={styles.grid} accessible accessibilityLabel={`A roster filling round by round: ${ROSTER_PICKS.map((p) => p.ticker).join(', ')}`}>
       {ROSTER_PICKS.map((p, i) => (
-        <RosterCell key={p.ticker} index={i} ticker={p.ticker} category={p.category} active={active} />
+        <RosterCell key={p.ticker} index={i} ticker={p.ticker} category={p.category} active={active} still={!!still} />
       ))}
     </View>
   );
 }
 
-function RosterCell({ index, ticker, category, active }: { index: number; ticker: string; category: (typeof ROSTER_PICKS)[number]['category']; active: boolean }) {
-  const { reduced, duration, easing } = useMotion();
+function RosterCell({ index, ticker, category, active, still }: { index: number; ticker: string; category: (typeof ROSTER_PICKS)[number]['category']; active: boolean; still: boolean }) {
+  const { reduced: reducedMotion, duration, easing } = useMotion();
+  const reduced = reducedMotion || still;
   const fill = useSharedValue(reduced ? 1 : 0);
 
   useEffect(() => {
@@ -73,8 +76,9 @@ function RosterCell({ index, ticker, category, active }: { index: number; ticker
 
 // ── 2. Versus, with a lead change ───────────────────────────────────────
 
-export function VersusVignette({ active }: VignetteProps) {
-  const { reduced, duration } = useMotion();
+export function VersusVignette({ active, still }: VignetteProps) {
+  const { reduced: reducedMotion, duration } = useMotion();
+  const reduced = reducedMotion || !!still;
   const [flipped, setFlipped] = useState(reduced);
 
   useEffect(() => {
@@ -100,8 +104,9 @@ export function VersusVignette({ active }: VignetteProps) {
 
 // ── 3. The Friday final ──────────────────────────────────────────────────
 
-export function FinalVignette({ active }: VignetteProps) {
-  const { reduced, duration, easing, spring, withSpring } = useMotion();
+export function FinalVignette({ active, still }: VignetteProps) {
+  const { reduced: reducedMotion, duration, easing, spring, withSpring } = useMotion();
+  const reduced = reducedMotion || !!still;
   const chip = useSharedValue(reduced ? 1 : 0);
   const winner = useSharedValue(reduced ? 1 : 0);
   const { fontScale } = useWindowDimensions();

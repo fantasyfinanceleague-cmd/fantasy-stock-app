@@ -1,19 +1,25 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useEffect, useReducer, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
+import { Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 
-import { space } from '@/constants/tokens';
+import { space, type } from '@/constants/tokens';
+import { fittedFontSize } from '@/lib/shell/fitText';
 import { Button, type ButtonStatus } from '@/components/sp/Button';
 import { Chip } from '@/components/sp/Chip';
 import { Text } from '@/components/sp/Text';
 import { useMotion } from '@/components/sp/motion';
+import { EmailConfirmedChip } from '@/components/shell/EmailConfirmedChip';
 import { Field } from '@/components/shell/Field';
 import { UsernameStatusIcon } from '@/components/shell/UsernameStatusIcon';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { validateUsername } from '@/lib/contentModeration';
 import { checkUsernames, setUsername } from '@/lib/shell/usernameApi';
+import { isEmailJustConfirmed, setEmailJustConfirmed, subscribeEmailJustConfirmed } from '@/lib/auth/emailConfirmed';
+import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
+import { pickAvailableGamertag, seededRng } from '@/lib/shell/gamertag';
 import {
+  HELPER_CHANGE_LATER,
   initialUsernameState,
   pickAvailable,
   usernameReducer,
@@ -22,6 +28,15 @@ import {
 } from '@/lib/shell/usernameMachine';
 import { CAPTURE } from '@/lib/shell/captureDev';
 
+// Onboarding W4 (plan 2026-10-14; board #1.3 frame 2): on FIRST RUN the field arrives pre-filled
+// with a generated gamertag (lib/shell/gamertag.ts: {adjective}{Animal}{digits}, never a name or
+// anything from the email or a sign-in provider), the server has already said it is available, and
+// the primary is "Keep"; "Change" opens the field to type. If the generator can't reach the server
+// (or takes longer than SUGGEST_TIMEOUT_MS) the screen is the plain form: an empty field, never a
+// name nobody checked. The "✓ EMAIL CONFIRMED" chip shows above the title when the confirmation
+// link brought you here, and clears when the name is kept. Profile › Username (edit mode) is
+// unchanged: it starts on the current name and never suggests.
+//
 // Phase 3b-1 — Pick a username (spec row 8, board "Pick a username", S6).
 // Shared by the first-run gate (a NULL username, before the tabs) and
 // Profile › Username (edit mode). All decisions live in the pure machine
@@ -39,17 +54,20 @@ import { CAPTURE } from '@/lib/shell/captureDev';
 // - Errors appear instantly, in both Reduce Motion modes (§4).
 
 const CHECK_DEBOUNCE_MS = 350;
+/** Longest the first-run screen waits for a generated name before it is just the form. */
+export const SUGGEST_TIMEOUT_MS = 6000;
+
+/** suggesting: asking the server for a free gamertag; suggested: Keep / Change; editing: the form. */
+type Mode = 'suggesting' | 'suggested' | 'editing';
 
 export interface UsernamePickerProps {
   /** The account's current username (edit mode), or null (first run). */
   current: string | null;
-  /** For email-derived suggestions. */
-  email: string | null;
   /** Called after set_username returned 'ok' and the ✓ has shown. */
   onSaved: (username: string) => void;
 }
 
-export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps) {
+export function UsernamePicker({ current, onSaved }: UsernamePickerProps) {
   const { reduced, duration, stagger } = useMotion();
   // Edit mode starts on the current name ("unchanged": nothing to save yet).
   const [state, dispatch] = useReducer(usernameReducer, initialUsernameState, (init) =>
@@ -57,13 +75,61 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
   );
   const [value, setValue] = useState(current ?? '');
   const view = usernameView(state);
-  const emailLocal = email ? email.split('@')[0] : null;
   const latest = useRef(state);
   latest.current = state;
+  const inputRef = useRef<TextInput>(null);
+  const firstRun = current === null;
+  const confirmed = useSyncExternalStore(subscribeEmailJustConfirmed, isEmailJustConfirmed);
+  const [mode, setMode] = useState<Mode>(firstRun && !CAPTURE.usernamePrefill ? 'suggesting' : 'editing');
+  // The suggested tag's size: the system size, shrunk only as needed (fitText.ts). null = the field's own.
+  const { fontScale } = useWindowDimensions();
+  const systemSize = type.body.fontSize * fontScale;
+  const [fieldWidth, setFieldWidth] = useState(0);
+  const [tagWidth, setTagWidth] = useState(0);
+  const suggestedFit = mode === 'suggested' && tagWidth > 0 && fieldWidth > 0 ? fittedFontSize(systemSize, tagWidth, fieldWidth) : undefined;
+
+  // First run: ask the server for a free gamertag. A fixture capture is deterministic (a seeded
+  // source); a real run is random. The generated name is checked by check_usernames BEFORE it is
+  // shown, so Keep never offers one nobody checked.
+  useEffect(() => {
+    if (mode !== 'suggesting') return;
+    let cancelled = false;
+    const rng = SHELL_FIXTURE ? seededRng(151) : Math.random;
+    const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), SUGGEST_TIMEOUT_MS));
+    void Promise.race([pickAvailableGamertag(rng, checkUsernames), timeout]).then((tag) => {
+      if (cancelled) return;
+      if (!tag) {
+        setMode('editing');
+        return;
+      }
+      setValue(tag);
+      dispatch({ type: 'suggested', value: tag });
+      setMode('suggested');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode]);
+
+  // The suggestion lost a race (someone took it between the check and Keep): another one, silently.
+  // Any other refusal shows the plain form with its reason.
+  useEffect(() => {
+    if (mode !== 'suggested') return;
+    if (state.kind === 'taken') setMode('suggesting');
+    else if (state.kind === 'server-invalid' || state.kind === 'check-failed') setMode('editing');
+  }, [mode, state.kind]);
+
+  /** Change: the field opens for typing, starting from the suggestion. */
+  function startEditing() {
+    setMode('editing');
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
 
   // DEV captures only: start with a name typed in (e.g. a taken one), as if the user had.
   useEffect(() => {
     if (CAPTURE.usernamePrefill && current === null) onChange(CAPTURE.usernamePrefill);
+    // ...and the EMAIL CONFIRMED chip, raised through the real store so keeping the name clears it.
+    if (CAPTURE.confirmed === 'chip') setEmailJustConfirmed(true);
     // Mount-only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -91,7 +157,7 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
   }, [state.seq, state.kind]);
 
   async function suggestFor(candidate: string): Promise<string[]> {
-    const offered = usernameSuggestions(candidate, emailLocal, new Date().getFullYear());
+    const offered = usernameSuggestions(candidate, Math.random, new Date().getFullYear());
     const rows = offered.length ? await checkUsernames(offered) : null;
     return rows ? pickAvailable(offered, rows) : [];
   }
@@ -113,13 +179,19 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
     }
     const suggestions = result === 'taken' ? await suggestFor(candidate) : undefined;
     dispatch({ type: 'submit-result', seq, result, suggestions });
-    if (result === 'ok') setTimeout(() => onSaved(candidate), duration.quick);
+    if (result === 'ok') {
+      // The chip describes THIS sign-in; keeping the name ends it (lib/auth/emailConfirmed.ts).
+      setEmailJustConfirmed(false);
+      setTimeout(() => onSaved(candidate), duration.quick);
+    }
   }
 
   const buttonStatus: ButtonStatus = state.kind === 'submitting' ? 'loading' : state.kind === 'saved' ? 'done' : 'idle';
 
+  const picking = mode !== 'editing';
   return (
     <>
+      {firstRun && confirmed ? <EmailConfirmedChip /> : null}
       <View style={styles.heading}>
         <ScreenTitle>Pick a username</ScreenTitle>
         <Text variant="body" tone="secondary">
@@ -127,9 +199,24 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
         </Text>
       </View>
 
+      {/* The probe: the suggested tag's one-line width at the SYSTEM size, never shown. */}
+      {mode === 'suggested' ? (
+        <View style={styles.probeBox} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Text
+            variant="body"
+            allowFontScaling={false}
+            numberOfLines={1}
+            style={[styles.probe, { fontSize: systemSize }]}
+            onTextLayout={(e) => setTagWidth(e.nativeEvent.lines[0]?.width ?? 0)}
+          >
+            {value}
+          </Text>
+        </View>
+      ) : null}
       <Field
+        ref={inputRef}
         label="Username"
-        value={value}
+        value={mode === 'suggesting' ? '' : value}
         onChangeText={onChange}
         autoCapitalize="none"
         autoCorrect={false}
@@ -137,11 +224,19 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
         textContentType="nickname"
         returnKeyType="done"
         onSubmitEditing={onContinue}
-        autoFocus
+        autoFocus={mode === 'editing' && !firstRun}
+        editable={!picking}
+        chosen={mode === 'suggested'}
+        // A suggested name is the thing being kept, so it shows whole at every text size: the system size,
+        // shrunk only as far as THIS tag needs to stay on one line (22pt floor, lib/shell/fitText.ts).
+        // Typing keeps the system scale.
+        inputFontSize={suggestedFit}
+        onLayout={(e) => setFieldWidth(e.nativeEvent.layout.width)}
         maxLength={40}
         error={view.error}
-        trailing={<UsernameStatusIcon state={view.trailing} />}
-        rules={view.rules}
+        helper={firstRun && picking ? HELPER_CHANGE_LATER : undefined}
+        trailing={<UsernameStatusIcon state={mode === 'suggesting' ? 'checking' : view.trailing} />}
+        rules={picking ? undefined : view.rules}
       />
 
       {view.note ? (
@@ -172,7 +267,12 @@ export function UsernamePicker({ current, email, onSaved }: UsernamePickerProps)
         </View>
       ) : null}
 
-      {view.continueShown ? (
+      {picking ? (
+        <View style={styles.keepRow}>
+          <Button label="Keep" status={buttonStatus} onPress={onContinue} disabled={mode === 'suggesting' || (!view.canContinue && buttonStatus === 'idle')} />
+          <Button label="Change" variant="secondary" onPress={startEditing} />
+        </View>
+      ) : view.continueShown ? (
         <Button
           label="Continue"
           status={buttonStatus}
@@ -196,6 +296,17 @@ export function UsernamePickerExit({ label, onPress }: { label: string; onPress:
 }
 
 const styles = StyleSheet.create({
+  // A zero-height box with the 4000pt probe inside: it measures and is never seen or widens the page.
+  probeBox: {
+    height: 0,
+    overflow: 'hidden',
+  },
+  probe: {
+    position: 'absolute',
+    opacity: 0,
+    width: 4000,
+    fontFamily: type.body.fontFamily,
+  },
   heading: {
     gap: space[2],
   },
@@ -205,6 +316,9 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: space[3],
+  },
+  keepRow: {
     gap: space[3],
   },
   exit: {

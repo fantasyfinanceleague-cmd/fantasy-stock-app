@@ -31,17 +31,21 @@ export interface FieldProps extends Omit<TextInputProps, 'style' | 'placeholderT
   rules?: FieldRule[];
   /** Right-hand slot inside the box (the username availability state). */
   trailing?: ReactNode;
+  /** Drawn as chosen: the 2pt accent edge a focused field has, without focus (the pre-filled username, W4). */
+  chosen?: boolean;
+  /** An explicit text size (and no system scaling): a fitted value, e.g. a suggested username shrunk to stay on one line. */
+  inputFontSize?: number;
 }
 
 export const Field = forwardRef<TextInput, FieldProps>(function Field(
-  { label, error, invalid = false, helper, rules, trailing, onFocus, onBlur, ...input },
+  { label, error, invalid = false, helper, rules, trailing, chosen = false, inputFontSize, onFocus, onBlur, ...input },
   ref
 ) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const inError = !!error || invalid;
-  const emphasised = inError || focused;
-  const borderColor = inError ? colors.danger : focused ? colors.accent : colors.borderStrong;
+  const emphasised = inError || focused || chosen;
+  const borderColor = inError ? colors.danger : focused || chosen ? colors.accent : colors.borderStrong;
 
   return (
     <View style={styles.field}>
@@ -74,7 +78,8 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.input, { color: colors.text }]}
+          style={[styles.input, { color: colors.text }, inputFontSize ? { fontSize: inputFontSize } : null]}
+          allowFontScaling={inputFontSize ? false : undefined}
           {...input}
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}

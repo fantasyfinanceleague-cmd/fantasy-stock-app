@@ -141,15 +141,17 @@ Deno.test('History and Playoffs say when their read failed, with Try again that 
   assert(SOURCES['components/league/LeagueStates.tsx'].includes('<Button label={TRY_AGAIN} variant="secondary" size="sm" onPress={onRetry} />'));
 });
 
-Deno.test('with no leagues, League is Home\'s own empty state, and both buttons go somewhere', () => {
+Deno.test('with no leagues, League is the shared no-league state (same words as Home), and both buttons go somewhere', () => {
   const league = SOURCES['app/(tabs)/league.tsx'];
   assert(!code(league).includes('Standings are on the way'));
   assert(!code(league).includes('in the next update'));
-  assert(league.includes('heading="No leagues yet"'));
-  assert(league.includes("onAction={() => router.push('/create-league')}"));
-  assert(league.includes("onSecondaryAction={() => router.push('/join-league')}"));
+  assert(league.includes('<NoLeagueState title="League"'));
   const home = SOURCES['app/(tabs)/index.tsx'];
-  assert(home.includes('heading="No leagues yet"') && home.includes('message="Create or join a league to get started."'));
+  assert(home.includes('<NoLeagueState title="Home"'));
+  const shared = SOURCES['components/shell/NoLeagueState.tsx'];
+  assert(shared.includes("heading: 'No leagues yet'") && shared.includes("message: 'Create or join a league to get started.'"));
+  assert(shared.includes("onAction={() => router.push('/create-league')}"));
+  assert(shared.includes("onSecondaryAction={() => router.push('/join-league')}"));
 });
 
 // ── The segment tabs ─────────────────────────────────────────────────────────────

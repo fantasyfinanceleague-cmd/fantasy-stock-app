@@ -9,6 +9,7 @@ import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Text } from '@/components/sp/Text';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
+import { LeagueListGate } from '@/components/shell/NoLeagueState';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { GroupHead, PlayerCard, RosterRow, Scoreboard, type PlayerCardOwnership } from '@/components/sp/gn';
@@ -56,7 +57,16 @@ import { marketOpensLabel } from '@/lib/money/marketOpensLabel';
 // the numbers on the rows are live and sum to the score. Tapping any stock, yours or
 // theirs, opens its player card as a sheet. FINAL: the FinalBanner over the same rows, from
 // the posted week's own per-stock rows (shown only when they reconcile to the cent).
-export default function MatchupScreen() {
+export default function MatchupTab() {
+  // Onboarding W4: no leagues is the one shared state on every tab (it was a blank tab here).
+  return (
+    <LeagueListGate title="Matchup">
+      <MatchupScreen />
+    </LeagueListGate>
+  );
+}
+
+function MatchupScreen() {
   const { activeLeagueId, activeLeague, refresh } = useLeagueContext();
   const { colors } = useTheme();
   const m = useMatchup(activeLeagueId);

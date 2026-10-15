@@ -8,10 +8,10 @@ import { useSession } from '@/lib/SessionProvider';
 // there. Saving updates the session, which lifts the gate — the navigator
 // then opens the app (and any deep link waiting since sign-in).
 export default function PickUsernameScreen() {
-  const { user, setUsernameLocal, signOut } = useSession();
+  const { setUsernameLocal, signOut } = useSession();
   return (
     <AuthScaffold>
-      <UsernamePicker current={null} email={user?.email ?? null} onSaved={setUsernameLocal} />
+      <UsernamePicker current={null} onSaved={setUsernameLocal} />
       <UsernamePickerExit label="Sign out" onPress={signOut} />
     </AuthScaffold>
   );

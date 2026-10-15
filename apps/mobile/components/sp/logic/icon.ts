@@ -7,6 +7,8 @@ export type IconName =
   | 'check' | 'circle' | 'info' | 'close' | 'search' | 'add' | 'remove' | 'share'
   | 'trophy' | 'lock' | 'mail' | 'alert' | 'star' | 'starFilled'
   | 'checkCircle' | 'pending'
+  // The notifications ask's bell (onboarding W4).
+  | 'bell'
   // The tab bar's four tabs: outline when idle, filled when selected (TabIcon).
   | 'tabHome' | 'tabHomeSelected' | 'tabMatchup' | 'tabMatchupSelected'
   | 'tabLeague' | 'tabLeagueSelected' | 'tabPortfolio' | 'tabPortfolioSelected';
@@ -39,6 +41,8 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   // A done state (reset-password's "Password updated") and a wait ("One moment"; gn-sweep).
   checkCircle: 'checkmark-circle-outline',
   pending: 'hourglass-outline',
+  // The notifications ask (W4): the bell on its disc.
+  bell: 'notifications-outline',
   // The tab bar (Design Lead ruling 2026-09-29): home, the line chart, the trophy, the bars.
   // The filled glyph is the selected state only, the one exception to "outline by default".
   tabHome: 'home-outline',

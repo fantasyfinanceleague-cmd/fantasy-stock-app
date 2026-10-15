@@ -6,6 +6,7 @@ import { space } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { Icon } from '@/components/sp/Icon';
 import { PhasePlaceholder } from '@/components/shell/PhasePlaceholder';
+import { LeaguesFailedState, NoLeagueState } from '@/components/shell/NoLeagueState';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -442,38 +443,10 @@ export default function HomeScreen() {
 
   // The league list didn't load (gn-sweep): its own state, with Try again — never "No
   // leagues yet" to someone whose read failed.
-  if (fallback === 'failed') {
-    return (
-      <PhasePlaceholder
-        title="Home"
-        showAvatar
-        icon={() => <Icon name="alert" size="title" tone="text2" />}
-        heading={LEAGUES_LOAD_FAILED}
-        message={MONEY_COPY.loadRetryMessage}
-        actionLabel={MONEY_COPY.tryAgain}
-        onAction={refresh}
-        onRefresh={refresh}
-      />
-    );
-  }
+  if (fallback === 'failed') return <LeaguesFailedState title="Home" onRefresh={refresh} />;
 
-  // A read that SUCCEEDED with no leagues.
-  if (fallback === 'empty') {
-    return (
-      <PhasePlaceholder
-        title="Home"
-        showAvatar
-        icon={() => <Icon name="trophy" size="title" tone="text2" />}
-        heading="No leagues yet"
-        message="Create or join a league to get started."
-        actionLabel="Create a league"
-        onAction={() => router.push('/create-league')}
-        secondaryActionLabel="Join with a code"
-        onSecondaryAction={() => router.push('/join-league')}
-        onRefresh={refresh}
-      />
-    );
-  }
+  // A read that SUCCEEDED with no leagues: the one no-league state, the same on every tab.
+  if (fallback === 'empty') return <NoLeagueState title="Home" onRefresh={refresh} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

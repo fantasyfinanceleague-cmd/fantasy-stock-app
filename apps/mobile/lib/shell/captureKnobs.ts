@@ -11,8 +11,13 @@
  *   EXPO_PUBLIC_JOIN_AUTO=find|join        Join presses Find league (and then Join) by itself
  *   EXPO_PUBLIC_SIGNUP_PAUSED=1            Create account opens on the signups-paused refusal
  *   EXPO_PUBLIC_USERNAME_PREFILL=<name>    the username picker starts with this typed in
+ *   EXPO_PUBLIC_PUSH_ASK=1                 the notifications ask is due (a simulator has no push token)
+ *   EXPO_PUBLIC_INVITE_FIXTURE=<state>     the signed-out invite arrival (found|solo|full|drafting|over|loading|not_found|unavailable)
+ *   EXPO_PUBLIC_CONFIRMED=chip|notice      the username screen shows the EMAIL CONFIRMED chip / Sign in shows
+ *                                          the confirm-failed line (no email link can be opened on a simulator)
  */
 import type { CreateStep } from '../game/createLeagueSteps';
+import { INVITE_FIXTURES, type InviteFixtureKind } from '../invite/inviteFixture';
 
 export type CreateFixture = CreateStep | 'tiers' | 'done' | 'done_no_date';
 const CREATE_FIXTURES: readonly CreateFixture[] = ['league', 'season', 'draft', 'stakes', 'tiers', 'done', 'done_no_date'];
@@ -24,9 +29,12 @@ export interface CaptureKnobs {
   joinAuto: 'find' | 'join' | null;
   signupPaused: boolean;
   usernamePrefill: string | null;
+  pushAsk: boolean;
+  confirmed: 'chip' | 'notice' | null;
+  invite: InviteFixtureKind | null;
 }
 
-export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null };
+export const NO_KNOBS: CaptureKnobs = { onboardingCard: null, create: null, joinAuto: null, signupPaused: false, usernamePrefill: null, pushAsk: false, confirmed: null, invite: null };
 
 export interface CaptureEnv {
   card?: string;
@@ -34,6 +42,9 @@ export interface CaptureEnv {
   joinAuto?: string;
   signupPaused?: string;
   usernamePrefill?: string;
+  pushAsk?: string;
+  confirmed?: string;
+  invite?: string;
 }
 
 /** Only a development build reads anything; an unrecognised value is ignored, never guessed. */
@@ -49,6 +60,9 @@ export function parseCaptureKnobs(isDev: boolean, env: CaptureEnv): CaptureKnobs
     joinAuto,
     signupPaused: env.signupPaused === '1',
     usernamePrefill: prefill,
+    pushAsk: env.pushAsk === '1',
+    invite: (INVITE_FIXTURES as readonly string[]).includes(env.invite ?? '') ? (env.invite as InviteFixtureKind) : null,
+    confirmed: env.confirmed === 'chip' || env.confirmed === 'notice' ? env.confirmed : null,
   };
 }
 

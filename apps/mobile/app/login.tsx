@@ -13,11 +13,13 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { BrandLockup } from '@/components/shell/BrandBars';
 import { ConfirmEmailSent } from '@/components/shell/ConfirmEmailSent';
+import { ConfirmedEmailNotice } from '@/components/shell/ConfirmedEmailNotice';
 import { Field } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { SocialSignIn } from '@/components/shell/SocialSignIn';
 import { getAuthErrorMessage, isEmailNotConfirmedError } from '@/lib/authErrors';
 import { useSession } from '@/lib/SessionProvider';
+import { setConfirmFailedNotice } from '@/lib/auth/confirmFailedNotice';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
 import { useFixtureInitialRoute } from '@/lib/shell/fixtureRoute';
 
@@ -55,6 +57,8 @@ export default function SignInScreen() {
 
   async function handleSignIn() {
     if (status !== 'idle') return;
+    // "Your email is confirmed…" is for the first look; the next attempt clears it (W4).
+    setConfirmFailedNotice(false);
     if (!email || !password) {
       setError('Please enter email and password');
       return;
@@ -115,6 +119,7 @@ export default function SignInScreen() {
           Sign in to your league
         </Text>
       </View>
+      <ConfirmedEmailNotice />
       <SocialSignIn />
       <View style={styles.fields}>
         <Field
