@@ -2,22 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "5695d7bcb79a9c8f07a14dce191c31fdeed1efbf",
-    "commitShort": "5695d7bc",
+    "commit": "befa23320a172aa5ffd635fa6d4d89be24affa0b",
+    "commitShort": "befa2332",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/onboarding-w3-invite-links",
+    "branch": "feat/onboarding-w5-web-join",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-15T20:32:54Z",
-    "sourceHash": "sha256:f76d67d36ca9fc62cecb680b86d1b1fed0011976f6c60eb045c206bb4a69ce5b",
+    "timestamp": "2026-10-15T21:47:08Z",
+    "sourceHash": "sha256:28bc7cf0f69242742a79c5fb98e323c37dfd109034a88c03230cb68aeaf99969",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-14T00:15:55Z",
-    "ageHours": 44.3,
-    "ageDays": 1.8,
+    "ageHours": 45.5,
+    "ageDays": 1.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:8f78588be3cdb8423f7e1889c38392ff86e7be7144fd628f40f5039b8bc5f3f2",
@@ -9160,6 +9160,23 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.src.join.onboardingAuth",
+      "label": "onboardingAuth.ts",
+      "sublabel": "web/src/join/onboardingAuth.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/web/src/join/onboardingAuth.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.src.pages.Dashboard.jsx",
       "label": "Dashboard.jsx",
       "sublabel": "web/src/pages/Dashboard.jsx",
@@ -9183,23 +9200,6 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/pages/DraftPage.jsx",
-        "line": 1
-      }
-    },
-    {
-      "layer": "client",
-      "facts": {},
-      "db": null,
-      "declared": null,
-      "drift": [],
-      "annotation": null,
-      "verified": true,
-      "id": "ui.src.pages.JoinLeague.jsx",
-      "label": "JoinLeague.jsx",
-      "sublabel": "web/src/pages/JoinLeague.jsx",
-      "kind": "client-screen",
-      "source": {
-        "path": "apps/web/src/pages/JoinLeague.jsx",
         "line": 1
       }
     },
@@ -17788,6 +17788,69 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.src.join.onboardingAuth->fn.join-league",
+      "from": "ui.src.join.onboardingAuth",
+      "to": "fn.join-league",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('join-league')",
+      "callSites": [
+        "apps/web/src/join/onboardingAuth.ts:232"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.join.onboardingAuth->fn.preview-league",
+      "from": "ui.src.join.onboardingAuth",
+      "to": "fn.preview-league",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('preview-league')",
+      "callSites": [
+        "apps/web/src/join/onboardingAuth.ts:220"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.join.onboardingAuth->pg.check_usernames",
+      "from": "ui.src.join.onboardingAuth",
+      "to": "pg.check_usernames",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_usernames')",
+      "callSites": [
+        "apps/web/src/join/onboardingAuth.ts:194"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.join.onboardingAuth->pg.set_username",
+      "from": "ui.src.join.onboardingAuth",
+      "to": "pg.set_username",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('set_username')",
+      "callSites": [
+        "apps/web/src/join/onboardingAuth.ts:207"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.src.join.onboardingAuth->tbl.user_profiles",
+      "from": "ui.src.join.onboardingAuth",
+      "to": "tbl.user_profiles",
+      "protocol": "postgrest-select",
+      "payload": ".from('user_profiles').select('username')",
+      "columns": [
+        "username"
+      ],
+      "callSites": [
+        "apps/web/src/join/onboardingAuth.ts:179"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.src.pages.Dashboard.jsx->tbl.drafts",
       "from": "ui.src.pages.Dashboard.jsx",
       "to": "tbl.drafts",
@@ -18020,30 +18083,6 @@
       "columns": [],
       "callSites": [
         "apps/web/src/pages/DraftPage.jsx:1128"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.JoinLeague.jsx->fn.join-league",
-      "from": "ui.src.pages.JoinLeague.jsx",
-      "to": "fn.join-league",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('join-league')",
-      "callSites": [
-        "apps/web/src/pages/JoinLeague.jsx:49"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.src.pages.JoinLeague.jsx->fn.preview-league",
-      "from": "ui.src.pages.JoinLeague.jsx",
-      "to": "fn.preview-league",
-      "protocol": "https-invoke",
-      "payload": "functions.invoke('preview-league')",
-      "callSites": [
-        "apps/web/src/pages/JoinLeague.jsx:27"
       ]
     },
     {
@@ -20178,7 +20217,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 272,
-    "edges": 651,
+    "edges": 654,
     "flows": 7,
     "drift": 32,
     "driftHigh": 3,
@@ -20243,12 +20282,12 @@
       "apps/web/src/components/TradeModal.jsx:63 -> quote",
       "apps/web/src/components/TradeModal.jsx:82 -> symbol-name",
       "apps/web/src/context/PriceContext.jsx:99 -> quote",
+      "apps/web/src/join/onboardingAuth.ts:220 -> preview-league",
+      "apps/web/src/join/onboardingAuth.ts:232 -> join-league",
       "apps/web/src/pages/DraftPage.jsx:103 -> quote",
       "apps/web/src/pages/DraftPage.jsx:640 -> validate-and-record-pick",
       "apps/web/src/pages/DraftPage.jsx:857 -> validate-and-record-pick",
-      "apps/web/src/pages/DraftPage.jsx:887 -> validate-and-record-pick",
-      "apps/web/src/pages/JoinLeague.jsx:27 -> preview-league",
-      "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
+      "apps/web/src/pages/DraftPage.jsx:887 -> validate-and-record-pick"
     ],
     "rpcs": [
       "apps/mobile/app/(tabs)/league.tsx:144 -> renew_league (via seamRpc)",
@@ -20283,6 +20322,8 @@
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
       "apps/web/src/context/UserProfilesContext.jsx:30 -> get_visible_profiles",
+      "apps/web/src/join/onboardingAuth.ts:194 -> check_usernames",
+      "apps/web/src/join/onboardingAuth.ts:207 -> set_username",
       "apps/web/src/pages/DraftPage.jsx:379 -> get_draft_order",
       "apps/web/src/pages/DraftPage.jsx:392 -> get_real_user_ids",
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
@@ -20399,6 +20440,7 @@
       "apps/mobile/lib/usePortfolio.ts:128 -> trades.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",
+      "apps/web/src/join/onboardingAuth.ts:179 -> user_profiles.select",
       "apps/web/src/pages/Dashboard.jsx:132 -> drafts.select",
       "apps/web/src/pages/Dashboard.jsx:144 -> trades.select",
       "apps/web/src/pages/Dashboard.jsx:215 -> matchups.select",
