@@ -232,4 +232,7 @@ Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is 
   assert(/settingRowWrap: \{\s*flexWrap: 'wrap',/.test(src));
   // flex: 1 has a basis of 0, which can never wrap; the wrapping label sizes to its content
   assert(/growWrap: \{[^}]*flexBasis: 'auto'/.test(src));
+  // a wrapping row's lines hug the top; alignContent keeps the single line centred in the row's minHeight, so nothing
+  // moves at normal size (found by the Large pixel diff: every static row's text sat ~1pt high without it)
+  assert(/settingRowWrap: \{[^}]*alignContent: 'center'/.test(src));
 });

@@ -220,6 +220,9 @@ const styles = StyleSheet.create({
   // goes to the right edge, or under the label when it does not fit beside it.
   settingRowWrap: {
     flexWrap: 'wrap',
+    // A wrapping row's lines hug the top (alignContent flex-start), where the one-line row centred in its minHeight:
+    // keep a single line centred so nothing moves at normal size.
+    alignContent: 'center',
     columnGap: space[3],
     rowGap: space[1],
   },

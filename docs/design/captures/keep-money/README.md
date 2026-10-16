@@ -57,6 +57,17 @@ pins that those files carry no `keepMoney`.
 `keepMoney` (`L-join-preview-{on,off}.png`) and the Renewal review's committed code against this change, layout included
 (`L-renewal-{HEAD,on}.png`): **0 differing pixels** in both.
 
+**Large, 17e, light, `origin/main` `3a1e3e85` against this branch (the shared `SettingRow` check; `L-ab/`).** Same sim,
+cold launch per variant, the 18 changed app files swapped for their `3a1e3e85` versions for the base run (bundle
+checked for `keepMoney` / `settingRowWrap`). Changed pixels: Create-league summary **0**; Renewal review (top and the
+Stakes row) **0 / 0**; League settings' static rows (Type, Season, Playoff teams, Commissioner) and its top **0**; the
+SlotBuilder with a slot added **0**; the League tab's League settings row **0**. **The first run was NOT 0:** every static
+row's text sat about 1pt higher (19,426 pixels over the Create summary). Cause: `flexWrap` makes a wrapping row's lines hug
+the top (`alignContent` flex-start), where the one-line row centred its content in `minHeight: 44`. Fixed with
+`alignContent: 'center'` on `settingRowWrap` (pinned, one more mutation, killed). One diff of 1,978 pixels on the League tab
+(avatar and two tab labels) was a first-run artefact of the BASE shot: re-shooting base gives 0 against the new code, and the
+two base shots differ from each other by the same 1,978.
+
 ## Not captured, and why
 
 - **The trade review panel and the stock sheet's sell summary / Review button at XXXL.** The stock sheet's body has no
