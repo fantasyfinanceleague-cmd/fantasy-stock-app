@@ -18,6 +18,9 @@ export const THIS_WEEK_HREF = '/(tabs)/matchup' as const;
 export const OPENS_MATCHUP_HINT = 'Opens Matchup';
 /** Standings opens League on Standings, even if League was left on another segment. */
 export const STANDINGS_HREF = { pathname: '/(tabs)/league', params: { segment: 'standings' } } as const;
+/** "See the bracket" (an eliminated player's card) opens League on the Playoffs segment, not on whichever segment
+ * League was left on (W8 tap-through: it landed on Standings, with no bracket in view). */
+export const BRACKET_HREF = { pathname: '/(tabs)/league', params: { segment: 'playoffs' } } as const;
 
 export type LeagueSegment = 'standings' | 'schedule' | 'playoffs' | 'history';
 const LEAGUE_SEGMENTS: readonly LeagueSegment[] = ['standings', 'schedule', 'playoffs', 'history'];

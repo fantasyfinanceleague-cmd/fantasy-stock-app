@@ -24,7 +24,7 @@ import { activeLeagueNow, activeLeagueOnContinue, completeInviteJoin, runInviteP
 import { pendingInvite } from '@/lib/invite/pendingInviteStore';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
-import { dotStartsLine, keepDots } from '@/lib/game/keepDots';
+import { keepDots, keepDotsIn } from '@/lib/game/keepDots';
 import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
@@ -558,7 +558,7 @@ function Joined({ name, draftDate, leagueId, fixtureLeague, onContinue }: { name
         </Animated.View>
         <FittedTitle lead={v.lead} name={v.name} label={v.title} />
         <Text variant="body" tone="secondary" maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={styles.centerText}>
-          {dotStartsLine(v.body)}
+          {keepDotsIn(v.body, v.when ?? '')}
         </Text>
         {rows.length > 0 ? (
           <Card style={[styles.rows, styles.joinedRows]}>

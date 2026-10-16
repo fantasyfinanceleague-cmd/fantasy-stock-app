@@ -36,7 +36,6 @@ import { INVITE_FIXTURES, inviteFixture } from '../lib/invite/inviteFixture.ts';
 import { JOIN_COPY, blockMessage, previewView, type PreviewLeague } from '../lib/join/joinPreview.ts';
 import { parseCaptureKnobs } from '../lib/shell/captureKnobs.ts';
 import { GAMERTAG_FLOOR_PT, NAME_MIN_SCALE, fittedFontSize, nameLines } from '../lib/shell/fitText.ts';
-import { dotStartsLine } from '../lib/game/keepDots.ts';
 import { dismissesOnFirstPick } from '../lib/shell/firstTimeTipPolicy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
@@ -554,15 +553,7 @@ Deno.test('gate 5: the arrival\'s display lines push out a lone last word ("leag
   assert(code(SOURCES['components/shell/FittedTitle.tsx']).includes('lineBreakStrategyIOS="push-out"'));
 });
 
-Deno.test('gate 6: a "·" starts a line and never ends one (the space AFTER it is no-break, the one before may break)', () => {
-  assertEquals(dotStartsLine('The draft is Sat, Oct 10 · 7:00 PM ET. The draft order is set an hour before.'), 'The draft is Sat, Oct 10 ·\u00a07:00 PM ET. The draft order is set an hour before.');
-  assertEquals(dotStartsLine('a · b · c'), 'a ·\u00a0b ·\u00a0c');
-  assertEquals(dotStartsLine('no dots'), 'no dots');
-  // The break opportunities: before the dot yes, after it never.
-  const out = dotStartsLine('Sat, Oct 10 · 7:00 PM ET');
-  assert(out.includes('10 ·') && !out.includes('· 7'), 'a normal space before, a no-break space after');
-  assert(code(SOURCES['app/join-league.tsx']).includes('{dotStartsLine(v.body)}'));
-});
+// gate 6 (the dot rule) moved to dot-rule.test.ts: ONE rule app-wide, keepDots.
 
 // ── The draft-room first-time tip (the Planner, 2026-10-15) ──────────────────────
 

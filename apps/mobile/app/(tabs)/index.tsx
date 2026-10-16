@@ -39,7 +39,7 @@ import {
   MISSED_PLAYOFFS_MESSAGE, THIS_WEEK_TAG, heroWeekOrRoundLabel, playoffPendingLine,
   standingsThroughWeek,
 } from '@/lib/home/homeCopy';
-import { seasonOverPrimary } from '@/lib/home/calmHome';
+import { BRACKET_HREF, seasonOverPrimary } from '@/lib/home/calmHome';
 import { resultFromGains } from '@/lib/home/weekMarks';
 
 /** Run it back stays off until its backend (PR #94) is live: see runItBackEnabled. */
@@ -273,7 +273,7 @@ function HomeBody({
     middleCard = <PhaseMessageCard lines={[byeToRoundLabel(phase.round)]} />;
   } else if (phase.kind === 'eliminated') {
     middleCard = (
-      <PhaseMessageCard lines={[eliminatedLabel(phase.round)]} actionLabel={SEE_THE_BRACKET} onAction={() => router.push('/(tabs)/league')} />
+      <PhaseMessageCard lines={[eliminatedLabel(phase.round)]} actionLabel={SEE_THE_BRACKET} onAction={() => router.push(BRACKET_HREF)} />
     );
   } else if (phase.kind === 'missed_playoffs') {
     middleCard = <PhaseMessageCard lines={[MISSED_PLAYOFFS_MESSAGE]} />;

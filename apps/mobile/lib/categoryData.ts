@@ -5,6 +5,7 @@
 // validate-and-record-pick / record-trade edge functions.
 import { supabase } from './supabase';
 import { capacityLine, slotConfigIssues, slotIssueAway } from './game/slotBuilderCopy';
+import { countOrThrow, rowsOrThrow } from './readResult';
 
 export type StakeMode = 'fixed_notional' | 'price_tiers' | 'budget_cap';
 
@@ -108,12 +109,13 @@ export async function fetchSymbolCategories(
 }
 
 export async function fetchEnrichmentProgress(): Promise<{ enriched: number; total: number; partial: boolean }> {
-  const [{ count: total }, { count: enriched }] = await Promise.all([
+  const [totalRes, enrichedRes] = await Promise.all([
     supabase.from('symbols').select('symbol', { count: 'exact', head: true }).eq('active', true),
     supabase.from('symbols').select('symbol', { count: 'exact', head: true }).eq('active', true).not('enriched_at', 'is', null),
   ]);
-  const t = total || 0;
-  const e = enriched || 0;
+  // A FAILED read throws (the caller's catch says "couldn't check"); it never reads as "no symbols yet".
+  const t = countOrThrow(totalRes, 'symbols total');
+  const e = countOrThrow(enrichedRes, 'symbols enriched');
   // Coverage gate: mirrors @fantasy-stock/shared coverageIsPartial (Metro can't
   // import the workspace package). enriched/total are the LIVE symbol counts
   // queried just above; below 90% coverage the per-slot counts are suppressed.
@@ -135,33 +137,30 @@ export async function countSlotMatches(
     return q;
   };
 
-  if (!slot.categoryId) {
-    const { count } = await base();
-    return count || 0;
-  }
+  if (!slot.categoryId) return countOrThrow(await base(), 'slot count');
 
-  const [{ data: ruleRows }, { data: allOverrides }] = await Promise.all([
+  const [ruleRes, overrideRes] = await Promise.all([
     supabase.from('category_rules').select('gics_industry').eq('category_id', slot.categoryId),
     supabase.from('symbol_category_overrides').select('symbol, category_id'),
   ]);
-  const industries = (ruleRows || []).map((r) => r.gics_industry as string);
-  const overridden = [...new Set((allOverrides || []).map((o) => o.symbol as string))];
+  const ruleRows = rowsOrThrow(ruleRes, 'category rules');
+  const allOverrides = rowsOrThrow(overrideRes, 'category overrides');
+  const industries = ruleRows.map((r) => r.gics_industry as string);
+  const overridden = [...new Set(allOverrides.map((o) => o.symbol as string))];
   const catOverrideSyms = [
-    ...new Set((allOverrides || []).filter((o) => o.category_id === slot.categoryId).map((o) => o.symbol as string)),
+    ...new Set(allOverrides.filter((o) => o.category_id === slot.categoryId).map((o) => o.symbol as string)),
   ];
 
   let ruleCount = 0;
   if (industries.length > 0) {
     let q = base().in('gics_industry', industries);
     if (overridden.length > 0) q = q.not('symbol', 'in', `(${overridden.join(',')})`);
-    const { count } = await q;
-    ruleCount = count || 0;
+    ruleCount = countOrThrow(await q, 'rule count');
   }
 
   let ovrCount = 0;
   if (catOverrideSyms.length > 0) {
-    const { count } = await base().in('symbol', catOverrideSyms);
-    ovrCount = count || 0;
+    ovrCount = countOrThrow(await base().in('symbol', catOverrideSyms), 'override count');
   }
 
   return ruleCount + ovrCount;

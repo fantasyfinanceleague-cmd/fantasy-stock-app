@@ -15,7 +15,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 
 | Where | Element | Prop | Handler | Destination | Disabled when |
 |---|---|---|---|---|---|
-| `app/(tabs)/index.tsx:276` | PhaseMessageCard | onAction | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
+| `app/(tabs)/index.tsx:276` | PhaseMessageCard | onAction | `inline: () => router.push(BRACKET_HREF)` | route push(BRACKET_HREF) |  |
 | `app/(tabs)/league.tsx:192` | Button | onPress | `inline: () => void runItBack()` | fn runItBack |  |
 | `app/(tabs)/league.tsx:210` | SegmentTabs | onChange | `inline: (v) => setSegment(v)` | state setSegment |  |
 | `app/(tabs)/league.tsx:215` | LoadFailed | onRetry | `retry` | fn retry |  |
@@ -100,11 +100,11 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/LeaveLeagueSheets.tsx:110` | ChoiceRow | onPress | `inline: () => setPicked(c.userId)` | state setPicked | `busy` |
 | `components/game/LeaveLeagueSheets.tsx:118` | Button | onPress | `inline: () => (picked ? onTransfer(picked) : undefined)` | fn onTransfer | `!picked \|\| busy` |
 | `components/game/LeaveLeagueSheets.tsx:123` | Button | onPress | `onClose` | prop onClose (the caller's) | `busy` |
-| `components/game/QueueEditor.tsx:59` | Pressable | onPress | `inline: () => setQueue((q) => moveItem(q, i, -1))` | state setQueue |  |
-| `components/game/QueueEditor.tsx:64` | Pressable | onPress | `inline: () => setQueue((q) => moveItem(q, i, 1))` | state setQueue |  |
-| `components/game/QueueEditor.tsx:68` | Pressable | onPress | `inline: () => setQueue((q) => removeItem(q, i))` | state setQueue |  |
-| `components/game/QueueEditor.tsx:74` | SymbolSearchField | onSelect | `onSelect` | fn onSelect |  |
-| `components/game/QueueEditor.tsx:80` | Button | onPress | `inline: () => void save()` | fn save | `saving` |
+| `components/game/QueueEditor.tsx:64` | Pressable | onPress | `inline: () => setQueue((q) => moveItem(q, i, -1))` | state setQueue |  |
+| `components/game/QueueEditor.tsx:69` | Pressable | onPress | `inline: () => setQueue((q) => moveItem(q, i, 1))` | state setQueue |  |
+| `components/game/QueueEditor.tsx:73` | Pressable | onPress | `inline: () => setQueue((q) => removeItem(q, i))` | state setQueue |  |
+| `components/game/QueueEditor.tsx:79` | SymbolSearchField | onSelect | `onSelect` | fn onSelect |  |
+| `components/game/QueueEditor.tsx:85` | Button | onPress | `inline: () => void save()` | fn save | `saving` |
 | `components/game/RenewalAsk.tsx:107` | Button | onPress | `inline: () => void answer(response)` | fn answer | `busy !== null && busy !== response` |
 | `components/game/RenewalAsk.tsx:122` | Button | onPress | `inline: () => void answer(refusal.response)` | fn answer | `busy !== null` |
 | `components/game/RenewalChangeSheet.tsx:30` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |

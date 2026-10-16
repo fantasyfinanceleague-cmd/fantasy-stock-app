@@ -12,10 +12,9 @@
  * fixture needs to produce the same state to capture it), and search_delay
  * holds the loading state for a beat so the skeleton (E-2) is catchable in a
  * screenshot. searchFixtureBehavior (fixtureMode.ts) is the pure decision;
- * this hook only carries its own timer. Neither scenario's retry does
- * anything -- the fixture's answer is deterministic from the query alone, so
- * there is nothing a retry would change; it exists only so the error state's
- * "Try again" control has something to call.
+ * this hook only carries its own timer. Neither scenario's retry changes
+ * anything -- the fixture's answer is deterministic from the query alone --
+ * so the error state's "Try again" logs a dev line (never a silent tap).
  */
 import { useEffect, useMemo, useState } from 'react';
 
@@ -25,7 +24,11 @@ import { MONEY_FIXTURE_CONFIG } from './devFixture';
 import { filterStressSearchCatalog } from './stressFixture';
 import { searchFixtureBehavior } from './fixtureMode';
 
-const NOOP = () => {};
+/** The fixture's Try again: a dev log line, as the invite fixture's is (the real hook re-runs the search; the
+ * fixture's answer is the same every time, so a log is the only thing a tap can show). */
+function logRetry(): void {
+  console.warn('[dev] money search fixture: retry()');
+}
 
 export function useMoneyStockSearch(query: string, selectedSymbol: string): UseSymbolSearchResult {
   const live = useSymbolSearch(MONEY_FIXTURE_CONFIG ? '' : query, selectedSymbol);
@@ -50,10 +53,10 @@ export function useMoneyStockSearch(query: string, selectedSymbol: string): UseS
   if (!MONEY_FIXTURE_CONFIG) return live;
 
   if (behavior.kind === 'fail') {
-    return { results: [], loading: false, error: query.length > 0, retry: NOOP };
+    return { results: [], loading: false, error: query.length > 0, retry: logRetry };
   }
   if (behavior.kind === 'delay') {
-    return { results: delayedLoading ? [] : fixtureResults, loading: delayedLoading, error: false, retry: NOOP };
+    return { results: delayedLoading ? [] : fixtureResults, loading: delayedLoading, error: false, retry: logRetry };
   }
-  return { results: fixtureResults, loading: false, error: false, retry: NOOP };
+  return { results: fixtureResults, loading: false, error: false, retry: logRetry };
 }
