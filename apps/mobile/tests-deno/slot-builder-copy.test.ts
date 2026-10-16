@@ -73,7 +73,7 @@ Deno.test('short only when matches fall below teams × count', () => {
 });
 
 Deno.test('the failure and partial-data lines are the old ones', () => {
-  assertEquals(SLOT_CHECK_FAILED, 'Could not check availability — try again.');
+  assertEquals(SLOT_CHECK_FAILED, "Couldn't check availability. Try again.");
   assertEquals(SLOT_PARTIAL_NOTE.startsWith('Stock data is still loading (takes ~2 days after launch)'), true);
   assertEquals(SLOT_PARTIAL_NOTE.endsWith('Slot count math is still enforced.'), true);
 });

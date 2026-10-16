@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { HowItWorksSheet } from '@/components/shell/HowItWorksSheet';
 import { ProfileView } from '@/components/shell/ProfileView';
 import { useSession } from '@/lib/SessionProvider';
+import { profileBackLabel } from '@/lib/shell/profileBack';
 
-// Phase 3b-1 — Profile (spec row 11). Reached from the Home avatar.
+// Phase 3b-1 — Profile (spec row 11). Reached from the avatar on any tab; the back link names that tab (?from=, W8 F3).
 export default function ProfileScreen() {
   const { user, username, signOut } = useSession();
   const [howItWorks, setHowItWorks] = useState(false);
+  const { from } = useLocalSearchParams<{ from?: string | string[] }>();
   return (
-    <AuthScaffold back={{ label: 'Home', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) }}>
+    <AuthScaffold back={{ label: profileBackLabel(from), onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) }}>
       <ProfileView
         username={username}
         email={user?.email ?? null}

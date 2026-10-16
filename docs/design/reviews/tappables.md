@@ -108,16 +108,16 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/RenewalAsk.tsx:107` | Button | onPress | `inline: () => void answer(response)` | fn answer | `busy !== null && busy !== response` |
 | `components/game/RenewalAsk.tsx:122` | Button | onPress | `inline: () => void answer(refusal.response)` | fn answer | `busy !== null` |
 | `components/game/RenewalChangeSheet.tsx:30` | Pressable | onPress | `onClose` | prop onClose (the caller's) |  |
-| `components/game/RenewalReview.tsx:72` | Row | onPress | `inline: () => setEditingDate((v) => !v)` | state setEditingDate |  |
-| `components/game/RenewalReview.tsx:78` | DateTimePicker | onChange | `inline: (_, d) => { if (d && isFutureDraftDate(d.toISOString(), new ` | fn isFutureDraftDate |  |
-| `components/game/RenewalReview.tsx:85` | SegmentedControl | onChange | `setDraftOrder` | state setDraftOrder |  |
-| `components/game/RenewalReview.tsx:89` | SegmentedControl | onChange | `inline: (v) => setPickSeconds(Number(v))` | state setPickSeconds |  |
-| `components/game/RenewalReview.tsx:91` | Stepper | onChange | `inline: (d) => setWeeks((w) => stepSeasonWeeks(w, d, managers))` | state setWeeks |  |
-| `components/game/RenewalReview.tsx:92` | Stepper | onChange | `inline: (d) => setPlayoffTeams((t) => stepPlayoffTeams(t, d, manager` | state setPlayoffTeams |  |
-| `components/game/RenewalReview.tsx:98` | Button | onPress | `inline: () => void schedule()` | fn schedule | `!enabled` |
-| `components/game/RenewalReview.tsx:111` | Pressable | onPress | `inline: () => onChange(-1)` | fn onChange | `value <= min` |
-| `components/game/RenewalReview.tsx:115` | Pressable | onPress | `inline: () => onChange(1)` | fn onChange | `max !== undefined && value >= max` |
-| `components/game/RenewalReview.tsx:140` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
+| `components/game/RenewalReview.tsx:78` | Row | onPress | `inline: () => setEditingDate((v) => !v)` | state setEditingDate |  |
+| `components/game/RenewalReview.tsx:84` | DateTimePicker | onChange | `inline: (_, d) => { if (d) setDraftDate(d.toISOString()); }` | state setDraftDate |  |
+| `components/game/RenewalReview.tsx:92` | SegmentedControl | onChange | `setDraftOrder` | state setDraftOrder |  |
+| `components/game/RenewalReview.tsx:96` | SegmentedControl | onChange | `inline: (v) => setPickSeconds(Number(v))` | state setPickSeconds |  |
+| `components/game/RenewalReview.tsx:98` | Stepper | onChange | `inline: (d) => setWeeks((w) => stepSeasonWeeks(w, d, managers))` | state setWeeks |  |
+| `components/game/RenewalReview.tsx:99` | Stepper | onChange | `inline: (d) => setPlayoffTeams((t) => stepPlayoffTeams(t, d, manager` | state setPlayoffTeams |  |
+| `components/game/RenewalReview.tsx:105` | Button | onPress | `inline: () => void schedule()` | fn schedule | `!enabled` |
+| `components/game/RenewalReview.tsx:118` | Pressable | onPress | `inline: () => onChange(-1)` | fn onChange | `value <= min` |
+| `components/game/RenewalReview.tsx:122` | Pressable | onPress | `inline: () => onChange(1)` | fn onChange | `max !== undefined && value >= max` |
+| `components/game/RenewalReview.tsx:147` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/game/RenewalRoster.tsx:85` | Pressable | onPress | `inline: () => setChanging(true)` | state setChanging |  |
 | `components/game/RenewalRoster.tsx:107` | Pressable | onPress | `inline: () => runSheet(p)` | fn runSheet |  |
 | `components/game/SetupRows.tsx:80` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
@@ -209,7 +209,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ProfileView.tsx:120` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/PushPrePrompt.tsx:38` | Button | onPress | `onContinue` | prop onContinue (the caller's) |  |
 | `components/shell/PushPrePrompt.tsx:40` | Pressable | onPress | `onNotNow` | prop onNotNow (the caller's) | `status !== 'idle'` |
-| `components/shell/ShellHeader.tsx:57` | Pressable | onPress | `inline: () => router.push('/profile')` | route push('/profile') |  |
+| `components/shell/ShellHeader.tsx:60` | Pressable | onPress | `inline: () => router.push(profileHref(profileFromPathname(pathname))` | route push(profileHref(profileFromPathname(pathname))) |  |
 | `components/shell/ShellTabBar.tsx:108` | TabItem | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:109` | TabItem | onLongPress | `onLongPress` | prop onLongPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:151` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |

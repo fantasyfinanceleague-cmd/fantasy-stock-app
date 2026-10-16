@@ -114,7 +114,7 @@ export function slotShort(matches: number, leagueSize: number, slotCount: string
   return matches < leagueSize * (Number(slotCount) || 1);
 }
 
-export const SLOT_CHECK_FAILED = 'Could not check availability — try again.';
+export const SLOT_CHECK_FAILED = "Couldn't check availability. Try again.";
 
 export const SLOT_PARTIAL_NOTE =
   'Stock data is still loading (takes ~2 days after launch) — per-slot availability checks are paused until it completes. Slot count math is still enforced.';

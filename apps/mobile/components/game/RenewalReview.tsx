@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert, Pressable } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
@@ -10,12 +10,12 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
-import { teamsLine, canSchedule, buildRenewalSettings } from '@/lib/game/renewalReview';
+import { teamsLine, canSchedule, buildRenewalSettings, scheduleLine, DRAFT_ROW_UNSET } from '@/lib/game/renewalReview';
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { playoffLine } from '@/lib/playoffs';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { PICK_CLOCK_OPTIONS, DRAFT_ORDER_OPTIONS, isFutureDraftDate, stepSeasonWeeks, seasonWeeksFloor } from '@/lib/game/renewalPickers';
+import { PICK_CLOCK_OPTIONS, DRAFT_ORDER_OPTIONS, stepSeasonWeeks, seasonWeeksFloor } from '@/lib/game/renewalPickers';
 import { playoffStepperBounds, stepPlayoffTeams } from '@/lib/game/draftLobby';
 
 export interface RenewalReviewProps {
@@ -39,13 +39,19 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
   const [draftOrder, setDraftOrder] = useState<string>(settings.draft_order_mode);
   const [draftDate, setDraftDate] = useState<string | null>(settings.draft_date);
   const [editingDate, setEditingDate] = useState(false);
+  // `now` ticks, so a time that was future when picked and has since passed disables Schedule and says why.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 15_000);
+    return () => clearInterval(id);
+  }, []);
   const [weeks, setWeeks] = useState(settings.num_weeks);
   const [playoffTeams, setPlayoffTeams] = useState(settings.playoff_teams ?? 2);
   const managers = counts.in + counts.new;
   const teams = teamsLine(counts, inviteCode);
   const bye = byeNoticeCopy(managers, weeks);
   const playoffs = playoffLine(playoffTeams);
-  const enabled = canSchedule({ repliesPending, draftDate }) && !busy;
+  const enabled = canSchedule({ repliesPending, draftDate, now }) && !busy;
 
   const schedule = async () => {
     if (!enabled) return;
@@ -69,14 +75,15 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
       <Card style={styles.card}>
         <Row label="Who's in" value={`${counts.in} back · ${counts.new} new`} />
         <Row label="Teams" value={teams.value} sub={teams.sub} />
-        <Row label="Draft" value={draftDate ? new Date(draftDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Not set'} onPress={() => setEditingDate((v) => !v)} />
+        <Row label="Draft" value={draftDate ? new Date(draftDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : DRAFT_ROW_UNSET} onPress={() => setEditingDate((v) => !v)} />
         {editingDate ? (
           <DateTimePicker
             value={draftDate ? new Date(draftDate) : new Date()}
             mode="datetime"
             minimumDate={new Date()}
             onChange={(_, d) => {
-              if (d && isFutureDraftDate(d.toISOString(), new Date())) setDraftDate(d.toISOString());
+              // Any picked time is kept and shown; a past one disables Schedule with its reason (canSchedule).
+              if (d) setDraftDate(d.toISOString());
             }}
           />
         ) : null}
@@ -96,7 +103,7 @@ export function RenewalReview({ leagueId, inviteCode, counts, repliesPending, se
       </Card>
       {bye ? <Text variant="caption" tone="secondary">{bye}</Text> : null}
       <Button label="Schedule the draft" onPress={() => void schedule()} disabled={!enabled} />
-      <Text variant="caption" tone="secondary">Everyone who's in gets a notification. Season 1 stays in History.</Text>
+      <Text variant="caption" tone="secondary">{scheduleLine({ draftDate, now })}</Text>
     </View>
   );
 }

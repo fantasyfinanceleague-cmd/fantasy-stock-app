@@ -395,46 +395,47 @@ import s391 from '../lib/shell/leagueRead.ts' with { type: 'text' };
 import s392 from '../lib/shell/leagueSheet.ts' with { type: 'text' };
 import s393 from '../lib/shell/notificationRoute.ts' with { type: 'text' };
 import s394 from '../lib/shell/pendingRoute.ts' with { type: 'text' };
-import s395 from '../lib/shell/pushAsk.ts' with { type: 'text' };
-import s396 from '../lib/shell/pushAskPolicy.ts' with { type: 'text' };
-import s397 from '../lib/shell/readSequence.ts' with { type: 'text' };
-import s398 from '../lib/shell/resetCaptureView.ts' with { type: 'text' };
-import s399 from '../lib/shell/resumeTarget.ts' with { type: 'text' };
-import s400 from '../lib/shell/signInTransition.ts' with { type: 'text' };
-import s401 from '../lib/shell/themeDip.ts' with { type: 'text' };
-import s402 from '../lib/shell/usernameApi.ts' with { type: 'text' };
-import s403 from '../lib/shell/usernameMachine.ts' with { type: 'text' };
-import s404 from '../lib/shell/usernameRules.ts' with { type: 'text' };
-import s405 from '../lib/stakesLine.ts' with { type: 'text' };
-import s406 from '../lib/supabase.ts' with { type: 'text' };
-import s407 from '../lib/symbolSearch.ts' with { type: 'text' };
-import s408 from '../lib/time/etParts.ts' with { type: 'text' };
-import s409 from '../lib/time/marketWeek.ts' with { type: 'text' };
-import s410 from '../lib/useAuth.ts' with { type: 'text' };
-import s411 from '../lib/useLeagues.ts' with { type: 'text' };
-import s412 from '../lib/usePortfolio.ts' with { type: 'text' };
-import s413 from '../lib/useStockNames.ts' with { type: 'text' };
-import s414 from '../lib/useStockPrices.ts' with { type: 'text' };
-import s415 from '../lib/useSymbolSearch.ts' with { type: 'text' };
-import s416 from '../lib/uuid.ts' with { type: 'text' };
-import s417 from '../lib/weekStatus.ts' with { type: 'text' };
-import s418 from '../constants/Colors.ts' with { type: 'text' };
-import s419 from '../constants/brand.ts' with { type: 'text' };
-import s420 from '../constants/confirmEmailCopy.ts' with { type: 'text' };
-import s421 from '../constants/passwordRules.ts' with { type: 'text' };
-import s422 from '../constants/theme/colors.ts' with { type: 'text' };
-import s423 from '../constants/theme/index.ts' with { type: 'text' };
-import s424 from '../constants/theme/shadows.ts' with { type: 'text' };
-import s425 from '../constants/theme/spacing.ts' with { type: 'text' };
-import s426 from '../constants/theme/typography.ts' with { type: 'text' };
-import s427 from '../constants/tokens/color.ts' with { type: 'text' };
-import s428 from '../constants/tokens/contrastPairs.ts' with { type: 'text' };
-import s429 from '../constants/tokens/elevation.ts' with { type: 'text' };
-import s430 from '../constants/tokens/index.ts' with { type: 'text' };
-import s431 from '../constants/tokens/motion.ts' with { type: 'text' };
-import s432 from '../constants/tokens/radius.ts' with { type: 'text' };
-import s433 from '../constants/tokens/space.ts' with { type: 'text' };
-import s434 from '../constants/tokens/type.ts' with { type: 'text' };
+import s395 from '../lib/shell/profileBack.ts' with { type: 'text' };
+import s396 from '../lib/shell/pushAsk.ts' with { type: 'text' };
+import s397 from '../lib/shell/pushAskPolicy.ts' with { type: 'text' };
+import s398 from '../lib/shell/readSequence.ts' with { type: 'text' };
+import s399 from '../lib/shell/resetCaptureView.ts' with { type: 'text' };
+import s400 from '../lib/shell/resumeTarget.ts' with { type: 'text' };
+import s401 from '../lib/shell/signInTransition.ts' with { type: 'text' };
+import s402 from '../lib/shell/themeDip.ts' with { type: 'text' };
+import s403 from '../lib/shell/usernameApi.ts' with { type: 'text' };
+import s404 from '../lib/shell/usernameMachine.ts' with { type: 'text' };
+import s405 from '../lib/shell/usernameRules.ts' with { type: 'text' };
+import s406 from '../lib/stakesLine.ts' with { type: 'text' };
+import s407 from '../lib/supabase.ts' with { type: 'text' };
+import s408 from '../lib/symbolSearch.ts' with { type: 'text' };
+import s409 from '../lib/time/etParts.ts' with { type: 'text' };
+import s410 from '../lib/time/marketWeek.ts' with { type: 'text' };
+import s411 from '../lib/useAuth.ts' with { type: 'text' };
+import s412 from '../lib/useLeagues.ts' with { type: 'text' };
+import s413 from '../lib/usePortfolio.ts' with { type: 'text' };
+import s414 from '../lib/useStockNames.ts' with { type: 'text' };
+import s415 from '../lib/useStockPrices.ts' with { type: 'text' };
+import s416 from '../lib/useSymbolSearch.ts' with { type: 'text' };
+import s417 from '../lib/uuid.ts' with { type: 'text' };
+import s418 from '../lib/weekStatus.ts' with { type: 'text' };
+import s419 from '../constants/Colors.ts' with { type: 'text' };
+import s420 from '../constants/brand.ts' with { type: 'text' };
+import s421 from '../constants/confirmEmailCopy.ts' with { type: 'text' };
+import s422 from '../constants/passwordRules.ts' with { type: 'text' };
+import s423 from '../constants/theme/colors.ts' with { type: 'text' };
+import s424 from '../constants/theme/index.ts' with { type: 'text' };
+import s425 from '../constants/theme/shadows.ts' with { type: 'text' };
+import s426 from '../constants/theme/spacing.ts' with { type: 'text' };
+import s427 from '../constants/theme/typography.ts' with { type: 'text' };
+import s428 from '../constants/tokens/color.ts' with { type: 'text' };
+import s429 from '../constants/tokens/contrastPairs.ts' with { type: 'text' };
+import s430 from '../constants/tokens/elevation.ts' with { type: 'text' };
+import s431 from '../constants/tokens/index.ts' with { type: 'text' };
+import s432 from '../constants/tokens/motion.ts' with { type: 'text' };
+import s433 from '../constants/tokens/radius.ts' with { type: 'text' };
+import s434 from '../constants/tokens/space.ts' with { type: 'text' };
+import s435 from '../constants/tokens/type.ts' with { type: 'text' };
 
 // [path, text] pairs, not a path-keyed object literal (see the generator).
 const ENTRIES: [string, string][] = [
@@ -833,46 +834,47 @@ const ENTRIES: [string, string][] = [
   ['lib/shell/leagueSheet.ts', s392],
   ['lib/shell/notificationRoute.ts', s393],
   ['lib/shell/pendingRoute.ts', s394],
-  ['lib/shell/pushAsk.ts', s395],
-  ['lib/shell/pushAskPolicy.ts', s396],
-  ['lib/shell/readSequence.ts', s397],
-  ['lib/shell/resetCaptureView.ts', s398],
-  ['lib/shell/resumeTarget.ts', s399],
-  ['lib/shell/signInTransition.ts', s400],
-  ['lib/shell/themeDip.ts', s401],
-  ['lib/shell/usernameApi.ts', s402],
-  ['lib/shell/usernameMachine.ts', s403],
-  ['lib/shell/usernameRules.ts', s404],
-  ['lib/stakesLine.ts', s405],
-  ['lib/supabase.ts', s406],
-  ['lib/symbolSearch.ts', s407],
-  ['lib/time/etParts.ts', s408],
-  ['lib/time/marketWeek.ts', s409],
-  ['lib/useAuth.ts', s410],
-  ['lib/useLeagues.ts', s411],
-  ['lib/usePortfolio.ts', s412],
-  ['lib/useStockNames.ts', s413],
-  ['lib/useStockPrices.ts', s414],
-  ['lib/useSymbolSearch.ts', s415],
-  ['lib/uuid.ts', s416],
-  ['lib/weekStatus.ts', s417],
-  ['constants/Colors.ts', s418],
-  ['constants/brand.ts', s419],
-  ['constants/confirmEmailCopy.ts', s420],
-  ['constants/passwordRules.ts', s421],
-  ['constants/theme/colors.ts', s422],
-  ['constants/theme/index.ts', s423],
-  ['constants/theme/shadows.ts', s424],
-  ['constants/theme/spacing.ts', s425],
-  ['constants/theme/typography.ts', s426],
-  ['constants/tokens/color.ts', s427],
-  ['constants/tokens/contrastPairs.ts', s428],
-  ['constants/tokens/elevation.ts', s429],
-  ['constants/tokens/index.ts', s430],
-  ['constants/tokens/motion.ts', s431],
-  ['constants/tokens/radius.ts', s432],
-  ['constants/tokens/space.ts', s433],
-  ['constants/tokens/type.ts', s434],
+  ['lib/shell/profileBack.ts', s395],
+  ['lib/shell/pushAsk.ts', s396],
+  ['lib/shell/pushAskPolicy.ts', s397],
+  ['lib/shell/readSequence.ts', s398],
+  ['lib/shell/resetCaptureView.ts', s399],
+  ['lib/shell/resumeTarget.ts', s400],
+  ['lib/shell/signInTransition.ts', s401],
+  ['lib/shell/themeDip.ts', s402],
+  ['lib/shell/usernameApi.ts', s403],
+  ['lib/shell/usernameMachine.ts', s404],
+  ['lib/shell/usernameRules.ts', s405],
+  ['lib/stakesLine.ts', s406],
+  ['lib/supabase.ts', s407],
+  ['lib/symbolSearch.ts', s408],
+  ['lib/time/etParts.ts', s409],
+  ['lib/time/marketWeek.ts', s410],
+  ['lib/useAuth.ts', s411],
+  ['lib/useLeagues.ts', s412],
+  ['lib/usePortfolio.ts', s413],
+  ['lib/useStockNames.ts', s414],
+  ['lib/useStockPrices.ts', s415],
+  ['lib/useSymbolSearch.ts', s416],
+  ['lib/uuid.ts', s417],
+  ['lib/weekStatus.ts', s418],
+  ['constants/Colors.ts', s419],
+  ['constants/brand.ts', s420],
+  ['constants/confirmEmailCopy.ts', s421],
+  ['constants/passwordRules.ts', s422],
+  ['constants/theme/colors.ts', s423],
+  ['constants/theme/index.ts', s424],
+  ['constants/theme/shadows.ts', s425],
+  ['constants/theme/spacing.ts', s426],
+  ['constants/theme/typography.ts', s427],
+  ['constants/tokens/color.ts', s428],
+  ['constants/tokens/contrastPairs.ts', s429],
+  ['constants/tokens/elevation.ts', s430],
+  ['constants/tokens/index.ts', s431],
+  ['constants/tokens/motion.ts', s432],
+  ['constants/tokens/radius.ts', s433],
+  ['constants/tokens/space.ts', s434],
+  ['constants/tokens/type.ts', s435],
 ];
 
 /** Every app source file, by path relative to apps/mobile, as text. */
