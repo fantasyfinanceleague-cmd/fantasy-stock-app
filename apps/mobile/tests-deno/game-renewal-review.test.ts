@@ -19,8 +19,9 @@ Deno.test('the teams line is in + new, up to 16, and says more can join by code'
   assertEquals(teamsLine({ in: 4, new: 1 }, 'SCUD26'), { value: '5', sub: "Follows who's in, up to 16. More can join with SCUD26 until the draft." });
 });
 
-Deno.test('the draft can be scheduled only when nobody is pending and a date is set', () => {
-  assertEquals(canSchedule({ repliesPending: false, draftDate: '2026-01-23T00:00:00Z' }), true);
-  assertEquals(canSchedule({ repliesPending: true, draftDate: '2026-01-23T00:00:00Z' }), false);
-  assertEquals(canSchedule({ repliesPending: false, draftDate: null }), false);
+Deno.test('the draft can be scheduled only when nobody is pending and a FUTURE date is set', () => {
+  const now = new Date('2026-01-09T12:00:00Z');
+  assertEquals(canSchedule({ repliesPending: false, draftDate: '2026-01-23T00:00:00Z', now }), true);
+  assertEquals(canSchedule({ repliesPending: true, draftDate: '2026-01-23T00:00:00Z', now }), false);
+  assertEquals(canSchedule({ repliesPending: false, draftDate: null, now }), false);
 });

@@ -2,82 +2,62 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "59e1222b446d9f04f618bdfbd4a24bb2292d9328",
-    "commitShort": "59e1222b",
+    "commit": "4abacfbc80a8a1448b1dd19b702b683e23be0398",
+    "commitShort": "4abacfbc",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/w8-tap-through",
+    "branch": "chore/w8-f3-f4",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/(tabs)/index.tsx"
+        "path": "apps/mobile/app/profile.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
+        "path": "apps/mobile/components/game/RenewalReview.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/QueueEditor.tsx"
+        "path": "apps/mobile/components/shell/ShellHeader.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/categoryData.ts"
+        "path": "apps/mobile/lib/game/renewalReview.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/keepDots.ts"
+        "path": "apps/mobile/lib/game/slotBuilderCopy.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/shell/profileBack.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/home/calmHome.ts"
+        "path": "apps/mobile/tests-deno/game-renewal-review.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/join/joinPreview.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/money/useMoneyStockSearch.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/lib/readResult.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/dot-rule.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/home-calm.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/read-result.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/search-stable-deps.test.ts"
+        "path": "apps/mobile/tests-deno/slot-builder-copy.test.ts"
       },
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/w8-f3-f4.test.ts"
       }
     ],
-    "timestamp": "2026-10-16T19:22:22Z",
-    "sourceHash": "sha256:9e19b765c890d59f8fe33e10a446c2d41bf3402d794f7e4548120297805f6d6c",
+    "timestamp": "2026-10-16T20:10:05Z",
+    "sourceHash": "sha256:79125fd0cb03be97d23477f8b4164fa80e70bc4d0812c474c39b79af58af5f22",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 21.1,
+    "ageHours": 21.9,
     "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
@@ -16550,7 +16530,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('start_renewed_season')",
       "callSites": [
-        "apps/mobile/components/game/RenewalReview.tsx:54"
+        "apps/mobile/components/game/RenewalReview.tsx:60"
       ],
       "via": [
         "seamRpc"
@@ -20321,7 +20301,7 @@
       "apps/mobile/app/(tabs)/matchup.tsx:94 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/game/QueueEditor.tsx:43 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
-      "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
+      "apps/mobile/components/game/RenewalReview.tsx:60 -> start_renewed_season (via seamRpc)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",

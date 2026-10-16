@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Pressable, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { space } from '@/constants/tokens';
@@ -11,6 +11,7 @@ import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useSession } from '@/lib/SessionProvider';
 import { chipLabelFor, chipPhaseFor } from '@/lib/shell/leagueSheet';
+import { profileFromPathname, profileHref } from '@/lib/shell/profileBack';
 
 // Phase 3b-1 — every tab's header (spec row 10; DESIGN_DIRECTION §3 IA):
 // the league pill on the left of every league-scoped header, and on Home
@@ -34,6 +35,8 @@ export function ShellHeader({ title, showAvatar = false, showPhase = false }: Sh
   const activeSheet = showPhase ? sheetLeagues.find((l) => l.id === activeLeagueId) ?? null : null;
   const { username, user } = useSession();
   const displayName = username ?? user?.email ?? '';
+  // Profile's back link names the tab it came from (W8 F3): the pathname at the moment of the tap.
+  const pathname = usePathname();
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + space[3] }]}>
@@ -54,7 +57,7 @@ export function ShellHeader({ title, showAvatar = false, showPhase = false }: Sh
       ) : null}
       {showAvatar ? (
         <Pressable
-          onPress={() => router.push('/profile')}
+          onPress={() => router.push(profileHref(profileFromPathname(pathname)))}
           accessibilityRole="button"
           accessibilityLabel="Profile"
           hitSlop={4}
