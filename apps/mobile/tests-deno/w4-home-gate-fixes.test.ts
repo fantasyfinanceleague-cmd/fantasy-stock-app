@@ -204,7 +204,7 @@ Deno.test('"Through Week N" is hidden while N = 0; the chevron and the card stil
   // exactly one chevron exists, so it can't hide with the label.
   assert(card.includes(') : null}\n          <Icon name="chevronRight" size="callout" tone="text2" />'));
   assertEquals((card.match(/chevronRight/g) ?? []).length, 1);
-  assert(card.includes('<PressableScale onPress={() => router.push(STANDINGS_HREF)}'));
+  assert(card.includes('onPress={() => router.push(STANDINGS_HREF)}'));
 });
 
 Deno.test("Week 1 Monday's lone point: at the RIGHT end (now), centred on the base, never clipped", async () => {

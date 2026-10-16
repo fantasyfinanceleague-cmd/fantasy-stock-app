@@ -90,6 +90,11 @@ export const COPY = {
   everySlotFull: 'Every slot is full. Sell a stock first to open its slot.',
   fillsOpenSlotFallback: 'Fills your open slot',
   portfolioLoadTitle: "Your portfolio didn't load",
+  // A leaguemate's team. RULED by the Planner, 2026-10-16: the load-failure title (the subject is theirs,
+  // not "your portfolio", audit S-7). `teamLoading` and `teamClose` are VoiceOver-only strings (not drawn).
+  teamLoadTitle: (name: string | null) => (name ? `${name}'s team didn't load` : "This team didn't load"),
+  teamLoading: (name: string | null) => (name ? `Loading ${name}'s team` : 'Loading this team'),
+  teamClose: 'Close',
   stockLoadTitle: "This stock didn't load",
   stockSearchLoadTitle: "Stocks didn't load",
   loadRetryMessage: 'Check your connection, then try again.',

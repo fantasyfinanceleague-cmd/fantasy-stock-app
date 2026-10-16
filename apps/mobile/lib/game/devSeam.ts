@@ -34,5 +34,9 @@ export const CAPTURE_REFUSAL: string | null = SEAM_ON ? process.env.EXPO_PUBLIC_
 /** Capture only: your draft happened today (Thu 6 PM ET, after the close) — Portfolio's one-point
  * Season line (EXPO_PUBLIC_CAPTURE_DRAFT_TODAY=1). */
 export const CAPTURE_DRAFT_TODAY: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_DRAFT_TODAY === '1';
+/** Capture only: the Home excerpt's other managers (Paolo M., Luca V.) hold Gianluigi's fixture roster too, so a tap on
+ * their row opens a team that loads (EXPO_PUBLIC_CAPTURE_TEAMS=1; the leaguemate team view). */
+export const CAPTURE_TEAMS: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_TEAMS === '1';
+
 /** Capture only: every price mirrored below its draft price — the loss stress (EXPO_PUBLIC_CAPTURE_LOSS=1). */
 export const CAPTURE_LOSS: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_LOSS === '1';

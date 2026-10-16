@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { parsePortfolioLedger, type PortfolioLedger } from './portfolioLedger';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from './devFixture';
 import { buildStressMarket } from './stressFixture';
-import { CAPTURE_DELAY_MS, CAPTURE_DRAFT_TODAY, CAPTURE_FAIL, MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
+import { CAPTURE_DELAY_MS, CAPTURE_DRAFT_TODAY, CAPTURE_FAIL, CAPTURE_TEAMS, MATCHUP_FIXTURE_VARIANT, SEAM_ON } from '../game/devSeam';
 import { SEAM_LEAGUE, SEAM_ME } from '../game/seamTables';
 import { SEAM_DRAFT_TODAY_AT, seamPortfolioLedger } from './portfolioSeam';
 import { HOME_FIXTURE } from '../home/devFixture';
@@ -25,7 +25,7 @@ export function loadPortfolioLedger(leagueId: string): Promise<PortfolioLedger |
   // The game capture seam (EXPO_PUBLIC_GAME_SEAM): the Matchup fixture's league ledger, so the
   // stock sheet Sell opens from the player card is the real sheet over fixture data.
   if (SEAM_ON) {
-    const ledger = CAPTURE_FAIL ? null : seamPortfolioLedger(MATCHUP_FIXTURE_VARIANT, HOME_FIXTURE, SEAM_ME, SEAM_LEAGUE.gianluigi, CAPTURE_DRAFT_TODAY ? SEAM_DRAFT_TODAY_AT : null);
+    const ledger = CAPTURE_FAIL ? null : seamPortfolioLedger(MATCHUP_FIXTURE_VARIANT, HOME_FIXTURE, SEAM_ME, SEAM_LEAGUE.gianluigi, CAPTURE_DRAFT_TODAY ? SEAM_DRAFT_TODAY_AT : null, CAPTURE_TEAMS);
     return CAPTURE_DELAY_MS > 0 ? new Promise((r) => setTimeout(() => r(ledger), CAPTURE_DELAY_MS)) : Promise.resolve(ledger);
   }
   if (MONEY_FIXTURE_CONFIG) {

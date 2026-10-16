@@ -11,6 +11,8 @@ import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ManagerRow } from '@/components/sp/gn';
 import { useMotion } from '@/components/sp/motion';
+import { teamHref, teamLinkLabel } from '@/lib/game/teamLink';
+import { useCaptureAction } from '@/lib/money/captureScript';
 import { STANDINGS_CARD_TITLE, standingsThroughWeekCaption } from '@/lib/home/homeCopy';
 import { STANDINGS_HREF, throughWeekShown } from '@/lib/home/calmHome';
 
@@ -29,6 +31,10 @@ import { STANDINGS_HREF, throughWeekShown } from '@/lib/home/calmHome';
 // Game Night (§9C, W4; the board's StandingsExcerpt): the rimmed card; the rows are the
 // one manager row (ManagerRow, its Home excerpt: no movement column — movement is League's
 // alone, S-10 — and a 24pt avatar), divided by space, never by rules.
+
+/** The header row is ~22pt tall; 11pt above and below reaches 44pt (the rows below start 8pt under it,
+ * so the last 3pt overlap theirs, where the row on top wins). */
+const HEADER_HIT_SLOP = { top: 11, bottom: 11 } as const;
 
 export interface StandingRow {
   userId: string;
@@ -60,6 +66,13 @@ function record(r: StandingRow): string {
 
 export function StandingsCard({ rows, throughWeek, skipEntrance = false }: StandingsCardProps) {
   const { colors } = useTheme();
+  // DEV capture only (captureScript): the same push an excerpt row's tap runs.
+  useCaptureAction('homeheader', () => router.push(STANDINGS_HREF));
+  useCaptureAction('hometeam', (id) => {
+    const r = rows.find((x) => x.userId === id);
+    const href = r ? teamHref({ userId: r.userId, name: r.displayName, isYou: r.isYou }) : null;
+    if (href) router.push(href);
+  });
   const { reduced, stagger, spring } = useMotion();
 
   // Top 3, plus the caller's own row if they're outside it.
@@ -69,9 +82,19 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
   const displayed = showMineSeparately ? [...top3, mine] : top3;
 
   return (
-    <PressableScale onPress={() => router.push(STANDINGS_HREF)} accessibilityRole="button">
     <Card style={styles.card}>
-      <View style={styles.header}>
+      {/* The header is the link to League › Standings; each row below opens THAT manager's team
+          (yours: your Portfolio), so the card is no longer one button (the leaguemate team view). */}
+      <PressableScale
+        onPress={() => router.push(STANDINGS_HREF)}
+        accessibilityRole="button"
+        accessibilityLabel={throughWeekShown(throughWeek) ? `${STANDINGS_CARD_TITLE}, ${standingsThroughWeekCaption(throughWeek)}` : STANDINGS_CARD_TITLE}
+        accessibilityHint="Opens Standings"
+        // The §9B 44pt target by hit slop, so the header's own box (and the card) doesn't move.
+        hitSlop={HEADER_HIT_SLOP}
+        style={styles.header}
+        testID="standings-card-header"
+      >
         {/* The board's excerpt title: 17/800 (headline is 17/600). */}
         <Text variant="headline" style={styles.title}>{STANDINGS_CARD_TITLE}</Text>
         <View style={styles.headerRight}>
@@ -82,7 +105,7 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
           ) : null}
           <Icon name="chevronRight" size="callout" tone="text2" />
         </View>
-      </View>
+      </PressableScale>
       <View style={styles.rows}>
         {displayed.map((r, i) => {
           const entering = reduced || skipEntrance
@@ -92,17 +115,26 @@ export function StandingsCard({ rows, throughWeek, skipEntrance = false }: Stand
                 .damping(spring.snappy.damping)
                 .stiffness(spring.snappy.stiffness)
                 .reduceMotion(ReduceMotion.System);
+          const href = teamHref({ userId: r.userId, name: r.displayName, isYou: r.isYou });
           return (
             <Animated.View key={r.userId} entering={entering}>
               {/* S-10 / §9C ManagerRow: your row on `youTint` with the 1.5pt `you` ring, your
                   name bold, no "(you)"; season gains carry their sign (U-50), by sign colour. */}
-              <ManagerRow excerpt rank={r.rank} name={r.displayName} isYou={r.isYou} record={record(r)} seasonGain={r.pointsFor} />
+              <ManagerRow
+                excerpt
+                rank={r.rank}
+                name={r.displayName}
+                isYou={r.isYou}
+                record={record(r)}
+                seasonGain={r.pointsFor}
+                onPress={href ? () => router.push(href) : undefined}
+                hint={href ? teamLinkLabel({ name: r.displayName, isYou: r.isYou }) : undefined}
+              />
             </Animated.View>
           );
         })}
       </View>
     </Card>
-    </PressableScale>
   );
 }
 

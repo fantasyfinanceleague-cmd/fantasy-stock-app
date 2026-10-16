@@ -98,11 +98,15 @@ Deno.test('This week opens Matchup: the whole card, a button with the hint, a ch
   assert(card.indexOf('{liveChipLabel ?? LIVE_CHIP}') < card.indexOf('<Icon name="chevronRight" size="callout" tone="text2" />'));
 });
 
-Deno.test('Standings opens League on Standings: the whole card, a chevron after "Through Week N"', () => {
+Deno.test('Standings opens League on Standings: the header (a button), a chevron after "Through Week N"; each row opens its team', () => {
   assertEquals(STANDINGS_HREF, { pathname: '/(tabs)/league', params: { segment: 'standings' } });
   const card = SOURCES['components/home/StandingsCard.tsx'];
-  const press = card.indexOf('<PressableScale onPress={() => router.push(STANDINGS_HREF)} accessibilityRole="button">');
-  assert(press > 0 && press < card.indexOf('<Card style={styles.card}>'));
+  // The leaguemate team view: the card is no longer one button. The HEADER is the Standings
+  // link (inside the card, a 44pt target); the rows below are buttons to their managers' teams.
+  const press = card.indexOf('onPress={() => router.push(STANDINGS_HREF)}');
+  assert(press > card.indexOf('<Card style={styles.card}>'));
+  assert(press < card.indexOf('<ManagerRow'));
+  assert(card.includes('testID="standings-card-header"'));
   assert(card.indexOf('{standingsThroughWeekCaption(throughWeek)}') < card.indexOf('<Icon name="chevronRight"'));
 });
 

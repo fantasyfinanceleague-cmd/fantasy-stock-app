@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { matchupSegmentFromParam } from '@/lib/game/draftComplete';
 import { View, StyleSheet } from 'react-native';
 import { Icon } from '@/components/sp/Icon';
@@ -13,7 +13,9 @@ import { LeagueListGate } from '@/components/shell/NoLeagueState';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { BarsRefresh } from '@/components/shell/BarsRefresh';
 import { GroupHead, PlayerCard, RosterRow, Scoreboard, type PlayerCardOwnership } from '@/components/sp/gn';
-import { LINE_MAX_SCALE } from '@/components/sp/gn/Scoreboard';
+import { LINE_MAX_SCALE, type ScoreboardOpen } from '@/components/sp/gn/Scoreboard';
+import { teamHref, teamLinkLabel } from '@/lib/game/teamLink';
+import { useCaptureAction } from '@/lib/money/captureScript';
 import { Card } from '@/components/sp/Card';
 import { Avatar } from '@/components/sp/Avatar';
 import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
@@ -185,6 +187,16 @@ interface BodyProps {
 
 function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLines, roster, orderAsOf }: BodyProps) {
   const { user } = useAuth();
+  const router = useRouter();
+  // The scoreboard's avatar + name open that manager's team (the opponent's, read-only) or,
+  // for your half, your Portfolio tab (the leaguemate team view; Planner ruling 2026-10-16).
+  const openTeam = (userId: string | null | undefined, name: string, isYou: boolean): ScoreboardOpen | undefined => {
+    const href = teamHref({ userId, name, isYou });
+    return href ? { hint: teamLinkLabel({ name, isYou }), onPress: () => router.push(href) } : undefined;
+  };
+  // DEV capture only (captureScript): the same handlers the header's two halves run.
+  useCaptureAction('opp', () => { if (derived?.live.opp) openTeam(derived.live.opp.userId, derived.live.opp.name, false)?.onPress(); });
+  useCaptureAction('me', () => { if (user && derived) openTeam(user.id, derived.live.me.name, true)?.onPress(); });
   if (status === 'error') {
     return (
       <PhasePlaceholder title="Matchup" icon={() => <Icon name="alert" size="title" tone="text2" />} heading="Couldn't load this matchup" message="Pull down to try again." onRefresh={onRefresh} />
@@ -205,7 +217,13 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
     // Before the season: the pairing with both totals at $0.00, and when it starts.
     return (
       <View style={styles.stack}>
-        <Scoreboard you={{ name: youName, gain: 0 }} opponent={{ name: live.opp?.name ?? '', gain: 0 }} showLine={false} />
+        <Scoreboard
+          you={{ name: youName, gain: 0 }}
+          opponent={{ name: live.opp?.name ?? '', gain: 0 }}
+          showLine={false}
+          openYou={openTeam(user.id, youName, true)}
+          openOpponent={live.opp ? openTeam(live.opp.userId, live.opp.name, false) : undefined}
+        />
         <Text variant="callout" tone="secondary" style={styles.center}>{preSeasonStartsLabel(phase && phase.kind === 'pre_season' ? phase.seasonStartsAt : null)}</Text>
       </View>
     );
@@ -216,7 +234,7 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
     // then your stocks in one column under the same order rules.
     return (
       <View style={styles.stack}>
-        <Scoreboard you={{ name: youName, gain: live.me.gain }} opponent={null} bye={{ label: BYE_HALF, line: COPY.byeNoResult }} />
+        <Scoreboard you={{ name: youName, gain: live.me.gain }} opponent={null} bye={{ label: BYE_HALF, line: COPY.byeNoResult }} openYou={openTeam(user.id, youName, true)} />
         {raw && live.me.lineup.length ? (
           <Roster derived={derived} raw={raw} roster={roster} myRows={live.me.lineup} theirRows={null} final={false} seamResumesAt={phase?.kind === 'live_closed' ? phase.resumesAt : null} orderAsOf={orderAsOf} />
         ) : null}
@@ -261,7 +279,13 @@ function MatchupBody({ status, derived, phase, onRefresh, raw, reveal, finalLine
           })}
         />
       ) : null}
-      <Scoreboard you={{ name: youName, gain: mine }} opponent={{ name: live.opp?.name ?? '', gain: theirs }} final={isFinal} />
+      <Scoreboard
+        you={{ name: youName, gain: mine }}
+        opponent={{ name: live.opp?.name ?? '', gain: theirs }}
+        final={isFinal}
+        openYou={openTeam(user.id, youName, true)}
+        openOpponent={live.opp ? openTeam(live.opp.userId, live.opp.name, false) : undefined}
+      />
       {/* Capped like the leads-by line: the totals stay loudest at XL. */}
       {note ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE}>{note}</Text> : null}
       {live.opp && raw ? (

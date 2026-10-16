@@ -145,7 +145,7 @@ export function seamOpenSales(ledger: PortfolioLedger, userId: string): { symbol
  * league ledger with YOUR rows scoped to the roster the Home fixture actually holds (the
  * shared fixture also carries the XL leagues' extra stocks, which would read as a 7th and 8th
  * holding in a 6-slot league). Everyone else's rows are kept (owners in search). */
-export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string, draftAt: string | null = null): PortfolioLedger {
+export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string, draftAt: string | null = null, leaguemates = false): PortfolioLedger {
   const base = fixtureLedger(variant, me, opp);
   // Capture only: your draft happened at `draftAt` (the one-point Season line on draft day).
   const ledger = draftAt ? { ...base, activity: base.activity.map((a) => (a.user_id === me && a.kind === 'draft' ? { ...a, occurred_at: draftAt } : a)) } : base;
@@ -153,5 +153,13 @@ export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture:
     ? XL_MILLION_ROBERTO_HOLDINGS
     : homeFixture && homeFixture.startsWith('xl') ? XL_ROBERTO_HOLDINGS : ROBERTO_HOLDINGS;
   const keep = new Set([...roster.map((h) => h.symbol), 'MSFT']);
-  return { ...ledger, activity: ledger.activity.filter((a) => a.user_id !== me || keep.has(a.symbol.toUpperCase())) };
+  const scoped = { ...ledger, activity: ledger.activity.filter((a) => a.user_id !== me || keep.has(a.symbol.toUpperCase())) };
+  if (!leaguemates) return scoped;
+  // Capture only: Home's excerpt rows (Paolo M., Luca V.) are teams in this league too, with the opponent's roster.
+  const others = [{ user_id: 'paolo', display_name: 'Paolo M.' }, { user_id: 'luca', display_name: 'Luca V.' }];
+  return {
+    ...scoped,
+    activity: [...scoped.activity, ...others.flatMap((o) => scoped.activity.filter((a) => a.user_id === opp).map((a) => ({ ...a, user_id: o.user_id })))],
+    members: [...scoped.members, ...others.map((o) => ({ ...o, is_bot: false }))],
+  };
 }

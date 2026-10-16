@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 import { Text } from '@/components/sp/Text';
 import { formatMoney } from '@/components/sp/logic/money';
+import { useRouter } from 'expo-router';
 import { ManagerRow, MANAGER_ROW_GAP } from '@/components/sp/gn';
+import { teamHref, teamLinkLabel } from '@/lib/game/teamLink';
 import { space } from '@/constants/tokens';
 import { shouldPinYourRow, type StandingsRow } from '@/lib/game/standings';
 import { useScrollFold } from '@/components/shell/scrollFold';
@@ -62,9 +64,14 @@ export function useStandingsLayout(rows: readonly { record: string; seasonGain: 
 
 /** One standings row (also the pinned copy of yours: the SAME component). */
 export function StandingsRowView({ r, seasonComplete, showMove = true, layout, nothingScored = false }: { r: StandingsRow; seasonComplete: boolean; showMove?: boolean; layout: StandingsLayout; nothingScored?: boolean }) {
+  const router = useRouter();
+  // A manager's row opens their team (yours: your Portfolio), as in ESPN / Sleeper / Yahoo.
+  const href = teamHref({ userId: r.userId, name: r.name, isYou: r.isYou });
   // VoiceOver hears the move as the row's own label says it (ManagerRow: "up 2" / "down 3").
   return (
     <ManagerRow
+      onPress={href ? () => router.push(href) : undefined}
+      hint={href ? teamLinkLabel({ name: r.name, isYou: r.isYou }) : undefined}
       rank={r.rank}
       delta={showMove ? r.move : null}
       showMove={showMove}
