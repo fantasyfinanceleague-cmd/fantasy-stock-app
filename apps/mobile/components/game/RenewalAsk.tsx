@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
@@ -42,13 +42,16 @@ export interface RenewalAskBodyProps {
   onSaved: (response: RenewalAnswer) => void;
   /** The current answer tapped again: nothing to write (the Change sheet closes). */
   onSame?: () => void;
+  /** Where the parts go. The default is one run (the card). The Change sheet passes its own, to scroll
+   * the question and pin the choice, its refusal and the note under it (SheetBody). */
+  layout?: (parts: { body: ReactNode; footer: ReactNode }) => ReactNode;
 }
 
 /** The ask's content, shared verbatim by the card (RenewalAsk) and the member list's
  * Change sheet (GS-10, RenewalChangeSheet): the board draws no separate sheet. */
-export function RenewalAskBody({ leagueId, commissionerName, answered, onSaved, onSame }: RenewalAskBodyProps) {
+export function RenewalAskBody({ leagueId, commissionerName, answered, onSaved, onSame, layout }: RenewalAskBodyProps) {
   const { colors } = useTheme();
-  return (
+  const body = (
     <>
       <View style={styles.header}>
         <Text variant="tag" tone="secondary">{ASK_TAG}</Text>
@@ -60,10 +63,16 @@ export function RenewalAskBody({ leagueId, commissionerName, answered, onSaved, 
       </View>
       <Text variant="headline">{askQuestion(commissionerName)}</Text>
       <Text variant="callout" tone="secondary">{ASK_LINE}</Text>
+    </>
+  );
+  // The action: the two answers, a refusal under them, and the note about changing the answer.
+  const footer = (
+    <>
       <RenewalChoice leagueId={leagueId} current={answered} onSaved={onSaved} onSame={onSame} />
       <Text variant="caption" tone="secondary">{ASK_CHANGE_NOTE}</Text>
     </>
   );
+  return layout ? <>{layout({ body, footer })}</> : <>{body}{footer}</>;
 }
 
 /** I'm out / I'm in on respond_to_renewal, the current answer selected. A refusal shows in

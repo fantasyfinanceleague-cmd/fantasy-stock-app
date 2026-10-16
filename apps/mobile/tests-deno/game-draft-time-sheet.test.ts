@@ -109,8 +109,8 @@ Deno.test('the sheet: × and a swipe dismiss; one full-width Set draft time; Set
   const sheet = SOURCES['components/game/DraftDateSheet.tsx'];
   assertEquals(sheet.includes("<Sheet visible={visible} onClose={() => run({ type: 'dismiss' })}>"), true);
   assertEquals(sheet.includes("<Pressable onPress={() => run({ type: 'dismiss' })} accessibilityRole=\"button\" accessibilityLabel=\"Close\""), true);
-  assertEquals(sheet.includes("<Button label={SET_DRAFT_TIME} onPress={() => run({ type: 'confirm', nowMs: Date.now() })} fullWidth />"), true);
-  assertEquals(sheet.includes("{onSetLater ? (\n          <Pressable onPress={() => run({ type: 'set_later' })}"), true);
+  assertEquals(sheet.includes("<Button label={SET_DRAFT_TIME} onPress={() => run({ type: 'confirm', nowMs: Date.now() })} fullWidth testID=\"draft-time-set\" />"), true);
+  assertEquals(sheet.includes("{onSetLater ? (\n              <Pressable onPress={() => run({ type: 'set_later' })}"), true);
   assertEquals(sheet.includes('Done'), false); // the header link is gone
   // The wheel only updates the held time.
   assertEquals(sheet.includes("if (event.type === 'set' && selectedDate) run({ type: 'spin', date: selectedDate });"), true);

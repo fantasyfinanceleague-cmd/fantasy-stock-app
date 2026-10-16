@@ -2,43 +2,27 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "3a1e3e85fd2b420abf6105247a6f74af28aa9333",
-    "commitShort": "3a1e3e85",
+    "commit": "71006931e91cd6fe4f4a927687fcca428b4d0e4b",
+    "commitShort": "71006931",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/create-league.tsx"
+        "path": "apps/mobile/components/game/DraftDateSheet.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/app/join-league.tsx"
+        "path": "apps/mobile/components/game/LeaveLeagueSheets.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/DraftComplete.tsx"
+        "path": "apps/mobile/components/game/RenewalAsk.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/DraftRoom.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalReview.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/ScheduleList.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/PortfolioScreen.tsx"
+        "path": "apps/mobile/components/game/RenewalChangeSheet.tsx"
       },
       {
         "code": "M",
@@ -46,15 +30,7 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/money/StockSearchScreen.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/money/StockSheetBody.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/TradeHistoryScreen.tsx"
       },
       {
         "code": "M",
@@ -62,59 +38,35 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/ManagerRow.tsx"
+        "path": "apps/mobile/components/shell/HowItWorksSheet.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/gn/PlayerCard.tsx"
-      },
-      {
-        "code": "UU",
-        "path": "apps/mobile/components/sp/gn/Scoreboard.tsx"
+        "path": "apps/mobile/components/sp/Sheet.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/keepDots.ts"
+        "path": "apps/mobile/tests-deno/game-draft-time-sheet.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/gn-w4-draft.test.ts"
+        "path": "apps/mobile/tests-deno/game-leave-league.test.ts"
       },
       {
         "code": "A",
-        "path": "apps/mobile/tests-deno/keep-money.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/league-game-night.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/money-stock-search-ownership.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/onboarding-game-night.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/player-card-model.test.ts"
+        "path": "apps/mobile/tests-deno/sheet-scroll-pinned-action.test.ts"
       }
     ],
-    "timestamp": "2026-10-16T23:05:07Z",
-    "sourceHash": "sha256:5766679f192b9961fa3e24c808fdbaedea34d270de553f73ab730a0d868a2ecb",
+    "timestamp": "2026-10-19T20:48:51Z",
+    "sourceHash": "sha256:cb29ce99e1d0e30cb523f4dc3dba387d128395b7fbfbd672d7a1fb532942cb29",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 24.9,
-    "ageDays": 1,
+    "ageHours": 94.6,
+    "ageDays": 3.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da",
@@ -16622,7 +16574,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('respond_to_renewal')",
       "callSites": [
-        "apps/mobile/components/game/RenewalAsk.tsx:88"
+        "apps/mobile/components/game/RenewalAsk.tsx:97"
       ],
       "via": [
         "seamRpc"
@@ -20522,7 +20474,7 @@
       "apps/mobile/app/(tabs)/league.tsx:146 -> renew_league (via seamRpc)",
       "apps/mobile/app/(tabs)/matchup.tsx:96 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/game/QueueEditor.tsx:43 -> set_draft_queue (via seamRpc)",
-      "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
+      "apps/mobile/components/game/RenewalAsk.tsx:97 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:61 -> start_renewed_season (via seamRpc)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",

@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/Skeleton';
 import { WarnPanel } from '@/components/sp/WarnPanel';
 import { TradeReviewPanel, type NextStep } from '@/components/money/TradeReviewPanel';
 import { Button } from '@/components/sp/Button';
+import { SheetBody } from '@/components/sp/Sheet';
 import { Icon } from '@/components/sp/Icon';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
@@ -456,22 +457,30 @@ export function StockSheetBody({
         />
       );
     }
+    // The message scrolls; its next steps (Try again, Edit) are the action, pinned under it.
     return (
-      <View style={styles.body}>
+      <SheetBody
+        contentContainerStyle={styles.scrollContent}
+        footerStyle={styles.footer}
+        footer={(
+          <>
+            {/* C-5 (Design Lead gate, U-33): no_price/invalid_price get a Try again,
+                not just Edit -- the price itself is what failed, so re-reading it
+                (data.refresh) before re-opening the review is the actual retry. */}
+            {open.error === COPY.noPrice || open.error === COPY.invalidPrice ? (
+              <Button label={COPY.tryAgain} variant="primary" fullWidth onPress={() => { data.refresh(); void openReview(open.kind); }} />
+            ) : null}
+            <Button label="Edit" variant="secondary" fullWidth onPress={() => setOpen(null)} />
+          </>
+        )}
+      >
         {open.warn ? (
           // A blocker before the review (a tier refusal, defect (a)'s budget): the warn panel, its own ink.
           <WarnPanel text={open.error ?? COPY.cantReach} />
         ) : (
           <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" accessibilityRole="alert">{open.error ?? COPY.cantReach}</Text>
         )}
-        {/* C-5 (Design Lead gate, U-33): no_price/invalid_price get a Try again,
-            not just Edit -- the price itself is what failed, so re-reading it
-            (data.refresh) before re-opening the review is the actual retry. */}
-        {open.error === COPY.noPrice || open.error === COPY.invalidPrice ? (
-          <Button label={COPY.tryAgain} variant="primary" fullWidth onPress={() => { data.refresh(); void openReview(open.kind); }} />
-        ) : null}
-        <Button label="Edit" variant="secondary" fullWidth onPress={() => setOpen(null)} />
-      </View>
+      </SheetBody>
     );
   }
 
@@ -495,73 +504,11 @@ export function StockSheetBody({
     ? (model.buy.blockedBy === 'owned' && data.facts.owner?.kind === 'other' ? COPY.ownerBlocksBuy(data.facts.owner.name ?? 'another manager', symbol) : model.buy.reason)
     : null;
 
-  return (
-    <View accessibilityRole="summary" style={styles.body}>
-      {/* The company line, or none: never the ticker repeated under itself. */}
-      <SheetHeader symbol={symbol} company={companyLine(model.name || cleanCompanyName(data.companyName), symbol)} onClose={onDone} />
-
-      {/* The price: the sheet's standout, in `money` (44/500, §9C rule 5), and today. */}
-      <View style={styles.priceBlock}>
-        {data.price != null ? (
-          <View accessible accessibilityLabel={`Price, ${formatMoney(data.price)}`}>
-            <RollingMoney text={formatMoney(data.price)} size="money" rollKey={symbol} />
-          </View>
-        ) : (
-          // C-5 (Design Lead gate, U-33): a way to retry, same as calendar_unavailable's.
-          <View style={styles.noPrice}>
-            <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{COPY.noPrice} </Text>
-            <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8} style={styles.textButton}>
-              <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>{COPY.tryAgain}</Text>
-            </Pressable>
-          </View>
-        )}
-        {model.todayChange ? (
-          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={todayTone} style={styles.bold}>
-            {keepMoney(`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })}`)}
-            <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.regular}> today</Text>
-          </Text>
-        ) : null}
-      </View>
-
-      {/* M2: the line, edge to edge, on its labelled axis; the range pills under it. */}
-      <StockChart symbol={symbol} price={data.price} live={gate.open} now={chartNow} sessions={sessions} bleed={SHEET_GUTTER} />
-
-      {position ? (
-        // C-4 (Design Lead gate, key screen 5): shares, avg entry, value and gain -- the
-        // figure a sell decision rests on (UX-audit rule 4). An `inset` panel (§9C).
-        <View style={[styles.panel, { backgroundColor: colors.inset }]}>
-          <View style={styles.panelHead}>
-            <Text variant="headline" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={styles.extraBold}>Your position</Text>
-            <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.panelCaption}>{ownerLine}</Text>
-          </View>
-          <View style={styles.figures}>
-            <Figure label="Shares" value={formatShares(position.quantity)} />
-            <Figure label="Avg entry" value={formatMoney(position.avgEntry)} />
-            <Figure label="Value" value={formatMoney(position.value)} />
-            <Figure
-              label="Gain"
-              value={`${formatMoney(position.gain, { sign: 'always' })} · ${formatPercent(position.gainPct, { sign: 'always' })}`}
-              color={Math.abs(position.gain) < 0.005 ? colors.zero : position.gain > 0 ? colors.gain : colors.loss}
-            />
-          </View>
-        </View>
-      ) : (
-        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{ownerLine}</Text>
-      )}
-
-      {held ? (
-        <SegmentedControl
-          shape="pill"
-          options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
-          value={selected}
-          onChange={(v) => setChoice(v as 'buy' | 'sell')}
-        />
-      ) : null}
-
-      {selected === 'sell' && model.sell.summary ? (
-        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={[styles.bold, styles.tabular]}>{keepMoney(model.sell.summary)}</Text>
-      ) : null}
-
+  // The one action, WITH the reason a disabled one carries, is pinned under the scroll (§9C order:
+  // the content scrolls under it, no rule line). At Large the sheet is content-sized, so this
+  // sits exactly where the button sat inline; at XXXL the body scrolls and this stays reachable.
+  const footer = (
+    <>
       {/* E-3 (3e UX audit): a buy the server would refuse is named BEFORE the review, in the
           warn panel; the button stays visible and disabled under it (board #buy-a-stock). */}
       {warnBlock ? <WarnPanel text={keepMoney(warnBlock)} /> : null}
@@ -590,7 +537,78 @@ export function StockSheetBody({
       </View>
 
       <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
-    </View>
+    </>
+  );
+
+  return (
+    <SheetBody contentContainerStyle={styles.scrollContent} footerStyle={styles.footer} footer={footer}>
+      <View accessibilityRole="summary" style={styles.stack}>
+        {/* The company line, or none: never the ticker repeated under itself. */}
+        <SheetHeader symbol={symbol} company={companyLine(model.name || cleanCompanyName(data.companyName), symbol)} onClose={onDone} />
+
+        {/* The price: the sheet's standout, in `money` (44/500, §9C rule 5), and today. */}
+        <View style={styles.priceBlock}>
+          {data.price != null ? (
+            <View accessible accessibilityLabel={`Price, ${formatMoney(data.price)}`}>
+              <RollingMoney text={formatMoney(data.price)} size="money" rollKey={symbol} />
+            </View>
+          ) : (
+            // C-5 (Design Lead gate, U-33): a way to retry, same as calendar_unavailable's.
+            <View style={styles.noPrice}>
+              <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{COPY.noPrice} </Text>
+              <Pressable accessibilityRole="button" onPress={data.refresh} hitSlop={8} style={styles.textButton}>
+                <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>{COPY.tryAgain}</Text>
+              </Pressable>
+            </View>
+          )}
+          {model.todayChange ? (
+            <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={todayTone} style={styles.bold}>
+              {keepMoney(`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })}`)}
+              <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.regular}> today</Text>
+            </Text>
+          ) : null}
+        </View>
+
+        {/* M2: the line, edge to edge, on its labelled axis; the range pills under it. */}
+        <StockChart symbol={symbol} price={data.price} live={gate.open} now={chartNow} sessions={sessions} bleed={SHEET_GUTTER} />
+
+        {position ? (
+          // C-4 (Design Lead gate, key screen 5): shares, avg entry, value and gain -- the
+          // figure a sell decision rests on (UX-audit rule 4). An `inset` panel (§9C).
+          <View style={[styles.panel, { backgroundColor: colors.inset }]}>
+            <View style={styles.panelHead}>
+              <Text variant="headline" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={styles.extraBold}>Your position</Text>
+              <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.panelCaption}>{ownerLine}</Text>
+            </View>
+            <View style={styles.figures}>
+              <Figure label="Shares" value={formatShares(position.quantity)} />
+              <Figure label="Avg entry" value={formatMoney(position.avgEntry)} />
+              <Figure label="Value" value={formatMoney(position.value)} />
+              <Figure
+                label="Gain"
+                value={`${formatMoney(position.gain, { sign: 'always' })} · ${formatPercent(position.gainPct, { sign: 'always' })}`}
+                color={Math.abs(position.gain) < 0.005 ? colors.zero : position.gain > 0 ? colors.gain : colors.loss}
+              />
+            </View>
+          </View>
+        ) : (
+          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{ownerLine}</Text>
+        )}
+
+        {held ? (
+          <SegmentedControl
+            shape="pill"
+            options={[{ label: 'Buy', value: 'buy' }, { label: 'Sell', value: 'sell' }]}
+            value={selected}
+            onChange={(v) => setChoice(v as 'buy' | 'sell')}
+          />
+        ) : null}
+
+        {selected === 'sell' && model.sell.summary ? (
+          <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={[styles.bold, styles.tabular]}>{keepMoney(model.sell.summary)}</Text>
+        ) : null}
+      </View>
+    </SheetBody>
   );
 }
 
@@ -632,6 +650,12 @@ function Figure({ label, value, color }: { label: string; value: string; color?:
 
 const styles = StyleSheet.create({
   body: { gap: space[5], paddingHorizontal: SHEET_GUTTER, paddingBottom: space[7] },
+  // The main view's scroll body and pinned footer: the same gutter and gaps as `body`, split in two.
+  // The scroll's bottom padding stands in for the gap above the footer; the footer carries the
+  // body's bottom padding, so at Large the layout is the one the sheet had before the split.
+  scrollContent: { paddingHorizontal: SHEET_GUTTER, paddingBottom: space[5] },
+  stack: { gap: space[5] },
+  footer: { gap: space[5], paddingHorizontal: SHEET_GUTTER, paddingBottom: space[7] },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   badge: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space[1] },
   headText: { flex: 1, minWidth: 0, gap: space[1] },

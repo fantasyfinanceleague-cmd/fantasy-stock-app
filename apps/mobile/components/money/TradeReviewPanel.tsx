@@ -18,6 +18,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { Button } from '@/components/sp/Button';
 import { keepMoney } from '@/lib/game/keepDots';
+import { SheetBody } from '@/components/sp/Sheet';
 import { Icon } from '@/components/sp/Icon';
 import { useMotion } from '@/components/sp/motion';
 import { Text } from '@/components/sp/Text';
@@ -57,7 +58,12 @@ export interface TradeReviewPanelProps {
 
 const styles = StyleSheet.create({
   // The review sits inside the sheet: its own 20 pt gutter, as the sheet body has.
-  stack: { gap: space[5], paddingHorizontal: space[6], paddingBottom: space[7] },
+  // The lines scroll; the action (submit / Done / the next step / Try again) is pinned under them
+  // (SheetBody). The scroll's bottom padding stands in for the gap above the footer, and the footer
+  // carries the bottom padding, so at Large the layout is what it was before the split.
+  scrollContent: { paddingHorizontal: space[6], paddingBottom: space[5] },
+  stack: { gap: space[5] },
+  footer: { gap: space[5], paddingHorizontal: space[6], paddingBottom: space[7] },
   back: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignSelf: 'flex-start' },
   // XL: the value keeps its width (flexShrink 0) so it never truncates, and the label never shrinks below its own width
   // (a squeezed label broke mid-word): a value that does not fit beside it drops UNDER it, at the left.
@@ -113,46 +119,8 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
   const nextStep = p.footer === 'back_to_picker' || p.footer === 'pick_stock' || p.footer === 'sell_first' || p.footer === 'sign_in' ? p.footer : null;
 
   const done = p.footer === 'done';
-  return (
-    <View style={styles.stack}>
-      {canEdit && !done ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={onBack} hitSlop={4} style={styles.back}>
-          <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>Edit</Text>
-        </Pressable>
-      ) : null}
-
-      {done ? (
-        // The confirmation: the check draws, then what happened, in the sheet's headline size.
-        <View style={styles.done}>
-          <DoneCheck />
-          <Text variant="title" accessibilityRole="header" style={[styles.title, styles.center]}>{p.message}</Text>
-        </View>
-      ) : (
-        <>
-          <Text variant="headline" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} accessibilityRole="header" style={styles.title}>{review.title}</Text>
-          {review.headline ? <Text variant="title" style={styles.title}>{keepMoney(review.headline)}</Text> : null}
-        </>
-      )}
-
-      <View style={[styles.panel, { backgroundColor: colors.inset }]}>
-        {review.lines.map((l) => (
-          <View key={l.label} style={styles.row} accessible accessibilityLabel={`${l.label}, ${l.value}`}>
-            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.rowLabel}>{keepMoney(l.label)}</Text>
-            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{keepMoney(l.value)}</Text>
-          </View>
-        ))}
-        {review.card ? <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} style={styles.bold}>{keepMoney(review.card)}</Text> : null}
-      </View>
-
-      {p.message && !done ? (
-        p.messageTone === 'warn' ? (
-          // The warn panel, NO icon (the Design Lead's ruling for refusals and blockers).
-          <WarnPanel text={p.message} />
-        ) : (
-          <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" accessibilityRole="alert">{p.message}</Text>
-        )
-      ) : null}
-
+  const footer = (
+    <>
       {p.button ? (
         <Button
           label={p.button.label}
@@ -179,6 +147,49 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
       <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{keepMoney(review.caption)}</Text>
       {/* The Alpaca credit on every price surface (PRODUCT_RULES), the review and its confirmation too. */}
       <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
-    </View>
+    </>
+  );
+  return (
+    <SheetBody contentContainerStyle={styles.scrollContent} footerStyle={styles.footer} footer={footer}>
+      <View style={styles.stack}>
+        {canEdit && !done ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Edit" onPress={onBack} hitSlop={4} style={styles.back}>
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} color={colors.accent} style={styles.bold}>Edit</Text>
+          </Pressable>
+        ) : null}
+
+        {done ? (
+          // The confirmation: the check draws, then what happened, in the sheet's headline size.
+          <View style={styles.done}>
+            <DoneCheck />
+            <Text variant="title" accessibilityRole="header" style={[styles.title, styles.center]}>{p.message}</Text>
+          </View>
+        ) : (
+          <>
+            <Text variant="headline" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} accessibilityRole="header" style={styles.title}>{review.title}</Text>
+            {review.headline ? <Text variant="title" style={styles.title}>{keepMoney(review.headline)}</Text> : null}
+          </>
+        )}
+
+        <View style={[styles.panel, { backgroundColor: colors.inset }]}>
+          {review.lines.map((l) => (
+            <View key={l.label} style={styles.row} accessible accessibilityLabel={`${l.label}, ${l.value}`}>
+              <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.rowLabel}>{keepMoney(l.label)}</Text>
+              <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{keepMoney(l.value)}</Text>
+            </View>
+          ))}
+          {review.card ? <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} style={styles.bold}>{keepMoney(review.card)}</Text> : null}
+        </View>
+
+        {p.message && !done ? (
+          p.messageTone === 'warn' ? (
+            // The warn panel, NO icon (the Design Lead's ruling for refusals and blockers).
+            <WarnPanel text={p.message} />
+          ) : (
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" accessibilityRole="alert">{p.message}</Text>
+          )
+        ) : null}
+      </View>
+    </SheetBody>
   );
 }

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Dimensions, Modal, PanResponder, StyleSheet, View } from 'react-native';
+import { Dimensions, Modal, PanResponder, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { ReduceMotion, runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { radius, space } from '@/constants/tokens';
@@ -40,6 +40,37 @@ const DISMISS_VELOCITY = 0.8;
  * height) — every sheet's content starts this far below the sheet's own top edge.
  * M1 uses it to place the header's resting rect without an extra measurement. */
 export const SHEET_HANDLE_AREA_HEIGHT = space[3] * 2 + 4;
+
+export interface SheetBodyProps {
+  /** The content: it scrolls when the sheet would be taller than its 90% ceiling. */
+  children: ReactNode;
+  /** The primary action (and the reason line a disabled one carries): pinned under the scroll, on
+   * the sheet's own surface. No rule line above it (§9C): the content just scrolls under it. */
+  footer?: ReactNode;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  footerStyle?: StyleProp<ViewStyle>;
+}
+
+/** A sheet's layout: a scrolling body and a pinned footer. At Large the sheet is content-sized, so
+ * the footer sits exactly where the action sat inline; at XXXL Dynamic Type the sheet reaches its
+ * 90% ceiling and only the body scrolls, so the action can never fall below the fold. Put this as
+ * the sheet's only child; the wrapper shrinks (flexShrink 1, minHeight 0) inside the sheet's maxHeight. */
+export function SheetBody({ children, footer, contentContainerStyle, footerStyle }: SheetBodyProps) {
+  return (
+    <View style={styles.bodyShell}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={contentContainerStyle}
+        alwaysBounceVertical={false}
+        keyboardShouldPersistTaps="handled"
+        testID="sheet-scroll"
+      >
+        {children}
+      </ScrollView>
+      {footer ? <View style={footerStyle} testID="sheet-footer">{footer}</View> : null}
+    </View>
+  );
+}
 
 export function Sheet({ visible, onClose, children, dismissible = true, overlay, onSheetLayout, onClosed }: SheetProps) {
   const { colors, elevation } = useTheme();
@@ -146,6 +177,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     paddingBottom: space[8],
     maxHeight: '90%',
+  },
+  // The body shell shrinks inside the sheet's maxHeight; the footer (flexShrink 0) keeps its height.
+  bodyShell: {
+    flexShrink: 1,
+    minHeight: 0,
+  },
+  scroll: {
+    flexShrink: 1,
+    flexGrow: 0,
   },
   handleArea: {
     alignItems: 'center',
