@@ -43,7 +43,7 @@ pins that those files carry no `keepMoney`.
 | Renewal review, Stakes row | `S1-renewal-stakes-xxxl-light-BEFORE.png`; `…-light-AFTER.png`, `…-dark-AFTER.png`; **`S1-renewal-stakes-xxxl-light-v2.png`** | BEFORE (committed code): "$1,000. / 00 a / slot". AFTER: "Stakes" then "$1,000.00 a / slot". **v2 (unit kept whole):** "$1,000.00" / "a slot" / "6 slots", never "a / slot" |
 | Join preview | `S2-join-preview-xxxl-{light,dark}.png` | rows stack at XXXL; "Equal stakes · / $2,000 per slot" |
 | "You're in" facts card | `S3-facts-card-xxxl-{light,dark}.png` | "Equal stakes · / $2,000 per slot" |
-| Create-league summary | `S4-create-summary-xxxl-{light,dark}.png`; **`S4-create-summary-xxxl-light-v2.png`** | "Equal stakes · / $1,000 per slot". **v2 (labels kept):** "Name", "Type", "Teams" and "Stakes" each sit over their value |
+| Create-league summary | `S4-create-summary-xxxl-{light,dark}.png`; `…-light-v2.png`; **`S4-create-summary-xxxl-light-v3.png`, `…-v3-stakes.png`** | "Equal stakes · / $1,000 per slot". v2 (labels kept). **v3 (the final row):** a value that does not fit beside its label drops to the LEFT under it, a two-line value ("Serie A / Traders", "Equal stakes · / $1,000 per slot") reads left, one-line values ("Matchup", "8", "TBD") stay at the right; two frames because the card is taller than the screen |
 | Portfolio | `S5-portfolio-top-xxxl-light.png`, `S5-portfolio-facts-xxxl-light.png`, `S5-portfolio-mid-xxxl-light.png` | hero and "$2,000.00 per slot at the draft" whole; holdings stay single-line |
 | Stock sheet | `S6-sheet-top-xxxl-{light,dark}.png` | "+$10.11 · +2.94% today"; "+$168,488.00 · / +5.00%"; "$3,538,500.00" whole |
 | Trade history | `S7-trade-history-xxxl-{light,dark}.png` | "1 sh at / $145.00": the amount whole, the unit wraps |
@@ -57,16 +57,22 @@ pins that those files carry no `keepMoney`.
 `keepMoney` (`L-join-preview-{on,off}.png`) and the Renewal review's committed code against this change, layout included
 (`L-renewal-{HEAD,on}.png`): **0 differing pixels** in both.
 
-**Large, 17e, light, `origin/main` `3a1e3e85` against this branch (the shared `SettingRow` check; `L-ab/`).** Same sim,
-cold launch per variant, the 18 changed app files swapped for their `3a1e3e85` versions for the base run (bundle
-checked for `keepMoney` / `settingRowWrap`). Changed pixels: Create-league summary **0**; Renewal review (top and the
-Stakes row) **0 / 0**; League settings' static rows (Type, Season, Playoff teams, Commissioner) and its top **0**; the
-SlotBuilder with a slot added **0**; the League tab's League settings row **0**. **The first run was NOT 0:** every static
-row's text sat about 1pt higher (19,426 pixels over the Create summary). Cause: `flexWrap` makes a wrapping row's lines hug
-the top (`alignContent` flex-start), where the one-line row centred its content in `minHeight: 44`. Fixed with
-`alignContent: 'center'` on `settingRowWrap` (pinned, one more mutation, killed). One diff of 1,978 pixels on the League tab
-(avatar and two tab labels) was a first-run artefact of the BASE shot: re-shooting base gives 0 against the new code, and the
-two base shots differ from each other by the same 1,978.
+**Large, 17e, light, `origin/main` `3a1e3e85` against this branch (the shared `SettingRow` check; `L-ab/`).** One sim,
+cold launch per variant, the 18 changed app files swapped for their `3a1e3e85` versions for the base run (served bundle
+checked for `keepMoney` / `settingRowWrap`). **Final changed pixels: 0 on every screen:** Create-league summary; League
+settings (commissioner view) top, bottom (Type, Season, Playoff teams, Commissioner) and the SlotBuilder with a slot added;
+League settings' member view (its static Commissioner row); the League tab's League settings row; the Renewal review (it
+does not use `SettingRow`; unchanged by the later tweaks, 0 / 0 at the previous commit). The pressable rows (League
+settings, Draft time, Category) keep the old layout path.
+
+Two real differences were found by this diff and fixed, which is why it is worth keeping: (1) the wrap made every static
+row's text sit about 1pt high (19,426 pixels on the Create summary): a wrapping row's lines hug the top
+(`alignContent` flex-start) where the one-line row centred in `minHeight: 44`; fixed with `alignContent: 'center'`.
+(2) `textAlign: 'left'` on the value (to make a stacked value read left) moved the one-line values about 1px (6,893
+pixels): the box is rounded up to the pixel grid, so left-aligned glyphs sit off its right edge; fixed by leaving
+one-line values right-aligned and switching to left only when `onTextLayout` reports several lines. Both pinned and
+mutated. One League-tab diff of 1,978 pixels (avatar and two tab labels) was an artefact of the first base shot, not
+code: re-shooting base gave 0 against the new code, and the two base shots differ from each other by the same 1,978.
 
 ## Not captured, and why
 
@@ -85,8 +91,10 @@ two base shots differ from each other by the same 1,978.
   can…") and "a slots" are untouched.
 - **A label is never dropped.** At XXXL the Create-league summary lost its "Name" and "Stakes" labels: `SettingRow`'s
   label block was `flex: 1` (basis 0, so it can never wrap) and the long value took the row. A static row (no
-  `onPress`, no chevron) now uses the same fix as the Renewal review: `flexWrap: 'wrap'`, the label block
-  `flexBasis: 'auto'`, the value `marginLeft: 'auto'`, so the value drops UNDER its label when it cannot sit beside it.
+  `onPress`, no chevron) now uses the same fix as the Renewal review: `flexWrap: 'wrap'` with `justifyContent:
+  'space-between'`, the label block `flexBasis: 'auto'`, so the value drops UNDER its label, at the LEFT (a lone item on
+  a line starts at the start), when it cannot sit beside it; beside the label it stays at the right edge. A value that
+  runs to several lines reads left (`onTextLayout`); a one-line value keeps its right alignment, which is the same pixel.
   `SettingRow` is shared, so the League tab, league settings' static rows and `SlotBuilder` get the same behaviour;
   pressable rows (with the chevron) keep the old layout. At normal size nothing moves.
 

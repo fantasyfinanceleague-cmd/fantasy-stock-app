@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Pressable, StyleSheet, Switch, View, ViewProps } from 'react-native';
 
 import { radius, space, typeFontFamily } from '@/constants/tokens';
@@ -60,6 +60,9 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
   // it, so a label is never squeezed to nothing (W8 follow-up: Create league's summary lost "Name" and "Stakes").
   // A row that opens something keeps its one-line layout: its chevron sits after the value.
   const wraps = !onPress;
+  // A value that runs to several lines reads LEFT (beside the label or stacked under it); a one-line value keeps the
+  // right alignment it always had, which is the same pixel (left-aligned, it sits up to a pixel off the box's edge).
+  const [valueLines, setValueLines] = useState(1);
   const body = (
     <View style={[styles.settingRow, wraps && styles.settingRowWrap, disabled && styles.dim]}>
       <View style={wraps ? styles.growWrap : styles.grow}>
@@ -71,7 +74,13 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
         ) : null}
       </View>
       {value ? (
-        <Text variant="callout" tone="secondary" color={valueColor} style={wraps ? [styles.value, styles.valueWrap] : styles.value}>
+        <Text
+          variant="callout"
+          tone="secondary"
+          color={valueColor}
+          style={wraps && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
+          onTextLayout={wraps ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}
+        >
           {value}
         </Text>
       ) : null}
@@ -217,9 +226,11 @@ const styles = StyleSheet.create({
     paddingVertical: space[4],
   },
   // Static rows: the label sizes to its content (flexBasis auto, not flex: 1's 0) so the row CAN wrap; the value
-  // goes to the right edge, or under the label when it does not fit beside it.
+  // sits at the right edge beside the label, or drops UNDER it, at the left (space-between starts a lone item at the
+  // start), like the Renewal review and the Join preview.
   settingRowWrap: {
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     // A wrapping row's lines hug the top (alignContent flex-start), where the one-line row centred in its minHeight:
     // keep a single line centred so nothing moves at normal size.
     alignContent: 'center',
@@ -232,8 +243,9 @@ const styles = StyleSheet.create({
     flexBasis: 'auto',
     gap: space[1],
   },
-  valueWrap: {
-    marginLeft: 'auto',
+  // The value's box shrink-wraps its text: on its own line it starts at the left, and several lines read left too.
+  valueMulti: {
+    textAlign: 'left',
   },
   choiceRow: {
     flexDirection: 'row',

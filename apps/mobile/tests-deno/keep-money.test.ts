@@ -228,11 +228,21 @@ Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is 
   assert(src.includes('const wraps = !onPress;'));
   assert(src.includes('wraps && styles.settingRowWrap'));
   assert(src.includes('<View style={wraps ? styles.growWrap : styles.grow}>'));
-  assert(src.includes('style={wraps ? [styles.value, styles.valueWrap] : styles.value}'));
+  assert(src.includes('style={wraps && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}'));
+  assert(src.includes('onTextLayout={wraps ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}'));
   assert(/settingRowWrap: \{\s*flexWrap: 'wrap',/.test(src));
   // flex: 1 has a basis of 0, which can never wrap; the wrapping label sizes to its content
   assert(/growWrap: \{[^}]*flexBasis: 'auto'/.test(src));
   // a wrapping row's lines hug the top; alignContent keeps the single line centred in the row's minHeight, so nothing
   // moves at normal size (found by the Large pixel diff: every static row's text sat ~1pt high without it)
   assert(/settingRowWrap: \{[^}]*alignContent: 'center'/.test(src));
+  // a wrapped value drops to the LEFT under its label (space-between starts a lone item at the start), never flush-right:
+  // no marginLeft: 'auto' pushing it, and its text reads left when it runs to several lines
+  assert(/settingRowWrap: \{[^}]*justifyContent: 'space-between'/.test(src));
+  assert(/valueMulti: \{[^}]*textAlign: 'left'/.test(src));
+  assert(!src.includes('valueWrap'));
+  assert(!src.includes("marginLeft: 'auto'"));
+  // a one-line value keeps its right alignment: left-aligned, its glyphs sit up to a pixel off the box edge (the Large
+  // pixel diff caught exactly that, 6,893 pixels), so the left alignment applies only once the text has several lines
+  assert(!/\n  value: \{[^}]*textAlign: 'left'/.test(src));
 });
