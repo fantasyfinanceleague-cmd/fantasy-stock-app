@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text as RNText, View } from 'react-native';
+import { StyleSheet, Text as RNText, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { resolveFontFamily } from '@/components/sp/logic/fontWeight';
 import { digitDiff } from '@/components/sp/logic/digits';
-import { alignSelfFor, fitScale, transformOriginFor, type RollingMoneyAlign } from '@/components/sp/logic/fitScale';
+import { alignSelfFor, FIT_MIN_SCALE, fitScale, transformOriginFor, type RollingMoneyAlign } from '@/components/sp/logic/fitScale';
+import { rollsDigits } from '@/components/sp/logic/rollDigits';
+import { cappedTextProps } from '@/components/sp/logic/cappedType';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -38,6 +40,16 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 // the same left/right/centre-aligned number, just smaller. Floored at
 // 0.7 -- if even that doesn't fit, the row is left to overflow its box
 // rather than ever clip (see fitScale.ts).
+//
+// Large text (P2, 2026-10-16): above the threshold in rollDigits.ts (the
+// variant's Dynamic Type cap engaged, or the app's large-text line), this
+// draws the value as ONE Text, no roll, and an engaged cap is applied as
+// an explicit size (cappedType.ts), not by maxFontSizeMultiplier: iOS
+// reused an uncapped twin's measurement for a capped Text (Home draws the
+// same digits uncapped), which spread Portfolio's sub-lines across the
+// screen at XL/XXXL. The one Text fits itself (adjustsFontSizeToFit, the
+// same 0.7 floor). Below the threshold nothing changes, Reduce Motion
+// included: per character, instant swap (DigitColumn).
 //
 // `align` (2026-10-07 follow-up): defaults to 'left', the only case this
 // component had until a right-aligned opposing value (the far side of a
@@ -118,6 +130,7 @@ export interface RollingMoneyProps {
 export function RollingMoney({ text, size, color, rollKey, align = 'left', fontWeight, maxScale }: RollingMoneyProps) {
   const { colors } = useTheme();
   const { reduced, duration, easing, withTiming } = useMotion();
+  const { fontScale } = useWindowDimensions();
   const prevTextRef = useRef(text);
   const prevKeyRef = useRef(rollKey);
   const keyChanged = prevKeyRef.current !== rollKey;
@@ -133,6 +146,26 @@ export function RollingMoney({ text, size, color, rollKey, align = 'left', fontW
   const typeStyle = type[size];
   const textColor = color ?? colors.text;
   const scale = fitScale(containerWidth, naturalWidth);
+  const cap = maxScale ?? typeStyle.maxScale;
+  const fontFamily = resolveFontFamily(typeStyle.fontFamily, fontWeight);
+
+  if (!rollsDigits(fontScale, cap)) {
+    const capped = cappedTextProps(typeStyle, fontScale, cap);
+    return (
+      <View style={styles.container}>
+        <RNText
+          style={{ alignSelf: alignSelfFor(align), fontFamily, fontSize: capped.style?.fontSize ?? typeStyle.fontSize, lineHeight: capped.style?.lineHeight ?? typeStyle.lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}
+          allowFontScaling={capped.allowFontScaling}
+          maxFontSizeMultiplier={capped.maxFontSizeMultiplier}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={FIT_MIN_SCALE}
+        >
+          {text}
+        </RNText>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
@@ -146,7 +179,7 @@ export function RollingMoney({ text, size, color, rollKey, align = 'left', fontW
             key={`${i}-${diff.length}-${rollKey}`}
             char={entry.char}
             changed={entry.changed}
-            fontFamily={resolveFontFamily(typeStyle.fontFamily, fontWeight)}
+            fontFamily={fontFamily}
             fontSize={typeStyle.fontSize}
             lineHeight={typeStyle.lineHeight}
             textColor={textColor}
@@ -154,7 +187,7 @@ export function RollingMoney({ text, size, color, rollKey, align = 'left', fontW
             duration={duration.base}
             easing={easing.settle}
             withTiming={withTiming}
-            maxFontSizeMultiplier={maxScale ?? typeStyle.maxScale}
+            maxFontSizeMultiplier={cap}
           />
         ))}
       </Animated.View>

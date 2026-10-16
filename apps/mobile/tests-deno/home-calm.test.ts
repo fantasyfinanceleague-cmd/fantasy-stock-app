@@ -72,7 +72,11 @@ Deno.test('the hero sub-line is unchanged: "+$X · +Y% season gain · +$Z today"
   }
   assert(hero.includes('<RollingMoney text={valueText} size="hero" rollKey={leagueId} />'));
   // The weight reaches the face: RollingMoney resolves it as the sp Text does (iOS ignores fontWeight on a named face).
-  assert(SOURCES['components/home/RollingMoney.tsx'].includes('fontFamily={resolveFontFamily(typeStyle.fontFamily, fontWeight)}'));
+  // Resolved once, used by both the rolling digits and the large-text single Text.
+  const rolling = SOURCES['components/home/RollingMoney.tsx'];
+  assert(rolling.includes('const fontFamily = resolveFontFamily(typeStyle.fontFamily, fontWeight);'));
+  assert(rolling.includes('fontFamily={fontFamily}'));
+  assert(rolling.includes('style={{ alignSelf: alignSelfFor(align), fontFamily, fontSize'));
 });
 
 Deno.test('the hero block: HomeHero, then the chart and range tabs, 8pt apart; pre-season stays hero only', () => {
