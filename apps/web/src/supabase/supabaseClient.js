@@ -1,66 +1,35 @@
 import { createClient } from '@supabase/supabase-js';
+import { createJwtRetryFetch, isLegacyAuthReturn } from './legacyClientGuards';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 // Phase 3b: legacy anon key -> new publishable key (anon drop-in replacement).
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Track if we're currently refreshing to avoid infinite loops
-let isRefreshing = false;
-let refreshPromise = null;
+// The JWT-expired retry is scoped to THIS client through supabase-js's
+// global.fetch option. It used to replace globalThis.fetch, which put this
+// client's session on other code's requests too (the onboarding client in
+// src/join/* included). The retry needs the client and the client needs the
+// fetch, so the ref breaks that cycle.
+const clientRef = { current: null };
+const jwtRetryFetch = createJwtRetryFetch({
+  supabaseUrl,
+  refreshSession: () => clientRef.current.auth.refreshSession(),
+});
 
-// Create the client first
 export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
+    // Only the old app's own sign-in return (the site root) is read for a
+    // session; tokens or errors in any other page's URL are not this
+    // client's to take. See legacyClientGuards.js.
+    detectSessionInUrl: isLegacyAuthReturn,
     // Storage key for the session - helps avoid conflicts
     storageKey: 'fantasy-finance-auth',
   },
+  global: { fetch: jwtRetryFetch },
 });
-
-// Wrap the original fetch to handle JWT expiry
-const originalFetch = globalThis.fetch;
-const supabaseFetch = async (url, options) => {
-  let response = await originalFetch(url, options);
-
-  // Only handle JWT errors for Supabase requests
-  if (response.status === 401 && typeof url === 'string' && url.includes(supabaseUrl)) {
-    try {
-      const body = await response.clone().text();
-      if (body.includes('JWT expired') || body.includes('jwt expired')) {
-
-        // Avoid multiple concurrent refresh attempts
-        if (!isRefreshing) {
-          isRefreshing = true;
-          refreshPromise = supabase.auth.refreshSession();
-        }
-
-        const { data: refreshData, error: refreshError } = await refreshPromise;
-        isRefreshing = false;
-        refreshPromise = null;
-
-        if (!refreshError && refreshData?.session) {
-          // Retry the original request with the new token
-          const newOptions = { ...options };
-          if (newOptions.headers) {
-            const headers = new Headers(newOptions.headers);
-            headers.set('Authorization', `Bearer ${refreshData.session.access_token}`);
-            newOptions.headers = headers;
-          }
-          response = await originalFetch(url, newOptions);
-        }
-      }
-    } catch {
-      // If we can't parse the body, just return the original response
-    }
-  }
-
-  return response;
-};
-
-// Apply the wrapped fetch globally for Supabase
-globalThis.fetch = supabaseFetch;
+clientRef.current = supabase;
 
 // Helper to ensure session is valid before making requests
 export async function ensureValidSession() {
