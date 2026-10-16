@@ -9,7 +9,7 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import {
-  THIS_WEEK_HREF, STANDINGS_HREF, OPENS_MATCHUP_HINT, leagueSegmentFromParam, seasonOverPrimary, preDraftBlocks, preDraftChipShown,
+  THIS_WEEK_HREF, STANDINGS_HREF, BRACKET_HREF, OPENS_MATCHUP_HINT, leagueSegmentFromParam, seasonOverPrimary, preDraftBlocks, preDraftChipShown,
   type PreDraftFlags,
 } from '../lib/home/calmHome.ts';
 import { HERO_SEASON_GAIN_LABEL, HERO_TODAY_LABEL, LIVE_CHIP } from '../lib/home/homeCopy.ts';
@@ -228,4 +228,14 @@ Deno.test("the static end dot is never clipped: the Game Night Chart keeps its w
   assert(chart.includes('const PAD = { top: HALO_R + 3, bottom: HALO_R, left: 2, right: HALO_R + 3 };'));
   assert(chart.includes('x: Math.min(Math.max(geometry.end.x, HALO_R + 1), width - HALO_R - 1)'));
   assert(SOURCES['components/home/SeasonChart.tsx'].includes('<Chart\n'));
+});
+
+// W8 tap-through (F6): "See the bracket" on an eliminated player's Home card opened League on whichever
+// segment it was left on (Standings), with no bracket in view. It now carries ?segment=playoffs.
+Deno.test('"See the bracket" opens League on the Playoffs segment', () => {
+  assertEquals(BRACKET_HREF, { pathname: '/(tabs)/league', params: { segment: 'playoffs' } });
+  assertEquals(leagueSegmentFromParam(BRACKET_HREF.params.segment), 'playoffs', 'League reads the param');
+  const index = SOURCES['app/(tabs)/index.tsx'];
+  assert(index.includes('actionLabel={SEE_THE_BRACKET} onAction={() => router.push(BRACKET_HREF)}'));
+  assert(!index.includes("onAction={() => router.push('/(tabs)/league')}"), 'no bare League push on a labelled destination');
 });

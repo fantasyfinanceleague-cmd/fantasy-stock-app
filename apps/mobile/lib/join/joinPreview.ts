@@ -300,6 +300,8 @@ export interface JoinedView {
   lead: string;
   name: string;
   body: string;
+  /** The date phrase inside `body` ("Sat, Oct 10 · 7:00 PM ET"), or null with no date: the screen runs it through keepDots. */
+  when: string | null;
 }
 
 /** "You're in {League}" / "The draft is {when}. The draft order is set an hour before." (Design Lead, #125: the board's "and we'll let you know" is dropped, the order-notify push doesn't exist yet.) */
@@ -312,5 +314,6 @@ export function joinedView(leagueName: string, draftDate: string | null): Joined
     body: when
       ? `The draft is ${when}. The draft order is set an hour before.`
       : JOIN_COPY.joinedNoDate,
+    when: when ?? null,
   };
 }

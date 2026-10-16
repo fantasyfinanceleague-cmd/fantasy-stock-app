@@ -2,27 +2,83 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "606bf862551339d7b9f4c4472cfacfa06df40aad",
-    "commitShort": "606bf862",
+    "commit": "59e1222b446d9f04f618bdfbd4a24bb2292d9328",
+    "commitShort": "59e1222b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "docs/db-snapshot-2026-10-15",
+    "branch": "chore/w8-tap-through",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
+        "path": "apps/mobile/app/(tabs)/index.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/QueueEditor.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/categoryData.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/keepDots.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/home/calmHome.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/join/joinPreview.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/money/useMoneyStockSearch.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/lib/readResult.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/dot-rule.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/home-calm.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/onboarding-w4.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/read-result.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/search-stable-deps.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-15T22:14:19Z",
-    "sourceHash": "sha256:f1c2544e6b798557a6c80f0b50d771d21ceeffd1a9d98c599896f4ca51f798bb",
+    "timestamp": "2026-10-16T19:22:22Z",
+    "sourceHash": "sha256:9e19b765c890d59f8fe33e10a446c2d41bf3402d794f7e4548120297805f6d6c",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 21.1,
+    "ageDays": 0.9,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da",
@@ -16277,7 +16333,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:65"
+        "apps/mobile/lib/categoryData.ts:66"
       ]
     },
     {
@@ -16293,8 +16349,8 @@
         "gics_industry"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:102",
-        "apps/mobile/lib/categoryData.ts:144"
+        "apps/mobile/lib/categoryData.ts:103",
+        "apps/mobile/lib/categoryData.ts:143"
       ]
     },
     {
@@ -16309,7 +16365,7 @@
         "slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:213"
+        "apps/mobile/lib/categoryData.ts:212"
       ]
     },
     {
@@ -16322,7 +16378,7 @@
       "payload": ".from('league_draft_slots').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:193"
+        "apps/mobile/lib/categoryData.ts:192"
       ]
     },
     {
@@ -16335,7 +16391,7 @@
       "payload": ".from('league_draft_slots').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:206"
+        "apps/mobile/lib/categoryData.ts:205"
       ]
     },
     {
@@ -16351,8 +16407,8 @@
         "symbol, category_id"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:145",
-        "apps/mobile/lib/categoryData.ts:84"
+        "apps/mobile/lib/categoryData.ts:144",
+        "apps/mobile/lib/categoryData.ts:85"
       ]
     },
     {
@@ -16368,10 +16424,10 @@
         "symbol"
       ],
       "callSites": [
-        "apps/mobile/lib/categoryData.ts:112",
         "apps/mobile/lib/categoryData.ts:113",
-        "apps/mobile/lib/categoryData.ts:130",
-        "apps/mobile/lib/categoryData.ts:95"
+        "apps/mobile/lib/categoryData.ts:114",
+        "apps/mobile/lib/categoryData.ts:132",
+        "apps/mobile/lib/categoryData.ts:96"
       ]
     },
     {
@@ -16464,7 +16520,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('set_draft_queue')",
       "callSites": [
-        "apps/mobile/components/game/QueueEditor.tsx:38"
+        "apps/mobile/components/game/QueueEditor.tsx:43"
       ],
       "via": [
         "seamRpc"
@@ -20263,7 +20319,7 @@
     "rpcs": [
       "apps/mobile/app/(tabs)/league.tsx:144 -> renew_league (via seamRpc)",
       "apps/mobile/app/(tabs)/matchup.tsx:94 -> get_portfolio_ledger (via useRosterData)",
-      "apps/mobile/components/game/QueueEditor.tsx:38 -> set_draft_queue (via seamRpc)",
+      "apps/mobile/components/game/QueueEditor.tsx:43 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:54 -> start_renewed_season (via seamRpc)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
@@ -20363,18 +20419,18 @@
       "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
       "apps/mobile/lib/SessionProvider.tsx:188 -> user_profiles.select",
-      "apps/mobile/lib/categoryData.ts:102 -> category_rules.select",
-      "apps/mobile/lib/categoryData.ts:112 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:103 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:113 -> symbols.select",
-      "apps/mobile/lib/categoryData.ts:130 -> symbols.select",
-      "apps/mobile/lib/categoryData.ts:144 -> category_rules.select",
-      "apps/mobile/lib/categoryData.ts:145 -> symbol_category_overrides.select",
-      "apps/mobile/lib/categoryData.ts:193 -> league_draft_slots.delete",
-      "apps/mobile/lib/categoryData.ts:206 -> league_draft_slots.insert",
-      "apps/mobile/lib/categoryData.ts:213 -> league_draft_slots.select",
-      "apps/mobile/lib/categoryData.ts:65 -> categories.select",
-      "apps/mobile/lib/categoryData.ts:84 -> symbol_category_overrides.select",
-      "apps/mobile/lib/categoryData.ts:95 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:114 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:132 -> symbols.select",
+      "apps/mobile/lib/categoryData.ts:143 -> category_rules.select",
+      "apps/mobile/lib/categoryData.ts:144 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:192 -> league_draft_slots.delete",
+      "apps/mobile/lib/categoryData.ts:205 -> league_draft_slots.insert",
+      "apps/mobile/lib/categoryData.ts:212 -> league_draft_slots.select",
+      "apps/mobile/lib/categoryData.ts:66 -> categories.select",
+      "apps/mobile/lib/categoryData.ts:85 -> symbol_category_overrides.select",
+      "apps/mobile/lib/categoryData.ts:96 -> symbols.select",
       "apps/mobile/lib/game/seamCalls.ts:49 -> leagues.update",
       "apps/mobile/lib/game/seamCalls.ts:77 -> leagues.insert",
       "apps/mobile/lib/game/seamCalls.ts:83 -> league_members.insert",

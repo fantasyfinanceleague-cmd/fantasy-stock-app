@@ -19,6 +19,11 @@ export interface QueueEditorProps {
   onSaved: () => void;
 }
 
+/** One Set for the life of the module: useSymbolSearch takes `ownedSymbols` as an effect dependency, so a fresh
+ * `new Set()` per render cancelled the 300 ms debounce on every parent re-render and the search never fired
+ * (the spinner for ever; W8 tap-through). The queue marks nothing as owned. */
+const NO_OWNED_SYMBOLS: Set<string> = new Set();
+
 /** The draft queue (3c): the stocks auto-pick takes first. Move, remove and add, then
  * save. The save is the server's set_draft_queue, and the server's refusal decides. */
 export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
@@ -71,7 +76,7 @@ export function QueueEditor({ leagueId, initial, onSaved }: QueueEditorProps) {
         </View>
       ))}
       {queue.length < QUEUE_MAX ? (
-        <SymbolSearchField value={search} onChangeText={setSearch} onSelect={onSelect} selectedSymbol="" ownedSymbols={new Set()} captureAction="typeq" />
+        <SymbolSearchField value={search} onChangeText={setSearch} onSelect={onSelect} selectedSymbol="" ownedSymbols={NO_OWNED_SYMBOLS} captureAction="typeq" />
       ) : null}
       {/* Save appears with something to save, beside the line that says so; it's a secondary
           pill, so the room's one primary stays Draft (§9C: one accent, small). */}

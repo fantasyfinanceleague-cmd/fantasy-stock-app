@@ -59,11 +59,6 @@ export const NO_OP_ALLOW = [
     snippet: "{ label: 'Join', onPress: undefined }",
     reason: "disabled with its reason: the Button sets disabled={view.action === 'join_disabled'}, an action that only comes from block 'left_league', whose blockMessage renders in the WarnPanel above the button",
   },
-  {
-    file: 'lib/money/useMoneyStockSearch.ts',
-    snippet: 'NOOP',
-    reason: "the __DEV__-only money fixture (MONEY_FIXTURE_CONFIG is null in release builds); its answer is deterministic from the query, so a retry has nothing to change (file header). W8 part 2: the search_fail fixture's \"Try again\" visibly does nothing on the simulator",
-  },
 ];
 
 // ---------------------------------------------------------------------------

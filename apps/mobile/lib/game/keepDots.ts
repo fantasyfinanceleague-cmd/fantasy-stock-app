@@ -30,11 +30,12 @@ export function keepDots(line: string, keepWhole = KEEP_WHOLE): string {
 }
 
 /**
- * A "·" starts a line and never ends one (onboarding W4, "Sat, Oct 10 · / 7:00 PM ET"). The space BEFORE the
- * dot stays breakable (the line may end there) and the space AFTER it becomes a no-break space, gluing the dot
- * to the word it introduces ("Oct 10 / · 7:00 PM ET"). (A no-break space before the dot would glue it to the
- * END of the line instead: the break would then fall after it, the very thing to avoid.)
+ * keepDots for ONE phrase inside a longer sentence ("The draft is {when}. The draft order is set an hour
+ * before."): only the phrase gets the no-break spaces, so the sentence's own words wrap freely around it.
+ * keepDots on the whole sentence would glue its 24-character first segment ("The draft is Sat, Oct 10")
+ * into one unbreakable run and leave "7:00 PM ET" free to split. (Onboarding W8, the one dot rule: a "·"
+ * may END a line, never start one.)
  */
-export function dotStartsLine(line: string): string {
-  return line.replace(/ · /g, ` ·${NBSP}`);
+export function keepDotsIn(sentence: string, phrase: string): string {
+  return phrase && sentence.includes(phrase) ? sentence.replace(phrase, () => keepDots(phrase)) : sentence;
 }
