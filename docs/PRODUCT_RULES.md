@@ -286,6 +286,35 @@ building anything, and don't reopen a rule without him.
   leagues didn't load." with "Check your connection, then try again." and "Try again" (one
   string, shared by both). "No leagues yet" shows only when that read succeeds with no
   leagues. (Before, a failed read said "No leagues yet" with Create / Join.)
+- **A leaguemate's team opens from the standings and the matchup** (the Planner, 2026-10-16,
+  F5 of the W8 tap-through; Giorgio has a veto), verbatim: "B, wire it. The standing rule
+  'league features follow fantasy football' decides this: ESPN, Sleeper and Yahoo all open
+  another manager's full team from the standings (and from the matchup header), and within a
+  league rosters are public by convention; holdings are already visible here ('Owned by …'),
+  so a read-only full view of a leaguemate's team exposes nothing new (only leaguemates, per
+  the profile-visibility rule; it's a member-gated read). Entry points, two: (1) tapping a
+  manager's row in League › Standings (and in Home's standings excerpt via the same
+  ManagerRow); (2) tapping the opponent's avatar/name in the Matchup scoreboard header. Your
+  own row opens your Portfolio tab instead. Nothing else links there; the deep link stays on
+  the resume allow-list."
+  - **Its words** (the Planner, same day): "View {name}'s team" / "View your portfolio" for
+    VoiceOver; "{name}'s team didn't load" (no name known: "This team didn't load") with "Try
+    again"; the screen's title is the manager's display name. A name ending in "s" still
+    takes "'s" ("Francis's team").
+  - **How the entry points behave** (Design Lead, 2026-10-16; the screens look the same at
+    rest, so no A/B):
+    - **Home's standings excerpt** is no longer one button. Its header (the title, "Through
+      Week N" and the chevron) opens League › Standings, with its tap area grown to 44pt and
+      the layout unchanged. Each manager row opens that manager's team, and yours opens your
+      Portfolio. No chevrons on the rows; every row behaves the same, bots included.
+    - **The Matchup scoreboard:** the WHOLE half is the button, not only the avatar and name
+      (a far bigger target; tapping the score beside a name never does nothing). Your half
+      opens your Portfolio. The lead line under the halves stays plain text. A "Bye week" half
+      and the compact boards in All matchups open nothing.
+    - **League › Standings** rows open the team the same way.
+    - **VoiceOver:** a row or half keeps its content as its label (rank, name, record and
+      season gain; or name and total), is a button, and carries the Planner's words as its
+      action ("View {name}'s team" / "View your portfolio").
 
 ## Home and Portfolio
 
