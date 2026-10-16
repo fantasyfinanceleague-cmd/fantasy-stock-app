@@ -157,7 +157,9 @@ Deno.test('PlayerPortfolioScreen: a money page (moneyBg), rows at the 56pt rhyth
   const pp = code(SOURCES['components/money/PlayerPortfolioScreen.tsx']);
   assert(pp.includes('backgroundColor: colors.moneyBg'));
   assert(!pp.includes('colors.bg'));
-  assert(pp.includes("row: { minHeight: 56, paddingVertical: space[3],"));
+  // The holdings are the Portfolio's HoldingRow (the 56pt rhythm lives there), no hand-built rows.
+  assert(pp.includes('<HoldingRow'));
+  assert(SOURCES['components/money/HoldingRow.tsx'].includes('minHeight: 56'));
 });
 
 Deno.test('SymbolSearchField: the result badge holds the 11pt floor (§9B)', () => {

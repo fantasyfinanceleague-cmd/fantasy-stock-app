@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
 import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
+import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
@@ -23,6 +24,15 @@ import { YOUR_NAME_WEIGHT } from '@/lib/game/managerRow';
 // `opp`, its total plain `text` like yours. Beside the old components/sp/game/Scoreboard
 // (Home's This week still uses that one); W4 moves Matchup onto this.
 
+/** A WHOLE half as one button (the leaguemate team view; Design Lead, 2026-10-16): yours opens
+ * your Portfolio, theirs opens their team. VoiceOver keeps the half's reading as its label
+ * (name, total) and says what the tap does as the hint ("View Paolo M.'s team", the Planner's
+ * words; yours "View your portfolio"). */
+export interface ScoreboardOpen {
+  hint: string;
+  onPress: () => void;
+}
+
 export interface GnScoreboardProps {
   you: ScoreSide & { avatarUri?: string | null };
   /** null only with `bye` (a bye week has no opponent). */
@@ -40,6 +50,13 @@ export interface GnScoreboardProps {
   /** A bye week (#call-mx-bye, B): no opponent. Their half reads `label` ("Bye week") and the
    * line under the card is `line` (the app's "Bye week · no result") — never a "leads by". */
   bye?: { label: string; line: string };
+  /** Matchup's header only: each half is ONE button that opens that manager's team (yours: your
+   * Portfolio). With either set the card is no longer ONE accessible element (a button inside
+   * it would be hidden from VoiceOver): each half reads on its own, the leads-by line is its own
+   * text, and a bye half stays inert. Absent (All matchups' compact boards), the card is inert
+   * as before, with its single combined label. */
+  openYou?: ScoreboardOpen;
+  openOpponent?: ScoreboardOpen;
 }
 
 const AVATAR = { hero: 44, compact: 32 } as const;
@@ -58,31 +75,32 @@ const WHO_GAP = space[3];
 /** The leads-by line under the card. */
 export const LINE_MAX_SCALE = 1.3;
 
-export function Scoreboard({ you, opponent, final = false, size = 'hero', mine = true, showLine = true, bye }: GnScoreboardProps) {
+export function Scoreboard({ you, opponent, final = false, size = 'hero', mine = true, showLine = true, bye, openYou, openOpponent }: GnScoreboardProps) {
   const { colors } = useTheme();
   const model = opponent ? scoreboardModel(you, opponent, final) : null;
   const line = bye || !model ? bye?.line ?? '' : model.line;
   // Each half's width, measured: decides whether a name fits beside its avatar.
   const [cardWidth, setCardWidth] = useState(0);
+  const interactive = !!(openYou || openOpponent);
   const label = bye
     ? `${you.name}, you, ${formatMoney(you.gain, { sign: 'always' })}. ${line}.`
     : `${you.name}${mine ? ', you' : ''}, ${formatMoney(you.gain, { sign: 'always' })}. ${opponent?.name ?? ''}, ${formatMoney(opponent?.gain ?? 0, { sign: 'always' })}.${showLine ? ` ${line}.` : ''}`;
 
   return (
     <View style={styles.wrap}>
-      <Card style={styles.card} accessible accessibilityLabel={label} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
-        <Half side={mine ? 'you' : 'opp'} team={you} mirror={false} size={size} halfWidth={cardWidth / 2} />
+      <Card style={styles.card} accessible={!interactive} accessibilityLabel={interactive ? undefined : label} onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}>
+        <Half side={mine ? 'you' : 'opp'} team={you} mirror={false} size={size} halfWidth={cardWidth / 2} open={openYou} />
         {bye || !opponent ? (
           <View style={[styles.half, styles.byeHalf]} testID="scoreboard-bye">
             <Text variant="callout" color={colors.text2} maxFontSizeMultiplier={NAME_MAX_SCALE} style={styles.byeLabel}>{bye?.label ?? ''}</Text>
           </View>
         ) : (
-          <Half side="opp" team={opponent} mirror size={size} halfWidth={cardWidth / 2} />
+          <Half side="opp" team={opponent} mirror size={size} halfWidth={cardWidth / 2} open={openOpponent} />
         )}
       </Card>
       {showLine ? (
         // Capped at 1.3× so the totals above stay the loudest thing on the card at XL.
-        <Text variant="callout" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.line} importantForAccessibility="no" accessibilityElementsHidden>
+        <Text variant="callout" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.line} importantForAccessibility={interactive ? 'auto' : 'no'} accessibilityElementsHidden={!interactive}>
           {line}
         </Text>
       ) : null}
@@ -90,7 +108,18 @@ export function Scoreboard({ you, opponent, final = false, size = 'hero', mine =
   );
 }
 
-function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; team: ScoreSide & { avatarUri?: string | null }; mirror: boolean; size: 'hero' | 'compact'; halfWidth: number }) {
+/** One half's box: a button (the whole half, press feedback only; its shading, ring and layout are
+ * the plain half's) when it opens a team, else the plain View. */
+function HalfBox({ open, label, style, testID, children }: { open?: ScoreboardOpen; label: string; style: StyleProp<ViewStyle>; testID?: string; children: ReactNode }) {
+  if (!open) return <View testID={testID} style={style}>{children}</View>;
+  return (
+    <PressableScale testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityHint={open.hint} onPress={open.onPress} style={style}>
+      {children}
+    </PressableScale>
+  );
+}
+
+function Half({ side, team, mirror, size, halfWidth, open }: { side: 'you' | 'opp'; team: ScoreSide & { avatarUri?: string | null }; mirror: boolean; size: 'hero' | 'compact'; halfWidth: number; open?: ScoreboardOpen }) {
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const you = side === 'you';
@@ -107,7 +136,9 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
     stacked, totalText, totalPt: TOTAL_PT[size] * Math.min(fontScale, TOTAL_MAX_SCALE), innerWidth: halfWidth - 2 * HALF_PAD, namePt: NAME_PT[size],
   });
   return (
-    <View
+    <HalfBox
+      open={open}
+      label={`${team.name}${you ? ', you' : ''}, ${totalText}`}
       testID={you ? 'scoreboard-you' : undefined}
       style={[
         styles.half,
@@ -134,7 +165,7 @@ function Half({ side, team, mirror, size, halfWidth }: { side: 'you' | 'opp'; te
       <Text variant={size === 'compact' ? 'score.lg' : 'score.xl'} adjustsFontSizeToFit minimumFontScale={0.6} style={mirror ? styles.right : null}>
         {formatMoney(team.gain, { sign: 'always' })}
       </Text>
-    </View>
+    </HalfBox>
   );
 }
 

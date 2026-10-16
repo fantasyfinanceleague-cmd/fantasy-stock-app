@@ -57,6 +57,8 @@ import { buildStandingsRows, standingsView, type StandingsRow } from '@/lib/game
 import { COPY as GAME_COPY } from '@/lib/game/gameCopy';
 import { SettingRow, SetupCard } from '@/components/game/SetupRows';
 import { showsLeagueSettingsRow } from '@/lib/game/leagueSettingsEntry';
+import { teamHref } from '@/lib/game/teamLink';
+import { useCaptureAction } from '@/lib/money/captureScript';
 import { leaveLeagueEnabled } from '@/lib/game/leaveLeague';
 import { runItBackEnabled } from '@/lib/game/renewal';
 
@@ -153,6 +155,12 @@ export default function LeagueScreen() {
     setActiveLeagueId(res.league_id);
   };
   const isCommissioner = !!user?.id && activeLeague?.commissioner_id === user.id;
+  // DEV capture only (captureScript): the same push a standings row's tap runs.
+  useCaptureAction('team', (id) => {
+    const r = st.standings.find((x) => x.user_id === id);
+    const href = r ? teamHref({ userId: r.user_id, name: r.display_name, isYou: r.user_id === user?.id }) : null;
+    if (href) router.push(href);
+  });
 
   // U-10: the room (its ending) stays once the last pick lands, even after the
   // server finishes the draft and the phase moves on, until "See your Week 1 matchup".

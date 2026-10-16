@@ -2,63 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "4abacfbc80a8a1448b1dd19b702b683e23be0398",
-    "commitShort": "4abacfbc",
+    "commit": "73d37cfa9024e216d41dc586cba53ab2e2e73635",
+    "commitShort": "73d37cfa",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/w8-f3-f4",
+    "branch": "feat/leaguemate-team-view",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/app/profile.tsx"
+        "path": "apps/mobile/lib/game/devSeam.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/RenewalReview.tsx"
+        "path": "apps/mobile/lib/money/portfolioSeam.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/shell/ShellHeader.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/renewalReview.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/game/slotBuilderCopy.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/shell/profileBack.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-renewal-review.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/slot-builder-copy.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/w8-f3-f4.test.ts"
+        "path": "apps/mobile/lib/money/usePortfolioLedger.ts"
       }
     ],
-    "timestamp": "2026-10-16T20:10:05Z",
-    "sourceHash": "sha256:79125fd0cb03be97d23477f8b4164fa80e70bc4d0812c474c39b79af58af5f22",
+    "timestamp": "2026-10-16T21:10:41Z",
+    "sourceHash": "sha256:573590f671e66b1680a1d4289c3d26e60c6cdedb2462460a119b6bcbfeb913a2",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 21.9,
-    "ageDays": 0.9,
+    "ageHours": 23,
+    "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da",
@@ -8723,6 +8695,23 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.game.useMemberSnapshots",
+      "label": "useMemberSnapshots.ts",
+      "sublabel": "mobile/lib/game/useMemberSnapshots.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/game/useMemberSnapshots.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.game.useRenewalRoster",
       "label": "useRenewalRoster.ts",
       "sublabel": "mobile/lib/game/useRenewalRoster.ts",
@@ -8984,6 +8973,23 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/mobile/app/(tabs)/matchup.tsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.money.PlayerPortfolioScreen",
+      "label": "PlayerPortfolioScreen.tsx",
+      "sublabel": "mobile/components/money/PlayerPortfolioScreen.tsx",
+      "kind": "client-component",
+      "source": {
+        "path": "apps/mobile/components/money/PlayerPortfolioScreen.tsx",
         "line": 1
       }
     },
@@ -9443,6 +9449,23 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/Ticker.jsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.tests-deno.leaguemate-team-view.test",
+      "label": "leaguemate-team-view.test.ts",
+      "sublabel": "mobile/tests-deno/leaguemate-team-view.test.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/tests-deno/leaguemate-team-view.test.ts",
         "line": 1
       }
     },
@@ -16958,6 +16981,21 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.game.useMemberSnapshots->tbl.week_snapshots",
+      "from": "ui.game.useMemberSnapshots",
+      "to": "tbl.week_snapshots",
+      "protocol": "postgrest-select",
+      "payload": ".from('week_snapshots').select('user_id, symbol, quantity, week_start_price, entered_mid_week')",
+      "columns": [
+        "user_id, symbol, quantity, week_start_price, entered_mid_week"
+      ],
+      "callSites": [
+        "apps/mobile/lib/game/useMemberSnapshots.ts:38"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.game.useRenewalRoster->pg.get_renewal_roster",
       "from": "ui.game.useRenewalRoster",
       "to": "pg.get_renewal_roster",
@@ -17268,7 +17306,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('renew_league')",
       "callSites": [
-        "apps/mobile/app/(tabs)/league.tsx:144"
+        "apps/mobile/app/(tabs)/league.tsx:146"
       ],
       "via": [
         "seamRpc"
@@ -17416,7 +17454,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:94"
+        "apps/mobile/app/(tabs)/matchup.tsx:96"
       ],
       "via": [
         "useRosterData"
@@ -17434,7 +17472,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:94"
+        "apps/mobile/app/(tabs)/matchup.tsx:96"
       ],
       "via": [
         "useRosterData"
@@ -17452,7 +17490,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:94"
+        "apps/mobile/app/(tabs)/matchup.tsx:96"
       ],
       "via": [
         "useRosterData"
@@ -17470,7 +17508,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:94"
+        "apps/mobile/app/(tabs)/matchup.tsx:96"
       ],
       "via": [
         "useRosterData"
@@ -17488,7 +17526,94 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/app/(tabs)/matchup.tsx:94"
+        "apps/mobile/app/(tabs)/matchup.tsx:96"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PlayerPortfolioScreen->pg.get_portfolio_ledger",
+      "from": "ui.money.PlayerPortfolioScreen",
+      "to": "pg.get_portfolio_ledger",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_portfolio_ledger')",
+      "callSites": [
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PlayerPortfolioScreen->tbl.categories",
+      "from": "ui.money.PlayerPortfolioScreen",
+      "to": "tbl.categories",
+      "protocol": "postgrest-select",
+      "payload": ".from('categories').select('id, slug, name, is_misc')",
+      "columns": [
+        "id, slug, name, is_misc"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PlayerPortfolioScreen->tbl.drafts",
+      "from": "ui.money.PlayerPortfolioScreen",
+      "to": "tbl.drafts",
+      "protocol": "postgrest-select",
+      "payload": ".from('drafts').select('user_id, symbol, slot_id, created_at')",
+      "columns": [
+        "user_id, symbol, slot_id, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PlayerPortfolioScreen->tbl.league_draft_slots",
+      "from": "ui.money.PlayerPortfolioScreen",
+      "to": "tbl.league_draft_slots",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_draft_slots').select('id, slot_index, slot_count, price_min, price_max, category_id')",
+      "columns": [
+        "id, slot_index, slot_count, price_min, price_max, category_id"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+      ],
+      "via": [
+        "useRosterData"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.money.PlayerPortfolioScreen->tbl.trades",
+      "from": "ui.money.PlayerPortfolioScreen",
+      "to": "tbl.trades",
+      "protocol": "postgrest-select",
+      "payload": ".from('trades').select('user_id, symbol, slot_id, created_at')",
+      "columns": [
+        "user_id, symbol, slot_id, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
       ],
       "via": [
         "useRosterData"
@@ -18534,6 +18659,19 @@
       "payload": "functions.invoke('ticker-quotes')",
       "callSites": [
         "apps/web/src/Ticker.jsx:28"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.tests-deno.leaguemate-team-view.test->tbl.week_snapshots",
+      "from": "ui.tests-deno.leaguemate-team-view.test",
+      "to": "tbl.week_snapshots",
+      "protocol": "postgrest-select",
+      "payload": ".from('week_snapshots').select()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/tests-deno/leaguemate-team-view.test.ts:193"
       ]
     },
     {
@@ -20223,8 +20361,8 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 272,
-    "edges": 651,
+    "nodes": 275,
+    "edges": 658,
     "flows": 7,
     "drift": 30,
     "driftHigh": 0,
@@ -20297,14 +20435,15 @@
       "apps/web/src/pages/JoinLeague.jsx:49 -> join-league"
     ],
     "rpcs": [
-      "apps/mobile/app/(tabs)/league.tsx:144 -> renew_league (via seamRpc)",
-      "apps/mobile/app/(tabs)/matchup.tsx:94 -> get_portfolio_ledger (via useRosterData)",
+      "apps/mobile/app/(tabs)/league.tsx:146 -> renew_league (via seamRpc)",
+      "apps/mobile/app/(tabs)/matchup.tsx:96 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/game/QueueEditor.tsx:43 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
       "apps/mobile/components/game/RenewalReview.tsx:60 -> start_renewed_season (via seamRpc)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:177 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:182 -> market_session_status",
@@ -20378,10 +20517,10 @@
       "supabase/functions/validate-and-record-pick/index.ts:131 -> check_and_bump_rate_limit"
     ],
     "tableOps": [
-      "apps/mobile/app/(tabs)/matchup.tsx:94 -> categories.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:94 -> drafts.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:94 -> league_draft_slots.select (via useRosterData)",
-      "apps/mobile/app/(tabs)/matchup.tsx:94 -> trades.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:96 -> categories.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:96 -> drafts.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:96 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/app/(tabs)/matchup.tsx:96 -> trades.select (via useRosterData)",
       "apps/mobile/app/create-league.tsx:198 -> leagues.insert (via seamInsertLeague)",
       "apps/mobile/app/create-league.tsx:222 -> league_members.insert (via seamInsertMember)",
       "apps/mobile/app/create-league.tsx:232 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
@@ -20389,6 +20528,10 @@
       "apps/mobile/app/league-settings.tsx:243 -> leagues.update (via seamUpdateLeague)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
       "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> categories.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> drafts.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> trades.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> categories.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> drafts.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:88 -> league_draft_slots.select (via useRosterData)",
@@ -20427,6 +20570,7 @@
       "apps/mobile/lib/game/useFinalLineups.ts:52 -> trades.select",
       "apps/mobile/lib/game/useLeaveLeague.ts:33 -> league_members.select",
       "apps/mobile/lib/game/useLeaveLeague.ts:60 -> league_members.select",
+      "apps/mobile/lib/game/useMemberSnapshots.ts:38 -> week_snapshots.select",
       "apps/mobile/lib/game/useRosterData.ts:50 -> league_draft_slots.select",
       "apps/mobile/lib/game/useRosterData.ts:74 -> drafts.select",
       "apps/mobile/lib/game/useRosterData.ts:82 -> trades.select",
@@ -20443,6 +20587,7 @@
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
       "apps/mobile/lib/usePortfolio.ts:128 -> trades.select",
+      "apps/mobile/tests-deno/leaguemate-team-view.test.ts:193 -> week_snapshots.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",
       "apps/web/src/pages/Dashboard.jsx:132 -> drafts.select",

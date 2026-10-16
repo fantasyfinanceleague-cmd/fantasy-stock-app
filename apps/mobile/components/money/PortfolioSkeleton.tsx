@@ -10,18 +10,23 @@ import { Skeleton } from '@/components/Skeleton';
 
 const LOADING = 'Loading your portfolio';
 
-export function PortfolioSkeleton() {
+/** `label`: what VoiceOver hears. `chart: false` is the leaguemate team view (no value line, no range pills). */
+export function PortfolioSkeleton({ label = LOADING, chart = true }: { label?: string; chart?: boolean } = {}) {
   return (
-    <View style={styles.blocks} accessible accessibilityLabel={LOADING} accessibilityState={{ busy: true }}>
+    <View style={styles.blocks} accessible accessibilityLabel={label} accessibilityState={{ busy: true }}>
       <View style={styles.hero}>
         <Skeleton width={96} height={12} />
         <Skeleton width={220} height={44} borderRadius={8} />
         <Skeleton width={200} height={14} />
         <Skeleton width={150} height={14} />
-        <Skeleton height={168} borderRadius={12} />
-        <View style={styles.pills}>
-          {[0, 1, 2].map((i) => <Skeleton key={i} width={56} height={32} borderRadius={16} />)}
-        </View>
+        {chart ? (
+          <>
+            <Skeleton height={168} borderRadius={12} />
+            <View style={styles.pills}>
+              {[0, 1, 2].map((i) => <Skeleton key={i} width={56} height={32} borderRadius={16} />)}
+            </View>
+          </>
+        ) : null}
       </View>
       <View style={styles.rows}>
         {[0, 1, 2, 3].map((i) => (

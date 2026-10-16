@@ -36,7 +36,7 @@ Deno.test('every manager list marks you with the shared row (source guards)', ()
   // W4: League's Standings and History are the Game Night ManagerRow (it carries all three).
   uses('components/game/StandingsTable.tsx', '<ManagerRow', 'isYou={r.isYou}');
   // Home's excerpt is the Game Night ManagerRow (W4), which carries all three itself.
-  uses('components/home/StandingsCard.tsx', '<ManagerRow excerpt rank={r.rank} name={r.displayName} isYou={r.isYou}');
+  uses('components/home/StandingsCard.tsx', '<ManagerRow', 'excerpt', 'name={r.displayName}', 'isYou={r.isYou}');
   uses('components/sp/gn/ManagerRow.tsx', 'yourNameStyle(isYou)', 'backgroundColor: colors.youTint', '${youA11y(isYou)}');
   uses('components/game/HistoryList.tsx', '<ManagerRow', 'isYou={st.user_id === myUserId}');
   // The lobby's order (W4 Draft) is ManagerRow's tile: your tint overlay and ring, bold name, "you" for VoiceOver.

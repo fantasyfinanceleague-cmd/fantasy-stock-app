@@ -31,6 +31,9 @@ interface ManagerRowBase {
   avatarUri?: string | null;
   isYou?: boolean;
   onPress?: () => void;
+  /** VoiceOver's hint for a pressable row ("View Paolo M.'s team"): the label keeps the row's
+   * figures, the hint says what the tap does (the HoldingRow's pattern). */
+  hint?: string;
   /** Home's Standings excerpt (the board's StandingsExcerpt): no movement column ("movement
    * arrows on League only", S-10), a 24pt avatar and a shorter tile. Same row otherwise. */
   excerpt?: boolean;
@@ -65,7 +68,7 @@ export type ManagerRowProps = ManagerRowBase & (
 );
 
 export function ManagerRow(props: ManagerRowProps) {
-  const { rank, delta, name, avatarUri, isYou = false, onPress, excerpt = false, showMove = !excerpt, medal = false, tag = null, stacked: stackedProp, textCap, recordWidth, gainWidth, rankLeads = true } = props;
+  const { rank, delta, name, avatarUri, isYou = false, onPress, hint, excerpt = false, showMove = !excerpt, medal = false, tag = null, stacked: stackedProp, textCap, recordWidth, gainWidth, rankLeads = true } = props;
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   // Before any early return: a hook (the medal disc's size; League's final standings).
@@ -156,7 +159,7 @@ export function ManagerRow(props: ManagerRowProps) {
 
   if (onPress) {
     return (
-      <PressableScale style={tile} onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y}>
+      <PressableScale style={tile} onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} accessibilityHint={hint}>
         {inner}
       </PressableScale>
     );

@@ -28,54 +28,68 @@ export interface HoldingRowProps {
   row: HoldingRowData;
   /** The slot pill: a category slot's category, a price tier's band; none when unslotted. */
   pill: { category: Category } | { slot: string } | null;
-  onPress: () => void;
+  /** Opens the player card. Absent: the row is information only (a leaguemate's stock whose
+   * card can't be whole), drawn as a plain row, never a button that does nothing. */
+  onPress?: () => void;
 }
 
 export const HoldingRow = forwardRef<View, HoldingRowProps>(function HoldingRow({ row, pill, onPress }, ref) {
   const { colors } = useTheme();
   const tone = row.todayTone ? colors[row.todayTone] : colors.text2;
   const pillText = pill && 'slot' in pill ? pill.slot : null;
-  return (
-    <View ref={ref} collapsable={false}>
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel={`${row.symbol}, ${row.name}, ${row.quantityText} shares, ${row.valueText}${row.todayText ? `, ${row.todayText} today` : ''}`}
-        accessibilityHint="Opens its player card"
-        onPress={onPress}
-        style={styles.row}
-        testID={`holding-row-${row.symbol}`}
-      >
-        <View style={[styles.disc, { backgroundColor: colors.inset }]}>
-          <Text variant="ticker.tile" allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={DISC_MIN_SCALE}>{row.symbol}</Text>
-        </View>
-        <View style={styles.lead}>
-          <View style={styles.tickerLine}>
-            <Text variant="ticker" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{row.symbol}</Text>
-            {pill && 'category' in pill ? <CategoryPill category={pill.category} size="row" /> : null}
-            {pillText ? (
-              <View style={[styles.slotPill, { backgroundColor: colors.inset }]}>
-                <Text variant="caption" maxFontSizeMultiplier={ROW_PILL_MAX_SCALE} style={styles.bold}>{pillText}</Text>
-              </View>
-            ) : null}
-          </View>
-          {/* Two Texts (W4 DL gate): the company truncates, " · N sh" never does. */}
-          <View style={styles.subLine}>
-            <Text testID="holding-row-company" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.company}>
-              {row.name}
-            </Text>
-            <Text testID="holding-row-shares" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.shares}>
-              {`${NBSP}· ${row.quantityText}${NBSP}sh`}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.trail}>
-          {/* A money number: 700 (800 is for game numbers, §9C rule 5). */}
-          <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.money}>{row.valueText}</Text>
-          {row.todayText ? (
-            <Text variant="caption" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} color={tone} style={[styles.bold, styles.tabular]}>{row.todayText}</Text>
+  const label = `${row.symbol}, ${row.name}, ${row.quantityText} shares, ${row.valueText}${row.todayText ? `, ${row.todayText} today` : ''}`;
+  const inner = (
+    <>
+      <View style={[styles.disc, { backgroundColor: colors.inset }]}>
+        <Text variant="ticker.tile" allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={DISC_MIN_SCALE}>{row.symbol}</Text>
+      </View>
+      <View style={styles.lead}>
+        <View style={styles.tickerLine}>
+          <Text variant="ticker" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{row.symbol}</Text>
+          {pill && 'category' in pill ? <CategoryPill category={pill.category} size="row" /> : null}
+          {pillText ? (
+            <View style={[styles.slotPill, { backgroundColor: colors.inset }]}>
+              <Text variant="caption" maxFontSizeMultiplier={ROW_PILL_MAX_SCALE} style={styles.bold}>{pillText}</Text>
+            </View>
           ) : null}
         </View>
-      </PressableScale>
+        {/* Two Texts (W4 DL gate): the company truncates, " · N sh" never does. */}
+        <View style={styles.subLine}>
+          <Text testID="holding-row-company" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.company}>
+            {row.name}
+          </Text>
+          <Text testID="holding-row-shares" variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} style={styles.shares}>
+            {`${NBSP}· ${row.quantityText}${NBSP}sh`}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.trail}>
+        {/* A money number: 700 (800 is for game numbers, §9C rule 5). */}
+        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.money}>{row.valueText}</Text>
+        {row.todayText ? (
+          <Text variant="caption" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} color={tone} style={[styles.bold, styles.tabular]}>{row.todayText}</Text>
+        ) : null}
+      </View>
+    </>
+  );
+  return (
+    <View ref={ref} collapsable={false}>
+      {onPress ? (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityHint="Opens its player card"
+          onPress={onPress}
+          style={styles.row}
+          testID={`holding-row-${row.symbol}`}
+        >
+          {inner}
+        </PressableScale>
+      ) : (
+        <View accessible accessibilityLabel={label} style={styles.row} testID={`holding-row-${row.symbol}`}>
+          {inner}
+        </View>
+      )}
     </View>
   );
 });
