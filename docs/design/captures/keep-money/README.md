@@ -6,7 +6,9 @@
 **Ruling (Design Lead, 2026-10-16), the gate rule "a money amount never breaks inside itself".** At XXXL the Renewal
 review's Stakes value broke as "$1,000. / 00 a / slot". `keepMoney` (in the `keepDots` family, `lib/game/keepDots.ts`)
 puts a word joiner (U+2060) between every glyph of a money amount or signed percent in WRAPPING text, so a line can
-end before or after it, never inside it. The unit after it ("a slot", "per slot") still wraps. Display only: the copy and
+end before or after it, never inside it. The short unit after it ("a slot", "per slot", "a share", "per share") is kept whole with a no-break space
+inside the phrase (the way `keepDots` keeps a short segment), so it can drop to the next line but never split as
+"a / slot"; the ordinary space between the amount and the unit still breaks. Display only: the copy and
 every accessibilityLabel keep their plain text; measurement code keeps the raw string.
 
 **Build.** Every still was taken on this branch's working tree on `origin/main` `162cf1aa`, i.e. BEFORE #289 (the F3 / F4
@@ -38,10 +40,10 @@ pins that those files carry no `keepMoney`.
 
 | Surface | Files | Shows |
 |---|---|---|
-| Renewal review, Stakes row | `S1-renewal-stakes-xxxl-light-BEFORE.png`; `…-light-AFTER.png`, `…-dark-AFTER.png` | BEFORE (committed code): "$1,000. / 00 a / slot". AFTER: "Stakes" then "$1,000.00 a / slot", the amount whole |
+| Renewal review, Stakes row | `S1-renewal-stakes-xxxl-light-BEFORE.png`; `…-light-AFTER.png`, `…-dark-AFTER.png`; **`S1-renewal-stakes-xxxl-light-v2.png`** | BEFORE (committed code): "$1,000. / 00 a / slot". AFTER: "Stakes" then "$1,000.00 a / slot". **v2 (unit kept whole):** "$1,000.00" / "a slot" / "6 slots", never "a / slot" |
 | Join preview | `S2-join-preview-xxxl-{light,dark}.png` | rows stack at XXXL; "Equal stakes · / $2,000 per slot" |
 | "You're in" facts card | `S3-facts-card-xxxl-{light,dark}.png` | "Equal stakes · / $2,000 per slot" |
-| Create-league summary | `S4-create-summary-xxxl-{light,dark}.png` | "Equal stakes · / $1,000 per slot" |
+| Create-league summary | `S4-create-summary-xxxl-{light,dark}.png`; **`S4-create-summary-xxxl-light-v2.png`** | "Equal stakes · / $1,000 per slot". **v2 (labels kept):** "Name", "Type", "Teams" and "Stakes" each sit over their value |
 | Portfolio | `S5-portfolio-top-xxxl-light.png`, `S5-portfolio-facts-xxxl-light.png`, `S5-portfolio-mid-xxxl-light.png` | hero and "$2,000.00 per slot at the draft" whole; holdings stay single-line |
 | Stock sheet | `S6-sheet-top-xxxl-{light,dark}.png` | "+$10.11 · +2.94% today"; "+$168,488.00 · / +5.00%"; "$3,538,500.00" whole |
 | Trade history | `S7-trade-history-xxxl-{light,dark}.png` | "1 sh at / $145.00": the amount whole, the unit wraps |
@@ -65,23 +67,36 @@ pins that those files carry no `keepMoney`.
 - The draft-room strip and the draft-complete caption: short captions ("1 of 6 · $2,000 per slot") that sit deep in a long
   XXXL scroll; covered by the unit pin with the real `rosterCaption` strings.
 
+## Also fixed in this branch (Design Lead PASS follow-up, 2026-10-16)
+
+- **The short unit stays whole** (`keepMoney`, see the ruling above): `a slot`, `per slot`, `a share`, `per share` are
+  glued with a no-break space only when they directly follow an amount; "a slot" in plain prose ("Optional: a slot
+  can…") and "a slots" are untouched.
+- **A label is never dropped.** At XXXL the Create-league summary lost its "Name" and "Stakes" labels: `SettingRow`'s
+  label block was `flex: 1` (basis 0, so it can never wrap) and the long value took the row. A static row (no
+  `onPress`, no chevron) now uses the same fix as the Renewal review: `flexWrap: 'wrap'`, the label block
+  `flexBasis: 'auto'`, the value `marginLeft: 'auto'`, so the value drops UNDER its label when it cannot sit beside it.
+  `SettingRow` is shared, so the League tab, league settings' static rows and `SlotBuilder` get the same behaviour;
+  pressable rows (with the chevron) keep the old layout. At normal size nothing moves.
+
 ## Also noticed, not touched
 
-- At XXXL the Create-league summary's "Name" and "Stakes" labels disappear when the value is long (the value takes the
-  row). Existing layout.
 - Not verified here: how VoiceOver reads the zero-width joiners inside an amount (`keepHyphens` already puts the same
   character in the app; the accessibility labels are unchanged plain text).
 
 ## Pins and mutations (Deno)
 
-`tests-deno/keep-money.test.ts` (24 tests): the helper's exact output (amounts, signs, percents, compact units, a sentence
+`tests-deno/keep-money.test.ts` (27 tests): the helper's exact output (amounts, signs, percents, compact units, a sentence
 period, plain text untouched, idempotence, display-only); a negative control proving the simulator sees the original bug in
 the UNJOINED string; and for each of 18 surfaces the file's real strings run through a worst-case line breaker (a break
 allowed between any two characters except next to a joiner or no-break space, or inside a word) at every width from 6 to
 60, asserting no break falls inside an amount. The exact `keepMoney(` count per file pins every site. **Mutations, all
 killed:** the helper as identity; skipping the decimal point; joining digits only (not the sign or `$`); ignoring
 percents; `keepMoney` stripped from each of the 16 files in turn; a single site dropped in the stock sheet; the Renewal
-row's `flexWrap` removed. Older source-pin tests that named the changed lines were updated to the new wrapped forms.
+row's `flexWrap` removed. **Added with the follow-up (9 more, all killed):** the unit glue dropped; the glue applied to
+a bare "a slot" in prose; the glue widened to any following word; the amount-to-unit space glued too; the unit glue
+applied to percents; `SettingRow`'s `wraps` gate removed; `settingRowWrap`'s `flexWrap` removed; `growWrap`'s
+`flexBasis: 'auto'` back to `flex: 1`; the value's `marginLeft: 'auto'` removed. Older source-pin tests that named the changed lines were updated to the new wrapped forms.
 
 ## §4 Every tappable element
 

@@ -76,6 +76,19 @@ function splitAmounts(display: string): string[] {
   return bad;
 }
 
+/** No wrapped line, at any width, breaks between "a"/"per" and "slot"/"share" after an amount (never "a / slot"). */
+function splitUnits(display: string): string[] {
+  const bad: string[] = [];
+  const units = [...display.matchAll(/[\d%KMBT] ((?:a|per)[ \u00a0](?:slot|share)(?![A-Za-z]))/g)].map((m) => {
+    const start = m.index! + 2;
+    return [start, start + m[1].length - 1] as const;
+  });
+  for (let width = 6; width <= 60; width++) {
+    for (const b of lineBreaks(display, width)) for (const [s0, e] of units) if (b > s0 && b <= e) bad.push(`width ${width}: broke inside ${JSON.stringify(display.slice(s0, e + 1))}`);
+  }
+  return bad;
+}
+
 const L = (over: Partial<PreviewLeague> = {}): PreviewLeague => ({
   name: 'Serie A Traders', leagueType: 'matchup', numWeeks: 10, durationDays: null, numParticipants: 8, membersJoined: 6,
   draftDate: '2026-10-10T23:00:00Z', stakeMode: 'fixed_notional', notionalPerSlot: 2000, budgetAmount: null, draftStatus: 'not_started',
@@ -123,8 +136,8 @@ const SURFACES: { surface: string; file: string; pin: string; strings: string[] 
 ];
 
 Deno.test('keepMoney: a word joiner between every glyph of each amount; the text around it is untouched', () => {
-  assertEquals(keepMoney('$1,000.00 a slot'), ['$', '1', ',', '0', '0', '0', '.', '0', '0'].join(WJ) + ' a slot');
-  assertEquals(keepMoney('Equal stakes · $2,000 per slot'), `Equal stakes · ${['$', '2', ',', '0', '0', '0'].join(WJ)} per slot`);
+  assertEquals(keepMoney('$1,000.00 a slot'), ['$', '1', ',', '0', '0', '0', '.', '0', '0'].join(WJ) + ` a${NBSP}slot`, 'the short unit is glued, the space before it is not');
+  assertEquals(keepMoney('Equal stakes · $2,000 per slot'), `Equal stakes · ${['$', '2', ',', '0', '0', '0'].join(WJ)} per${NBSP}slot`);
   assertEquals(keepMoney('−$12.34 · +9.74% today'), `${['−', '$', '1', '2', '.', '3', '4'].join(WJ)} · ${['+', '9', '.', '7', '4', '%'].join(WJ)} today`);
   assertEquals(keepMoney('$1.23M'), ['$', '1', '.', '2', '3', 'M'].join(WJ));
   assertEquals(keepMoney('He paid $3.50.'), `He paid ${['$', '3', '.', '5', '0'].join(WJ)}.`, 'the sentence period is not part of the amount');
@@ -133,6 +146,16 @@ Deno.test('keepMoney: a word joiner between every glyph of each amount; the text
   assertEquals(keepMoney(''), '');
   assertEquals(keepMoney(keepMoney('$1,000.00')), keepMoney('$1,000.00'), 'applying it twice changes nothing');
   assertEquals(keepMoney('$1,000.00').replaceAll(WJ, ''), '$1,000.00', 'display only: strip the joiners and the copy is unchanged');
+});
+
+Deno.test('keepMoney: the short units stay whole ("a slot", "per slot", "a share", "per share"), only after an amount', () => {
+  const amt = (a: string) => Array.from(a).join(WJ);
+  assertEquals(keepMoney('$318.37 per share'), `${amt('$318.37')} per${NBSP}share`);
+  assertEquals(keepMoney('$5 a share'), `${amt('$5')} a${NBSP}share`);
+  assertEquals(keepMoney('$2,000.01 per slot at the draft'), `${amt('$2,000.01')} per${NBSP}slot at the draft`);
+  assertEquals(keepMoney('Optional: a slot can require a category'), 'Optional: a slot can require a category', 'prose without an amount is untouched');
+  assertEquals(keepMoney('$5 a slots'), `${amt('$5')} a slots`, 'only the whole word');
+  assertEquals(keepMoney('+9.74% per share'), `${amt('+9.74%')} per share`, 'a percent has no unit');
 });
 
 Deno.test('the simulator sees the bug: the UNJOINED Stakes value breaks inside "$1,000.00"', () => {
@@ -145,8 +168,9 @@ for (const s of SURFACES) {
     for (const raw of s.strings) {
       const display = keepMoney(raw);
       assertEquals(splitAmounts(display), [], JSON.stringify(raw));
-      assertEquals(display.replaceAll(WJ, ''), raw.replaceAll(WJ, ''), 'display only');
+      assertEquals(display.replaceAll(WJ, '').replaceAll(NBSP, ' '), raw.replaceAll(WJ, '').replaceAll(NBSP, ' '), 'display only: the same words');
     }
+    for (const raw of s.strings) assertEquals(splitUnits(keepMoney(raw)), [], `a unit split: ${JSON.stringify(raw)}`);
     assert(SOURCES[s.file].includes(s.pin), `${s.file} no longer wraps this surface: ${s.pin}`);
   });
 }
@@ -188,4 +212,24 @@ Deno.test('the joiner only helps if the amount can sit on a line: the Renewal St
   const src = SOURCES['components/game/RenewalReview.tsx'];
   assert(/row: \{ flexDirection: 'row', flexWrap: 'wrap',/.test(src), 'the review row wraps');
   assert(src.includes("value: { alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' },"));
+});
+
+Deno.test('the unit is glued, the amount-to-unit space is not: "$1,000.00" / "a slot" or one line, never "a / slot"', () => {
+  const d = keepMoney('Stakes $1,000.00 a slot');
+  assertEquals(splitUnits(d), []);
+  // the amount and the unit CAN part (a narrow line puts "a slot" under the amount) ...
+  assert(lineBreaks(d, 12).some((b) => d.slice(b).trimStart().startsWith(`a${NBSP}slot`)), 'a narrow line wraps "a slot" whole');
+  // ... and the control: an unglued unit splits
+  assert(splitUnits('$1,000.00 a slot').length > 0);
+});
+
+Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is never dropped); a pressable row keeps its layout', () => {
+  const src = SOURCES['components/game/SetupRows.tsx'];
+  assert(src.includes('const wraps = !onPress;'));
+  assert(src.includes('wraps && styles.settingRowWrap'));
+  assert(src.includes('<View style={wraps ? styles.growWrap : styles.grow}>'));
+  assert(src.includes('style={wraps ? [styles.value, styles.valueWrap] : styles.value}'));
+  assert(/settingRowWrap: \{\s*flexWrap: 'wrap',/.test(src));
+  // flex: 1 has a basis of 0, which can never wrap; the wrapping label sizes to its content
+  assert(/growWrap: \{[^}]*flexBasis: 'auto'/.test(src));
 });
