@@ -39,3 +39,18 @@ export function keepDots(line: string, keepWhole = KEEP_WHOLE): string {
 export function keepDotsIn(sentence: string, phrase: string): string {
   return phrase && sentence.includes(phrase) ? sentence.replace(phrase, () => keepDots(phrase)) : sentence;
 }
+
+/**
+ * keepMoney (W8 follow-up, Design Lead ruling 2026-10-16; the gate rule: "a money amount never breaks inside
+ * itself"): a money amount or signed percent in WRAPPING text is one unbreakable run. At XXXL the Renewal review's
+ * Stakes value broke as "$1,000. / 00 a / slot". A word joiner (U+2060, zero-width, no glyph of its own) goes
+ * between every glyph of the amount, so no line can end inside it; the unit after it ("a slot", "per slot") still
+ * wraps. Matches what the app's formatters emit: "$2,000", "$1,000.00", "−$12.34", "+$1.2K", "$1.23M", "+9.74%".
+ * Display only (the copy, and every accessibilityLabel, keep their plain text). Apply at the render, never to the
+ * string a width estimate or a test compares. Single-line money (the hero numbers, `numberOfLines={1}` cells)
+ * needs no help and is left alone.
+ */
+const MONEY_OR_PERCENT = /[+−]?\$\d[\d,]*(?:\.\d+)?[KMBT]?|[+−]?\d[\d,]*(?:\.\d+)?%/g;
+export function keepMoney(text: string): string {
+  return text.replace(MONEY_OR_PERCENT, (amount) => Array.from(amount).join(WORD_JOINER));
+}

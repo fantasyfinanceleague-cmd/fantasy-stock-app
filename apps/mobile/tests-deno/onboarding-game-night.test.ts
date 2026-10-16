@@ -233,7 +233,7 @@ Deno.test('Join preview / Create summary lines wrap only between "·" segments',
   assertEquals(keepDots('Sat, Oct 10 · 7:00 PM ET'), `Sat,${NBSP}Oct${NBSP}10${NBSP}· 7:00${NBSP}PM${NBSP}ET`);
   assertEquals(keepDots('Equal stakes · $2,000 per slot'), `Equal${NBSP}stakes${NBSP}· $2,000${NBSP}per${NBSP}slot`);
   const join = src('app/join-league.tsx');
-  assert(join.includes('{keepDots(row.value)}'));
+  assert(join.includes('{keepMoney(keepDots(row.value))}'));
   assert(join.includes('style={stackRows ? styles.rowStacked : styles.row}'), 'rows stack at accessibility sizes');
   const create = src('app/create-league.tsx');
   assertEquals(create.match(/keepDots\(/g)?.length, 3, 'stakes, draft (summary) and Draft time');

@@ -24,7 +24,7 @@ import { activeLeagueNow, activeLeagueOnContinue, completeInviteJoin, runInviteP
 import { pendingInvite } from '@/lib/invite/pendingInviteStore';
 import { JOIN_FIXTURE } from '@/lib/join/devFixture';
 import { CAPTURE } from '@/lib/shell/captureDev';
-import { keepDots, keepDotsIn } from '@/lib/game/keepDots';
+import { keepDots, keepDotsIn, keepMoney } from '@/lib/game/keepDots';
 import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import {
   FIXTURE_NETWORK_MS, fixtureJoinResponse, fixturePrefill, fixturePreviewResponse,
@@ -481,7 +481,7 @@ export default function JoinLeagueScreen() {
               </Text>
               {/* keepDots: wraps only between "·" segments, never inside "7:00 PM ET". */}
               <Text variant="callout" numberOfLines={0} maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={stackRows ? styles.rowValueStacked : styles.rowValue}>
-                {keepDots(row.value)}
+                {keepMoney(keepDots(row.value))}
               </Text>
             </View>
           ))}
@@ -568,7 +568,7 @@ function Joined({ name, draftDate, leagueId, fixtureLeague, onContinue }: { name
                   {row.label}
                 </Text>
                 <Text variant="callout" numberOfLines={0} maxFontSizeMultiplier={PREVIEW_ROW_MAX_SCALE} style={styles.rowValue}>
-                  {keepDots(row.value)}
+                  {keepMoney(keepDots(row.value))}
                 </Text>
               </View>
             ))}

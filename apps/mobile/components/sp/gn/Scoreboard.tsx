@@ -6,6 +6,7 @@ import { radius, space } from '@/constants/tokens';
 import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
 import { PressableScale } from '@/components/sp/PressableScale';
+import { keepMoney } from '@/lib/game/keepDots';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
@@ -101,7 +102,7 @@ export function Scoreboard({ you, opponent, final = false, size = 'hero', mine =
       {showLine ? (
         // Capped at 1.3× so the totals above stay the loudest thing on the card at XL.
         <Text variant="callout" tone="secondary" maxFontSizeMultiplier={LINE_MAX_SCALE} style={styles.line} importantForAccessibility={interactive ? 'auto' : 'no'} accessibilityElementsHidden={!interactive}>
-          {line}
+          {keepMoney(line)}
         </Text>
       ) : null}
     </View>

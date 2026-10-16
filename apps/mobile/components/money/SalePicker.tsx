@@ -12,6 +12,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { radius } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
+import { keepMoney } from '@/lib/game/keepDots';
 import { Icon } from '@/components/sp/Icon';
 import { formatMoney } from '@/components/sp/logic/money';
 import { Text } from '@/components/sp/Text';
@@ -82,7 +83,7 @@ export function SalePicker({ sources, chosenId, symbol, onChoose, onUse, onClose
             <View style={styles.rowLead}>
               <Text variant="callout">{r.label}</Text>
             </View>
-            <Text variant="callout">{formatMoney(r.amount)}</Text>
+            <Text variant="callout">{keepMoney(formatMoney(r.amount))}</Text>
           </Pressable>
         ))}
       </View>

@@ -10,6 +10,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { radius, space } from '@/constants/tokens';
 import { supabase } from '@/lib/supabase';
 import { seamRpc } from '@/lib/game/seamCalls';
+import { keepMoney } from '@/lib/game/keepDots';
 import { teamsLine, canSchedule, buildRenewalSettings, scheduleLine, DRAFT_ROW_UNSET } from '@/lib/game/renewalReview';
 import { byeNoticeCopy } from '@/lib/game/draftLobby';
 import { playoffLine } from '@/lib/playoffs';
@@ -138,7 +139,7 @@ function Row({ label, value, sub, onPress }: { label: string; value: string; sub
       <View style={[styles.row, sub ? null : styles.rowMin]}>
         <Text variant="callout">{label}</Text>
         <View style={styles.value}>
-          <Text variant="callout" tone="secondary">{value}</Text>
+          <Text variant="callout" tone="secondary">{keepMoney(value)}</Text>
         </View>
       </View>
       {sub ? <Text variant="caption" tone="secondary">{sub}</Text> : null}
@@ -153,9 +154,10 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, padding: space[5], gap: space[2] },
   stack: { gap: space[3] },
   rowStack: { gap: space[2], paddingVertical: space[1] },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: space[3] },
+  // flexWrap: a value that cannot sit beside its label (an amount at XXXL is one unbreakable run, keepMoney) drops under it.
+  row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', columnGap: space[3], rowGap: space[1] },
   rowMin: { minHeight: 36 },
-  value: { alignItems: 'flex-end', flexShrink: 1 },
+  value: { alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' },
   picker: { gap: space[2], paddingVertical: space[2] },
   stepRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
   stepBox: { flexDirection: 'row', alignItems: 'center', gap: space[2] },

@@ -215,7 +215,7 @@ Deno.test('PlayerCard: Save carries the drawn star; the Season row carries "{ent
   const src = strip(SOURCES['components/sp/gn/PlayerCard.tsx']);
   assert(src.includes('{action.star ? <Icon name={action.star} size="body" tone="text" /> : null}'));
   assert(!/backgroundColor: colors\.accent/.test(src), 'Saved has no accent fill');
-  assert(src.includes('{`${formatMoney(acquisition.price)} → ${formatMoney(price)}`}'));
+  assert(src.includes('{keepMoney(`${formatMoney(acquisition.price)} → ${formatMoney(price)}`)}'));
 });
 
 Deno.test('PlayerCard: the action is drawn only from cardAction (never a handler-less button), and the X closes', () => {

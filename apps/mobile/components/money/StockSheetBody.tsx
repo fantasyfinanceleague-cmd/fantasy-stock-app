@@ -27,6 +27,7 @@ import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
+import { keepMoney } from '@/lib/game/keepDots';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { MONEY_FIXTURE, MONEY_FIXTURE_CONFIG } from '@/lib/money/devFixture';
@@ -516,7 +517,7 @@ export function StockSheetBody({
         )}
         {model.todayChange ? (
           <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={todayTone} style={styles.bold}>
-            {`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })}`}
+            {keepMoney(`${formatMoney(model.todayChange.perShare, { sign: 'always' })} · ${formatPercent(model.todayChange.pct, { sign: 'always' })}`)}
             <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.regular}> today</Text>
           </Text>
         ) : null}
@@ -558,12 +559,12 @@ export function StockSheetBody({
       ) : null}
 
       {selected === 'sell' && model.sell.summary ? (
-        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={[styles.bold, styles.tabular]}>{model.sell.summary}</Text>
+        <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} style={[styles.bold, styles.tabular]}>{keepMoney(model.sell.summary)}</Text>
       ) : null}
 
       {/* E-3 (3e UX audit): a buy the server would refuse is named BEFORE the review, in the
           warn panel; the button stays visible and disabled under it (board #buy-a-stock). */}
-      {warnBlock ? <WarnPanel text={warnBlock} /> : null}
+      {warnBlock ? <WarnPanel text={keepMoney(warnBlock)} /> : null}
 
       {/* The one action, always drawn: enabled, or disabled with its reason beside it. */}
       <View style={styles.actionWrap}>
@@ -582,7 +583,7 @@ export function StockSheetBody({
         ) : null}
         {!warnBlock && action.reason ? (
           <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center} accessibilityLiveRegion="polite">
-            {action.reason}
+            {keepMoney(action.reason)}
           </Text>
         ) : null}
         {model.marketNote ? <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{model.marketNote}</Text> : null}
@@ -624,7 +625,7 @@ function Figure({ label, value, color }: { label: string; value: string; color?:
   return (
     <View style={styles.figure} accessible accessibilityLabel={`${label}, ${value}`}>
       <Text variant="caption" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} tone="secondary">{label}</Text>
-      <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={color} style={[styles.extraBold, styles.tabular]}>{value}</Text>
+      <Text variant="callout" maxFontSizeMultiplier={SHEET_TEXT_MAX_SCALE} color={color} style={[styles.extraBold, styles.tabular]}>{keepMoney(value)}</Text>
     </View>
   );
 }

@@ -24,7 +24,7 @@ import { DRAFT_ROOM_LOAD_FAILED, QUEUE_LOAD_FAILED } from '@/lib/game/draftQueue
 import { managerAtPick } from '@/lib/game/draftBoard';
 import { CARD_LINE_MAX_SCALE, clockCardKind, clockRingTone, draftOffered } from '@/lib/game/draftClockCard';
 import { useSymbolCategories } from '@/lib/game/useSymbolCategories';
-import { keepDots } from '@/lib/game/keepDots';
+import { keepDots, keepMoney } from '@/lib/game/keepDots';
 import { DraftBoard } from '@/components/game/DraftBoard';
 import { PICK_SENDING, YOUR_ROSTER, afterPickLine, budgetLeft, isAutoPick, myDraftedSoFar, pickClockLabel, pickRowView, pickRefusalView, AUTO_PICK_WAITING_FOR_PRICES, picksUntilYouLine, rosterCaption, roundPickLine, liveClock } from '@/lib/game/draftRoom';
 import { TeamSoFarGrid } from '@/components/home/TeamSoFarGrid';
@@ -327,7 +327,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
     return (
       <DraftComplete
         roster={myRosterPicks(room.picks, room.order, myUserId)}
-        caption={keepDots(caption)}
+        caption={keepMoney(keepDots(caption))}
         finished={finished}
         weekLine={weekOneLine(weekOneRealStart(weekOne?.weekStart, marketCalendar), weekOne?.opponentId ? nameOf(weekOne.opponentId) : null, weekOneIsBye(weekOne))}
         bye={weekOneIsBye(weekOne)}
@@ -437,7 +437,7 @@ export function DraftRoom({ leagueId, myUserId, rounds, isCommissioner = false, 
       ) : null}
 
       {/* Under the search results (board key screen 4). */}
-      <TeamSoFarGrid title={YOUR_ROSTER} caption={keepDots(caption)} symbols={mine.symbols} numRounds={rounds} />
+      <TeamSoFarGrid title={YOUR_ROSTER} caption={keepMoney(keepDots(caption))} symbols={mine.symbols} numRounds={rounds} />
 
       {log.length > 0 ? (
         <Card style={styles.card}>

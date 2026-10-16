@@ -54,6 +54,7 @@ import { resolveWeekWindow, standardWeekSessions } from '@/lib/time/marketWeek';
 import { useCaptureAction } from '@/lib/money/captureScript';
 import { preDraftPortfolio } from '@/lib/money/preDraftPortfolio';
 import { Button } from '@/components/sp/Button';
+import { keepMoney } from '@/lib/game/keepDots';
 
 /** gain/loss/zero -> its theme colour (C-6: the same mapping Home's hero uses). */
 function toneColor(colors: ThemeColors, tone: 'gain' | 'loss' | 'zero' | null): string {
@@ -273,13 +274,13 @@ export function PortfolioScreen() {
             {v.cashValueText ? (
               <View style={styles.factRow} accessible accessibilityLabel={`${COPY.cashFromSales}, ${v.cashValueText}`}>
                 <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{COPY.cashFromSales}</Text>
-                <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.bold}>{v.cashValueText}</Text>
+                <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.bold}>{keepMoney(v.cashValueText)}</Text>
               </View>
             ) : null}
             {v.slotsText ? (
               <View style={styles.factRow}>
                 <Text variant="callout" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.bold}>{v.slotsText}</Text>
-                {v.perSlotText ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{v.perSlotText}</Text> : null}
+                {v.perSlotText ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{keepMoney(v.perSlotText)}</Text> : null}
               </View>
             ) : null}
           </View>
@@ -299,7 +300,7 @@ export function PortfolioScreen() {
             </View>
             <View style={styles.linkText}>
               <Text variant="callout" color={colors.accent} maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.extraBold}>{COPY.buyAStock}</Text>
-              {v.buyRowText ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{v.buyRowText}</Text> : null}
+              {v.buyRowText ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{keepMoney(v.buyRowText)}</Text> : null}
             </View>
             <Icon name="chevronRight" size="callout" tone="text2" />
           </Pressable>

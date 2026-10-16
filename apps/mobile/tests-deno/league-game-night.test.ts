@@ -200,7 +200,7 @@ Deno.test('GS-13: the renewal review\'s sub-line sits under the label, full widt
   const review = SOURCES['components/game/RenewalReview.tsx'];
   const row = review.slice(review.indexOf('function Row('), review.indexOf('return onPress'));
   // The value column closes BEFORE the sub-line: the sub-line is the row's own second line.
-  const valueEnd = row.indexOf('<Text variant="callout" tone="secondary">{value}</Text>\n        </View>');
+  const valueEnd = row.indexOf('<Text variant="callout" tone="secondary">{keepMoney(value)}</Text>\n        </View>');
   const sub = row.indexOf('{sub ? <Text variant="caption" tone="secondary">{sub}</Text> : null}');
   assert(valueEnd > 0 && sub > valueEnd, `value ${valueEnd}, sub ${sub}`);
 });

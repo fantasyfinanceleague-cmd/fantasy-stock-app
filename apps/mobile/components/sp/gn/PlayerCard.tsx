@@ -6,6 +6,7 @@ import { Icon } from '@/components/sp/Icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Sheet } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
+import { keepMoney } from '@/lib/game/keepDots';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney, formatPercent } from '@/components/sp/logic/money';
 import {
@@ -135,7 +136,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
         <View style={styles.titleRow}>
           <Text variant="headline" style={styles.title}>Season</Text>
           {/* The board's caption: the entry price per share → the price now. */}
-          <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" style={styles.tabular} testID="player-card-season-caption">{`${formatMoney(acquisition.price)} → ${formatMoney(price)}`}</Text>
+          <Text variant="caption" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} tone="secondary" style={styles.tabular} testID="player-card-season-caption">{keepMoney(`${formatMoney(acquisition.price)} → ${formatMoney(price)}`)}</Text>
         </View>
         <Chart points={season.points} base={season.base} axis={season.axis} height={128} bleed={SHEET_GUTTER} drawKey={`${ticker}-season`} formatValue={(v) => formatMoney(v)} accessibilityLabel={`${ticker} this season`} />
       </View>
@@ -174,7 +175,7 @@ export function PlayerCardBody(props: PlayerCardProps) {
       {/* 6. How you got it — at the bottom, in its inset panel (the board: radius 14, 12 / 14) */}
       <View style={[styles.how, { backgroundColor: colors.inset }]} accessible accessibilityLabel={`${howTitle(owner === 'you' ? 'you' : 'other')}: ${acquisitionLine(acquisition)}`}>
         <CardLabel text={howTitle(owner === 'you' ? 'you' : 'other')} />
-        <Text variant="body" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} style={styles.howLine}>{acquisitionLine(acquisition)}</Text>
+        <Text variant="body" maxFontSizeMultiplier={CARD_TEXT_MAX_SCALE} style={styles.howLine}>{keepMoney(acquisitionLine(acquisition))}</Text>
       </View>
 
       {/* 7. The Alpaca credit */}

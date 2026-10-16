@@ -31,6 +31,7 @@ import { useStockSheet } from '@/components/money/MoneyHost';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { ROW_TEXT_MAX_SCALE } from '@/components/money/HoldingRow';
 import { Skeleton } from '@/components/Skeleton';
+import { keepMoney } from '@/lib/game/keepDots';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { useSession } from '@/lib/SessionProvider';
 import { COPY } from '@/lib/money/moneyCopy';
@@ -209,7 +210,7 @@ function SearchRow({ item, status, onPress }: { item: ShapedSearchResult; status
         <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} numberOfLines={1}>{item.name}</Text>
       </View>
       {item.price != null ? (
-        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.price, styles.bold, off ? styles.dim : null]}>{formatMoney(item.price)}</Text>
+        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={[styles.price, styles.bold, off ? styles.dim : null]}>{keepMoney(formatMoney(item.price))}</Text>
       ) : null}
       {off ? <View style={styles.chevronSpace} /> : <Icon name="chevronRight" size="callout" tone="text2" />}
     </>

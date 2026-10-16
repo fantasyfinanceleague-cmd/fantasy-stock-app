@@ -6,6 +6,7 @@ import { radius, space } from '@/constants/tokens';
 import { Avatar } from '@/components/sp/Avatar';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
+import { keepMoney } from '@/lib/game/keepDots';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { formatMoney } from '@/components/sp/logic/money';
 import { excerptStacks, movement, toneOf, YOU_RING } from '@/components/sp/logic/gameNight';
@@ -114,7 +115,7 @@ export function ManagerRow(props: ManagerRowProps) {
           {tag ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={textCap}>{tag}</Text> : null}
           <View style={styles.stackNumbers}>
             <Text variant="callout" tone="secondary" maxFontSizeMultiplier={textCap} style={styles.record}>{record}</Text>
-            <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gainStacked}>{gainText}</Text>
+            <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gainStacked}>{keepMoney(gainText)}</Text>
           </View>
         </View>
       ) : !excerpt ? (
@@ -125,7 +126,7 @@ export function ManagerRow(props: ManagerRowProps) {
             {tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}
           </View>
           <Text variant="callout" tone="secondary" style={[styles.record, recordWidth ? { minWidth: recordWidth } : null]}>{record}</Text>
-          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={[styles.gain, gainWidth ? { minWidth: gainWidth } : null]}>{gainText}</Text>
+          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={[styles.gain, gainWidth ? { minWidth: gainWidth } : null]}>{keepMoney(gainText)}</Text>
         </>
       ) : stacked ? (
         // Home's excerpt at large text (W4 gate): the name takes its own line(s) and the
@@ -134,14 +135,14 @@ export function ManagerRow(props: ManagerRowProps) {
           <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>
           <View style={styles.stackNumbers}>
             <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
-            <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+            <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{keepMoney(gainText)}</Text>
           </View>
         </View>
       ) : (
         <>
           <Text variant="body" numberOfLines={1} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
           <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
-          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{gainText}</Text>
+          <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{keepMoney(gainText)}</Text>
         </>
       )}
     </>
