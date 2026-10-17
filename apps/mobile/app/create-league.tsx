@@ -86,7 +86,7 @@ import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
 import { CAPTURE } from '@/lib/shell/captureDev';
 import { createFixtureStep } from '@/lib/shell/captureKnobs';
-import { keepDots, keepHyphens } from '@/lib/game/keepDots';
+import { keepDots, keepHyphens, keepMoney } from '@/lib/game/keepDots';
 import { pushAskRouteFor } from '@/lib/shell/pushAsk';
 import { ChoiceRow, RowDivider, RowKey, RowWrap, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
@@ -549,10 +549,10 @@ export default function CreateLeagueWizard() {
             label="Stakes"
             // The shared stakes line (Design Lead: one line across Join and this
             // summary), with the amounts the insert writes.
-            value={keepDots(stakesLine(state.stakeMode, {
+            value={keepMoney(keepDots(stakesLine(state.stakeMode, {
               notionalPerSlot: parseInt(state.notionalPerSlot) || DEFAULT_NOTIONAL_PER_SLOT,
               budgetAmount: parseInt(state.budgetCap) || DEFAULT_BUDGET_CAP,
-            }))}
+            })))}
           />
           <RowDivider />
           <SettingRow

@@ -205,7 +205,7 @@ Deno.test('the room and Home show the SAME team grid; the room\'s is the board\'
   const room = SOURCES['components/game/DraftRoom.tsx'];
   // Not wrapped in !draftDone any more: a finished draft returns the ending first.
   // W4: the caption keeps each "·" with the segment before it (keepDots; the gate's "Wrapping at XL").
-  assertEquals(room.includes('<TeamSoFarGrid title={YOUR_ROSTER} caption={keepDots(caption)} symbols={mine.symbols} numRounds={rounds} />'), true);
+  assertEquals(room.includes('<TeamSoFarGrid title={YOUR_ROSTER} caption={keepMoney(keepDots(caption))} symbols={mine.symbols} numRounds={rounds} />'), true);
   assertEquals(room.indexOf('<SymbolSearchField') < room.indexOf('<TeamSoFarGrid title={YOUR_ROSTER}'), true);
   assertEquals(SOURCES['app/(tabs)/league.tsx'].includes('notionalPerSlot={activeLeague?.notional_per_slot ?? null}'), true);
   assertEquals(SOURCES['components/home/DraftingCard.tsx'].includes('<TeamSoFarGrid symbols={myPicks} numRounds={numRounds} />'), true);

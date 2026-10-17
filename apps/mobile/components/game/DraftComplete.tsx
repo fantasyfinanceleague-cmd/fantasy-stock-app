@@ -7,7 +7,7 @@ import { Text } from '@/components/sp/Text';
 import { Button } from '@/components/sp/Button';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { YOUR_ROSTER } from '@/lib/game/draftRoom';
-import { keepDots } from '@/lib/game/keepDots';
+import { keepDots, keepMoney } from '@/lib/game/keepDots';
 import {
   DRAFT_COMPLETE_TAG, SEE_WEEK_ONE_MATCHUP, SEE_WEEK_ONE_MATCHUPS, YOUR_TEAM_IS_SET, draftPriceLabel, rosterPickCaption, type RosterPick,
 } from '@/lib/game/draftComplete';
@@ -72,7 +72,7 @@ export function DraftComplete({ roster, caption, finished, weekLine, bye, onSeeM
               >
                 <View style={styles.rowText}>
                   <Text variant="ticker">{r.symbol}</Text>
-                  <Text variant="caption" tone="secondary">{keepDots(rosterPickCaption(r))}</Text>
+                  <Text variant="caption" tone="secondary">{keepMoney(keepDots(rosterPickCaption(r)))}</Text>
                 </View>
                 {price ? <Text variant="callout" style={[styles.tabular, styles.price]}>{price}</Text> : null}
               </View>

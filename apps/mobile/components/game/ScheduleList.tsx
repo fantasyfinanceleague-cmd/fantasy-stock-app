@@ -2,6 +2,7 @@
 import { View, StyleSheet } from 'react-native';
 import { useLargeText } from '@/components/sp/useLargeText';
 import { Text } from '@/components/sp/Text';
+import { keepMoney } from '@/lib/game/keepDots';
 import { Avatar } from '@/components/sp/Avatar';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { LiveDot } from '@/components/sp/game/LiveDot';
@@ -45,7 +46,7 @@ export function ScheduleList({ rows, playoffLine }: ScheduleListProps) {
             </Text>
             <View style={[styles.result, largeText ? styles.resultLine : null]}>
               {r.bye ? (
-                <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_CAP}>{r.gain === null ? '' : formatMoney(r.gain, { sign: 'always' })}</Text>
+                <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_CAP}>{r.gain === null ? '' : keepMoney(formatMoney(r.gain, { sign: 'always' }))}</Text>
               ) : r.state === 'live' ? (
                 <View style={[styles.chip, { backgroundColor: live.fill }]}>
                   <LiveDot size={7} />
@@ -56,7 +57,7 @@ export function ScheduleList({ rows, playoffLine }: ScheduleListProps) {
               ) : r.gain !== null ? (
                 <View style={styles.score}>
                   <Text variant="score.sm" color={r.tie ? colors.text2 : r.won ? colors.gain : colors.loss}>{r.tie ? 'T' : r.won ? 'W' : 'L'}</Text>
-                  <Text variant="score.sm" color={colors[toneOf(r.gain)]} style={styles.gain}>{formatMoney(r.gain, { sign: 'always' })}</Text>
+                  <Text variant="score.sm" color={colors[toneOf(r.gain)]} style={styles.gain}>{keepMoney(formatMoney(r.gain, { sign: 'always' }))}</Text>
                 </View>
               ) : null}
             </View>

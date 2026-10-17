@@ -20,6 +20,7 @@ import { space } from '@/constants/tokens';
 import { LoadFailure } from '@/components/money/LoadFailure';
 import { ROW_TEXT_MAX_SCALE } from '@/components/money/HoldingRow';
 import { Skeleton } from '@/components/Skeleton';
+import { keepMoney } from '@/lib/game/keepDots';
 import { Icon } from '@/components/sp/Icon';
 import { SegmentedControl } from '@/components/sp/SegmentedControl';
 import { Text } from '@/components/sp/Text';
@@ -68,10 +69,10 @@ function ItemRow({ item }: { item: HistoryItem }) {
       </View>
       <View style={styles.itemLead}>
         <Text variant="callout" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.extraBold}>{label}</Text>
-        <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.tabular}>{detail}</Text>
+        <Text variant="caption" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.tabular}>{keepMoney(detail)}</Text>
       </View>
       {total != null ? (
-        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.money}>{formatMoney(total)}</Text>
+        <Text variant="score.sm" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE} style={styles.money}>{keepMoney(formatMoney(total))}</Text>
       ) : null}
     </View>
   );

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Pressable, StyleSheet, Switch, View, ViewProps } from 'react-native';
 
 import { radius, space, typeFontFamily } from '@/constants/tokens';
@@ -56,9 +56,16 @@ export interface SettingRowProps {
 
 /** Key, value, optional sub-line, and a chevron when it opens something. */
 export function SettingRow({ label, value, sub, valueColor, onPress, disabled = false, accessibilityLabel, maxScale }: SettingRowProps) {
+  // A static row (no chevron) wraps: a value that cannot sit beside its label (an amount at XXXL, keepMoney) drops UNDER
+  // it, so a label is never squeezed to nothing (W8 follow-up: Create league's summary lost "Name" and "Stakes").
+  // A row that opens something keeps its one-line layout: its chevron sits after the value.
+  const wraps = !onPress;
+  // A value that runs to several lines reads LEFT (beside the label or stacked under it); a one-line value keeps the
+  // right alignment it always had, which is the same pixel (left-aligned, it sits up to a pixel off the box's edge).
+  const [valueLines, setValueLines] = useState(1);
   const body = (
-    <View style={[styles.settingRow, disabled && styles.dim]}>
-      <View style={styles.grow}>
+    <View style={[styles.settingRow, wraps && styles.settingRowWrap, disabled && styles.dim]}>
+      <View style={wraps ? styles.growWrap : styles.grow}>
         <RowKey maxScale={maxScale}>{label}</RowKey>
         {sub ? (
           <Text variant="caption" tone="secondary">
@@ -67,7 +74,13 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
         ) : null}
       </View>
       {value ? (
-        <Text variant="callout" tone="secondary" color={valueColor} style={styles.value}>
+        <Text
+          variant="callout"
+          tone="secondary"
+          color={valueColor}
+          style={wraps && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
+          onTextLayout={wraps ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}
+        >
           {value}
         </Text>
       ) : null}
@@ -211,6 +224,28 @@ const styles = StyleSheet.create({
     gap: space[3],
     minHeight: 44,
     paddingVertical: space[4],
+  },
+  // Static rows: the label sizes to its content (flexBasis auto, not flex: 1's 0) so the row CAN wrap; the value
+  // sits at the right edge beside the label, or drops UNDER it, at the left (space-between starts a lone item at the
+  // start), like the Renewal review and the Join preview.
+  settingRowWrap: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    // A wrapping row's lines hug the top (alignContent flex-start), where the one-line row centred in its minHeight:
+    // keep a single line centred so nothing moves at normal size.
+    alignContent: 'center',
+    columnGap: space[3],
+    rowGap: space[1],
+  },
+  growWrap: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
+    gap: space[1],
+  },
+  // The value's box shrink-wraps its text: on its own line it starts at the left, and several lines read left too.
+  valueMulti: {
+    textAlign: 'left',
   },
   choiceRow: {
     flexDirection: 'row',

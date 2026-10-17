@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/components/sp/Button';
+import { keepMoney } from '@/lib/game/keepDots';
 import { Icon } from '@/components/sp/Icon';
 import { useMotion } from '@/components/sp/motion';
 import { Text } from '@/components/sp/Text';
@@ -128,18 +129,18 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
       ) : (
         <>
           <Text variant="headline" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} accessibilityRole="header" style={styles.title}>{review.title}</Text>
-          {review.headline ? <Text variant="title" style={styles.title}>{review.headline}</Text> : null}
+          {review.headline ? <Text variant="title" style={styles.title}>{keepMoney(review.headline)}</Text> : null}
         </>
       )}
 
       <View style={[styles.panel, { backgroundColor: colors.inset }]}>
         {review.lines.map((l) => (
           <View key={l.label} style={styles.row} accessible accessibilityLabel={`${l.label}, ${l.value}`}>
-            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.rowLabel}>{l.label}</Text>
-            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{l.value}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.rowLabel}>{keepMoney(l.label)}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone={l.tone === 'zero' ? 'secondary' : 'primary'} style={styles.rowValue}>{keepMoney(l.value)}</Text>
           </View>
         ))}
-        {review.card ? <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} style={styles.bold}>{review.card}</Text> : null}
+        {review.card ? <Text variant="callout" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} style={styles.bold}>{keepMoney(review.card)}</Text> : null}
       </View>
 
       {p.message && !done ? (
@@ -174,7 +175,7 @@ export function TradeReviewPanel({ review, presentation, onSubmit, onRetry, canE
         <Button label={COPY.tryAgain} variant="primary" fullWidth onPress={onRetry} testID="trade-review-try-again" />
       ) : null}
 
-      <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{review.caption}</Text>
+      <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{keepMoney(review.caption)}</Text>
       {/* The Alpaca credit on every price surface (PRODUCT_RULES), the review and its confirmation too. */}
       <Text variant="caption" maxFontSizeMultiplier={REVIEW_TEXT_MAX_SCALE} tone="secondary" style={styles.center}>{COPY.alpacaCredit}</Text>
     </View>

@@ -39,3 +39,29 @@ export function keepDots(line: string, keepWhole = KEEP_WHOLE): string {
 export function keepDotsIn(sentence: string, phrase: string): string {
   return phrase && sentence.includes(phrase) ? sentence.replace(phrase, () => keepDots(phrase)) : sentence;
 }
+
+/**
+ * keepMoney (W8 follow-up, Design Lead ruling 2026-10-16; the gate rule: "a money amount never breaks inside
+ * itself"): a money amount or signed percent in WRAPPING text is one unbreakable run. At XXXL the Renewal review's
+ * Stakes value broke as "$1,000. / 00 a / slot". A word joiner (U+2060, zero-width, no glyph of its own) goes
+ * between every glyph of the amount, so no line can end inside it; the unit after it ("a slot", "per slot") still
+ * wraps. Matches what the app's formatters emit: "$2,000", "$1,000.00", "−$12.34", "+$1.2K", "$1.23M", "+9.74%".
+ * Display only (the copy, and every accessibilityLabel, keep their plain text). Apply at the render, never to the
+ * string a width estimate or a test compares. Single-line money (the hero numbers, `numberOfLines={1}` cells)
+ * needs no help and is left alone.
+ */
+const AMOUNT = '[+\\u2212]?\\$\\d[\\d,]*(?:\\.\\d+)?[KMBT]?';
+const PERCENT = '[+\\u2212]?\\d[\\d,]*(?:\\.\\d+)?%';
+/** An amount, then optionally its short unit ("a slot", "per slot", "a share", "per share"). */
+const MONEY_OR_PERCENT = new RegExp(`(${AMOUNT})( (?:a|per) (?:slot|share)(?![A-Za-z]))?|${PERCENT}`, 'g');
+/**
+ * The short unit stays whole, the way keepDots keeps short segments: "a slot" / "per share" never split into "a" and
+ * "slot". The space BETWEEN the amount and its unit stays breakable, so "$1,000.00" / "a slot" when the line is
+ * narrow and "$1,000.00 a slot" on one line when it fits.
+ */
+export function keepMoney(text: string): string {
+  return text.replace(MONEY_OR_PERCENT, (match, amount?: string, unit?: string) => {
+    if (amount === undefined) return Array.from(match).join(WORD_JOINER); // a percent
+    return Array.from(amount).join(WORD_JOINER) + (unit ? unit.replace(/^( (?:a|per)) /, `$1${NBSP}`) : '');
+  });
+}

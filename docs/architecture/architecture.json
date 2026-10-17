@@ -2,50 +2,118 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "97d1396b6134c1d2473a7522b3abc5c3067624bd",
-    "commitShort": "97d1396b",
+    "commit": "3a1e3e85fd2b420abf6105247a6f74af28aa9333",
+    "commitShort": "3a1e3e85",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/home/RollingMoney.tsx"
+        "path": "apps/mobile/app/create-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/app/join-league.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/DraftComplete.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/DraftRoom.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/RenewalReview.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/game/ScheduleList.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/home/ThisWeekCard.tsx"
       },
       {
         "code": "M",
         "path": "apps/mobile/components/money/PortfolioScreen.tsx"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/components/sp/logic/cappedType.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/components/sp/logic/rollDigits.ts"
+        "code": "M",
+        "path": "apps/mobile/components/money/SalePicker.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/home-calm.test.ts"
+        "path": "apps/mobile/components/money/StockSearchScreen.tsx"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/rolling-money-large-text.test.ts"
+        "code": "M",
+        "path": "apps/mobile/components/money/StockSheetBody.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/money/TradeHistoryScreen.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/money/TradeReviewPanel.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/gn/ManagerRow.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/components/sp/gn/PlayerCard.tsx"
       },
       {
         "code": "UU",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+        "path": "apps/mobile/components/sp/gn/Scoreboard.tsx"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/lib/game/keepDots.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/game-draft-room.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/gn-w4-draft.test.ts"
+      },
+      {
+        "code": "A",
+        "path": "apps/mobile/tests-deno/keep-money.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/league-game-night.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/money-stock-search-ownership.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/onboarding-game-night.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "apps/mobile/tests-deno/player-card-model.test.ts"
       }
     ],
-    "timestamp": "2026-10-16T23:02:22Z",
-    "sourceHash": "sha256:b7a92f822766b57eb4f71f5b79decd6b5a7678344f1bb3d22960d6f31e0c2971",
+    "timestamp": "2026-10-16T23:05:07Z",
+    "sourceHash": "sha256:5766679f192b9961fa3e24c808fdbaedea34d270de553f73ab730a0d868a2ecb",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 24.8,
+    "ageHours": 24.9,
     "ageDays": 1,
     "staleAfterDays": 14,
     "stale": false,
@@ -16569,7 +16637,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('start_renewed_season')",
       "callSites": [
-        "apps/mobile/components/game/RenewalReview.tsx:60"
+        "apps/mobile/components/game/RenewalReview.tsx:61"
       ],
       "via": [
         "seamRpc"
@@ -17644,7 +17712,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/components/money/PortfolioScreen.tsx:89"
+        "apps/mobile/components/money/PortfolioScreen.tsx:90"
       ],
       "via": [
         "useRosterData"
@@ -17662,7 +17730,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/components/money/PortfolioScreen.tsx:89"
+        "apps/mobile/components/money/PortfolioScreen.tsx:90"
       ],
       "via": [
         "useRosterData"
@@ -17680,7 +17748,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/components/money/PortfolioScreen.tsx:89"
+        "apps/mobile/components/money/PortfolioScreen.tsx:90"
       ],
       "via": [
         "useRosterData"
@@ -17698,7 +17766,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/components/money/PortfolioScreen.tsx:89"
+        "apps/mobile/components/money/PortfolioScreen.tsx:90"
       ],
       "via": [
         "useRosterData"
@@ -17716,7 +17784,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/components/money/PortfolioScreen.tsx:89"
+        "apps/mobile/components/money/PortfolioScreen.tsx:90"
       ],
       "via": [
         "useRosterData"
@@ -20455,12 +20523,12 @@
       "apps/mobile/app/(tabs)/matchup.tsx:96 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/game/QueueEditor.tsx:43 -> set_draft_queue (via seamRpc)",
       "apps/mobile/components/game/RenewalAsk.tsx:88 -> respond_to_renewal (via seamRpc)",
-      "apps/mobile/components/game/RenewalReview.tsx:60 -> start_renewed_season (via seamRpc)",
+      "apps/mobile/components/game/RenewalReview.tsx:61 -> start_renewed_season (via seamRpc)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
       "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> get_portfolio_ledger (via useRosterData)",
-      "apps/mobile/components/money/PortfolioScreen.tsx:89 -> get_portfolio_ledger (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:90 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:177 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:182 -> market_session_status",
       "apps/mobile/lib/game/useDraftRoom.ts:46 -> get_draft_clock (via seamRpc)",
@@ -20548,10 +20616,10 @@
       "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> drafts.select (via useRosterData)",
       "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> league_draft_slots.select (via useRosterData)",
       "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> trades.select (via useRosterData)",
-      "apps/mobile/components/money/PortfolioScreen.tsx:89 -> categories.select (via useRosterData)",
-      "apps/mobile/components/money/PortfolioScreen.tsx:89 -> drafts.select (via useRosterData)",
-      "apps/mobile/components/money/PortfolioScreen.tsx:89 -> league_draft_slots.select (via useRosterData)",
-      "apps/mobile/components/money/PortfolioScreen.tsx:89 -> trades.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:90 -> categories.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:90 -> drafts.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:90 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/components/money/PortfolioScreen.tsx:90 -> trades.select (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:178 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:180 -> league_seasons.select",
       "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
