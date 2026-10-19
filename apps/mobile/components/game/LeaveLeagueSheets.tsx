@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
-import { Sheet } from '@/components/sp/Sheet';
+import { Sheet, SheetBody, SHEET_FOOTER_MAX_SCALE } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ChoiceRow, RowDivider, SetupCard } from '@/components/game/SetupRows';
@@ -56,23 +56,33 @@ export function LeaveLeagueSheet({ visible, copy, busy, error, onLeave, onStay }
   return (
     <Sheet visible={visible && !!copy} onClose={onStay}>
       {copy ? (
-        <View style={styles.body}>
-          <Text variant="title" accessibilityRole="header">{copy.title}</Text>
-          <View style={styles.bullets}>
-            {copy.bullets.map((b) => (
-              <View key={b} style={styles.bullet}>
-                <Text variant="callout" tone="secondary">•</Text>
-                <Text variant="callout" style={styles.grow}>{b}</Text>
-              </View>
-            ))}
+        // The text scrolls; the refusal line and the two buttons are the action, pinned under it.
+        <SheetBody
+          contentContainerStyle={styles.scrollContent}
+          footerStyle={styles.footer}
+          footer={(
+            <>
+              {error ? <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
+              <Button label={LEAVE_LEAGUE} variant="destructive" onPress={onLeave} status={busy ? 'loading' : 'idle'} disabled={busy} fullWidth testID="leave-league-confirm" />
+              {/* Giorgio, board review 2026-10-06 (overrules G-3): "I want stay as a button." A real
+                  full-width Button, secondary (outlined) until the Design Lead sets the style; Leave
+                  league stays the one filled (red) action. */}
+              <Button label={STAY} variant="secondary" onPress={onStay} disabled={busy} fullWidth testID="leave-league-stay" />
+            </>
+          )}
+        >
+          <View style={styles.stack}>
+            <Text variant="title" accessibilityRole="header">{copy.title}</Text>
+            <View style={styles.bullets}>
+              {copy.bullets.map((b) => (
+                <View key={b} style={styles.bullet}>
+                  <Text variant="callout" tone="secondary">•</Text>
+                  <Text variant="callout" style={styles.grow}>{b}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-          {error ? <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
-          <Button label={LEAVE_LEAGUE} variant="destructive" onPress={onLeave} status={busy ? 'loading' : 'idle'} disabled={busy} fullWidth />
-          {/* Giorgio, board review 2026-10-06 (overrules G-3): "I want stay as a button." A real
-              full-width Button, secondary (outlined) until the Design Lead sets the style; Leave
-              league stays the one filled (red) action. */}
-          <Button label={STAY} variant="secondary" onPress={onStay} disabled={busy} fullWidth />
-        </View>
+        </SheetBody>
       ) : null}
     </Sheet>
   );
@@ -97,31 +107,42 @@ export function TransferCommissionerSheet({ visible, candidates, busy, error, on
   const pickedName = candidates.find((c) => c.userId === picked)?.name ?? null;
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <View style={styles.body}>
-        <Text variant="title" accessibilityRole="header">{TRANSFER_TITLE}</Text>
-        <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>
-        <Text variant="tag" tone="secondary">{WHO_TAKES_OVER}</Text>
-        <SetupCard>
-          <View accessibilityRole="radiogroup">
-            {candidates.map((c, i) => (
-              <View key={c.userId}>
-                {i > 0 ? <RowDivider /> : null}
-                {/* G-8: no subtitle; the same "Member" on every row carried nothing. */}
-                <ChoiceRow title={c.name} selected={picked === c.userId} onPress={() => setPicked(c.userId)} disabled={busy} />
-              </View>
-            ))}
-          </View>
-        </SetupCard>
-        {error ? <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
-        <Button
-          label={pickedName ? handOverLabel(pickedName) : HAND_OVER}
-          onPress={() => (picked ? onTransfer(picked) : undefined)}
-          disabled={!picked || busy}
-          status={busy ? 'loading' : 'idle'}
-          fullWidth
-        />
-        <Button label={TRANSFER_CANCEL} variant="ghost" onPress={onClose} disabled={busy} fullWidth />
-      </View>
+      {/* The list scrolls (up to 15 managers); the refusal line and the two buttons are pinned under it. */}
+      <SheetBody
+        contentContainerStyle={styles.scrollContent}
+        footerStyle={styles.footer}
+        footer={(
+          <>
+            {error ? <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
+            <Button
+              label={pickedName ? handOverLabel(pickedName) : HAND_OVER}
+              onPress={() => (picked ? onTransfer(picked) : undefined)}
+              disabled={!picked || busy}
+              status={busy ? 'loading' : 'idle'}
+              fullWidth
+              testID="transfer-hand-over"
+            />
+            <Button label={TRANSFER_CANCEL} variant="ghost" onPress={onClose} disabled={busy} fullWidth testID="transfer-cancel" />
+          </>
+        )}
+      >
+        <View style={styles.stack}>
+          <Text variant="title" accessibilityRole="header">{TRANSFER_TITLE}</Text>
+          <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>
+          <Text variant="tag" tone="secondary">{WHO_TAKES_OVER}</Text>
+          <SetupCard>
+            <View accessibilityRole="radiogroup">
+              {candidates.map((c, i) => (
+                <View key={c.userId}>
+                  {i > 0 ? <RowDivider /> : null}
+                  {/* G-8: no subtitle; the same "Member" on every row carried nothing. */}
+                  <ChoiceRow title={c.name} selected={picked === c.userId} onPress={() => setPicked(c.userId)} disabled={busy} />
+                </View>
+              ))}
+            </View>
+          </SetupCard>
+        </View>
+      </SheetBody>
     </Sheet>
   );
 }
@@ -129,7 +150,11 @@ export function TransferCommissionerSheet({ visible, candidates, busy, error, on
 const styles = StyleSheet.create({
   row: { paddingVertical: space[4], gap: space[1], minHeight: 44, justifyContent: 'center' },
   bold: { fontWeight: '700' },
-  body: { gap: space[4], paddingHorizontal: space[6], paddingBottom: space[4] },
+  // Scroll body + pinned footer (SheetBody): the scroll's bottom padding stands in for the gap above
+  // the footer, the footer carries the bottom padding, so at Large the sheet is what it was.
+  scrollContent: { paddingHorizontal: space[6], paddingBottom: space[4] },
+  stack: { gap: space[4] },
+  footer: { gap: space[4], paddingHorizontal: space[6], paddingBottom: space[4] },
   bullets: { gap: space[2] },
   bullet: { flexDirection: 'row', gap: space[2] },
   grow: { flex: 1 },

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { radius, space } from '@/constants/tokens';
 import { Icon } from '@/components/sp/Icon';
-import { Sheet } from '@/components/sp/Sheet';
+import { Sheet, SheetBody } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { FinalVignette, RosterVignette, VersusVignette, type VignetteProps } from '@/components/shell/onboarding/Vignettes';
@@ -28,7 +28,8 @@ export function HowItWorksSheet({ visible, onClose }: { visible: boolean; onClos
   const insets = useSafeAreaInsets();
   return (
     <Sheet visible={visible} onClose={onClose}>
-      <View style={[styles.body, { paddingBottom: Math.max(insets.bottom, space[5]) + space[3] }]}>
+      {/* No commit action (the × is the only control): the content just scrolls when the sheet reaches its ceiling. */}
+      <SheetBody contentContainerStyle={[styles.body, { paddingBottom: Math.max(insets.bottom, space[5]) + space[3] }]}>
         <View style={styles.header}>
           <Text variant="title" accessibilityRole="header">
             How it works
@@ -59,7 +60,7 @@ export function HowItWorksSheet({ visible, onClose }: { visible: boolean; onClos
             </View>
           );
         })}
-      </View>
+      </SheetBody>
     </Sheet>
   );
 }

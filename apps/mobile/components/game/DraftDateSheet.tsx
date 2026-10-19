@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
-import { Sheet } from '@/components/sp/Sheet';
+import { Sheet, SheetBody, SHEET_FOOTER_MAX_SCALE } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { EARLIEST_NOTE, PICKER_HELPER, earliestDraftMs, pickerLine } from '@/lib/game/autoStart';
@@ -82,39 +82,58 @@ export function DraftDateSheet({ visible, initial, onConfirm, onSetLater, onClos
 
   return (
     <Sheet visible={visible} onClose={() => run({ type: 'dismiss' })}>
-      <View style={styles.body}>
-        <View style={styles.head}>
-          <Text variant="title" accessibilityRole="header" style={styles.grow}>
-            Draft time
-          </Text>
-          <Pressable onPress={() => run({ type: 'dismiss' })} accessibilityRole="button" accessibilityLabel="Close" style={styles.close} hitSlop={8}>
-            <Icon name="close" size="headline" tone="text2" />
-          </Pressable>
-        </View>
-        {visible && (Platform.OS === 'ios' || androidPicking) ? picker : null}
-        {Platform.OS === 'ios' ? lineText : (
-          <Pressable onPress={() => setAndroidPicking(true)} accessibilityRole="button" style={styles.tapTarget}>
-            {lineText}
-          </Pressable>
+      {/* The wheel and its lines scroll; "Set draft time" (and "Set later") are pinned under them. */}
+      <SheetBody
+        contentContainerStyle={styles.scrollContent}
+        footerStyle={styles.footer}
+        footer={(
+          <>
+            <Button label={SET_DRAFT_TIME} onPress={() => run({ type: 'confirm', nowMs: Date.now() })} fullWidth testID="draft-time-set" />
+            {onSetLater ? (
+              <Pressable onPress={() => run({ type: 'set_later' })} accessibilityRole="button" style={styles.textButton} testID="draft-time-later">
+                <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.accent} style={styles.bold}>
+                  {SET_LATER}
+                </Text>
+              </Pressable>
+            ) : null}
+          </>
         )}
-        <Text variant="caption" tone="secondary">
-          {PICKER_HELPER}
-        </Text>
-        <Button label={SET_DRAFT_TIME} onPress={() => run({ type: 'confirm', nowMs: Date.now() })} fullWidth />
-        {onSetLater ? (
-          <Pressable onPress={() => run({ type: 'set_later' })} accessibilityRole="button" style={styles.textButton}>
-            <Text variant="callout" color={colors.accent} style={styles.bold}>
-              {SET_LATER}
+      >
+        <View style={styles.stack}>
+          <View style={styles.head}>
+            <Text variant="title" accessibilityRole="header" style={styles.grow}>
+              Draft time
             </Text>
-          </Pressable>
-        ) : null}
-      </View>
+            <Pressable onPress={() => run({ type: 'dismiss' })} accessibilityRole="button" accessibilityLabel="Close" style={styles.close} hitSlop={8}>
+              <Icon name="close" size="headline" tone="text2" />
+            </Pressable>
+          </View>
+          {visible && (Platform.OS === 'ios' || androidPicking) ? picker : null}
+          {Platform.OS === 'ios' ? lineText : (
+            <Pressable onPress={() => setAndroidPicking(true)} accessibilityRole="button" style={styles.tapTarget}>
+              {lineText}
+            </Pressable>
+          )}
+          <Text variant="caption" tone="secondary">
+            {PICKER_HELPER}
+          </Text>
+        </View>
+      </SheetBody>
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  body: {
+  // Scroll body + pinned footer (SheetBody): the scroll's bottom padding stands in for the gap above
+  // the footer, the footer carries the bottom padding, so at Large the sheet is what it was.
+  scrollContent: {
+    paddingHorizontal: space[6],
+    paddingBottom: space[4],
+  },
+  stack: {
+    gap: space[4],
+  },
+  footer: {
     gap: space[4],
     paddingHorizontal: space[6],
     paddingBottom: space[4],

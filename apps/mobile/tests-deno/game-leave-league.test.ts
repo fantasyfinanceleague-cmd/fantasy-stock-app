@@ -249,7 +249,7 @@ Deno.test('the sheets: the danger button and Stay; the transfer button names the
   assertEquals(v.includes('<Button label={LEAVE_LEAGUE} variant="destructive"'), true);
   // Giorgio's ruling (overrules G-3): Stay is a real full-width Button, secondary, never ghost text;
   // Leave league stays the destructive (filled red) one. The transfer sheet's Cancel is unchanged.
-  assertEquals(v.includes('<Button label={STAY} variant="secondary" onPress={onStay} disabled={busy} fullWidth />'), true);
+  assertEquals(v.includes('<Button label={STAY} variant="secondary" onPress={onStay} disabled={busy} fullWidth testID="leave-league-stay" />'), true);
   assertEquals(/label=\{STAY\}[^>]*variant="ghost"/.test(v), false);
   assertEquals(/<Text[^>]*>\s*\{STAY\}/.test(v), false); // never plain text
   assertEquals(v.includes('<Button label={TRANSFER_CANCEL} variant="ghost"'), true);
@@ -283,7 +283,7 @@ Deno.test('a member\'s League settings: ONLY Invite code (with Share), the Commi
 
 Deno.test('the transfer sheet shows the ruled line under its title (source guard)', () => {
   const v = SOURCES['components/game/LeaveLeagueSheets.tsx'];
-  assertEquals(v.includes('{TRANSFER_TITLE}</Text>\n        <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>'), true);
+  assertEquals(v.includes('{TRANSFER_TITLE}</Text>\n          <Text variant="callout" tone="secondary">{TRANSFER_NOTE}</Text>'), true);
 });
 
 Deno.test('League settings is a modal: its Cancel is text only, no back chevron (G-7; source guard)', () => {

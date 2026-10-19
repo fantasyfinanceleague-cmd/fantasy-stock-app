@@ -14,6 +14,7 @@ import { radius } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { keepMoney } from '@/lib/game/keepDots';
 import { Icon } from '@/components/sp/Icon';
+import { SheetBody } from '@/components/sp/Sheet';
 import { formatMoney } from '@/components/sp/logic/money';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -31,7 +32,10 @@ export interface SalePickerProps {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12, paddingHorizontal: 20 },
+  // The sources scroll; "Use …" is pinned under them (SheetBody). Same 20pt gutter and 12pt gap as before the split.
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 12 },
+  stack: { gap: 12 },
+  footer: { paddingHorizontal: 20 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   close: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'flex-end' },
   card: { borderRadius: radius.lg, overflow: 'hidden' },
@@ -59,36 +63,40 @@ export function SalePicker({ sources, chosenId, symbol, onChoose, onUse, onClose
   const chosen = rows.some((r) => r.selected);
 
   return (
-    <View style={styles.stack}>
-      <View style={styles.header}>
-        <Text variant="title">{COPY.whichSalePays}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8} style={styles.close}>
-          <Icon name="close" size="body" tone="text2" />
-        </Pressable>
-      </View>
-
-      <Text variant="callout" tone="secondary">{COPY.pickerCaption}</Text>
-
-      <View style={[styles.card, { backgroundColor: colors.inset }]}>
-        {rows.map((r) => (
-          <Pressable
-            key={r.tradeId}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: r.selected }}
-            accessibilityLabel={`${r.label}, ${formatMoney(r.amount)}`}
-            onPress={() => onChoose(r.tradeId)}
-            style={styles.row}
-          >
-            <Radio selected={r.selected} />
-            <View style={styles.rowLead}>
-              <Text variant="callout">{r.label}</Text>
-            </View>
-            <Text variant="callout">{keepMoney(formatMoney(r.amount))}</Text>
+    <SheetBody
+      contentContainerStyle={styles.scrollContent}
+      footerStyle={styles.footer}
+      footer={<Button label={COPY.useSaleButton(symbol)} variant="primary" fullWidth disabled={!chosen} onPress={onUse} testID="sale-picker-use" />}
+    >
+      <View style={styles.stack}>
+        <View style={styles.header}>
+          <Text variant="title">{COPY.whichSalePays}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} hitSlop={8} style={styles.close}>
+            <Icon name="close" size="body" tone="text2" />
           </Pressable>
-        ))}
-      </View>
+        </View>
 
-      <Button label={COPY.useSaleButton(symbol)} variant="primary" fullWidth disabled={!chosen} onPress={onUse} />
-    </View>
+        <Text variant="callout" tone="secondary">{COPY.pickerCaption}</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.inset }]}>
+          {rows.map((r) => (
+            <Pressable
+              key={r.tradeId}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: r.selected }}
+              accessibilityLabel={`${r.label}, ${formatMoney(r.amount)}`}
+              onPress={() => onChoose(r.tradeId)}
+              style={styles.row}
+            >
+              <Radio selected={r.selected} />
+              <View style={styles.rowLead}>
+                <Text variant="callout">{r.label}</Text>
+              </View>
+              <Text variant="callout">{keepMoney(formatMoney(r.amount))}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </SheetBody>
   );
 }
