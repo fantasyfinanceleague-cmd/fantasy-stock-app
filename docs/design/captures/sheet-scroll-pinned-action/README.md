@@ -103,19 +103,13 @@ rendered at a fraction of its size (`adjustsFontSizeToFit` inside the scroll vie
 `r2L/round1-sell-mine.png`). The badge text is now sized by length (`tickerTileSize`: up to four characters at the 13 pt token, five or more at the old
 fit's 0.85 floor), and a test forbids `adjustsFontSizeToFit` in any scrolled sheet body. The rendered badge now matches main.
 
-**4. Found, NOT changed: a held stock's sell sheet is already taller than the 90% ceiling at Large on a 17e.** On main its top edge is at the
-same y as on this branch (the cap); main silently clips about 23 pt of its bottom padding off-screen, and every line stays visible. With the footer
-pinned, that padding is real (the footer's 28 pt plus the sheet's 32 pt), so the body scrolls by about 40 pt and **the "Sell all …" line sits under the
-fade at the top** (`r3L/L-sell-top-mine.png` against `-main.png`). Review sell is pinned and nothing is unreachable, but it is a visible change at Large
-that the ruling's "only a sheet taller than 90% changes" predicts and that I did not expect. If the Design Lead wants it back at Large, the cheapest
-options are (a) let the footer's bottom padding give way before the body does (a shrinkable spacer in place of the footer's `paddingBottom`, which recovers
-about 28 pt of the 40), or (b) shorten the summary line's gap in this state. Not done without a call.
+**4. Found: a held stock's sell sheet is already taller than the 90% ceiling at Large on a 17e.** Fixed in round 3 (below).
 
 ### Round 2 Large diffs against main (`586a9598`), light, Large, same fixtures and timings
 
 | State | Result |
 |---|---|
-| Stock sheet, sell, **top** (held stock) | **differs, by design: finding 4** (body scrolls under the fade; the rest of the sheet, including the badge, matches) |
+| Stock sheet, sell, **top** (held stock) | differed in round 2 (finding 4); **superseded by round 3** |
 | Stock sheet, buy, top / review | differs only inside two 40–65 px boxes: the chart's animated live dot, in the sheet and in the Portfolio behind the scrim |
 | Stock sheet, blocked buy, top | differs only inside one 60 px live-dot box |
 | Stock sheet, sell, review | live-dot box behind the scrim only |
@@ -123,15 +117,46 @@ about 28 pt of the 40), or (b) shorten the summary line's gap in this state. Not
 | Leave league | **0 pixels differ** |
 | How it works | **0 pixels differ** |
 
+## Round 3 (Design Lead, 2026-10-19): the held-stock sell at Large, ruled (a) with (b) as the backstop
+
+**The ruling.** At Large on the 17e, "Sell all … ≈ $2,194.91" (what Review sell will do) must sit whole and unfaded above the footer, as on main. When a sheet hits its 90%
+ceiling the footer's bottom padding yields first, down to the home-indicator inset; the sheet's own bottom padding and the footer's must never stack (exactly one carries the
+inset); only then does the body scroll. (b): if that still leaves the body short, compress the footer's internal gaps, only at the ceiling, never below 8pt. Neither touches a
+content-sized sheet.
+
+**What it measured.** (a) alone was not enough: main clips ~32pt of its bottom padding off-screen (28pt visible under the credit) but the floor is the 34pt inset, so the body was
+still about 5pt short. (b) closes it.
+
+**What was built** (`Sheet.tsx` / `logic/sheetScroll.ts`):
+- The sheet's 32pt bottom padding and the footer's own are ONE bottom space: the shell cancels the sheet's padding with an equal negative margin (only under a footer) and a single
+  spacer of their sum sits under the footer. A content-sized sheet is exactly as tall as before; there is no stacking.
+- The footer is no longer one wrapper view: its items, the gaps between them (spacers) and the bottom space are direct children of the shell beside the scroll; each item carries the
+  footer's gutter. (A Fragment footer's children are its items; `RenewalChoice` is now one View so its row/refusal keep their 8pt gap.)
+- `footerSpacing(...)` (pure, 14 cases in the test) computes the order from measured heights: bottom space to the inset, then gaps to 8, then the body takes the rest.
+  **Why explicit math, not flex-shrink weights:** a first version used weights (bottom space ≫ gaps ≫ body) and worked at Large, but at XXXL the footer fell off the bottom of the
+  sheet: Yoga redistributes shrink only twice, so a three-layer priority cannot be left to it.
+- (b) is built in (the gap spacers); on the 17e it supplies the last 5.3pt (the credit line sits 5.3pt closer to the button than main's; nothing above it moves).
+
+**Acceptance, on the final code** (`r4/`, `r6L/`, `final2/` in the design-review folder):
+
+| Frame | Result |
+|---|---|
+| 17e, Large, light: held-stock sell, top, vs main | "Sell all … ≈ $2,194.91" whole, unfaded, body unscrolled. **0 differing pixels above the footer's credit line** except the chart's live dot (a 65 px box); the Review sell button is identical. The only other difference is the credit line, 5.3pt higher (cluster y 2387–2448 px, 517 × 61 px) |
+| 17 Pro, Large, light: the same frame | fits with no scroll; differs from main only inside the live-dot box (775–842 y, 819–886 x px) |
+| 17e, Large: buy top, blocked buy top, sell review, buy review | only the live-dot boxes, as before |
+| 17e, Large: Draft time, Leave league, How it works | **0 pixels differ** |
+| 17e, XXXL, light: `final2/sell-xxxl-light-top.png` / `…-end.png` | fade at the top; at the end the fade is gone; Review sell and the credit pinned; gaps compressed to 8; bottom space at the inset |
+| 17e, XXXL, light: `final2/leave-xxxl-light-top.png`, `final2/drafttime-xxxl-light-top.png` | actions pinned, Set later capped, fade over the cut line |
+
 ## Tests and checks
 
-- `tests-deno/sheet-scroll-pinned-action.test.ts` (18 tests): the footer is outside the scroll (and after it); the wrapper and scroll shrink inside the 90% ceiling
+- `tests-deno/sheet-scroll-pinned-action.test.ts` (21 tests): the footer is outside the scroll (and after it); the wrapper and scroll shrink inside the 90% ceiling
   and the footer does not; no border, fill or shadow on any footer (no rule line); for each fixed sheet the action (and its reason line) is in the `footer` slot
   and not in the scroll children; the Large spacing is conserved per sheet; every footer `<Text>` is capped and the cap is the button label's; the fade rule
   (14 cases) and the fade's structure (one fade, in the footer's view, `bottom: '100%'`, 24 pt, surface-to-surface, `pointerEvents` none, state flips only on
-  change, the ScrollView is the shell's direct child); no `adjustsFontSizeToFit` in a scrolled body and the badge sizing; and the audit test (every `<Sheet>` file uses
+  change, the ScrollView is the shell's direct child); no `adjustsFontSizeToFit` in a scrolled body and the badge sizing; round 3's `footerSpacing` order (natural when it fits, bottom space to the inset, then gaps to 8, then the body; the measured 17e case; edge cases) and the one-bottom-space / gap-spacer structure (no stacking, the spacer under the items, only with a footer, no flex-shrink weights); and the audit test (every `<Sheet>` file uses
   `SheetBody`, scrolls on its own, or is a listed exception).
-- **Mutations: 31 of 31 killed, measured by the test run's exit code.** (Round 1 said "12 of 12 killed"; that harness counted the text "0 failed" as a kill, so it proved
+- **Mutations: 48 of 48 killed (rounds 1–3), measured by the test run's exit code.** (Round 1 said "12 of 12 killed"; that harness counted the text "0 failed" as a kill, so it proved
   nothing. Re-run properly, two mutants survived, one never applied and one was a no-op by construction; the pins were strengthened and the mutants rebuilt.)
   The set: the stock sheet's button back in the scroll; the footer inside the `ScrollView`; `flexShrink` removed; a pinned `testID` dropped; a `borderTopWidth` on the
   footer; the reason condition dropped; Stay's `testID` dropped; the scroll padding off by one step (Large drift); How it works losing `SheetBody`; Set draft time's `testID`
@@ -141,5 +166,5 @@ about 28 pt of the 40), or (b) shorten the summary line's gap in this state. Not
   and long size changed.
 - Three older exact-string source guards were updated for the new indentation and `testID`s (`game-draft-time-sheet`, `game-leave-league` ×2); what they pin is unchanged.
 - tsc 0, lint 0 errors (8 pre-existing warnings), tappables / sourceManifest / the architecture map regenerated and current, gitleaks clean.
-- Deno: `cd apps/mobile/tests-deno && deno test --allow-read .` is **2452 passed, 0 failed**. Round 1 reported two failures as "also failing on main": those two
+- Deno: `cd apps/mobile/tests-deno && deno test --allow-read .` is **2455 passed, 0 failed**. Round 1 reported two failures as "also failing on main": those two
   (`onboarding-w4`, `shell-username`) read source files and need `--allow-read`; without the flag they fail on any tree. Not a main defect.

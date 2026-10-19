@@ -118,7 +118,7 @@ function RenewalChoice({ leagueId, current, onSaved, onSame }: {
     </View>
   );
   return (
-    <>
+    <View style={styles.choiceStack}>
       <View style={styles.row}>
         {choice('out', "I'm out", 'secondary')}
         {choice('in', "I'm in", 'primary')}
@@ -133,7 +133,7 @@ function RenewalChoice({ leagueId, current, onSaved, onSame }: {
           ) : null}
         </View>
       ) : null}
-    </>
+    </View>
   );
 }
 
@@ -145,6 +145,8 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: space[3], paddingVertical: space[2], borderRadius: 999 },
   row: { flexDirection: 'row', gap: space[3], marginVertical: space[2] },
   choice: { flex: 1 },
+  // The row and its refusal keep the card's 8pt gap between them (a sheet footer spaces its ITEMS, not a fragment's children).
+  choiceStack: { gap: space[2] },
   refusal: { gap: space[2] },
   retry: { alignSelf: 'flex-start' },
 });

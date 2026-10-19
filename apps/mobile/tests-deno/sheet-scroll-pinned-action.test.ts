@@ -11,7 +11,7 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { SOURCES } from './sourceManifest.generated.ts';
-import { SCROLL_SLACK, scrollsFurther } from '../components/sp/logic/sheetScroll.ts';
+import { MIN_FOOTER_GAP, SCROLL_SLACK, SHEET_MAX_HEIGHT_FRACTION, footerSpacing, scrollsFurther } from '../components/sp/logic/sheetScroll.ts';
 import { type as TYPE } from '../constants/tokens/type.ts';
 
 /** Source without comments, so a pin never passes on a comment that names the thing. */
@@ -81,10 +81,11 @@ Deno.test('SheetBody: the footer is outside the scroll view, after it, and shrin
   const sheet = src('components/sp/Sheet.tsx');
   const body = sheet.slice(sheet.indexOf('export function SheetBody'), sheet.indexOf('export function Sheet('));
   const scrollEnd = body.indexOf('</ScrollView>');
-  const footerAt = body.indexOf('testID="sheet-footer"');
-  assert(scrollEnd > 0 && footerAt > scrollEnd, 'the footer View comes after </ScrollView>, not inside it');
+  const itemsAt = body.indexOf('{spaced}');
+  assert(scrollEnd > 0 && itemsAt > scrollEnd, 'the footer\'s items come after </ScrollView>, not inside it');
   assert(body.includes('{children}') && body.indexOf('{children}') < scrollEnd, 'children render inside the scroll');
-  assert(!body.slice(0, scrollEnd).includes('{footer}'), 'the footer is not a scroll child');
+  assert(!body.slice(0, scrollEnd).includes('{footer}') && !body.slice(0, scrollEnd).includes('{spaced}'), 'the footer is not a scroll child');
+  assert(body.includes('testID="sheet-footer-item"'), 'each footer item is a sibling of the scroll (a direct child of the shell), so flexbox can yield them');
 });
 
 Deno.test('SheetBody: the wrapper and the scroll shrink inside the sheet\'s 90% ceiling; the footer does not', () => {
@@ -316,21 +317,22 @@ Deno.test('Scroll fade: drawn only when the rule says so, on the surface, no rul
   assert(/\{fade \? \(\s*(\/\/[^\n]*\n\s*)*<LinearGradient/.test(body), 'the fade is rendered only under `fade`');
   assert(body.includes('colors={[clearOf(colors.surface), colors.surface]}'), 'the sheet surface at alpha 0 into the surface');
   assert(!/transparent/.test(body), 'never the `transparent` keyword (black at 0: a grey fade)');
-  assert(body.includes('pointerEvents="none"'), 'it never eats a touch');
+  assert(/style=\{styles\.fade\}\s*pointerEvents="none"/.test(body), 'the fade never eats a touch');
   assertEquals((body.match(/<LinearGradient/g) ?? []).length, 1, 'exactly one fade');
-  // Placement: AFTER the scroll closes, inside the footer's View (so it exists only with a footer), before {footer}.
+  // Placement: AFTER the scroll closes, in a zero-height anchor at the footer's top edge (so it exists only with a footer), before the items.
   const scrollEnd = body.indexOf('</ScrollView>');
-  const footerView = body.indexOf('testID="sheet-footer"');
+  const anchorAt = body.indexOf('testID="sheet-footer-anchor"');
   const fadeAt = body.indexOf('<LinearGradient');
-  assert(scrollEnd > 0 && footerView > scrollEnd && fadeAt > footerView, 'the fade is inside the footer view, not a scroll child');
-  assert(fadeAt < body.indexOf('{footer}'), 'and before the footer\'s own content');
-  assert(/fade: \{[^}]*position: 'absolute'[^}]*bottom: '100%'[^}]*height: SHEET_FADE_HEIGHT/.test(sheet), 'its bottom edge is the footer\'s top edge: it sits over the scroll\'s last lines');
+  assert(scrollEnd > 0 && anchorAt > scrollEnd && fadeAt > anchorAt && body.lastIndexOf('<View style={styles.footerAnchor}', fadeAt) > scrollEnd, 'the fade is inside the footer anchor, not a scroll child');
+  assert(fadeAt < body.indexOf('{spaced}'), 'and before the footer\'s own items');
+  assert(/footerAnchor: \{\s*height: 0,/.test(sheet), 'the anchor has no height: the fade ends exactly at the footer\'s top edge');
+  assert(/fade: \{[^}]*position: 'absolute'[^}]*bottom: 0[^}]*height: SHEET_FADE_HEIGHT/.test(sheet), 'its bottom edge is the anchor\'s: it sits over the scroll\'s last lines');
   assertEquals(Number(/export const SHEET_FADE_HEIGHT = (\d+);/.exec(sheet)?.[1]), 24, '~24pt');
   assert(!/borderTopWidth|borderBottomWidth|borderWidth|hairline/i.test(sheet), 'no rule line, anywhere in Sheet.tsx');
   assert(body.includes('setFade((prev) => (prev === next ? prev : next))'), 'state flips only when the answer changes (no re-render per scroll frame)');
   for (const ev of ['onLayout', 'onContentSizeChange', 'onScroll']) assert(body.includes(ev), `${ev} feeds the metrics`);
   // The scroll is the wrapper's direct child (no extra View between them: an extra wrapper changed iOS text fitting).
-  assert(/<View style=\{styles\.bodyShell\}>\s*<ScrollView/.test(body), 'ScrollView is the shell\'s direct child');
+  assert(/<View style=\{footer \? \[styles\.bodyShell, styles\.bodyShellUnderFooter\] : styles\.bodyShell\}>\s*<ScrollView/.test(body), 'ScrollView is the shell\'s direct child');
 });
 
 // ── No shrink-to-fit text in a scrolled sheet body (found at Large on a held stock, 2026-10-19) ───────────
@@ -348,4 +350,68 @@ Deno.test('Scrolled sheet bodies: no adjustsFontSizeToFit text (iOS collapsed th
   assert(/symbol\.length >= 5 \? TICKER_TILE_LONG : TICKER_TILE_SIZE/.test(stock), 'five or more characters take the smaller size');
   assertEquals(Number(/TICKER_TILE_SIZE = \{ fontSize: (\d+)/.exec(stock)?.[1]), TYPE['ticker.tile'].fontSize, 'up to four characters are at the ticker.tile token size');
   assert(Number(/TICKER_TILE_LONG = \{ fontSize: (\d+)/.exec(stock)?.[1]) >= Math.floor(TYPE['ticker.tile'].fontSize * 0.85), 'the long size is the old fit\'s floor (0.85)');
+});
+
+// ── The ONE bottom space, which yields at the 90% ceiling (DL, 2026-10-19: held-stock sell at Large on a 17e) ───────
+
+Deno.test('footerSpacing: natural when it fits; the bottom space yields first (to the inset), then the gaps (to 8), then the body takes the rest', () => {
+  // The 17e held-stock sell at Large (numbers from the device): room 731.6, a 28 + 32 = 60 bottom space, one 20pt gap, 34pt inset.
+  const base = { room: 731.6, gaps: 1, gap: 20, bottom: 60, floor: 34, items: 140 };
+  assertEquals(footerSpacing({ ...base, content: 500 }), { bottom: 60, gap: 20 }, 'it fits: the natural spacing, exactly (content-sized sheets are unchanged)');
+  assertEquals(footerSpacing({ ...base, content: 731.6 - 140 - 20 - 60 }), { bottom: 60, gap: 20 }, 'exactly at the ceiling');
+  const slack = 731.6 - 140 - 20 - 60;
+  assertEquals(footerSpacing({ ...base, content: slack + 10 }), { bottom: 50, gap: 20 }, '10 over: the bottom space gives 10, the gap none');
+  assertEquals(footerSpacing({ ...base, content: slack + 26 }), { bottom: 34, gap: 20 }, '26 over: the bottom space is exactly at the home-indicator inset, gaps untouched');
+  const measured = footerSpacing({ ...base, content: slack + 31.3 });
+  assertEquals(measured.bottom, 34);
+  assert(Math.abs(measured.gap - (20 - 5.3)) < 1e-9, '5.3 past that (the measured 17e case): only then the gap gives, and the body does not scroll');
+  assertEquals(footerSpacing({ ...base, content: slack + 26 + 12 }), { bottom: 34, gap: 8 }, 'the gaps reach their floor of 8');
+  assertEquals(footerSpacing({ ...base, content: slack + 400 }), { bottom: 34, gap: 8 }, 'XXXL: both at their floors; the body (flexShrink) scrolls');
+  // Several gaps share what is left.
+  const two = footerSpacing({ ...base, gaps: 2, items: 200, content: 731.6 - 200 - 40 - 60 + 26 + 6 });
+  assert(two.bottom === 34 && Math.abs(two.gap - 17) < 1e-9, 'two gaps each give 3');
+  // Floors and edge cases.
+  assertEquals(footerSpacing({ ...base, content: slack + 500, floor: 0 }), { bottom: 0, gap: 8 }, 'a phone with no inset');
+  assertEquals(footerSpacing({ ...base, content: slack + 500, floor: 90 }), { bottom: 60, gap: 8 }, 'the floor never exceeds the natural space');
+  assertEquals(footerSpacing({ ...base, gaps: 0, content: slack + 500 }), { bottom: 34, gap: 20 }, 'no gaps: nothing to compress');
+  assertEquals(footerSpacing({ ...base, gap: 4, content: slack + 500 }), { bottom: 34, gap: 4 }, 'a gap already under 8 is never raised to 8');
+  assertEquals(footerSpacing({ ...base, content: NaN }), { bottom: 60, gap: 20 }, 'garbage: natural');
+  assertEquals(footerSpacing({ ...base, room: 0, content: 900 }), { bottom: 60, gap: 20 }, 'no room measured yet: natural');
+  assertEquals(MIN_FOOTER_GAP, 8);
+  assertEquals(SHEET_MAX_HEIGHT_FRACTION, 0.9);
+});
+
+Deno.test('One bottom space: the footer\'s padding and the sheet\'s never stack; the spacer sits under the footer and yields by explicit math', () => {
+  const sheet = src('components/sp/Sheet.tsx');
+  const body = sheet.slice(sheet.indexOf('export function SheetBody'), sheet.indexOf('export function Sheet('));
+  // One carrier: the sheet's own padding is cancelled under a footer, and the footer's own bottom padding is NOT rendered (it is in the spacer).
+  assert(/paddingBottom: SHEET_BOTTOM_PADDING,/.test(sheet), 'the sheet pads by the shared constant');
+  assert(/bodyShellUnderFooter: \{\s*marginBottom: -SHEET_BOTTOM_PADDING,/.test(sheet), 'under a footer, the shell cancels exactly that padding');
+  assert(!/paddingBottom/.test(body.replace(/flatFooter\?\.paddingBottom/g, '')), 'no item, wrapper or shell in SheetBody applies a bottom padding of its own (never stacked)');
+  assert(body.includes('bottom: Number(flatFooter?.paddingBottom ?? 0) + SHEET_BOTTOM_PADDING'), 'the spacer is their SUM: a content-sized sheet is exactly as tall as before');
+  assert(body.includes('floor: insets.bottom'), 'floored at the home-indicator inset');
+  assert(body.includes('windowHeight * SHEET_MAX_HEIGHT_FRACTION - SHEET_HANDLE_AREA_HEIGHT'), 'the room is the sheet\'s 90% ceiling minus its handle row');
+  assert(/maxHeight: '90%'/.test(sheet), 'the ceiling the room assumes (Sheet\'s maxHeight)');
+  assert(body.includes('footerSpacing({ ...p, content: m.content'), 'the spacing is the pure function of measured heights');
+  assert(body.includes('items: m.items.slice(0, p.gaps + 1).reduce((a, h) => a + h, 0)'), 'the footer items\' heights are summed into the spacing');
+  // The spacer: under the footer's items, inside the shell, only with a footer; takes no touches.
+  const itemsAt = body.indexOf('{spaced}');
+  const spacerAt = body.indexOf('testID="sheet-bottom-space"');
+  assert(itemsAt > 0 && spacerAt > itemsAt, 'the spacer is under the footer\'s items');
+  assert(/\{footer \? <View pointerEvents="none" style=\{\{ height: bottomNow \}\} testID="sheet-bottom-space" \/> : null\}/.test(body), 'one spacer, only with a footer, taking its yielded height');
+  assert(body.includes('footer ? [styles.bodyShell, styles.bodyShellUnderFooter]'), 'the cancelling margin applies only when there is a footer (How it works keeps the sheet\'s padding)');
+  assert(!/flexShrink:\s*(BOTTOM|FOOTER)/.test(body), 'no flex-shrink weights: flexbox only redistributes twice, so the order is explicit math');
+});
+
+Deno.test('Footer gaps: spacers BETWEEN the footer\'s items, each item measured, the gutter carried by each item', () => {
+  const sheet = src('components/sp/Sheet.tsx');
+  const body = sheet.slice(sheet.indexOf('export function SheetBody'), sheet.indexOf('export function Sheet('));
+  assert(!/style=\{\{[^}]*\bgap:/.test(body) && !/const gutter = \{[^}]*\bgap:/.test(body), 'SheetBody renders no `gap` style of its own: the spacers are the only gaps (never both)');
+  assert(body.includes('gap: Number(flatFooter?.gap ?? 0)'), 'the spacer is the footer\'s own gap');
+  assert(body.includes('Children.toArray(') && body.includes('footer.type === Fragment ? footer.props.children'), 'a Fragment footer\'s children are its items');
+  assert(body.includes('i > 0 && gapNow > 0') && body.includes('height: gapNow'), 'a gap goes BETWEEN items only (none before the first, none after the last)');
+  assert(body.includes('gaps: Math.max(items.length - 1, 0)'), 'the gap count is items minus one');
+  assert(body.includes('measured.current.items[i] = e.nativeEvent.layout.height') && body.includes('measured.current.content = h'), 'the items and the content are measured');
+  assert(body.includes('paddingLeft: flatFooter?.paddingLeft ?? flatFooter?.paddingHorizontal ?? 0') && body.includes('paddingRight: flatFooter?.paddingRight ?? flatFooter?.paddingHorizontal ?? 0') && body.includes('style={gutter}'), 'each item carries the footer\'s left and right gutter');
+  assert(src('components/game/RenewalAsk.tsx').includes('<View style={styles.choiceStack}>') && /choiceStack: \{ gap: space\[2\] \}/.test(src('components/game/RenewalAsk.tsx')), 'the renewal choice keeps its row/refusal gap');
 });

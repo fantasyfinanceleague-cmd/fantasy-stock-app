@@ -2,26 +2,18 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "66181585e660dd77698a01583912a1adbe645ecf",
-    "commitShort": "66181585",
+    "commit": "e0f056bc768861e137506edb94c9406887afa8e3",
+    "commitShort": "e0f056bc",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/game/DraftDateSheet.tsx"
+        "path": "apps/mobile/components/game/RenewalAsk.tsx"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/LeaveLeagueSheets.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/StockSheetBody.tsx"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/components/sp/logic/sheetScroll.ts"
       },
       {
@@ -31,13 +23,9 @@
       {
         "code": "M",
         "path": "apps/mobile/tests-deno/sheet-scroll-pinned-action.test.ts"
-      },
-      {
-        "code": "UU",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-19T20:49:02Z",
+    "timestamp": "2026-10-19T20:49:06Z",
     "sourceHash": "sha256:cb29ce99e1d0e30cb523f4dc3dba387d128395b7fbfbd672d7a1fb532942cb29",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
