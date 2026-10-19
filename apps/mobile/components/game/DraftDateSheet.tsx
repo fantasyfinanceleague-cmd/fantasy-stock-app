@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { space, typeFontFamily } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Icon } from '@/components/sp/Icon';
-import { Sheet, SheetBody } from '@/components/sp/Sheet';
+import { Sheet, SheetBody, SHEET_FOOTER_MAX_SCALE } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { EARLIEST_NOTE, PICKER_HELPER, earliestDraftMs, pickerLine } from '@/lib/game/autoStart';
@@ -91,7 +91,7 @@ export function DraftDateSheet({ visible, initial, onConfirm, onSetLater, onClos
             <Button label={SET_DRAFT_TIME} onPress={() => run({ type: 'confirm', nowMs: Date.now() })} fullWidth testID="draft-time-set" />
             {onSetLater ? (
               <Pressable onPress={() => run({ type: 'set_later' })} accessibilityRole="button" style={styles.textButton} testID="draft-time-later">
-                <Text variant="callout" color={colors.accent} style={styles.bold}>
+                <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.accent} style={styles.bold}>
                   {SET_LATER}
                 </Text>
               </Pressable>

@@ -11,6 +11,8 @@
  */
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { SOURCES } from './sourceManifest.generated.ts';
+import { SCROLL_SLACK, scrollsFurther } from '../components/sp/logic/sheetScroll.ts';
+import { type as TYPE } from '../constants/tokens/type.ts';
 
 /** Source without comments, so a pin never passes on a comment that names the thing. */
 function code(src: string): string {
@@ -115,7 +117,7 @@ Deno.test('Stock sheet: Review buy / Review sell is pinned, WITH its reason line
   const at = s.indexOf('const footer = (');
   assert(at > 0);
   const footer = group(s, at + 'const footer = '.length);
-  for (const t of ['stock-sheet-review', 'action.reason', 'WarnPanel text={keepMoney(warnBlock)}', 'model.marketNote', 'stock-sheet-pick-another', 'COPY.alpacaCredit']) {
+  for (const t of ['stock-sheet-review', 'action.reason', '!warnBlock && action.reason', 'WarnPanel text={keepMoney(warnBlock)}', 'model.marketNote', 'stock-sheet-pick-another', 'COPY.alpacaCredit']) {
     assert(footer.includes(t), `"${t}" is in the footer`);
   }
   const main = s.indexOf('<SheetBody contentContainerStyle={styles.scrollContent} footerStyle={styles.footer} footer={footer}>');
@@ -226,4 +228,124 @@ Deno.test('Audit: every file that opens a <Sheet> either uses SheetBody, scrolls
     if (p === 'components/money/MoneyHost.tsx') continue;
     assert(s.includes('SheetBody'), `${p} opens a Sheet but its content does not use SheetBody: add it, or list it as an exception with why`);
   }
+});
+
+// ── Footer text never outgrows the footer's button (DL, 2026-10-19: "Set later" outranked its button) ────────
+
+/** Every <Text ...> opening tag in `text` (up to its closing `>` outside braces). */
+function textTags(text: string): string[] {
+  const tags: string[] = [];
+  let at = text.indexOf('<Text');
+  while (at >= 0) {
+    let depth = 0;
+    let i = at;
+    for (; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') depth--;
+      else if (text[i] === '>' && depth === 0) break;
+    }
+    tags.push(text.slice(at, i + 1));
+    at = text.indexOf('<Text', i);
+  }
+  return tags;
+}
+
+Deno.test('Footer text: the shared cap IS the Button label\'s ceiling (headline), and the footers\' own caps do not exceed it', () => {
+  const sheet = src('components/sp/Sheet.tsx');
+  const cap = Number(/export const SHEET_FOOTER_MAX_SCALE = ([\d.]+);/.exec(sheet)?.[1]);
+  assertEquals(cap, TYPE.headline.maxScale, 'the footer cap equals the button label\'s (headline) maxScale');
+  assert(src('components/sp/Button.tsx').includes("variant={size === 'md' ? 'headline' : 'callout'}"), 'the Button label is still headline at md');
+  for (const [f, name] of [['components/money/StockSheetBody.tsx', 'SHEET_TEXT_MAX_SCALE'], ['components/money/TradeReviewPanel.tsx', 'REVIEW_TEXT_MAX_SCALE']]) {
+    const v = Number(new RegExp(`const ${name} = ([\\d.]+);`).exec(src(f))?.[1]);
+    assert(v <= cap, `${f}: ${name} (${v}) is within the footer cap (${cap})`);
+  }
+});
+
+Deno.test('Footer text: every <Text> in a SheetBody footer carries a maxFontSizeMultiplier (Set later, error lines, captions, the credit)', () => {
+  const files: [string, string[]][] = [
+    ['components/money/StockSheetBody.tsx', ['<SheetBody contentContainerStyle={styles.scrollContent} footerStyle={styles.footer} footer={footer}>']],
+    ['components/money/TradeReviewPanel.tsx', ['<SheetBody']],
+    ['components/game/DraftDateSheet.tsx', ['<SheetBody']],
+    ['components/game/LeaveLeagueSheets.tsx', ['export function LeaveLeagueSheet(', 'export function TransferCommissionerSheet(']],
+  ];
+  let checked = 0;
+  for (const [f, starts] of files) {
+    const s = src(f);
+    for (const start of starts) {
+      const from = s.indexOf(start);
+      assert(from >= 0);
+      const footer = footerSlot(s, from);
+      for (const tag of textTags(footer)) {
+        assert(tag.includes('maxFontSizeMultiplier='), `${f}: a footer <Text> with no cap: ${tag.slice(0, 90)}`);
+        checked++;
+      }
+    }
+  }
+  assert(checked === 8, `checked the footers' texts (${checked})`);
+  // The two named by the Design Lead, by name.
+  assert(src('components/game/DraftDateSheet.tsx').includes('maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.accent}'), 'Set later is capped with the shared footer cap');
+  assert(group(src('components/money/StockSheetBody.tsx'), src('components/money/StockSheetBody.tsx').indexOf('const footer = (') + 'const footer = '.length).includes('stock-sheet-pick-another'), '"Pick another stock" is a Button in the footer (its label is the Button\'s own headline cap)');
+});
+
+// ── The soft bottom edge (DL, 2026-10-19) ───────────────────────────────────────────
+
+Deno.test('Scroll fade rule: shown only while the content overflows AND there is more below', () => {
+  // Large: nothing overflows, however the view bounces.
+  assertEquals(scrollsFurther({ content: 500, layout: 500, offset: 0 }), false, 'exactly fits');
+  assertEquals(scrollsFurther({ content: 400, layout: 500, offset: 0 }), false, 'smaller than the view');
+  assertEquals(scrollsFurther({ content: 500, layout: 500, offset: -30 }), false, 'top bounce on a content that fits must not flash it');
+  assertEquals(scrollsFurther({ content: 500 + SCROLL_SLACK, layout: 500, offset: 0 }), false, 'sub-pixel rounding is not more to scroll');
+  // XXXL: it overflows.
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: 0 }), true, 'top of an overflowing body');
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: 200 }), true, 'middle');
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: 400 }), false, 'scrolled to the end: gone');
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: 399.5 }), false, 'within the slack of the end');
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: 450 }), false, 'bounced past the end');
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: -20 }), true, 'top bounce while overflowing');
+  // Unmeasured or garbage values never show it.
+  assertEquals(scrollsFurther({ content: 0, layout: 0, offset: 0 }), false, 'before layout');
+  assertEquals(scrollsFurther({ content: 900, layout: 0, offset: 0 }), false, 'no layout height yet');
+  assertEquals(scrollsFurther({ content: NaN, layout: 500, offset: 0 }), false);
+  assertEquals(scrollsFurther({ content: 900, layout: 500, offset: Infinity }), false);
+});
+
+Deno.test('Scroll fade: drawn only when the rule says so, on the surface, no rule line, in the footer\'s own view above its top edge', () => {
+  const sheet = src('components/sp/Sheet.tsx');
+  const body = sheet.slice(sheet.indexOf('export function SheetBody'), sheet.indexOf('export function Sheet('));
+  assert(body.includes('scrollsFurther(metrics.current)'), 'the rule decides');
+  assert(/\{fade \? \(\s*(\/\/[^\n]*\n\s*)*<LinearGradient/.test(body), 'the fade is rendered only under `fade`');
+  assert(body.includes('colors={[clearOf(colors.surface), colors.surface]}'), 'the sheet surface at alpha 0 into the surface');
+  assert(!/transparent/.test(body), 'never the `transparent` keyword (black at 0: a grey fade)');
+  assert(body.includes('pointerEvents="none"'), 'it never eats a touch');
+  assertEquals((body.match(/<LinearGradient/g) ?? []).length, 1, 'exactly one fade');
+  // Placement: AFTER the scroll closes, inside the footer's View (so it exists only with a footer), before {footer}.
+  const scrollEnd = body.indexOf('</ScrollView>');
+  const footerView = body.indexOf('testID="sheet-footer"');
+  const fadeAt = body.indexOf('<LinearGradient');
+  assert(scrollEnd > 0 && footerView > scrollEnd && fadeAt > footerView, 'the fade is inside the footer view, not a scroll child');
+  assert(fadeAt < body.indexOf('{footer}'), 'and before the footer\'s own content');
+  assert(/fade: \{[^}]*position: 'absolute'[^}]*bottom: '100%'[^}]*height: SHEET_FADE_HEIGHT/.test(sheet), 'its bottom edge is the footer\'s top edge: it sits over the scroll\'s last lines');
+  assertEquals(Number(/export const SHEET_FADE_HEIGHT = (\d+);/.exec(sheet)?.[1]), 24, '~24pt');
+  assert(!/borderTopWidth|borderBottomWidth|borderWidth|hairline/i.test(sheet), 'no rule line, anywhere in Sheet.tsx');
+  assert(body.includes('setFade((prev) => (prev === next ? prev : next))'), 'state flips only when the answer changes (no re-render per scroll frame)');
+  for (const ev of ['onLayout', 'onContentSizeChange', 'onScroll']) assert(body.includes(ev), `${ev} feeds the metrics`);
+  // The scroll is the wrapper's direct child (no extra View between them: an extra wrapper changed iOS text fitting).
+  assert(/<View style=\{styles\.bodyShell\}>\s*<ScrollView/.test(body), 'ScrollView is the shell\'s direct child');
+});
+
+// ── No shrink-to-fit text in a scrolled sheet body (found at Large on a held stock, 2026-10-19) ───────────
+
+Deno.test('Scrolled sheet bodies: no adjustsFontSizeToFit text (iOS collapsed the stock sheet\'s ticker badge to a fraction of its size); the badge is sized by length', () => {
+  for (const f of [
+    'components/money/StockSheetBody.tsx', 'components/money/TradeReviewPanel.tsx', 'components/money/SalePicker.tsx',
+    'components/game/LeaveLeagueSheets.tsx', 'components/game/RenewalChangeSheet.tsx', 'components/game/DraftDateSheet.tsx',
+    'components/shell/HowItWorksSheet.tsx',
+  ]) {
+    assert(!src(f).includes('adjustsFontSizeToFit'), `${f}: no adjustsFontSizeToFit inside a scroll body`);
+  }
+  const stock = src('components/money/StockSheetBody.tsx');
+  assert(stock.includes('style={tickerTileSize(symbol)}'), 'the badge text takes its size from the ticker\'s length');
+  assert(/symbol\.length >= 5 \? TICKER_TILE_LONG : TICKER_TILE_SIZE/.test(stock), 'five or more characters take the smaller size');
+  assertEquals(Number(/TICKER_TILE_SIZE = \{ fontSize: (\d+)/.exec(stock)?.[1]), TYPE['ticker.tile'].fontSize, 'up to four characters are at the ticker.tile token size');
+  assert(Number(/TICKER_TILE_LONG = \{ fontSize: (\d+)/.exec(stock)?.[1]) >= Math.floor(TYPE['ticker.tile'].fontSize * 0.85), 'the long size is the old fit\'s floor (0.85)');
 });

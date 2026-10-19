@@ -2,8 +2,8 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "71006931e91cd6fe4f4a927687fcca428b4d0e4b",
-    "commitShort": "71006931",
+    "commit": "66181585e660dd77698a01583912a1adbe645ecf",
+    "commitShort": "66181585",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
@@ -18,27 +18,11 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/game/RenewalAsk.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/game/RenewalChangeSheet.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/money/SalePicker.tsx"
-      },
-      {
-        "code": "M",
         "path": "apps/mobile/components/money/StockSheetBody.tsx"
       },
       {
-        "code": "M",
-        "path": "apps/mobile/components/money/TradeReviewPanel.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/components/shell/HowItWorksSheet.tsx"
+        "code": "A",
+        "path": "apps/mobile/components/sp/logic/sheetScroll.ts"
       },
       {
         "code": "M",
@@ -46,18 +30,14 @@
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-draft-time-sheet.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/game-leave-league.test.ts"
-      },
-      {
-        "code": "A",
         "path": "apps/mobile/tests-deno/sheet-scroll-pinned-action.test.ts"
+      },
+      {
+        "code": "UU",
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
       }
     ],
-    "timestamp": "2026-10-19T20:48:51Z",
+    "timestamp": "2026-10-19T20:49:02Z",
     "sourceHash": "sha256:cb29ce99e1d0e30cb523f4dc3dba387d128395b7fbfbd672d7a1fb532942cb29",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1

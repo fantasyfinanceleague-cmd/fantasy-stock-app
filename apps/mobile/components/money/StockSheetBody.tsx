@@ -77,6 +77,16 @@ import { acquisitionLine } from '@/components/sp/logic/gameNight';
 /** The sheet's gutter (§9C: the card's and the sheet's 20pt). */
 const SHEET_GUTTER = space[6];
 
+/** The badge's ticker, sized by length rather than by `adjustsFontSizeToFit`: inside the sheet's scroll view iOS
+ * shrank that text to a fraction of its size on a sheet that overflows by a little (found at Large on a held stock,
+ * 2026-10-19). Up to four characters are at the token size; five or more take the old fit's floor (0.85), so they
+ * always fit the 52pt disc. */
+const TICKER_TILE_SIZE = { fontSize: 13, lineHeight: 16 } as const;
+const TICKER_TILE_LONG = { fontSize: 11, lineHeight: 14 } as const;
+function tickerTileSize(symbol: string) {
+  return symbol.length >= 5 ? TICKER_TILE_LONG : TICKER_TILE_SIZE;
+}
+
 /** The sheet's small text follows Dynamic Type to 1.6× (the player card's ceiling), so the price
  * stays the sheet's loudest text at XXXL. */
 const SHEET_TEXT_MAX_SCALE = 1.6;
@@ -619,7 +629,7 @@ function SheetHeader({ symbol, company, onClose }: { symbol: string; company: st
   return (
     <View style={styles.header}>
       <View style={[styles.badge, { backgroundColor: colors.inset }]}>
-        <Text variant="ticker.tile" allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{symbol}</Text>
+        <Text variant="ticker.tile" allowFontScaling={false} numberOfLines={1} style={tickerTileSize(symbol)}>{symbol}</Text>
       </View>
       <View style={styles.headText}>
         <Text variant="ticker.card" accessibilityRole="header">{symbol}</Text>

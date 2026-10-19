@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
-import { Sheet, SheetBody } from '@/components/sp/Sheet';
+import { Sheet, SheetBody, SHEET_FOOTER_MAX_SCALE } from '@/components/sp/Sheet';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { ChoiceRow, RowDivider, SetupCard } from '@/components/game/SetupRows';
@@ -62,7 +62,7 @@ export function LeaveLeagueSheet({ visible, copy, busy, error, onLeave, onStay }
           footerStyle={styles.footer}
           footer={(
             <>
-              {error ? <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
+              {error ? <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
               <Button label={LEAVE_LEAGUE} variant="destructive" onPress={onLeave} status={busy ? 'loading' : 'idle'} disabled={busy} fullWidth testID="leave-league-confirm" />
               {/* Giorgio, board review 2026-10-06 (overrules G-3): "I want stay as a button." A real
                   full-width Button, secondary (outlined) until the Design Lead sets the style; Leave
@@ -113,7 +113,7 @@ export function TransferCommissionerSheet({ visible, candidates, busy, error, on
         footerStyle={styles.footer}
         footer={(
           <>
-            {error ? <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
+            {error ? <Text variant="callout" maxFontSizeMultiplier={SHEET_FOOTER_MAX_SCALE} color={colors.danger} accessibilityLiveRegion="polite">{error}</Text> : null}
             <Button
               label={pickedName ? handOverLabel(pickedName) : HAND_OVER}
               onPress={() => (picked ? onTransfer(picked) : undefined)}

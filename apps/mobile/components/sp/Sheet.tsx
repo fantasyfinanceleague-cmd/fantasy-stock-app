@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Dimensions, Modal, PanResponder, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { Dimensions, Modal, PanResponder, ScrollView, StyleSheet, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ReduceMotion, runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { radius, space } from '@/constants/tokens';
+import { clearOf } from '@/constants/tokens/color';
+import { scrollsFurther, type ScrollMetrics } from '@/components/sp/logic/sheetScroll';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 
@@ -39,6 +42,12 @@ const DISMISS_VELOCITY = 0.8;
 /** The grab-handle row's rendered height (paddingVertical * 2 + the handle's own
  * height) — every sheet's content starts this far below the sheet's own top edge.
  * M1 uses it to place the header's resting rect without an extra measurement. */
+/** A footer's text (a link such as Set later, an error line, a caption) never outgrows the footer's
+ * Button label: the label is `headline`, capped at 1.6 (constants/tokens/type.ts), so footer text is capped at the same
+ * multiplier. Callout, body and caption carry no cap of their own, so uncapped they grew past the button at XXXL. */
+export const SHEET_FOOTER_MAX_SCALE = 1.6;
+/** The soft bottom edge's height, and the pinned footer's own surface under it. */
+export const SHEET_FADE_HEIGHT = 24;
 export const SHEET_HANDLE_AREA_HEIGHT = space[3] * 2 + 4;
 
 export interface SheetBodyProps {
@@ -56,6 +65,15 @@ export interface SheetBodyProps {
  * 90% ceiling and only the body scrolls, so the action can never fall below the fold. Put this as
  * the sheet's only child; the wrapper shrinks (flexShrink 1, minHeight 0) inside the sheet's maxHeight. */
 export function SheetBody({ children, footer, contentContainerStyle, footerStyle }: SheetBodyProps) {
+  const { colors } = useTheme();
+  // The soft bottom edge: shown only while the content can still scroll further down. The metrics
+  // live in a ref and state flips only when the answer changes, so scrolling does not re-render.
+  const metrics = useRef<ScrollMetrics>({ content: 0, layout: 0, offset: 0 });
+  const [fade, setFade] = useState(false);
+  const refresh = useCallback(() => {
+    const next = scrollsFurther(metrics.current);
+    setFade((prev) => (prev === next ? prev : next));
+  }, []);
   return (
     <View style={styles.bodyShell}>
       <ScrollView
@@ -63,11 +81,38 @@ export function SheetBody({ children, footer, contentContainerStyle, footerStyle
         contentContainerStyle={contentContainerStyle}
         alwaysBounceVertical={false}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onLayout={(e: LayoutChangeEvent) => {
+          metrics.current.layout = e.nativeEvent.layout.height;
+          refresh();
+        }}
+        onContentSizeChange={(_w: number, h: number) => {
+          metrics.current.content = h;
+          refresh();
+        }}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          metrics.current.offset = e.nativeEvent.contentOffset.y;
+          refresh();
+        }}
         testID="sheet-scroll"
       >
         {children}
       </ScrollView>
-      {footer ? <View style={footerStyle} testID="sheet-footer">{footer}</View> : null}
+      {footer ? (
+        <View style={footerStyle} testID="sheet-footer">
+          {fade ? (
+            // Sits just above the footer's top edge, over the scroll's last lines: the surface at alpha 0 into
+            // the surface (never the `transparent` keyword, which is black at 0: a grey fade).
+            <LinearGradient
+              colors={[clearOf(colors.surface), colors.surface]}
+              style={styles.fade}
+              pointerEvents="none"
+              testID="sheet-scroll-fade"
+            />
+          ) : null}
+          {footer}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -186,6 +231,13 @@ const styles = StyleSheet.create({
   scroll: {
     flexShrink: 1,
     flexGrow: 0,
+  },
+  fade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: '100%',
+    height: SHEET_FADE_HEIGHT,
   },
   handleArea: {
     alignItems: 'center',

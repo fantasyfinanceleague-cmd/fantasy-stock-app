@@ -69,38 +69,77 @@ swipe below was a real touch through the simulator control tool (duration 0.1 ta
 | `leave-xxxl-light-top.png` → `…-after-stay.png` | Leave league: the bullets scroll under the pinned Leave league and Stay; **tap Stay** → the sheet closes |
 | `howitworks-xxxl-light-top.png` | How it works: fits at XXXL on a 17e (no scroll needed; the scroll is protective) |
 
-### L pixel diffs against main (the merge-base `5a44398a`), light, Large text
+### L pixel diffs against main, light, Large text (round 2 re-runs them; see "Round 2" below)
 
-Same fixtures and timings, both builds on the same simulator, compared with `pxdiff.py` (every pixel, all channels).
+Round 1 compared every pixel of each state against main (the merge-base then) with `pxdiff.py`. **Correction (round 2):** in round 1 the
+"stock sheet, sell, top" frame was in fact the review panel on both builds (the review step fired before the shot), so it never compared
+the sheet's top. Round 2 re-shot every state with the top frames taken before any review, and found a real difference in one of them.
 
-| State | Result |
-|---|---|
-| Stock sheet, sell, top / review | **0 pixels differ** |
-| Stock sheet, buy, top / review | review **0**; top differs only inside a 42 px box: the chart's animated live dot (its halo pulses) |
-| Stock sheet, blocked buy (warn panel), top / review | differs only inside a 54 px live-dot box; **0 pixels outside it** |
-| Draft time | **0 pixels differ** |
-| Leave league | **0 pixels differ** |
-| How it works | **0 pixels differ** |
-
-**Not captured on a device, and why.** Transfer commissioner (the fixtures have no commissioner with an open leave window: the
+**Not captured on a device, and why.** (Unchanged in round 2.) Transfer commissioner (the fixtures have no commissioner with an open leave window: the
 W8 tap-through already recorded this), Renewal change (the fixtures I tried did not land on the "You're running back · Change" roster
 within the time spent), and the Sale picker (it needs two or more sales to fund a per-slot buy; no fixture gives two). Each uses the
 same `SheetBody` as the sheets that were captured and carries the same structural pin and the same spacing-conservation pin
 (`tests-deno/sheet-scroll-pinned-action.test.ts`); their Large pixel-identity is argued by that arithmetic, not measured. Treat them
 as the first thing to look at when a real device pass reaches them.
 
+## Round 2 (Design Lead, 2026-10-19): footer links capped, a soft edge, two defects found on the way
+
+**1. Text in a SheetBody footer never outgrows the footer's button.** "Set later" (a `callout` Pressable) outranked its button at XXXL: callout, body
+and caption carry no `maxScale` of their own, while a Button label is `headline`, capped at 1.6. `SHEET_FOOTER_MAX_SCALE = 1.6` (in `Sheet.tsx`,
+pinned equal to `type.headline.maxScale`) now caps Set later and the Leave / Transfer refusal lines; every other footer text already carried
+a 1.6 cap (the stock sheet's and the review's), and the Pick another stock / Cancel / Stay controls are Buttons (their label is the Button's own
+headline cap). A test requires a `maxFontSizeMultiplier` on every `<Text>` inside every footer (8 today). Still: `final/drafttime-xxxl-light-top.png`.
+
+**2. A soft edge where content scrolls under the footer.** A 24 pt `LinearGradient` (the sheet surface at alpha 0 into the surface, never the
+`transparent` keyword; no rule line) sits just above the footer's top edge, shown ONLY while the content can scroll further down
+(`components/sp/logic/sheetScroll.ts`: content − layout − scrolled > 1 pt, with a top bounce counted as 0 so a body that fits never flashes).
+The metrics live in a ref and state flips only when the answer changes. At Large nothing overflows, so it does not show. Stills:
+`final/sell-xxxl-light-top.png` (the "Shares / Avg entry" row dissolves into the pinned button), `final/sell-xxxl-light-end.png` (scrolled
+to the end, the fade is gone, "Sell all 6.8942 sh ≈ $2,194.91" clear above the button), `final/leave-xxxl-light-top.png` (the "Y…" sliver
+is a faded edge, no longer a cut glyph).
+
+**3. Found and fixed: the stock sheet's ticker badge collapsed inside the scroll view.** At Large, on a held stock, the badge's "NVDA"
+rendered at a fraction of its size (`adjustsFontSizeToFit` inside the scroll view, iOS; it is deterministic, and it is in the round-1 SHA too:
+`r2L/round1-sell-mine.png`). The badge text is now sized by length (`tickerTileSize`: up to four characters at the 13 pt token, five or more at the old
+fit's 0.85 floor), and a test forbids `adjustsFontSizeToFit` in any scrolled sheet body. The rendered badge now matches main.
+
+**4. Found, NOT changed: a held stock's sell sheet is already taller than the 90% ceiling at Large on a 17e.** On main its top edge is at the
+same y as on this branch (the cap); main silently clips about 23 pt of its bottom padding off-screen, and every line stays visible. With the footer
+pinned, that padding is real (the footer's 28 pt plus the sheet's 32 pt), so the body scrolls by about 40 pt and **the "Sell all …" line sits under the
+fade at the top** (`r3L/L-sell-top-mine.png` against `-main.png`). Review sell is pinned and nothing is unreachable, but it is a visible change at Large
+that the ruling's "only a sheet taller than 90% changes" predicts and that I did not expect. If the Design Lead wants it back at Large, the cheapest
+options are (a) let the footer's bottom padding give way before the body does (a shrinkable spacer in place of the footer's `paddingBottom`, which recovers
+about 28 pt of the 40), or (b) shorten the summary line's gap in this state. Not done without a call.
+
+### Round 2 Large diffs against main (`586a9598`), light, Large, same fixtures and timings
+
+| State | Result |
+|---|---|
+| Stock sheet, sell, **top** (held stock) | **differs, by design: finding 4** (body scrolls under the fade; the rest of the sheet, including the badge, matches) |
+| Stock sheet, buy, top / review | differs only inside two 40–65 px boxes: the chart's animated live dot, in the sheet and in the Portfolio behind the scrim |
+| Stock sheet, blocked buy, top | differs only inside one 60 px live-dot box |
+| Stock sheet, sell, review | live-dot box behind the scrim only |
+| Draft time | **0 pixels differ** |
+| Leave league | **0 pixels differ** |
+| How it works | **0 pixels differ** |
+
 ## Tests and checks
 
-- `tests-deno/sheet-scroll-pinned-action.test.ts` (13 tests): the footer is outside the scroll (and after it); the wrapper and scroll
-  shrink inside the 90% ceiling and the footer does not; no border, fill or shadow on any footer (no rule line); for each fixed sheet
-  the action (and its reason line) is in the `footer` slot and not in the scroll children; the Large spacing is conserved per sheet;
-  and an audit test: every file that opens a `<Sheet>` uses `SheetBody`, scrolls on its own, or is a listed exception.
-- Mutations, each making that suite fail (12 of 12 killed): the stock sheet's button back in the scroll; the footer inside the
-  `ScrollView`; the wrapper's `flexShrink` removed; a pinned `testID` dropped from the review; a `borderTopWidth` on the footer; the
-  reason line out of the footer; Stay out of the footer; the scroll padding changed by one step (Large drift); How it works losing
-  `SheetBody`; Set draft time out of the footer; the sale picker's footer losing its gutter; the renewal choice back in the body.
-- Three older exact-string source guards were updated for the new indentation and the new `testID`s (`game-draft-time-sheet`,
-  `game-leave-league` ×2); what they pin is unchanged.
-- tsc 0, lint 0 errors (8 pre-existing warnings), tappables / sourceManifest / the architecture map regenerated and current,
-  gitleaks clean. The deno suite is green except `onboarding-w4` (the invite-reason mapping) and `shell-username` (the suggestions
-  function), which also fail on a clean `main`.
+- `tests-deno/sheet-scroll-pinned-action.test.ts` (18 tests): the footer is outside the scroll (and after it); the wrapper and scroll shrink inside the 90% ceiling
+  and the footer does not; no border, fill or shadow on any footer (no rule line); for each fixed sheet the action (and its reason line) is in the `footer` slot
+  and not in the scroll children; the Large spacing is conserved per sheet; every footer `<Text>` is capped and the cap is the button label's; the fade rule
+  (14 cases) and the fade's structure (one fade, in the footer's view, `bottom: '100%'`, 24 pt, surface-to-surface, `pointerEvents` none, state flips only on
+  change, the ScrollView is the shell's direct child); no `adjustsFontSizeToFit` in a scrolled body and the badge sizing; and the audit test (every `<Sheet>` file uses
+  `SheetBody`, scrolls on its own, or is a listed exception).
+- **Mutations: 31 of 31 killed, measured by the test run's exit code.** (Round 1 said "12 of 12 killed"; that harness counted the text "0 failed" as a kill, so it proved
+  nothing. Re-run properly, two mutants survived, one never applied and one was a no-op by construction; the pins were strengthened and the mutants rebuilt.)
+  The set: the stock sheet's button back in the scroll; the footer inside the `ScrollView`; `flexShrink` removed; a pinned `testID` dropped; a `borderTopWidth` on the
+  footer; the reason condition dropped; Stay's `testID` dropped; the scroll padding off by one step (Large drift); How it works losing `SheetBody`; Set draft time's `testID`
+  dropped; the sale picker's gutter lost; the renewal choice back in the body; Set later / the Leave error / the review caption uncapped; the footer cap raised; the fade
+  always shown / with the `transparent` keyword / eating touches / 40 pt / under a border / at `bottom: 0` / duplicated in the scroll; the fade rule ignoring the offset,
+  counting a top bounce, or always true; `setFade` every frame; an extra wrapper around the scroll; `adjustsFontSizeToFit` back on the badge; the badge's length rule
+  and long size changed.
+- Three older exact-string source guards were updated for the new indentation and `testID`s (`game-draft-time-sheet`, `game-leave-league` ×2); what they pin is unchanged.
+- tsc 0, lint 0 errors (8 pre-existing warnings), tappables / sourceManifest / the architecture map regenerated and current, gitleaks clean.
+- Deno: `cd apps/mobile/tests-deno && deno test --allow-read .` is **2452 passed, 0 failed**. Round 1 reported two failures as "also failing on main": those two
+  (`onboarding-w4`, `shell-username`) read source files and need `--allow-read`; without the flag they fail on any tree. Not a main defect.
