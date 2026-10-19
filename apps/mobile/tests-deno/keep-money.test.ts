@@ -223,13 +223,13 @@ Deno.test('the unit is glued, the amount-to-unit space is not: "$1,000.00" / "a 
   assert(splitUnits('$1,000.00 a slot').length > 0);
 });
 
-Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is never dropped); a pressable row keeps its layout', () => {
+Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is never dropped); a row with a chevron or a help line stacks once its label breaks', () => {
   const src = SOURCES['components/game/SetupRows.tsx'];
-  assert(src.includes('const wraps = !onPress;'));
-  assert(src.includes('wraps && styles.settingRowWrap'));
-  assert(src.includes('<View style={wraps ? styles.growWrap : styles.grow}>'));
-  assert(src.includes('style={wraps && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}'));
-  assert(src.includes('onTextLayout={wraps ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}'));
+  assert(src.includes('const stack = (!onPress && !sub) || broke;'));
+  assert(src.includes('styles.settingRow, stack && styles.settingRowWrap, disabled && styles.dim'));
+  assert(src.includes('<View style={stack ? styles.growWrap : styles.grow}'));
+  assert(src.includes('style={stack && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}'));
+  assert(src.includes('onTextLayout={stack ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}'));
   assert(/settingRowWrap: \{\s*flexWrap: 'wrap',/.test(src));
   // flex: 1 has a basis of 0, which can never wrap; the wrapping label sizes to its content
   assert(/growWrap: \{[^}]*flexBasis: 'auto'/.test(src));
@@ -237,11 +237,11 @@ Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is 
   // moves at normal size (found by the Large pixel diff: every static row's text sat ~1pt high without it)
   assert(/settingRowWrap: \{[^}]*alignContent: 'center'/.test(src));
   // a wrapped value drops to the LEFT under its label (space-between starts a lone item at the start), never flush-right:
-  // no marginLeft: 'auto' pushing it, and its text reads left when it runs to several lines
+  // no marginLeft: 'auto' pushing the VALUE (only the chevron / switch has one), and its text reads left on several lines
   assert(/settingRowWrap: \{[^}]*justifyContent: 'space-between'/.test(src));
   assert(/valueMulti: \{[^}]*textAlign: 'left'/.test(src));
   assert(!src.includes('valueWrap'));
-  assert(!src.includes("marginLeft: 'auto'"));
+  assert(!/\n  value: \{[^}]*marginLeft/.test(src) && !/valueMulti: \{[^}]*marginLeft/.test(src));
   // a one-line value keeps its right alignment: left-aligned, its glyphs sit up to a pixel off the box edge (the Large
   // pixel diff caught exactly that, 6,893 pixels), so the left alignment applies only once the text has several lines
   assert(!/\n  value: \{[^}]*textAlign: 'left'/.test(src));

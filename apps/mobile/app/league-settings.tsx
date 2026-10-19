@@ -558,13 +558,15 @@ export default function LeagueSettingsScreen() {
 function InviteRow({ code, window }: { code: string; window: LeaveWindow }) {
   return (
     <View style={styles.inviteRow}>
-      <View style={styles.grow}>
+      <View style={styles.inviteTexts}>
         <Text variant="callout" style={styles.key}>Invite code</Text>
         {/* §9C: the accent means live / your turn / selected; the code is plain text. */}
         <Text variant="callout" style={[styles.bold, styles.tabular]}>{code}</Text>
       </View>
       {inviteShareShown(window) ? (
-        <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: inviteShareMessage(code) })} />
+        <View style={styles.inviteShare}>
+          <Button label="Share" variant="secondary" size="sm" onPress={() => void Share.share({ message: inviteShareMessage(code) })} />
+        </View>
       ) : null}
     </View>
   );
@@ -588,12 +590,23 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: space[2],
   },
+  // Wraps like the setting rows: at XXXL the Share button drops under the code instead of squeezing it ("SCUD / 26").
   inviteRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    alignContent: 'center',
     gap: space[3],
     paddingVertical: space[3],
     minHeight: 44,
+  },
+  inviteTexts: {
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: 'auto',
+  },
+  inviteShare: {
+    marginLeft: 'auto',
   },
   grow: {
     flex: 1,

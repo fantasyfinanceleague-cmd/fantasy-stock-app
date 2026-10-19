@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { Icon } from '@/components/sp/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,7 @@ import { radius, space } from '@/constants/tokens';
 import { clearOf } from '@/constants/tokens/color';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
+import { FULL_WIDTH_FONT_SCALE } from '@/components/sp/Button';
 import { ListRow } from '@/components/sp/ListRow';
 import { Money } from '@/components/sp/Money';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -73,6 +74,10 @@ export function SeasonCompleteCard({
 }: SeasonCompleteCardProps) {
   const { colors } = useTheme();
   const { reduced } = useMotion();
+  // At accessibility sizes the tiles stack, one per row: two across, each half was narrower than its own caption and
+  // "Season gain" broke mid-word ("Seaso / n gain"; label-no-midword round, the Design Lead's rule).
+  const { fontScale } = useWindowDimensions();
+  const tileStyle = fontScale >= FULL_WIDTH_FONT_SCALE ? [styles.tile, styles.tileStacked] : styles.tile;
   const result = useSeasonResult(leagueId);
   // GS-4: the headline's place is the final standings' (League › Standings' order), so a
   // 1st seed who lost the Final reads "2nd place" here too, never "1st place".
@@ -202,12 +207,12 @@ export function SeasonCompleteCard({
           {/* §9C rule 2: separation by surface, never by rules — the tiles sit on an `inset`
               panel (the key-figures strip's look), not between hairlines. */}
           <View style={[styles.tilesGrid, { backgroundColor: colors.inset }]}>
-            <View style={styles.tile}>
+            <View style={tileStyle}>
               <Text variant="caption" tone="secondary">{core.seasonGainTitle}</Text>
               <Money value={core.seasonGain} size="headline" colorBySign sign="always" />
             </View>
             {result?.best_week_number != null && result.best_week_gain != null ? (
-              <View style={styles.tile}>
+              <View style={tileStyle}>
                 <Text variant="caption" tone="secondary">{BEST_WEEK_TILE_TITLE}</Text>
                 <View style={styles.inlineRow}>
                   <Text variant="headline">{bestWeekLine(result.best_week_number)} · </Text>
@@ -215,7 +220,7 @@ export function SeasonCompleteCard({
                 </View>
               </View>
             ) : null}
-            <View style={styles.tile}>
+            <View style={tileStyle}>
               <Text variant="caption" tone="secondary">{core.regularSeasonTitle}</Text>
               <Text variant="headline">{core.regularSeasonLine}</Text>
             </View>
@@ -223,7 +228,7 @@ export function SeasonCompleteCard({
              * indexing; playoffResultLine is null for that case unless the podium
              * itself (champion/runner_up) already answers it. */}
             {playoffResultLine ? (
-              <View style={styles.tile}>
+              <View style={tileStyle}>
                 <Text variant="caption" tone="secondary">{PLAYOFFS_TILE_TITLE}</Text>
                 <Text variant="headline">{playoffRecordLine(result?.playoff_wins ?? null, result?.playoff_losses ?? null, playoffResultLine)}</Text>
               </View>
@@ -276,6 +281,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     minWidth: 130,
     gap: space[1],
+  },
+  // One per row from the accessibility scale (a tile's caption is wider than half the panel there).
+  tileStacked: {
+    flexBasis: '100%',
   },
   inlineRow: {
     flexDirection: 'row',

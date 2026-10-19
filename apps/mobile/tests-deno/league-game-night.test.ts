@@ -277,7 +277,8 @@ Deno.test("League's settings row stops at the gains' size at XL; the shared form
   // 13 × 1.5 = 19.5 = 15 × 1.3 (the gains' cap).
   assertEquals(13 * 1.5, 15 * 1.3);
   const rows = SOURCES['components/game/SetupRows.tsx'];
-  assert(rows.includes('<RowKey maxScale={maxScale}>{label}</RowKey>'));
+  // the row's label takes the cap (the row may also watch its label for a mid-word break: onTextLayout)
+  assert(/<RowKey maxScale=\{maxScale\}[^>]*>\s*\{label\}\s*<\/RowKey>/.test(rows));
   assert(!SOURCES['app/create-league.tsx'].includes('maxScale='), 'create league is not capped');
 });
 

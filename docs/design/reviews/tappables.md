@@ -59,7 +59,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/league-settings.tsx:469` | SwitchRow | onValueChange | `setAllowUndraftable` | state setAllowUndraftable | `isLocked` |
 | `app/league-settings.tsx:488` | SlotBuilder | onChange | `inline: (next) => { setSlots(next); setSlotsError(null); }` | state setSlots | `isLocked` |
 | `app/league-settings.tsx:525` | SettingRow | onPress | `inline: transferAllowed(membershipWindow) ? () => { setLeaveError(nu` | sheet setTransferOpen(true) |  |
-| `app/league-settings.tsx:567` | Button | onPress | `inline: () => void Share.share({ message: inviteShareMessage(code) }` | share sheet |  |
+| `app/league-settings.tsx:568` | Button | onPress | `inline: () => void Share.share({ message: inviteShareMessage(code) }` | share sheet |  |
 | `app/login.tsx:161` | Pressable | onPress | `handleResend` | fn handleResend |  |
 | `app/login.tsx:168` | Pressable | onPress | `inline: () => router.push('/forgot-password')` | route push('/forgot-password') |  |
 | `app/login.tsx:177` | Button | onPress | `handleSignIn` | sheet setConfirmFailedNotice(false) |  |
@@ -120,9 +120,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/RenewalReview.tsx:148` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/game/RenewalRoster.tsx:85` | Pressable | onPress | `inline: () => setChanging(true)` | state setChanging |  |
 | `components/game/RenewalRoster.tsx:107` | Pressable | onPress | `inline: () => runSheet(p)` | fn runSheet |  |
-| `components/game/SetupRows.tsx:93` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:117` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:161` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:133` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:157` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:194` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
 | `components/game/SetupScaffold.tsx:52` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/game/StandingsTable.tsx:73` | ManagerRow | onPress | `inline: href ? () => router.push(href) : undefined` | route push(href) |  |
 | `components/game/Stepper.tsx:67` | Pressable | onPress | `inline: () => down && onStep(-1)` | fn onStep | `!down` |
@@ -136,7 +136,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/home/PreDraftCard.tsx:287` | Button | onPress | `onShare` | share sheet |  |
 | `components/home/RenewalCountsCard.tsx:22` | Button | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
 | `components/home/RunItBackCard.tsx:39` | Button | onPress | `inline: () => void runItBack()` | fn runItBack | `busy` |
-| `components/home/SeasonCompleteCard.tsx:235` | ListRow | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
+| `components/home/SeasonCompleteCard.tsx:240` | ListRow | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
 | `components/home/StandingsCard.tsx:89` | PressableScale | onPress | `inline: () => router.push(STANDINGS_HREF)` | route push(STANDINGS_HREF) |  |
 | `components/home/StandingsCard.tsx:130` | ManagerRow | onPress | `inline: href ? () => router.push(href) : undefined` | route push(href) |  |
 | `components/home/ThisWeekCard.tsx:148` | PressableScale | onPress | `inline: () => router.push(THIS_WEEK_HREF)` | route push(THIS_WEEK_HREF) |  |
@@ -172,11 +172,11 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/money/TradeHistoryScreen.tsx:132` | LoadFailure | onRetry | `ledger.refresh` | prop ledger.refresh |  |
 | `components/money/TradeHistoryScreen.tsx:167` | Pressable | onPress | `inline: () => router.back()` | route back |  |
 | `components/money/TradeHistoryScreen.tsx:176` | SegmentedControl | onChange | `choose` | fn choose |  |
-| `components/money/TradeReviewPanel.tsx:118` | Pressable | onPress | `onBack` | prop onBack (the caller's) |  |
-| `components/money/TradeReviewPanel.tsx:162` | Button | onPress | `onSubmit` | prop onSubmit (the caller's) | `!p.button.enabled` |
-| `components/money/TradeReviewPanel.tsx:168` | Button | onPress | `onDone` | prop onDone (the caller's) |  |
-| `components/money/TradeReviewPanel.tsx:171` | Button | onPress | `inline: () => onNextStep(nextStep)` | fn onNextStep |  |
-| `components/money/TradeReviewPanel.tsx:175` | Button | onPress | `onRetry` | prop onRetry (the caller's) |  |
+| `components/money/TradeReviewPanel.tsx:119` | Pressable | onPress | `onBack` | prop onBack (the caller's) |  |
+| `components/money/TradeReviewPanel.tsx:163` | Button | onPress | `onSubmit` | prop onSubmit (the caller's) | `!p.button.enabled` |
+| `components/money/TradeReviewPanel.tsx:169` | Button | onPress | `onDone` | prop onDone (the caller's) |  |
+| `components/money/TradeReviewPanel.tsx:172` | Button | onPress | `inline: () => onNextStep(nextStep)` | fn onNextStep |  |
+| `components/money/TradeReviewPanel.tsx:176` | Button | onPress | `onRetry` | prop onRetry (the caller's) |  |
 | `components/shell/AppearancePicker.tsx:38` | ThemeOption | onPress | `inline: () => changeAppearance(o.id)` | fn changeAppearance |  |
 | `components/shell/AppearancePicker.tsx:52` | PressableScale | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/AuthScaffold.tsx:36` | Pressable | onPress | `back.onPress` | prop back.onPress |  |

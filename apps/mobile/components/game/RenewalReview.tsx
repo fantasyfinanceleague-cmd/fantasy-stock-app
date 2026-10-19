@@ -159,7 +159,8 @@ const styles = StyleSheet.create({
   rowMin: { minHeight: 36 },
   value: { alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' },
   picker: { gap: space[2], paddingVertical: space[2] },
-  stepRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
+  // flexWrap: at XXXL the stepper drops under its label instead of pushing past the edge.
+  stepRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', alignContent: 'center', minHeight: 44, columnGap: space[3], rowGap: space[1] },
   stepBox: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   stepHit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });
