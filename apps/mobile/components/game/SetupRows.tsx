@@ -56,16 +56,16 @@ export interface SettingRowProps {
 
 /** Key, value, optional sub-line, and a chevron when it opens something. */
 export function SettingRow({ label, value, sub, valueColor, onPress, disabled = false, accessibilityLabel, maxScale }: SettingRowProps) {
-  // A static row (no chevron) wraps: a value that cannot sit beside its label (an amount at XXXL, keepMoney) drops UNDER
-  // it, so a label is never squeezed to nothing (W8 follow-up: Create league's summary lost "Name" and "Stakes").
-  // A row that opens something keeps its one-line layout: its chevron sits after the value.
-  const wraps = !onPress;
+  // Every row wraps: a value (and the chevron) that cannot sit beside the label drops UNDER it, so a label is never
+  // squeezed to nothing or broken mid-word (W8 follow-up: Create league's summary lost "Name" and "Stakes"; the
+  // label-no-midword round: a row with a chevron broke "Commissioner" into "Commis / sioner" and lost "Draft time").
+  // The label does not shrink (growWrap); at normal size everything still sits on one line.
   // A value that runs to several lines reads LEFT (beside the label or stacked under it); a one-line value keeps the
   // right alignment it always had, which is the same pixel (left-aligned, it sits up to a pixel off the box's edge).
   const [valueLines, setValueLines] = useState(1);
   const body = (
-    <View style={[styles.settingRow, wraps && styles.settingRowWrap, disabled && styles.dim]}>
-      <View style={wraps ? styles.growWrap : styles.grow}>
+    <View style={[styles.settingRow, styles.settingRowWrap, disabled && styles.dim]}>
+      <View style={styles.growWrap}>
         <RowKey maxScale={maxScale}>{label}</RowKey>
         {sub ? (
           <Text variant="caption" tone="secondary">
@@ -78,13 +78,17 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
           variant="callout"
           tone="secondary"
           color={valueColor}
-          style={wraps && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
-          onTextLayout={wraps ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}
+          style={valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
+          onTextLayout={(e) => setValueLines(e.nativeEvent.lines.length)}
         >
           {value}
         </Text>
       ) : null}
-      {onPress ? <Icon name="chevronRight" size="callout" tone="text2" /> : null}
+      {onPress ? (
+        <View style={styles.trailing}>
+          <Icon name="chevronRight" size="callout" tone="text2" />
+        </View>
+      ) : null}
     </View>
   );
   if (!onPress) return body;
@@ -147,8 +151,8 @@ export interface SwitchRowProps {
 export function SwitchRow({ label, sub, value, onValueChange, disabled = false }: SwitchRowProps) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.settingRow, disabled && styles.dim]}>
-      <View style={styles.grow}>
+    <View style={[styles.settingRow, styles.settingRowWrap, disabled && styles.dim]}>
+      <View style={styles.growWrap}>
         <RowKey>{label}</RowKey>
         {sub ? (
           <Text variant="caption" tone="secondary">
@@ -156,13 +160,15 @@ export function SwitchRow({ label, sub, value, onValueChange, disabled = false }
           </Text>
         ) : null}
       </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        accessibilityLabel={label}
-        trackColor={{ false: colors.border, true: colors.accent }}
-      />
+      <View style={styles.trailing}>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          disabled={disabled}
+          accessibilityLabel={label}
+          trackColor={{ false: colors.border, true: colors.accent }}
+        />
+      </View>
     </View>
   );
 }
@@ -237,11 +243,17 @@ const styles = StyleSheet.create({
     columnGap: space[3],
     rowGap: space[1],
   },
+  // The label never shrinks: its basis is its own width, capped by the row's (a Text is measured at most the container
+  // wide), so it only wraps BETWEEN words, and what does not fit beside it wraps to the next line instead.
   growWrap: {
     flexGrow: 1,
-    flexShrink: 1,
+    flexShrink: 0,
     flexBasis: 'auto',
     gap: space[1],
+  },
+  // A control after the label (a chevron, a switch): the right edge of whichever line it lands on.
+  trailing: {
+    marginLeft: 'auto',
   },
   // The value's box shrink-wraps its text: on its own line it starts at the left, and several lines read left too.
   valueMulti: {

@@ -160,6 +160,7 @@ const styles = StyleSheet.create({
   // height, so it keeps its size once Change (a 44 pt target) goes with the draft set.
   banner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 48, borderRadius: radius.md, paddingVertical: space[1], paddingHorizontal: space[4] },
   bold: { fontWeight: '700' },
-  draftRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 },
+  // flexWrap: a value that does not fit beside its label drops under it, so neither is clipped or squeezed.
+  draftRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', alignContent: 'center', minHeight: 44, columnGap: space[3], rowGap: space[1] },
   disabled: { opacity: 0.5 },
 });

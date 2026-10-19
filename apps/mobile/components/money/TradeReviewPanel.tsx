@@ -59,9 +59,10 @@ const styles = StyleSheet.create({
   // The review sits inside the sheet: its own 20 pt gutter, as the sheet body has.
   stack: { gap: space[5], paddingHorizontal: space[6], paddingBottom: space[7] },
   back: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignSelf: 'flex-start' },
-  // XL: the label may wrap; the value keeps its width (flexShrink 0) so it never truncates.
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', minHeight: 28, gap: space[4] },
-  rowLabel: { flex: 1 },
+  // XL: the value keeps its width (flexShrink 0) so it never truncates, and the label never shrinks below its own width
+  // (a squeezed label broke mid-word): a value that does not fit beside it drops UNDER it, at the left.
+  row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', alignContent: 'center', minHeight: 28, columnGap: space[4], rowGap: space[1] },
+  rowLabel: { flexGrow: 1, flexShrink: 0, flexBasis: 'auto' },
   rowValue: { flexShrink: 0, textAlign: 'right', fontWeight: '800', fontVariant: ['tabular-nums'] },
   panel: { borderRadius: radius.lg, paddingVertical: space[4], paddingHorizontal: 14, gap: space[3] },
   title: { fontWeight: '800' },
