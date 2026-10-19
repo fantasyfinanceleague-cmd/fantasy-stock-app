@@ -63,6 +63,18 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
   // A value that runs to several lines reads LEFT (beside the label or stacked under it); a one-line value keeps the
   // right alignment it always had, which is the same pixel (left-aligned, it sits up to a pixel off the box's edge).
   const [valueLines, setValueLines] = useState(1);
+  const chevron = <Icon name="chevronRight" size="callout" tone="text2" />;
+  const valueText = value ? (
+    <Text
+      variant="callout"
+      tone="secondary"
+      color={valueColor}
+      style={valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
+      onTextLayout={(e) => setValueLines(e.nativeEvent.lines.length)}
+    >
+      {value}
+    </Text>
+  ) : null;
   const body = (
     <View style={[styles.settingRow, styles.settingRowWrap, disabled && styles.dim]}>
       <View style={styles.growWrap}>
@@ -73,22 +85,18 @@ export function SettingRow({ label, value, sub, valueColor, onPress, disabled = 
           </Text>
         ) : null}
       </View>
-      {value ? (
-        <Text
-          variant="callout"
-          tone="secondary"
-          color={valueColor}
-          style={valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}
-          onTextLayout={(e) => setValueLines(e.nativeEvent.lines.length)}
-        >
-          {value}
-        </Text>
-      ) : null}
-      {onPress ? (
-        <View style={styles.trailing}>
-          <Icon name="chevronRight" size="callout" tone="text2" />
+      {onPress && value ? (
+        // The chevron stays with its value: the pair wraps together, never a chevron alone on a line.
+        <View style={styles.valueWithChevron}>
+          {valueText}
+          {chevron}
         </View>
-      ) : null}
+      ) : (
+        <>
+          {valueText}
+          {onPress ? <View style={styles.trailing}>{chevron}</View> : null}
+        </>
+      )}
     </View>
   );
   if (!onPress) return body;
@@ -251,9 +259,17 @@ const styles = StyleSheet.create({
     flexBasis: 'auto',
     gap: space[1],
   },
-  // A control after the label (a chevron, a switch): the right edge of whichever line it lands on.
+  // A control after the label (a chevron on its own, a switch): the right edge of whichever line it lands on.
   trailing: {
     marginLeft: 'auto',
+  },
+  // A value and its chevron: one wrap item, so the chevron is never left alone on a line. The value shrinks inside it
+  // when it is longer than the line; otherwise the pair sits right after the label, as the one-line row always did.
+  valueWithChevron: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: space[3],
+    flexShrink: 1,
   },
   // The value's box shrink-wraps its text: on its own line it starts at the left, and several lines read left too.
   valueMulti: {

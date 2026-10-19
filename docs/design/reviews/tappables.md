@@ -120,9 +120,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/RenewalReview.tsx:148` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/game/RenewalRoster.tsx:85` | Pressable | onPress | `inline: () => setChanging(true)` | state setChanging |  |
 | `components/game/RenewalRoster.tsx:107` | Pressable | onPress | `inline: () => runSheet(p)` | fn runSheet |  |
-| `components/game/SetupRows.tsx:97` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:121` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:166` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:105` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:129` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:174` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
 | `components/game/SetupScaffold.tsx:52` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/game/StandingsTable.tsx:73` | ManagerRow | onPress | `inline: href ? () => router.push(href) : undefined` | route push(href) |  |
 | `components/game/Stepper.tsx:67` | Pressable | onPress | `inline: () => down && onStep(-1)` | fn onStep | `!down` |
@@ -136,7 +136,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/home/PreDraftCard.tsx:287` | Button | onPress | `onShare` | share sheet |  |
 | `components/home/RenewalCountsCard.tsx:22` | Button | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
 | `components/home/RunItBackCard.tsx:39` | Button | onPress | `inline: () => void runItBack()` | fn runItBack | `busy` |
-| `components/home/SeasonCompleteCard.tsx:235` | ListRow | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
+| `components/home/SeasonCompleteCard.tsx:240` | ListRow | onPress | `inline: () => router.push('/(tabs)/league')` | route push('/(tabs)/league') |  |
 | `components/home/StandingsCard.tsx:89` | PressableScale | onPress | `inline: () => router.push(STANDINGS_HREF)` | route push(STANDINGS_HREF) |  |
 | `components/home/StandingsCard.tsx:130` | ManagerRow | onPress | `inline: href ? () => router.push(href) : undefined` | route push(href) |  |
 | `components/home/ThisWeekCard.tsx:148` | PressableScale | onPress | `inline: () => router.push(THIS_WEEK_HREF)` | route push(THIS_WEEK_HREF) |  |

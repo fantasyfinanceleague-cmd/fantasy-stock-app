@@ -16,6 +16,8 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { space } from '../constants/tokens/space.ts';
 import { COMMISSIONER_ROW } from '../lib/game/leaveLeague.ts';
+import { BEST_WEEK_TILE_TITLE, PLAYOFFS_TILE_TITLE, REGULAR_SEASON_TILE_TITLE, SEASON_GAIN_TILE_TITLE } from '../lib/home/homeCopy.ts';
+import { COPY } from '../lib/money/moneyCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -132,22 +134,25 @@ function labelItem(s: Style, mc: number): Item {
   return { name: 'label', mc, grow: num(s.flexGrow), shrink: num(s.flexShrink, 0), basisZero: s.flexBasis === '0' };
 }
 
-type RowSpec = { name: string; file: string; row: string; extraRow?: string; label: string; trailing: (scale: number) => Item[] };
+type RowSpec = { name: string; file: string; row: string; extraRow?: string; label: string; trailing: (scale: number) => Item[]; /** The row's text stops growing here (maxFontSizeMultiplier). */ cap?: () => number; /** This row's own labels (default: the settings rows'). */ labels?: string[] };
 
 /** Row layouts that put a label beside something. `row` styles are merged (later wins), as `[a, b]` styles are. */
 const ROWS: RowSpec[] = [
   { name: 'SettingRow (value + chevron)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
-    trailing: (sc) => [{ name: 'value', mc: textW('You', sc), grow: 0, shrink: 1 }, { name: 'chevron', mc: CHEVRON, fixed: true, grow: 0, shrink: 0 }] },
+    trailing: (sc) => [{ name: 'value+chevron', mc: textW('You', sc) + space[3] + CHEVRON, grow: 0, shrink: 1 }] },
   { name: 'SettingRow (chevron only)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
     trailing: () => [{ name: 'chevron', mc: CHEVRON, fixed: true, grow: 0, shrink: 0 }] },
   { name: 'SettingRow (a long value)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
-    trailing: (sc) => [{ name: 'value', mc: textW('Sat, Oct 3 · 7:00 PM ET', sc), grow: 0, shrink: 1 }, { name: 'chevron', mc: CHEVRON, fixed: true, grow: 0, shrink: 0 }] },
+    trailing: (sc) => [{ name: 'value+chevron', mc: textW('Sat, Oct 3 · 7:00 PM ET', sc) + space[3] + CHEVRON, grow: 0, shrink: 1 }] },
   { name: 'SwitchRow', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
     trailing: () => [{ name: 'switch', mc: SWITCH, fixed: true, grow: 0, shrink: 0 }] },
   { name: 'InviteRow (Share)', file: SETTINGS, row: 'inviteRow', label: 'inviteTexts',
     trailing: (sc) => [{ name: 'share', mc: SHARE_BTN(sc), fixed: true, grow: 0, shrink: 0 }] },
-  { name: 'Trade review row', file: TRADE, row: 'row', label: 'rowLabel',
-    trailing: (sc) => [{ name: 'value', mc: textW('$3,538,500.00', sc), fixed: true, grow: 0, shrink: 0 }] },
+  // The review's rows (text capped at REVIEW_TEXT_MAX_SCALE): the value never shrinks, so beside the sale row's
+  // "12.5 NVDA · all you hold" the old label was left a few pt wide at the cap. Real labels and the longest real value.
+  { name: 'Trade review row (capped text)', file: TRADE, row: 'row', label: 'rowLabel', cap: () => Number(/REVIEW_TEXT_MAX_SCALE = ([\d.]+)/.exec(SOURCES[TRADE])![1]),
+    labels: ['Sell', 'Buy', 'Price', COPY.backToBudget, COPY.budgetLeftAfter, COPY.youGet, COPY.paidFrom, COPY.leftInSlot],
+    trailing: (sc) => [{ name: 'value', mc: textW(`12.5 NVDA · ${COPY.allYouHold}`, sc), fixed: true, grow: 0, shrink: 0 }] },
 ];
 
 const LABELS = [
@@ -157,7 +162,8 @@ const LABELS = [
 /** Card inner widths: a 375pt phone to a 430pt phone, less the screen gutter and the card padding. */
 const CONTAINERS = [280, 300, 315, 330, 350, 370];
 
-function labelWidth(spec: RowSpec, label: string, container: number, scale: number): number {
+function labelWidth(spec: RowSpec, label: string, container: number, scaleIn: number): number {
+  const scale = spec.cap ? Math.min(scaleIn, spec.cap()) : scaleIn;
   const rowStyle = { ...styleBlock(spec.file, spec.row), ...(spec.extraRow ? styleBlock(spec.file, spec.extraRow) : {}) };
   const model: RowModel = { wrap: rowStyle.flexWrap === 'wrap', gap: num(rowStyle.columnGap ?? rowStyle.gap) };
   const mc = pieces(label).reduce((n, p) => n + textW(p, scale), 0) + (pieces(label).length - 1) * GLYPH * scale * 0.35;
@@ -167,13 +173,14 @@ function labelWidth(spec: RowSpec, label: string, container: number, scale: numb
 
 Deno.test('every row that holds a label keeps each word whole, at every Dynamic Type scale and card width', () => {
   for (const spec of ROWS) {
-    for (const label of LABELS) {
+    for (const label of spec.labels ?? LABELS) {
       for (const scale of SCALES) {
         for (const container of CONTAINERS) {
           const w = labelWidth(spec, label, container, scale);
+          const eff = spec.cap ? Math.min(scale, spec.cap()) : scale;
           // A piece wider than the WHOLE row cannot be helped by any layout (only a font cap could); everything else must hold.
-          const unavoidable = (p: string) => textW(p, scale) > container;
-          const bad = brokenPieces(label, w, scale).filter((p) => !unavoidable(p));
+          const unavoidable = (p: string) => textW(p, eff) > container;
+          const bad = brokenPieces(label, w, eff).filter((p) => !unavoidable(p));
           assertEquals(bad, [], `${spec.name}: "${label}" at x${scale}, card ${container}pt gets ${Math.round(w)}pt: ${bad.join(' / ')}`);
         }
       }
@@ -206,6 +213,15 @@ Deno.test('negative control: the OLD interactive row (label flex: 1, no wrap) br
   assertEquals(brokenPieces(COMMISSIONER_ROW, labelWidth(ROWS[0], COMMISSIONER_ROW, 330, sc), sc), []);
 });
 
+Deno.test('negative control: the OLD trade review row (label flex: 1, no wrap) breaks "Sell" at the text cap', () => {
+  const cap = 1.6;
+  const w = layoutRow(
+    [{ name: 'label', mc: textW('Sell', cap), grow: 1, shrink: 1, basisZero: true }, { name: 'value', mc: textW(`12.5 NVDA · ${COPY.allYouHold}`, cap), fixed: true, grow: 0, shrink: 0 }],
+    330, { wrap: false, gap: space[5] },
+  ).label;
+  assert(brokenPieces('Sell', w, cap).length > 0, `the old review row left "Sell" ${Math.round(w)}pt`);
+});
+
 Deno.test('the model fails when a row stops protecting its label (so the pass above means something)', () => {
   // shrink: a label that CAN shrink, in a row that does not wrap, loses its words
   const sc = 3.12;
@@ -235,6 +251,10 @@ Deno.test('SettingRow and SwitchRow: every row wraps, the label never shrinks, t
   const label = styleBlock(SETUP, 'growWrap');
   assertEquals([label.flexGrow, label.flexShrink, label.flexBasis], ['1', '0', 'auto']);
   assertEquals(styleBlock(SETUP, 'trailing').marginLeft, 'auto');
+  // a value and its chevron are ONE wrap item: the chevron is never left alone on a line
+  const pair = styleBlock(SETUP, 'valueWithChevron');
+  assertEquals([pair.flexDirection, pair.flexShrink], ['row', '1']);
+  assert(src.includes('<View style={styles.valueWithChevron}>'));
   // SettingRow and SwitchRow both use them, for every row (a row with a chevron too): never the old flex: 1 label
   assert(src.includes('styles.settingRow, styles.settingRowWrap, disabled && styles.dim'));
   assertEquals(src.split('<View style={styles.growWrap}>').length - 1, 2, 'SettingRow and SwitchRow both use the wrapping label');
@@ -281,4 +301,56 @@ Deno.test('the rows that stay as they were: the Steppers stack from the accessib
   // app/join-league.tsx: the preview rows stack at that scale too; below it the label is a Text with the default flexShrink 0
   assert(SOURCES['app/join-league.tsx'].includes('const stackRows = fontScale >= FULL_WIDTH_FONT_SCALE;'));
   assert(!/rowLabel/.test(SOURCES['app/join-league.tsx']), 'the join rows give the label no shrinking style');
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// The season-complete tiles (Home): a two-across grid whose captions broke at XXXL ("Seaso / n gain")
+// ---------------------------------------------------------------------------------------------------------------
+
+const TILES = 'components/home/SeasonCompleteCard.tsx';
+/** A caption glyph, calibrated on a 17e at XXXL: "Seaso" (5 glyphs) measured 120pt at scale 3.12. */
+const CAPTION_GLYPH = 120 / 5 / 3.12;
+const STACK_AT = Number(/FULL_WIDTH_FONT_SCALE = ([\d.]+)/.exec(SOURCES['components/sp/Button.tsx'])![1]);
+
+/** Home's card is the screen less its gutters (350pt on a 390pt phone) and pads 20pt inside; the inset panel is the rest
+ * (measured 310pt on a 17e). */
+const CARD_PAD = 20;
+/** The width one tile gets in the inset panel: two across (basis max(minWidth, 40%)) until `stacked`, then one per row. */
+function tileWidth(card: number, stacked: boolean): number {
+  const container = card - 2 * CARD_PAD;
+  const grid = styleBlock(TILES, 'tilesGrid');
+  const tile = styleBlock(TILES, 'tile');
+  const pad = num(grid.padding);
+  const gap = num(grid.gap);
+  const inner = container - 2 * pad;
+  const basisPct = (v: string | undefined) => (v && v.endsWith('%') ? (Number(v.slice(0, -1)) / 100) * inner : num(v));
+  const base = Math.max(basisPct(tile.flexBasis), num(tile.minWidth));
+  const eff = stacked ? Math.max(basisPct(styleBlock(TILES, 'tileStacked').flexBasis), num(tile.minWidth)) : base;
+  const perLine = Math.max(1, Math.floor((inner + gap) / (eff + gap)));
+  return perLine === 1 ? inner : (inner - gap * (perLine - 1)) / perLine;
+}
+
+Deno.test('the season-complete tiles: two across until the accessibility scale, then one per row; no caption word breaks', () => {
+  const captions = [SEASON_GAIN_TILE_TITLE, BEST_WEEK_TILE_TITLE, REGULAR_SEASON_TILE_TITLE, PLAYOFFS_TILE_TITLE];
+  for (const scale of SCALES) {
+    for (const container of [335, 350, 390]) {
+      const w = tileWidth(container, scale >= STACK_AT);
+      for (const c of captions) {
+        const bad = pieces(c).filter((p) => p.length * CAPTION_GLYPH * scale > w && p.length * CAPTION_GLYPH * scale <= container - 2 * CARD_PAD - 24);
+        assertEquals(bad, [], `"${c}" at x${scale}, card ${container}pt: tile ${Math.round(w)}pt breaks ${bad.join(' / ')}`);
+      }
+    }
+  }
+  // the reported break, reproduced: at XXXL on a 17e card (350pt), two across, "Season" is wider than its half
+  assert(pieces(SEASON_GAIN_TILE_TITLE)[0].length * CAPTION_GLYPH * 3.12 > tileWidth(350, false), 'the old two-across tile breaks "Season"');
+  assert(pieces(SEASON_GAIN_TILE_TITLE)[0].length * CAPTION_GLYPH * 3.12 <= tileWidth(350, true), 'one per row fits it');
+});
+
+Deno.test('SeasonCompleteCard: the tiles stack from FULL_WIDTH_FONT_SCALE (all four use the stacking style)', () => {
+  const src = SOURCES[TILES];
+  assert(src.includes('const { fontScale } = useWindowDimensions();'));
+  assert(src.includes('fontScale >= FULL_WIDTH_FONT_SCALE ? [styles.tile, styles.tileStacked] : styles.tile'));
+  assertEquals(styleBlock(TILES, 'tileStacked').flexBasis, '100%');
+  assertEquals(src.split('<View style={tileStyle}>').length - 1, 4, 'all four tiles');
+  assert(!src.includes('<View style={styles.tile}>'), 'no tile skips the stacking style');
 });
