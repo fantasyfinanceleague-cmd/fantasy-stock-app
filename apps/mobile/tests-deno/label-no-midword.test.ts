@@ -16,6 +16,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { space } from '../constants/tokens/space.ts';
 import { COMMISSIONER_ROW } from '../lib/game/leaveLeague.ts';
+import { LABEL_COLLAPSED_PT, labelBreaksMidWord, labelCollapsed } from '../lib/game/labelBreaks.ts';
 import { BEST_WEEK_TILE_TITLE, PLAYOFFS_TILE_TITLE, REGULAR_SEASON_TILE_TITLE, SEASON_GAIN_TILE_TITLE } from '../lib/home/homeCopy.ts';
 import { COPY } from '../lib/money/moneyCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
@@ -134,17 +135,26 @@ function labelItem(s: Style, mc: number): Item {
   return { name: 'label', mc, grow: num(s.flexGrow), shrink: num(s.flexShrink, 0), basisZero: s.flexBasis === '0' };
 }
 
-type RowSpec = { name: string; file: string; row: string; extraRow?: string; label: string; trailing: (scale: number) => Item[]; /** The row's text stops growing here (maxFontSizeMultiplier). */ cap?: () => number; /** This row's own labels (default: the settings rows'). */ labels?: string[] };
+type RowSpec = {
+  name: string; file: string; row: string; extraRow?: string; label: string; trailing: (scale: number) => Item[];
+  /** The row's text stops growing here (maxFontSizeMultiplier). */ cap?: () => number;
+  /** This row's own labels (default: the settings rows'). */ labels?: string[];
+  /** 'reactive': the row lays out as it always did (`row` + `unstacked`) until its label breaks mid-word or collapses, then stacks
+   * (`row` + `extraRow`, `label`). Default: always the stacked layout. */
+  unstackedLabel?: string; unstackedRow?: string;
+};
 
 /** Row layouts that put a label beside something. `row` styles are merged (later wins), as `[a, b]` styles are. */
 const ROWS: RowSpec[] = [
-  { name: 'SettingRow (value + chevron)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
+  { name: 'SettingRow (value + chevron)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap', unstackedLabel: 'grow',
     trailing: (sc) => [{ name: 'value+chevron', mc: textW('You', sc) + space[3] + CHEVRON, grow: 0, shrink: 1 }] },
-  { name: 'SettingRow (chevron only)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
+  { name: 'SettingRow (chevron only)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap', unstackedLabel: 'grow',
     trailing: () => [{ name: 'chevron', mc: CHEVRON, fixed: true, grow: 0, shrink: 0 }] },
-  { name: 'SettingRow (a long value)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
+  { name: 'SettingRow (a long value)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap', unstackedLabel: 'grow',
     trailing: (sc) => [{ name: 'value+chevron', mc: textW('Sat, Oct 3 · 7:00 PM ET', sc) + space[3] + CHEVRON, grow: 0, shrink: 1 }] },
-  { name: 'SwitchRow', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
+  { name: 'SettingRow (static, no help line: always stacked)', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap',
+    trailing: (sc) => [{ name: 'value', mc: textW('The commissioner', sc), grow: 0, shrink: 1 }] },
+  { name: 'SwitchRow', file: SETUP, row: 'settingRow', extraRow: 'settingRowWrap', label: 'growWrap', unstackedLabel: 'grow',
     trailing: () => [{ name: 'switch', mc: SWITCH, fixed: true, grow: 0, shrink: 0 }] },
   { name: 'InviteRow (Share)', file: SETTINGS, row: 'inviteRow', label: 'inviteTexts',
     trailing: (sc) => [{ name: 'share', mc: SHARE_BTN(sc), fixed: true, grow: 0, shrink: 0 }] },
@@ -162,13 +172,23 @@ const LABELS = [
 /** Card inner widths: a 375pt phone to a 430pt phone, less the screen gutter and the card padding. */
 const CONTAINERS = [280, 300, 315, 330, 350, 370];
 
-function labelWidth(spec: RowSpec, label: string, container: number, scaleIn: number): number {
-  const scale = spec.cap ? Math.min(scaleIn, spec.cap()) : scaleIn;
-  const rowStyle = { ...styleBlock(spec.file, spec.row), ...(spec.extraRow ? styleBlock(spec.file, spec.extraRow) : {}) };
+function layoutLabel(spec: RowSpec, label: string, container: number, scale: number, stacked: boolean): number {
+  const base = styleBlock(spec.file, spec.row);
+  const rowStyle = stacked ? { ...base, ...(spec.extraRow ? styleBlock(spec.file, spec.extraRow) : {}) } : base;
   const model: RowModel = { wrap: rowStyle.flexWrap === 'wrap', gap: num(rowStyle.columnGap ?? rowStyle.gap) };
   const mc = pieces(label).reduce((n, p) => n + textW(p, scale), 0) + (pieces(label).length - 1) * GLYPH * scale * 0.35;
-  const items = [labelItem(styleBlock(spec.file, spec.label), mc), ...spec.trailing(scale)];
+  const items = [labelItem(styleBlock(spec.file, stacked || !spec.unstackedLabel ? spec.label : spec.unstackedLabel), mc), ...spec.trailing(scale)];
   return layoutRow(items, container, model).label;
+}
+
+/** The label's width once the row has settled: a reactive row starts as it always did and stacks the moment its label
+ * breaks inside a word or collapses (labelBreaksMidWord / labelCollapsed on the real device); the others are always stacked. */
+function labelWidth(spec: RowSpec, label: string, container: number, scaleIn: number): number {
+  const scale = spec.cap ? Math.min(scaleIn, spec.cap()) : scaleIn;
+  if (!spec.unstackedLabel) return layoutLabel(spec, label, container, scale, true);
+  const first = layoutLabel(spec, label, container, scale, false);
+  const broke = brokenPieces(label, first, scale).length > 0 || labelCollapsed(first);
+  return broke ? layoutLabel(spec, label, container, scale, true) : first;
 }
 
 Deno.test('every row that holds a label keeps each word whole, at every Dynamic Type scale and card width', () => {
@@ -244,23 +264,51 @@ Deno.test('the model fails when a row stops protecting its label (so the pass ab
 // The source: each row wears the layout the model assumes
 // ---------------------------------------------------------------------------------------------------------------
 
-Deno.test('SettingRow and SwitchRow: every row wraps, the label never shrinks, the control rides to the right edge of its line', () => {
+Deno.test('SettingRow and SwitchRow: the stacked layout (wrap, a label that never shrinks) applies once the label breaks; a static row without a help line is always stacked', () => {
   const src = SOURCES[SETUP];
   const wrap = styleBlock(SETUP, 'settingRowWrap');
   assertEquals(wrap.flexWrap, 'wrap');
   const label = styleBlock(SETUP, 'growWrap');
   assertEquals([label.flexGrow, label.flexShrink, label.flexBasis], ['1', '0', 'auto']);
+  // the layout before it breaks is the one the rows always had: a flex: 1 label, no wrap
+  const old = styleBlock(SETUP, 'grow');
+  assertEquals(old.flex, '1');
+  assert(styleBlock(SETUP, 'settingRow').flexWrap === undefined, 'the unstacked row does not wrap');
   assertEquals(styleBlock(SETUP, 'trailing').marginLeft, 'auto');
   // a value and its chevron are ONE wrap item: the chevron is never left alone on a line
   const pair = styleBlock(SETUP, 'valueWithChevron');
   assertEquals([pair.flexDirection, pair.flexShrink], ['row', '1']);
   assert(src.includes('<View style={styles.valueWithChevron}>'));
-  // SettingRow and SwitchRow both use them, for every row (a row with a chevron too): never the old flex: 1 label
-  assert(src.includes('styles.settingRow, styles.settingRowWrap, disabled && styles.dim'));
-  assertEquals(src.split('<View style={styles.growWrap}>').length - 1, 2, 'SettingRow and SwitchRow both use the wrapping label');
-  assertEquals(src.split('<View style={styles.trailing}>').length - 1, 2, 'the chevron and the switch both ride with the value');
-  assertEquals(src.split('styles.settingRow, styles.settingRowWrap').length - 1, 2);
-  assert(!src.includes('wraps ?'), 'no pressable/static split any more');
+  // the switch: unstacked, the Switch sits directly in the row (as it always did); stacked, it rides in `trailing`
+  assert(src.includes('{broke ? <View style={styles.trailing}>{sw}</View> : sw}'));
+  assert(src.includes('{onPress ? stack ? <View style={styles.trailing}>{chevron}</View> : chevron : null}'));
+  assert(src.includes('<View style={broke ? styles.growWrap : styles.grow} onLayout={onLayout}>'));
+  assert(src.includes('const { broke, onTextLayout, onLayout } = useLabelBreaks();'));
+  // SettingRow: always stacked when static without a help line; otherwise only once the label breaks
+  assert(src.includes('const stack = (!onPress && !sub) || broke;'));
+  assert(src.includes('<View style={stack ? styles.growWrap : styles.grow} onLayout={onPress || sub ? onLabelBox : undefined}>'));
+  assert(src.includes('<RowKey maxScale={maxScale} onTextLayout={onPress || sub ? onLabelLayout : undefined}>'));
+  // the detection: the label's broken lines, or a collapsed label column; reset when the text size changes
+  assert(src.includes('if (labelBreaksMidWord(e.nativeEvent.lines)) setBrokeAt(fontScale);'));
+  assert(src.includes('if (labelCollapsed(e.nativeEvent.layout.width)) setBrokeAt(fontScale);'));
+  assert(src.includes('broke: brokeAt === fontScale'));
+});
+
+Deno.test('labelBreaksMidWord / labelCollapsed: the device lines for a squeezed and a stacked "Commissioner"', () => {
+  // read off a 17e at XXXL (Metro log): the interactive row, squeezed, then stacked
+  assertEquals(labelBreaksMidWord([{ text: 'Commis' }, { text: 'sioner' }]), true);
+  assertEquals(labelBreaksMidWord([{ text: 'Commissioner' }]), false);
+  // iOS keeps the trailing space of a line that broke between words, and the hyphen of one that broke after it
+  assertEquals(labelBreaksMidWord([{ text: 'Draft ' }, { text: 'time' }]), false);
+  assertEquals(labelBreaksMidWord([{ text: 'Allow non-' }, { text: 'draftable ' }, { text: 'stocks (full ' }, { text: 'universe)' }]), false);
+  assertEquals(labelBreaksMidWord([{ text: 'Seaso' }, { text: 'n gain' }]), true);
+  assertEquals(labelBreaksMidWord([]), false);
+  assertEquals(labelBreaksMidWord([{ text: 'Name' }]), false);
+  // a label squeezed to nothing has no lines to break: its column's width says so
+  assert(labelCollapsed(0));
+  assert(labelCollapsed(LABEL_COLLAPSED_PT - 0.5));
+  assert(!labelCollapsed(LABEL_COLLAPSED_PT));
+  assert(!labelCollapsed(96));
 });
 
 Deno.test('InviteRow: the code is a wrapping row; Share drops under the code instead of squeezing it', () => {

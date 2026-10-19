@@ -223,12 +223,13 @@ Deno.test('the unit is glued, the amount-to-unit space is not: "$1,000.00" / "a 
   assert(splitUnits('$1,000.00 a slot').length > 0);
 });
 
-Deno.test('SettingRow: a row wraps its value UNDER the label (a label is never dropped), the chevron rides with it', () => {
+Deno.test('SettingRow: a static row wraps its value UNDER the label (a label is never dropped); a row with a chevron or a help line stacks once its label breaks', () => {
   const src = SOURCES['components/game/SetupRows.tsx'];
-  assert(src.includes('styles.settingRow, styles.settingRowWrap, disabled && styles.dim'));
-  assert(src.includes('<View style={styles.growWrap}>'));
-  assert(src.includes('style={valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}'));
-  assert(src.includes('onTextLayout={(e) => setValueLines(e.nativeEvent.lines.length)}'));
+  assert(src.includes('const stack = (!onPress && !sub) || broke;'));
+  assert(src.includes('styles.settingRow, stack && styles.settingRowWrap, disabled && styles.dim'));
+  assert(src.includes('<View style={stack ? styles.growWrap : styles.grow}'));
+  assert(src.includes('style={stack && valueLines > 1 ? [styles.value, styles.valueMulti] : styles.value}'));
+  assert(src.includes('onTextLayout={stack ? (e) => setValueLines(e.nativeEvent.lines.length) : undefined}'));
   assert(/settingRowWrap: \{\s*flexWrap: 'wrap',/.test(src));
   // flex: 1 has a basis of 0, which can never wrap; the wrapping label sizes to its content
   assert(/growWrap: \{[^}]*flexBasis: 'auto'/.test(src));
