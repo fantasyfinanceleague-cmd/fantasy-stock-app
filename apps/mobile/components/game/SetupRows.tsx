@@ -7,7 +7,7 @@ import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
-import { labelBreaksMidWord, labelCollapsed } from '@/lib/game/labelBreaks';
+import { isStacked, nextBrokeAt } from '@/lib/game/labelBreaks';
 
 // 3c-2 — the row vocabulary of the board's setup frames (DraftSettingsScreen,
 // RibReview: a card of `ks-rows`, each a callout-weight key, a muted value and
@@ -48,18 +48,18 @@ function useLabelBreaks() {
   const [brokeAt, setBrokeAt] = useState<number | null>(null);
   const onTextLayout = useCallback(
     (e: NativeSyntheticEvent<TextLayoutEventData>) => {
-      if (labelBreaksMidWord(e.nativeEvent.lines)) setBrokeAt(fontScale);
+      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines: e.nativeEvent.lines }));
     },
     [fontScale],
   );
   // A label squeezed to nothing reports no broken line (there was no room for one): its column's width says so.
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
-      if (labelCollapsed(e.nativeEvent.layout.width)) setBrokeAt(fontScale);
+      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width: e.nativeEvent.layout.width }));
     },
     [fontScale],
   );
-  return { broke: brokeAt === fontScale, onTextLayout, onLayout };
+  return { broke: isStacked(brokeAt, fontScale), onTextLayout, onLayout };
 }
 
 export interface SettingRowProps {

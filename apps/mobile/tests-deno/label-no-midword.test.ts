@@ -16,7 +16,7 @@
 import { assert, assertEquals } from 'jsr:@std/assert';
 import { space } from '../constants/tokens/space.ts';
 import { COMMISSIONER_ROW } from '../lib/game/leaveLeague.ts';
-import { LABEL_COLLAPSED_PT, labelBreaksMidWord, labelCollapsed } from '../lib/game/labelBreaks.ts';
+import { LABEL_COLLAPSED_PT, isStacked, labelBreaksMidWord, labelCollapsed, nextBrokeAt } from '../lib/game/labelBreaks.ts';
 import { BEST_WEEK_TILE_TITLE, PLAYOFFS_TILE_TITLE, REGULAR_SEASON_TILE_TITLE, SEASON_GAIN_TILE_TITLE } from '../lib/home/homeCopy.ts';
 import { COPY } from '../lib/money/moneyCopy.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
@@ -289,9 +289,9 @@ Deno.test('SettingRow and SwitchRow: the stacked layout (wrap, a label that neve
   assert(src.includes('<View style={stack ? styles.growWrap : styles.grow} onLayout={onPress || sub ? onLabelBox : undefined}>'));
   assert(src.includes('<RowKey maxScale={maxScale} onTextLayout={onPress || sub ? onLabelLayout : undefined}>'));
   // the detection: the label's broken lines, or a collapsed label column; reset when the text size changes
-  assert(src.includes('if (labelBreaksMidWord(e.nativeEvent.lines)) setBrokeAt(fontScale);'));
-  assert(src.includes('if (labelCollapsed(e.nativeEvent.layout.width)) setBrokeAt(fontScale);'));
-  assert(src.includes('broke: brokeAt === fontScale'));
+  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines: e.nativeEvent.lines }));"));
+  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width: e.nativeEvent.layout.width }));"));
+  assert(src.includes('broke: isStacked(brokeAt, fontScale)'));
 });
 
 Deno.test('labelBreaksMidWord / labelCollapsed: the device lines for a squeezed and a stacked "Commissioner"', () => {
@@ -401,4 +401,39 @@ Deno.test('SeasonCompleteCard: the tiles stack from FULL_WIDTH_FONT_SCALE (all f
   assertEquals(styleBlock(TILES, 'tileStacked').flexBasis, '100%');
   assertEquals(src.split('<View style={tileStyle}>').length - 1, 4, 'all four tiles');
   assert(!src.includes('<View style={styles.tile}>'), 'no tile skips the stacking style');
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// The latch: a stacked row's label has the full width and reports no break; that must not un-stack it (a layout loop)
+// ---------------------------------------------------------------------------------------------------------------
+
+Deno.test('the break LATCHES: once stacked, a no-break report at the same size leaves the row stacked (no layout loop)', () => {
+  const squeezed = { kind: 'lines', lines: [{ text: 'Commis' }, { text: 'sioner' }] } as const;
+  const whole = { kind: 'lines', lines: [{ text: 'Commissioner' }] } as const;
+  const S = 3.12;
+  let brokeAt: number | null = null;
+  assertEquals(isStacked(brokeAt, S), false, 'beside, to begin with');
+  brokeAt = nextBrokeAt(brokeAt, S, squeezed);
+  assertEquals(isStacked(brokeAt, S), true, 'the label broke: stacked');
+  // stacked, the label has the whole row: it reports one whole line, again and again, and a full-width column
+  for (let i = 0; i < 5; i++) {
+    brokeAt = nextBrokeAt(brokeAt, S, whole);
+    brokeAt = nextBrokeAt(brokeAt, S, { kind: 'width', width: 311 });
+    assertEquals(isStacked(brokeAt, S), true, `still stacked after report ${i + 1}`);
+  }
+  // an empty report (no lines yet) does not un-stack it either
+  assertEquals(isStacked(nextBrokeAt(brokeAt, S, { kind: 'lines', lines: [] }), S), true);
+});
+
+Deno.test('the latch is per text size: a different size re-evaluates from beside, and breaking there stacks it there', () => {
+  let brokeAt: number | null = nextBrokeAt(null, 3.12, { kind: 'width', width: 0 });
+  assertEquals(isStacked(brokeAt, 3.12), true, 'a collapsed label stacks too');
+  assertEquals(isStacked(brokeAt, 1.0), false, 'back at a normal size the row lays out beside again');
+  assertEquals(isStacked(brokeAt, 1.64), false, 'and at a size it never broke at');
+  // no break at the new size keeps it beside; a break at the new size moves the latch to it
+  brokeAt = nextBrokeAt(brokeAt, 1.0, { kind: 'lines', lines: [{ text: 'Draft ' }, { text: 'time' }] });
+  assertEquals(isStacked(brokeAt, 1.0), false);
+  brokeAt = nextBrokeAt(brokeAt, 1.64, { kind: 'lines', lines: [{ text: 'Commis' }, { text: 'sioner' }] });
+  assertEquals(isStacked(brokeAt, 1.64), true);
+  assertEquals(isStacked(brokeAt, 3.12), false, 'the earlier size starts over');
 });

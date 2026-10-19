@@ -75,13 +75,13 @@ change; neither file has changed since.
 
 ## Pins and mutations (Deno)
 
-`tests-deno/label-no-midword.test.ts` (13 tests): a flex-layout model whose parameters are read from the real style blocks
+`tests-deno/label-no-midword.test.ts` (15 tests): a flex-layout model whose parameters are read from the real style blocks
 (a label's grow / shrink / basis, whether the row wraps, the gap) and run over the real label strings at every Dynamic Type scale
 and several card widths, including the reactive policy (a row starts as it always did and stacks once its label breaks);
 negative controls reproduce "Commis / sioner" and the lost "Draft time" with the OLD row, and the trade review's "Sell"; the
 season-complete tiles model reproduces "Seaso / n"; `labelBreaksMidWord` / `labelCollapsed` are tested on the lines read off the
-device ("Commis", "sioner"; "Draft ", "time"; "Allow non-", "draftable "); and every row's styles are pinned. **30 mutants, all
-killed** (label may shrink, `flex: 1` again, no wrap, no alignContent, no trailing margin, chevron leaves its value, always-stack
+device ("Commis", "sioner"; "Draft ", "time"; "Allow non-", "draftable "); the **latch** is pinned on the pure reducer (`nextBrokeAt` / `isStacked`): once a row has stacked, a no-break report at the same text size leaves it stacked (no layout loop), and a different size starts over beside; and every row's styles are pinned. **33 mutants, all
+killed** (reset on no-break, i.e. the loop; stacked at any size; label may shrink, `flex: 1` again, no wrap, no alignContent, no trailing margin, chevron leaves its value, always-stack
 (the Large regression), never-react, detector ignores spaces / flags hyphens, collapsed threshold 0, the invite, trade, stepper,
 roster and tile styles). `keep-money.test.ts`'s `SettingRow` pin was updated.
 

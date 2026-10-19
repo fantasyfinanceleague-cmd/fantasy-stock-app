@@ -22,3 +22,20 @@ export const LABEL_COLLAPSED_PT = 12;
 export function labelCollapsed(width: number): boolean {
   return width < LABEL_COLLAPSED_PT;
 }
+
+/**
+ * The row's memory of a break: the text size (fontScale) at which its label broke, or null. It LATCHES: once a label has
+ * broken at a size the row stacks, the label then has the whole row and reports no break, and that "no break" must not
+ * un-stack it (it would break again: a layout loop). It only re-evaluates when the text size changes.
+ */
+export type LabelSignal = { kind: 'lines'; lines: readonly LabelLine[] } | { kind: 'width'; width: number };
+
+export function nextBrokeAt(brokeAt: number | null, fontScale: number, signal: LabelSignal): number | null {
+  const broke = signal.kind === 'lines' ? labelBreaksMidWord(signal.lines) : labelCollapsed(signal.width);
+  return broke ? fontScale : brokeAt;
+}
+
+/** Stacked only for the text size at which the label broke; a different size starts over beside. */
+export function isStacked(brokeAt: number | null, fontScale: number): boolean {
+  return brokeAt === fontScale;
+}
