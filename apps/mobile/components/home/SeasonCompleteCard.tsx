@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { radius, space } from '@/constants/tokens';
+import { radius, space, type as typeScale } from '@/constants/tokens';
 import { clearOf } from '@/constants/tokens/color';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
@@ -49,6 +49,12 @@ import { seasonCompletePlace } from '@/lib/game/finalStandings';
 // Game Night (§9C, W4): the rimmed card; the tiles on an `inset` panel (radius 14) instead
 // of between hairlines (rule 2); the champion's disc and wash in `medalGold` with its own
 // `onMedal` ink (rule 4); the headline at 28pt (`score.lg`).
+
+/** The hero line ("Champion", "2nd place") is the card's TAG: it takes the chips' own ceiling (type.tag.maxScale, as PhaseChip does), so it
+ * shows whole at XXXL ("Champ…" at the old 2.4×). The line under it keeps growing, but only to SUBTITLE_MAX_SCALE: at the chip's 1.4× the
+ * title is 39pt, and an uncapped callout (13pt × the system's 3.1× at XXXL) is 40pt, bigger than its own title (the S3 rule). Pinned as arithmetic. */
+export const HERO_MAX_SCALE = typeScale.tag.maxScale;
+export const SUBTITLE_MAX_SCALE = 2;
 
 export interface SeasonCompleteCardProps {
   leagueId: string;
@@ -186,18 +192,19 @@ export function SeasonCompleteCard({
                 than its own subtitle. The title's cap now matches the subtitle's reach. */}
             {/* GS-4: a place is shown only once the playoff result proves it (never the regular-season rank). */}
             {headline !== null ? (
-              <Text variant="score.lg" maxFontSizeMultiplier={2.4} style={styles.headline}>
+              <Text variant="score.lg" maxFontSizeMultiplier={HERO_MAX_SCALE} style={styles.headline}>
                 {headline}
               </Text>
             ) : null}
-            <Text variant="callout">{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={SUBTITLE_MAX_SCALE}>{isChampion ? wonLeagueLine(leagueName) : nonChampionLine(leagueName, record)}</Text>
           </>
         ) : (
           <>
-            <Text variant="score.lg" maxFontSizeMultiplier={2.4} style={styles.headline}>
+            {/* A name is not a chip: it wraps (numberOfLines 0) rather than truncating at the ceiling. */}
+            <Text variant="score.lg" maxFontSizeMultiplier={HERO_MAX_SCALE} numberOfLines={0} style={styles.headline}>
               {result?.champion_display_name ?? CHAMPION_LABEL}
             </Text>
-            <Text variant="callout">{championAnnounceLine(leagueName)}</Text>
+            <Text variant="callout" maxFontSizeMultiplier={SUBTITLE_MAX_SCALE}>{championAnnounceLine(leagueName)}</Text>
           </>
         )}
         </View>
@@ -237,7 +244,7 @@ export function SeasonCompleteCard({
         </>
       ) : null}
 
-      <ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} />
+      <ListRow title={SEE_FINAL_STANDINGS} wrapTitle onPress={() => router.push('/(tabs)/league')} />
       {/* B4 (Design Lead gate, 2026-10-05): no "Start next season" here. The
        * start_new_league_season path is revoked, so a button for it is dead;
        * the "Run it back?" card (3c) owns the primary. */}

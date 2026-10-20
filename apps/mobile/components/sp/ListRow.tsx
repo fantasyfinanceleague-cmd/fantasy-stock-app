@@ -2,7 +2,7 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { space } from '@/constants/tokens';
+import { space, type as typeScale } from '@/constants/tokens';
 import { Icon } from '@/components/sp/Icon';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
@@ -12,6 +12,9 @@ import { Text } from '@/components/sp/Text';
 // slot, with the press affordance built in when `onPress` is given.
 // Game Night (§9C rule 2, gn-sweep): no rule line under a row; rows divide by
 // space (their own 12pt padding), a surface step, or your side's tint.
+
+/** A button-row's title never outgrows a Button label: the label is `headline`, capped at its maxScale (1.6). */
+export const BUTTON_ROW_MAX_SCALE = typeScale.headline.maxScale;
 
 export interface ListRowProps {
   leading?: ReactNode;
@@ -25,14 +28,17 @@ export interface ListRowProps {
   onPress?: () => void;
   /** Hides the trailing chevron even when `onPress` is set. */
   hideChevron?: boolean;
+  /** The title wraps instead of truncating, at a Button label's own ceiling. For a row that IS a button ("See the final standings"):
+   * a button label never truncates (Design Lead, 2026-10-19). Data rows (names) keep their single line. */
+  wrapTitle?: boolean;
 }
 
-export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron }: ListRowProps) {
+export function ListRow({ leading, title, subtitle, subtitle2, trailing, onPress, hideChevron, wrapTitle }: ListRowProps) {
   const content = (
     <View style={styles.row}>
       {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.titles}>
-        <Text variant="body" numberOfLines={1}>
+        <Text variant="body" numberOfLines={wrapTitle ? undefined : 1} maxFontSizeMultiplier={wrapTitle ? BUTTON_ROW_MAX_SCALE : undefined}>
           {title}
         </Text>
         {subtitle ? (

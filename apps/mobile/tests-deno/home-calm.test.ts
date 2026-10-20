@@ -150,7 +150,7 @@ Deno.test('season over: Run it back (commissioner) or the ask (member) is the on
 Deno.test('the season-over card has no filled button: "See the final standings" is a row with a chevron, inside the one card', () => {
   const card = SOURCES['components/home/SeasonCompleteCard.tsx'];
   assert(!code(card).includes('<Button'), 'no Button in the season-over card');
-  assert(card.includes("<ListRow title={SEE_FINAL_STANDINGS} onPress={() => router.push('/(tabs)/league')} />"));
+  assert(card.includes("<ListRow title={SEE_FINAL_STANDINGS} wrapTitle onPress={() => router.push('/(tabs)/league')} />"));
   // One card: the medallion block, the tiles on their `inset` panel, the row. Game Night
   // (§9C rule 2): no hairlines — separation by surface, never by rules.
   assertEquals((code(card).match(/<Card\b/g) ?? []).length, 1);

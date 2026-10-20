@@ -137,8 +137,6 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
         <Text
           variant={size === 'md' ? 'headline' : 'callout'}
           color={textColor}
-          numberOfLines={2}
-          ellipsizeMode="clip"
           style={styles.label}
         >
           {label}
