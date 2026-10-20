@@ -114,7 +114,9 @@ export function finalPlaceOf<T>(rows: readonly T[], idOf: (row: T) => string, po
  * same order as League › Standings (GS-4: "every screen tells the same story"). The
  * server's own podium answer wins for 1st and 2nd; anyone else's place needs the
  * finished bracket. Null while it can't be proven: the card then shows no place rather
- * than the regular-season one, which put "1st place" on the manager who lost the Final. */
+ * than the regular-season one, which put "1st place" on the manager who lost the Final.
+ * Null too when the two sources contradict (an eliminated / missed result against a podium
+ * top-two place): never a medal the server's own result rules out. */
 export function seasonCompletePlace(input: {
   myUserId: string;
   regularRank: number;
@@ -131,5 +133,10 @@ export function seasonCompletePlace(input: {
   const ordered = input.standings.slice().sort((a, b) => a.rank - b.rank);
   const seed = new Map(ordered.map((s) => [s.user_id, s.rank]));
   const podium = playoffPodium(input.playoffRows, (id) => seed.get(id) ?? null, { teams: input.playoffTeams });
-  return finalPlaceOf(ordered, (s) => s.user_id, podium, input.myUserId);
+  const place = finalPlaceOf(ordered, (s) => s.user_id, podium, input.myUserId);
+  // The two sources can disagree for a moment (a result row written before the bracket refreshes, or the reverse). Someone the server
+  // says was knocked out, or never made the playoffs, cannot be on the podium's top two: show no place (the card's honest fallback)
+  // rather than "1st place" / "2nd place". With no server result (null) the bracket's own podium stands.
+  if ((input.playoffResult === 'eliminated' || input.playoffResult === 'missed') && place !== null && place <= 2) return null;
+  return place;
 }
