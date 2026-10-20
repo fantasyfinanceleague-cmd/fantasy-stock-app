@@ -37,7 +37,7 @@ Deno.test('the Members header wraps: the value drops under the label (to the lef
 Deno.test('the "+N" disc: its text takes the chips\' cap, and the disc is a minimum size that grows, never a fixed box that clips', () => {
   assert(card.includes('export const PLUS_MAX_SCALE = typeScale.tag.maxScale;'), 'the cap IS the tag token\'s maxScale');
   assertEquals(TYPE.tag.maxScale, 1.4);
-  assert(code(SOURCES['components/sp/PhaseChip.tsx']).includes('maxFontSizeMultiplier={tagStyle.maxScale}'), 'the chips use that token');
+  assert(code(SOURCES['components/sp/PhaseChip.tsx']).includes('cappedTextProps(tagStyle, fontScale, tagStyle.maxScale)'), 'the chips use that token (through the sp capped-size path)');
   assert(/<Text variant="callout" tone="secondary" maxFontSizeMultiplier=\{PLUS_MAX_SCALE\}>\s*\+\{overflow\}/.test(card), 'the "+N" text carries the cap');
   const disc = style('plusDisc');
   assert(/minWidth: AVATAR/.test(disc) && /minHeight: AVATAR/.test(disc), 'the disc is AT LEAST the avatar size (36pt at Large: the same circle)');
