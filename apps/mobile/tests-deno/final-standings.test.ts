@@ -116,6 +116,27 @@ Deno.test('seasonCompletePlace: the card\'s place follows the playoffs, never th
   assertEquals(seasonCompletePlace({ ...base, myUserId: 'b', regularRank: 2, playoffTeams: null }), 2);
 });
 
+Deno.test('seasonCompletePlace: a result and a bracket that disagree show no place, never a medal the result rules out', () => {
+  const standings = REG4.map((user_id, i) => ({ user_id, rank: i + 1 }));
+  const base = { standings, playoffTeams: 4, bracketStatus: 'ready' as const, playoffRows: BRACKET4 };
+  // BRACKET4's podium: c champion, a runner-up, b third, d fourth.
+  // The server says c was eliminated, but the (stale or fresher) bracket has c winning the Final: "1st place" is impossible for an eliminated manager.
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'c', regularRank: 3, playoffResult: 'eliminated' }), null);
+  // The same for 2nd, and for a manager the server says missed the playoffs.
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'a', regularRank: 1, playoffResult: 'eliminated' }), null);
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'c', regularRank: 3, playoffResult: 'missed' }), null);
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'a', regularRank: 1, playoffResult: 'missed' }), null);
+  // Agreeing data is untouched: an eliminated manager the bracket also puts 3rd or 4th keeps that place.
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'b', regularRank: 2, playoffResult: 'eliminated' }), 3);
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'd', regularRank: 4, playoffResult: 'eliminated' }), 4);
+  // With no server result at all, the bracket's own podium stands: 1st and 2nd are trusted.
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'c', regularRank: 3, playoffResult: null }), 1);
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'a', regularRank: 1, playoffResult: null }), 2);
+  // The server's champion / runner-up answers are not second-guessed by the guard.
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'c', regularRank: 3, playoffResult: 'champion' }), 1);
+  assertEquals(seasonCompletePlace({ ...base, myUserId: 'a', regularRank: 1, playoffResult: 'runner_up' }), 2);
+});
+
 Deno.test('M4 guard: more than one game in the last round read is not a Final (no podium)', () => {
   // History's check has no team count: semifinals done, the Final not written yet. The last
   // round read is the semis (two games). Taking its first game as "the Final" would crown a,

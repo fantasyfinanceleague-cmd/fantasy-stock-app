@@ -2,22 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "893b82337a3197110311be59f7813249457487df",
-    "commitShort": "893b8233",
+    "commit": "d6aaf697b73b564dc5b0b5f9b30c5bb8b7e502a8",
+    "commitShort": "d6aaf697",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/home/PreDraftCard.tsx"
+        "path": "apps/mobile/lib/game/finalStandings.ts"
       },
       {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/predraft-members-xxxl.test.ts"
+        "code": "M",
+        "path": "apps/mobile/tests-deno/final-standings.test.ts"
       }
     ],
-    "timestamp": "2026-10-20T16:31:39Z",
+    "timestamp": "2026-10-20T16:31:42Z",
     "sourceHash": "sha256:cb29ce99e1d0e30cb523f4dc3dba387d128395b7fbfbd672d7a1fb532942cb29",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
