@@ -117,8 +117,9 @@ Deno.test('cappedFont: null (scale natively) when no cap, at or under the cap, o
 Deno.test('cappedFont: an engaged cap is the size iOS draws it at — fontSize and lineHeight × cap', () => {
   assertEquals(cappedFont(callout, 3.571, HERO_LINE_CAP), { fontSize: 13 * 1.3, lineHeight: 18 * 1.3 });
   assertEquals(cappedFont(callout, 1.31, HERO_LINE_CAP), { fontSize: 13 * 1.3, lineHeight: 18 * 1.3 });
-  // money 44/46 at its own 1.2 cap; letterSpacing scales with it.
-  assertEquals(cappedFont(type.money, 2.35, type.money.maxScale), { fontSize: 44 * 1.2, lineHeight: 46 * 1.2, letterSpacing: -0.66 * 1.2 });
+  // money 44/46 at its own 1.2 cap. letterSpacing is NOT scaled: iOS feeds NSKernAttributeName the
+  // given value and scales only the font and the line height (RCTAttributedTextUtils.mm).
+  assertEquals(cappedFont(type.money, 2.35, type.money.maxScale), { fontSize: 44 * 1.2, lineHeight: 46 * 1.2 });
 });
 
 Deno.test('cappedTextProps: engaged -> explicit size, font scaling OFF, no multiplier; else native under the cap', () => {
@@ -137,12 +138,10 @@ Deno.test('every engaged cap also stops the roll, so the digit path never meets 
   }
 });
 
-Deno.test('wiring: Portfolio HeroLine\'s "·" and words carry the 1.3× cap as an explicit size too', () => {
+Deno.test('wiring: Portfolio HeroLine keeps its 1.3× cap as a prop; the primitive turns it into a size', () => {
   const heroLine = portfolioSrc.slice(portfolioSrc.indexOf('function HeroLine'), portfolioSrc.indexOf('const styles = StyleSheet.create'));
-  assertEquals(heroLine.includes('const { fontScale } = useWindowDimensions();'), true);
-  assertEquals(heroLine.includes('const capped = cappedTextProps(type.callout, fontScale, HERO_LINE_MAX_SCALE);'), true);
-  assertEquals((heroLine.match(/allowFontScaling=\{capped\.allowFontScaling\} maxFontSizeMultiplier=\{capped\.maxFontSizeMultiplier\}/g) ?? []).length, 2);
-  assertEquals(heroLine.includes("style={[styles.bold, capped.style]}>{' · '}</Text>"), true);
-  assertEquals(heroLine.includes('style={capped.style}>{`\\u00a0${words}`}</Text>'), true);
-  assertEquals(heroLine.includes('maxFontSizeMultiplier={HERO_LINE_MAX_SCALE}'), false);
+  // Four capped pieces: two RollingMoney (maxScale) and the "·" and the words (maxFontSizeMultiplier).
+  assertEquals((heroLine.match(/maxScale=\{HERO_LINE_MAX_SCALE\}/g) ?? []).length, 2);
+  assertEquals((heroLine.match(/maxFontSizeMultiplier=\{HERO_LINE_MAX_SCALE\}/g) ?? []).length, 2);
+  assertEquals(heroLine.includes('cappedTextProps'), false);
 });

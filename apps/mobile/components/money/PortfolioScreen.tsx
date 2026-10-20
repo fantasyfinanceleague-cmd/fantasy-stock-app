@@ -16,10 +16,10 @@
  * stock sheet instead, so no row is ever a dead tap.
  */
 import React, { useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { radius, space, type } from '@/constants/tokens';
+import { radius, space } from '@/constants/tokens';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import type { ThemeColors } from '@/constants/tokens/color';
@@ -27,7 +27,6 @@ import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Chart, PlayerCard, RangePills, type PlayerCardOwnership } from '@/components/sp/gn';
 import { formatMoney } from '@/components/sp/logic/money';
-import { cappedTextProps } from '@/components/sp/logic/cappedType';
 import { ShellHeader } from '@/components/shell/ShellHeader';
 import { useStockSheet } from '@/components/money/MoneyHost';
 import { LoadFailure } from '@/components/money/LoadFailure';
@@ -381,20 +380,19 @@ export function PortfolioScreen() {
  * (C-6/M3: one string misaligns mid-roll), each "·" stays glued to the figure before it, so a
  * wrapped line never starts with "·" (§5 "Wrapping at XL"), and everything caps at 1.3× so the
  * value stays the screen's loudest text at XL (§5 "The standout stays loudest"). Above 1.3× the
- * cap is an explicit size (cappedType.ts): Home draws the same " · " and figures uncapped in
- * the same face, and iOS gave the capped copies those uncapped boxes (P2, 2026-10-16). */
+ * sp Text primitive (and RollingMoney) turn that cap into an explicit size (cappedType.ts): Home
+ * draws the same " · " and figures uncapped in the same face, and iOS gave the capped copies those
+ * uncapped boxes (P2, 2026-10-16/19). */
 function HeroLine({ label, money, pct, words, color, rollKey }: { label: string; money: string; pct: string; words: string; color: string; rollKey: string }) {
-  const { fontScale } = useWindowDimensions();
-  const capped = cappedTextProps(type.callout, fontScale, HERO_LINE_MAX_SCALE);
   return (
     <View accessible accessibilityLabel={label} style={styles.rollRow}>
       <View style={styles.nowrap}>
         <RollingMoney text={money} size="callout" fontWeight="700" color={color} rollKey={rollKey} maxScale={HERO_LINE_MAX_SCALE} />
-        <Text variant="callout" color={color} allowFontScaling={capped.allowFontScaling} maxFontSizeMultiplier={capped.maxFontSizeMultiplier} style={[styles.bold, capped.style]}>{' · '}</Text>
+        <Text variant="callout" color={color} maxFontSizeMultiplier={HERO_LINE_MAX_SCALE} style={styles.bold}>{' · '}</Text>
       </View>
       <View style={styles.nowrap}>
         <RollingMoney text={pct} size="callout" fontWeight="700" color={color} rollKey={rollKey} maxScale={HERO_LINE_MAX_SCALE} />
-        <Text variant="callout" tone="secondary" allowFontScaling={capped.allowFontScaling} maxFontSizeMultiplier={capped.maxFontSizeMultiplier} style={capped.style}>{`\u00a0${words}`}</Text>
+        <Text variant="callout" tone="secondary" maxFontSizeMultiplier={HERO_LINE_MAX_SCALE}>{`\u00a0${words}`}</Text>
       </View>
     </View>
   );

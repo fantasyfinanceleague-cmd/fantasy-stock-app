@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside DigitColumn's render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import { useEffect, useRef } from 'react';
-import { StyleSheet, Text as RNText } from 'react-native';
+import { StyleSheet, Text as RNText, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, WithSpringConfig } from 'react-native-reanimated';
 import type { withTiming as withTimingType, EasingFunctionFactory } from 'react-native-reanimated';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { digitDiff, DigitDiffEntry } from '@/components/sp/logic/digits';
+import { cappedTextProps } from '@/components/sp/logic/cappedType';
 import { useMotion } from '@/components/sp/motion';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { useLeadChangeSpring } from '@/components/sp/game/motion';
@@ -38,6 +39,7 @@ interface DigitColumnProps {
   withTiming: typeof withTimingType;
   slam: boolean;
   leadChangeSpring: WithSpringConfig;
+  allowFontScaling: boolean;
   maxFontSizeMultiplier?: number;
 }
 
@@ -53,6 +55,7 @@ function DigitColumn({
   withTiming,
   slam,
   leadChangeSpring,
+  allowFontScaling,
   maxFontSizeMultiplier,
 }: DigitColumnProps) {
   const progress = useSharedValue(entry.changed ? 0 : 1);
@@ -93,6 +96,7 @@ function DigitColumn({
     <Animated.View style={[styles.column, animatedStyle]}>
       <RNText
         style={{ fontFamily, fontSize, lineHeight, color: textColor, fontVariant: ['tabular-nums'] }}
+        allowFontScaling={allowFontScaling}
         maxFontSizeMultiplier={maxFontSizeMultiplier}
         // Safety net (Design Lead, 2026-09-29): a score must never leave its
         // card, even past the maxFontSizeMultiplier cap above or at an
@@ -131,6 +135,10 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
 
   const typeStyle = type[variant];
   const textColor = colorProp ?? colors.text;
+  // Past the variant's ceiling the digit is an explicit size (cappedType.ts): one Text per digit is
+  // the shape most exposed to an uncapped twin's box (P2, 2026-10-19).
+  const { fontScale } = useWindowDimensions();
+  const capped = cappedTextProps(typeStyle, fontScale, typeStyle.maxScale);
 
   return (
     <Animated.View style={{ flexDirection: 'row', flexShrink: 1 }}>
@@ -139,8 +147,8 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
           key={`${index}-${diff.length}`}
           entry={entry}
           fontFamily={typeStyle.fontFamily}
-          fontSize={typeStyle.fontSize}
-          lineHeight={typeStyle.lineHeight}
+          fontSize={capped.style?.fontSize ?? typeStyle.fontSize}
+          lineHeight={capped.style?.lineHeight ?? typeStyle.lineHeight}
           textColor={textColor}
           reduced={reduced}
           duration={duration.base}
@@ -148,7 +156,8 @@ export function ScoreDigits({ text, variant = 'score.md', color: colorProp, slam
           withTiming={withTiming}
           slam={slam}
           leadChangeSpring={leadChangeSpring}
-          maxFontSizeMultiplier={typeStyle.maxScale}
+          allowFontScaling={capped.allowFontScaling}
+          maxFontSizeMultiplier={capped.maxFontSizeMultiplier}
         />
       ))}
     </Animated.View>
