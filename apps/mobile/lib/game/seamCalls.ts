@@ -5,7 +5,7 @@
  * returns the fixture and makes NO real call. A call with no fixture is real.
  */
 import { supabase } from '../supabase';
-import { SEAM_ON } from './devSeam';
+import { SEAM_ON, captureFailsOnce } from './devSeam';
 import { fixtureFor, invokeFixtureFor } from './seamFixtures';
 import { seamTableRows, seamWeekClosed, type SeamTableName } from './seamTables';
 import { markFixtureRenewed } from '../shell/devFixture';
@@ -17,8 +17,12 @@ import { draftRoomClockRead, parseDraftRoomVariant, roomVariantAfterAutoPick } f
 let roomVariant = parseDraftRoomVariant(process.env.EXPO_PUBLIC_DRAFT_ROOM_FIXTURE);
 import { saveLeagueSlots, type SlotDraft } from '../categoryData';
 
+/** The error a read answers with when EXPO_PUBLIC_CAPTURE_FAIL_ONCE names it (its first call only). */
+const FAIL_ONCE_ERROR = { message: 'fixture: this read fails once (EXPO_PUBLIC_CAPTURE_FAIL_ONCE)', details: '', hint: '', code: 'FIXTURE', name: 'PostgrestError' };
+
 export async function seamRpc(name: string, args: Record<string, unknown>) {
   if (SEAM_ON) {
+    if (captureFailsOnce(name)) return { data: null, error: FAIL_ONCE_ERROR, count: null, status: 500, statusText: 'fixture' };
     // DRAFT_ROOM_FIXTURE=loading: the room's clock read never answers, so its skeleton stays up for the capture.
     if (name === 'get_draft_clock' && draftRoomClockRead(roomVariant) === 'pending') return new Promise<never>(() => {});
     const f = fixtureFor(name, args, roomVariant, process.env.EXPO_PUBLIC_DRAFT_START_FIXTURE);
@@ -55,6 +59,7 @@ export async function seamTable<T>(
   real: () => PromiseLike<{ data: T[] | null; error: unknown; count?: number | null }>,
 ): Promise<{ data: T[] | null; error: unknown; count?: number | null }> {
   // Week 6 closes in the Home fixtures that score it (EXPO_PUBLIC_HOME_FIXTURE=scored, …).
+  if (SEAM_ON && captureFailsOnce(name)) return { data: null, error: FAIL_ONCE_ERROR, count: null };
   const rows = seamTableRows(SEAM_ON, name, roomVariant, {
     weekClosed: seamWeekClosed(process.env.EXPO_PUBLIC_HOME_FIXTURE),
     bye: process.env.EXPO_PUBLIC_HOME_FIXTURE === 'bye',

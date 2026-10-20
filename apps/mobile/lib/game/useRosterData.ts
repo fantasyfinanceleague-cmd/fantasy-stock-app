@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react';
 
 import { supabase } from '../supabase';
-import { SEAM_ON } from './devSeam';
+import { SEAM_ON, captureFailsOnce } from './devSeam';
 import { SEAM_LEAGUE } from './seamTables';
 import { checkRowsComplete } from './readGuard';
 import { fetchCategories } from '../categoryData';
@@ -44,7 +44,11 @@ export interface RosterData {
 
 async function loadSlots(leagueId: string, me: string, opp: string | null): Promise<{ slots: SlotRow[]; bySide: Record<string, Record<string, string | null>> }> {
   // A bye week has no opponent: only your own rows are read.
-  if (SEAM_ON) return fixtureSlots(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) ?? { slots: [], bySide: {} };
+  if (SEAM_ON) {
+    // DEV capture: EXPO_PUBLIC_CAPTURE_FAIL_ONCE=league_draft_slots fails this read once; Try again re-reads and it answers.
+    if (captureFailsOnce('league_draft_slots')) throw new Error('fixture: league_draft_slots fails once');
+    return fixtureSlots(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) ?? { slots: [], bySide: {} };
+  }
 
   const sl = await supabase
     .from('league_draft_slots')
@@ -101,6 +105,9 @@ export function useRosterData(leagueId: string | null, me: string | null, opp: s
   const ledgerState = usePortfolioLedger(SEAM_ON ? null : leagueId);
   const [slots, setSlots] = useState<RosterSlotsState>({ status: 'idle', slots: [], bySide: {} });
   const [tick, setTick] = useState(0);
+  // DEV capture, seam only: under the seam the ledger is the fixture's, never read, so its "failed" state is played here:
+  // EXPO_PUBLIC_CAPTURE_FAIL_ONCE=get_portfolio_ledger leaves it failed until the first Try again.
+  const [seamLedgerFails, setSeamLedgerFails] = useState(() => SEAM_ON && captureFailsOnce('get_portfolio_ledger'));
 
   useEffect(() => {
     if (!leagueId || !me) return;
@@ -121,13 +128,14 @@ export function useRosterData(leagueId: string | null, me: string | null, opp: s
 
   const retry = () => {
     ledgerState.refresh();
+    setSeamLedgerFails(false);
     setTick((t) => t + 1);
   };
 
   if (SEAM_ON) {
     return {
-      ledger: me ? fixtureLedger(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) : null,
-      ledgerStatus: me ? 'ready' : 'loading',
+      ledger: me && !seamLedgerFails ? fixtureLedger(VARIANT, me, opp ?? SEAM_LEAGUE.gianluigi) : null,
+      ledgerStatus: me ? (seamLedgerFails ? 'error' : 'ready') : 'loading',
       slots,
       retry,
     };

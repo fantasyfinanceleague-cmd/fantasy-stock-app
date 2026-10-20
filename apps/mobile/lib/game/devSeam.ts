@@ -3,7 +3,7 @@
  * EXPO_PUBLIC_GAME_SEAM='1'. Production never sees a fixture response. The gate
  * itself lives in devSeamGate.ts, where it is tested.
  */
-import { seamActive } from './devSeamGate';
+import { createFailOnce, seamActive } from './devSeamGate';
 import { parseMatchupFixture, type MatchupFixtureVariant } from './matchupFixture';
 import { parseLeagueFixture, type LeagueFixture } from './leagueFixture';
 
@@ -28,6 +28,9 @@ export const PORTFOLIO_STAKE_VARIANT: 'fixed_notional' | 'budget_cap' | 'budget_
 export const CAPTURE_DELAY_MS: number = SEAM_ON ? Number(process.env.EXPO_PUBLIC_CAPTURE_DELAY_MS) || 0 : 0;
 /** Capture only: the seam ledger read fails (Portfolio's failed state) — EXPO_PUBLIC_CAPTURE_FAIL=1. */
 export const CAPTURE_FAIL: boolean = SEAM_ON && process.env.EXPO_PUBLIC_CAPTURE_FAIL === '1';
+/** Capture only: the named seam read fails on its FIRST call and answers after (EXPO_PUBLIC_CAPTURE_FAIL_ONCE=<read key>[,...];
+ * devSeamGate.ts), so a load-failure card's Try again can be tapped and seen to recover. Seam only: inert in production. */
+export const captureFailsOnce: (key: string) => boolean = createFailOnce(SEAM_ON, process.env.EXPO_PUBLIC_CAPTURE_FAIL_ONCE);
 /** Capture only: record-trade's refusal for the review's refusal captures (EXPO_PUBLIC_CAPTURE_REFUSAL,
  * e.g. trade_conflict, market_closed). Unset: the seam's submit succeeds (and never writes). */
 export const CAPTURE_REFUSAL: string | null = SEAM_ON ? process.env.EXPO_PUBLIC_CAPTURE_REFUSAL || null : null;
