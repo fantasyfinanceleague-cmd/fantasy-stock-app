@@ -45,12 +45,22 @@ Deno.test('fail-once: the named read fails ONCE (its first call), then answers; 
 
 Deno.test('fail-once: several keys, each once; spaces and junk are ignored', () => {
   const failsOnce = createFailOnce(true, ' matchups_week , week_snapshots,,not a key!,get_renewal_roster ');
-  assertEquals([...parseFailOnce(true, ' matchups_week , week_snapshots,,not a key!,get_renewal_roster ')].sort(), ['get_renewal_roster', 'matchups_week', 'week_snapshots']);
+  assertEquals([...parseFailOnce(true, ' matchups_week , week_snapshots,,not a key!,get_renewal_roster ').keys()].sort(), ['get_renewal_roster', 'matchups_week', 'week_snapshots']);
   for (const k of ['matchups_week', 'week_snapshots', 'get_renewal_roster']) {
     assertEquals(failsOnce(k), true, `${k}: first call`);
     assertEquals(failsOnce(k), false, `${k}: second call`);
   }
   assertEquals(failsOnce('not a key!'), false);
+});
+
+Deno.test('fail-once: key*n fails the first n calls (a read another screen makes first, as Home does for the renewal roster)', () => {
+  const failsOnce = createFailOnce(true, 'get_renewal_roster*2,matchups_week');
+  assertEquals([failsOnce('get_renewal_roster'), failsOnce('get_renewal_roster'), failsOnce('get_renewal_roster')], [true, true, false]);
+  assertEquals([failsOnce('matchups_week'), failsOnce('matchups_week')], [true, false], 'no count means once');
+  assertEquals(parseFailOnce(true, 'a*9,b*0,c*10,d*x').get('a'), 9);
+  assertEquals([...parseFailOnce(true, 'a*9,b*0,c*10,d*x').keys()], ['a'], 'a count is 1 to 9; anything else is not a key');
+  // the count never turns a gated-off knob on
+  assertEquals(createFailOnce(false, 'get_renewal_roster*9')('get_renewal_roster'), false);
 });
 
 Deno.test('fail-once: production can never read it. With the seam off, no read ever fails, whatever the variable holds', () => {
@@ -78,5 +88,12 @@ Deno.test('fail-once: the variable is read in ONE place, built from SEAM_ON, and
   const calls = SOURCES['lib/game/seamCalls.ts'];
   assert(calls.includes("if (SEAM_ON) {\n    if (captureFailsOnce(name)) return { data: null, error: FAIL_ONCE_ERROR"), 'seamRpc, inside the seam branch');
   assert(calls.includes('if (SEAM_ON && captureFailsOnce(name)) return { data: null, error: FAIL_ONCE_ERROR, count: null };'), 'seamTable, seam only');
+  const renewal = SOURCES['lib/game/useRenewalRoster.ts'];
+  assert(renewal.includes("if (captureFailsOnce('get_renewal_roster')) {\n          if (!cancelled) setState({ status: 'error', roster: null });"), 'the fixture renewal roster read (Home reads it first: use *2)');
+  const roster = SOURCES['lib/game/useRosterData.ts'];
+  assert(roster.includes("if (captureFailsOnce('league_draft_slots')) throw new Error("), 'the roster slots read, inside its seam branch');
+  assert(roster.includes("useState(() => SEAM_ON && captureFailsOnce('get_portfolio_ledger'))"), 'the roster ledger state, seam only');
+  assert(roster.includes('setSeamLedgerFails(false);'), 'Try again clears it');
+  assert(roster.includes("ledgerStatus: me ? (seamLedgerFails ? 'error' : 'ready') : 'loading',"));
   assert(SOURCES['lib/money/usePortfolioLedger.ts'].includes("CAPTURE_FAIL || captureFailsOnce('get_portfolio_ledger') ? null :"), 'the ledger read, inside the seam branch');
 });

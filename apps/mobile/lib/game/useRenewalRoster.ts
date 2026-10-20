@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase';
 import { seamRpc } from './seamCalls';
+import { captureFailsOnce } from './devSeam';
 import { fixtureAnswered, fixtureRoster, parseRenewalCaller, type RenewalCaller } from './renewalFixture';
 
 /** DEV-only: who the roster fixture answers as (EXPO_PUBLIC_RENEWAL_FIXTURE: commissioner,
@@ -42,6 +43,12 @@ export function useRenewalRoster(successorLeagueId: string | null, fixtureCaller
     setState((s) => ({ ...s, status: 'loading' }));
     (async () => {
       if (fixtureCaller) {
+        // DEV capture: EXPO_PUBLIC_CAPTURE_FAIL_ONCE=get_renewal_roster[*n] fails the fixture roster read (the first n reads:
+        // Home asks first), so the League's "didn't load" card and its Try again can be tapped.
+        if (captureFailsOnce('get_renewal_roster')) {
+          if (!cancelled) setState({ status: 'error', roster: null });
+          return;
+        }
         // The seam's last answer moves the caller (a flip in a DEV capture).
         if (!cancelled) setState({ status: 'ready', roster: fixtureRoster(fixtureAnswered(fixtureCaller), new Date()) as RosterResult });
         return;

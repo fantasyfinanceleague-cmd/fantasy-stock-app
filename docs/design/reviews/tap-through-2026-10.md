@@ -5,6 +5,7 @@ Giorgio, 2026-10-12: "we can't have buttons that don't do anything, links that d
 - **Build:** `origin/main` 59e1222b with this branch's changes in the working tree. The fixes below were applied DURING the pass; a row that says BEFORE / AFTER was tapped both ways. The same commit carries the fixes and this file.
 - **Device:** iPhone 17e simulator (iOS 27.0), Expo Go, Metro on a private port, a DEAD Supabase URL (nothing real was read or written). Dev fixtures only: `SHELL_FIXTURE` (leagues, no-leagues, no-username, signed-out, onboarding, drafting, leagues-member, leagues-renewal, leagues-failed-once), `INVITE_FIXTURE`, `JOIN_FIXTURE`, `CREATE_FIXTURE`, `PUSH_ASK`, `CONFIRMED`, `HOME_FIXTURE` with `GAME_SEAM`, `DRAFT_ROOM_FIXTURE`, `DRAFT_START_FIXTURE`, `RENEWAL_FIXTURE`, `LEAVE_LEAGUE`, `MONEY_FIXTURE` scenarios.
 - **Method:** real taps (duration 0.1), a fresh screenshot after each (they lag a beat, so a "nothing happened" was always re-taken before it was called). Typed text only for the fixtures' own values; no real credential was typed anywhere.
+- **P3 follow-up (2026-10-20): the five load-failure rows.** Added `EXPO_PUBLIC_CAPTURE_FAIL_ONCE=<read key>[*n][,<read key>...]` (DEV, seam only; `lib/game/devSeamGate.ts`): the named seam read fails on its first call (the first `n` with `*n`) and answers after, so a failed card's Try again can be tapped and seen to recover. Keys: an rpc name (`get_league_history`, `get_renewal_roster`), a `seamTable` name (`matchups_week`, `matchups_playoff`, `trades`, `week_snapshots`), `get_portfolio_ledger` and `league_draft_slots` (the Matchup roster's two reads under the seam). A read that another screen makes first needs a count (Home reads the renewal roster before the League tab). Every retry recovered; no bug. Stills (failed, then recovered) are in `~/fantasy-stock-design-review/chore-read-fails-once/`.
 - **Evidence:** stills stay out of the repo, in `~/fantasy-stock-design-review/chore-w8-tap-through/` (the log `results.tsv`, the drivers `fx.sh` / `shot.sh` / `x07.sh`, and the frames).
 
 ## Summary
@@ -13,10 +14,10 @@ Giorgio, 2026-10-12: "we can't have buttons that don't do anything, links that d
 
 | Result | Rows |
 |---|---|
-| PASS | 157 |
+| PASS | 160 |
 | PASS (fix or finding) | 5 |
 | TAPPED, EFFECT UNVERIFIABLE | 6 |
-| UNREACHABLE | 15 |
+| UNREACHABLE | 12 |
 | FINDING | 1 |
 | n/a | 4 |
 
@@ -64,9 +65,6 @@ Controls whose job is a server write the fixture's static seam cannot show. They
 - **Stock sheet / Trade review**: Sale picker (rows, Use, close) (no fixture)
 - **reset-password (dead link)**: Back to sign in / Cancel / form Cancel (for the form variant (real recovery session)
 - **Player portfolio route**: any control (no entry point)
-- **League (load failed)**: LeagueStates Try again (no fixture)
-- **Matchup (load failed)**: LoadFailure retries (x4) (no fixture)
-- **Renewal (load failed)**: Try again (no fixture)
 - **Home (season 2 renewed)**: See league (RenewalCountsCard) (state not reachable)
 - **Create account (after a real sign-up)**: Check-your-email card: Back / Resend (real sign-up)
 
@@ -257,9 +255,9 @@ Screen | tappable | where (from the inventory) | expected | what happened | resu
 | reset-password (dead link) | Back to sign in / Cancel / form Cancel | app/reset-password.tsx handleCancel; NewPasswordForm onCancel | Home or Login | same wiring as Back to sign in (router.replace); the form variant needs a recovery session | UNREACHABLE for the form variant (real recovery session) |
 | Home (calm states) | Bye / missed-playoffs cards | components/home/PhaseMessageCard.tsx | no action | no tappable (only the eliminated variant has a button) | n/a |
 | Player portfolio route | any control | app/player-portfolio.tsx + components/money/PlayerPortfolioScreen.tsx | opens from somewhere | NOTHING navigates to this route (finding F5) | UNREACHABLE (no entry point) |
-| League (load failed) | LeagueStates Try again | components/league/LeagueStates.tsx Button onPress=onRetry | re-reads league data | needs a failed league-data read; no fixture fails only that read | UNREACHABLE (no fixture) |
-| Matchup (load failed) | LoadFailure retries (x4) | app/(tabs)/matchup.tsx LoadFailure onRetry | re-reads | needs a failed matchup/roster read; no fixture | UNREACHABLE (no fixture) |
-| Renewal (load failed) | Try again | components/game/LeagueRenewal.tsx Button onPress=setRetry | re-reads the roster | needs a failed renewal read | UNREACHABLE (no fixture) |
+| League (load failed: History and Playoffs) | LeagueStates LoadFailed Try again | components/league/LeagueStates.tsx Button onPress=onRetry (league.tsx `retry` bumps `reload`) | re-reads the failed read | `CAPTURE_FAIL_ONCE=get_league_history`: History shows "Your league's history didn't load." + Try again, never blank; one tap, the Season 1 / Season 2 history loads. `CAPTURE_FAIL_ONCE=matchups_playoff` (`LEAGUE_FIXTURE=playoffs_live`): "The bracket didn't load." + Try again; one tap, the Wild card / Semifinals bracket loads | PASS |
+| Matchup (load failed, x4) | LoadFailure Try again | app/(tabs)/matchup.tsx LoadFailure onRetry (all matchups, final lineups, the withheld roster, the live roster) | re-reads | `matchups_week`: "This week's matchups didn't load" + Try again, then the three matchups. `trades` (`HOME_FIXTURE=scored`): "Couldn't load this matchup", then the final lineups. `get_portfolio_ledger` (`HOME_FIXTURE=live_open`): "Couldn't load this matchup", then the roster. `get_portfolio_ledger` (`SCORED_OUTCOME=withheld`): the same card, then "Stock-by-stock results aren't available for this week." with the tickers. Every retry recovered on ONE tap | PASS (x4) |
+| Renewal (load failed) | Try again | components/game/LeagueRenewal.tsx Button onPress=setRetry | re-reads the roster | `CAPTURE_FAIL_ONCE=get_renewal_roster*2` (Home reads it first, so the count is 2): after Run it back, "The renewal didn't load." + Try again, never blank; one tap, the roster, the draft rows and the member list load | PASS |
 | Home (season 2 renewed) | See league (RenewalCountsCard) | components/home/RenewalCountsCard.tsx Button onPress router.push('/(tabs)/league') | League | card only shows for a renewed Season 2 whose Home is the counts state; the seam league list is static after Run it back | UNREACHABLE (state not reachable) |
 | Create account (after a real sign-up) | Check-your-email card: Back / Resend | components/shell/ConfirmEmailSent.tsx | back / resend the confirmation | only shown after a real sign-up succeeds (the fixture answers with the signups-paused refusal) | UNREACHABLE (real sign-up) |
 | Draft room | Draft board tiles | components/sp/gn/DraftTile.tsx | none (not tappable) | tiles are views, not controls | n/a |
