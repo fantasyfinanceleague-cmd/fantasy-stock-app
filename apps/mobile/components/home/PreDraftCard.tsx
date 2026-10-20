@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 
-import { radius, space } from '@/constants/tokens';
+import { radius, space, type as typeScale } from '@/constants/tokens';
 import { Avatar } from '@/components/sp/Avatar';
 import { Card } from '@/components/sp/Card';
 import { Text } from '@/components/sp/Text';
@@ -268,8 +268,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
             <Avatar key={m.userId} name={m.displayName} size={AVATAR} tone={isYou ? 'you' : 'neutral'} />
           ))}
           {overflow > 0 ? (
-            <View style={[styles.avatarCircle, styles.avatarDashed, { borderColor: colors.borderStrong }]}>
-              <Text variant="callout" tone="secondary">
+            <View style={[styles.plusDisc, { borderColor: colors.borderStrong }]}>
+              <Text variant="callout" tone="secondary" maxFontSizeMultiplier={PLUS_MAX_SCALE}>
                 +{overflow}
               </Text>
             </View>
@@ -300,6 +300,8 @@ export function PreDraftCard({ leagueId, inviteCode, pickSeconds, numRounds, dra
 }
 
 const AVATAR = 36;
+/** The "+N" disc's text takes the chips' own ceiling (type.tag.maxScale, as PhaseChip does). */
+export const PLUS_MAX_SCALE = typeScale.tag.maxScale;
 
 const styles = StyleSheet.create({
   card: {
@@ -360,24 +362,30 @@ const styles = StyleSheet.create({
   progressCaption: {
     fontVariant: ['tabular-nums'],
   },
+  // The label and its value share a line while they fit; when they don't (accessibility sizes) the value drops under the label, to the
+  // left (a wrapped item on its own line starts at the left under space-between), instead of running past the card's edge.
   sectionHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'baseline',
+    columnGap: space[3],
+    rowGap: space[1],
   },
   membersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space[2],
   },
-  avatarCircle: {
-    width: AVATAR,
-    height: AVATAR,
+  // The "+N" disc never clips its text: its text takes the chips' cap (PLUS_MAX_SCALE) and the disc is a MINIMUM size, so at the sizes where
+  // "+2" fits in 36pt it is the same 36pt dashed circle as before, and where it does not the disc grows (into a pill) around it.
+  plusDisc: {
+    minWidth: AVATAR,
+    minHeight: AVATAR,
     borderRadius: AVATAR / 2,
+    paddingHorizontal: space[1],
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarDashed: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderStyle: 'dashed',
