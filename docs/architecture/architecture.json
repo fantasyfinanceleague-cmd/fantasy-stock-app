@@ -2,50 +2,42 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "42b255c1fca168ade02dfd3c5dae573dc47ae552",
-    "commitShort": "42b255c1",
+    "commit": "4cc9b897303c3185a5749b37d368f1ae4f69a4c0",
+    "commitShort": "4cc9b897",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/components/money/PortfolioScreen.tsx"
+        "path": "apps/mobile/lib/game/devSeam.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/game/ScoreDigits.tsx"
+        "path": "apps/mobile/lib/game/devSeamGate.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/logic/cappedType.ts"
+        "path": "apps/mobile/lib/game/seamCalls.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/PhaseChip.tsx"
+        "path": "apps/mobile/lib/money/usePortfolioLedger.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/components/sp/Text.tsx"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/rolling-money-large-text.test.ts"
-      },
-      {
-        "code": "A",
-        "path": "apps/mobile/tests-deno/sp-text-capped-size.test.ts"
+        "path": "apps/mobile/tests-deno/game-dev-seam.test.ts"
       }
     ],
-    "timestamp": "2026-10-20T16:39:17Z",
-    "sourceHash": "sha256:8594b0e5dbd3c4e152ea90d476011059b109a970a1b1a9d554d659652d721c0b",
+    "timestamp": "2026-10-20T16:45:38Z",
+    "sourceHash": "sha256:8c196a0f8d2e884728969862fafa238c6d24e73ad75b2d3ba523c382a3e6cc06",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 114.4,
+    "ageHours": 114.5,
     "ageDays": 4.8,
     "staleAfterDays": 14,
     "stale": false,
@@ -16615,7 +16607,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:83"
+        "apps/mobile/lib/game/seamCalls.ts:88"
       ]
     },
     {
@@ -16628,7 +16620,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:77"
+        "apps/mobile/lib/game/seamCalls.ts:82"
       ]
     },
     {
@@ -16641,7 +16633,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:49"
+        "apps/mobile/lib/game/seamCalls.ts:53"
       ]
     },
     {
@@ -20234,7 +20226,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 72,
+        "line": 77,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -20242,7 +20234,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 80,
+        "line": 85,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -20250,7 +20242,7 @@
         "surface": "client",
         "name": "seamInvoke",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 40,
+        "line": 44,
         "kind": "forwarder:invoke",
         "detail": "argument 0 is the function name"
       },
@@ -20258,7 +20250,7 @@
         "surface": "client",
         "name": "seamRpc",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 31,
+        "line": 35,
         "kind": "forwarder:rpc",
         "detail": "argument 0 is the RPC name"
       },
@@ -20266,7 +20258,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 86,
+        "line": 91,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -20282,7 +20274,7 @@
         "surface": "client",
         "name": "seamUpdateLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 46,
+        "line": 50,
         "kind": "seam-stub",
         "detail": "leagues.update"
       },
@@ -20570,9 +20562,9 @@
       "apps/mobile/lib/categoryData.ts:66 -> categories.select",
       "apps/mobile/lib/categoryData.ts:85 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:96 -> symbols.select",
-      "apps/mobile/lib/game/seamCalls.ts:49 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:77 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:83 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:53 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:82 -> leagues.insert",
+      "apps/mobile/lib/game/seamCalls.ts:88 -> league_members.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
