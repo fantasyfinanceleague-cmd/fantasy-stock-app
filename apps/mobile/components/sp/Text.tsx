@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { Text as RNText, TextProps as RNTextProps, StyleSheet, type TextStyle } from 'react-native';
+import { Text as RNText, TextProps as RNTextProps, StyleSheet, useWindowDimensions, type TextStyle } from 'react-native';
 import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import { resolveFontFamily } from './logic/fontWeight';
+import { cappedSpText } from './logic/cappedType';
 
 import { type, TypeVariant } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
@@ -38,11 +39,13 @@ export function Text({
   style,
   numberOfLines,
   maxFontSizeMultiplier,
+  allowFontScaling: callerAllowFontScaling,
   animatedStyle,
   children,
   ...rest
 }: TextProps) {
   const { colors } = useTheme();
+  const { fontScale } = useWindowDimensions();
   const typeStyle = type[variant];
 
   let resolvedColor: string;
@@ -68,7 +71,15 @@ export function Text({
 
   // A caller's fontWeight picks the matching Archivo face (iOS ignores fontWeight on a
   // single-weight family: logic/fontWeight.ts); the weight itself is then cleared.
-  const callerWeight = (StyleSheet.flatten(style) as TextStyle | undefined)?.fontWeight;
+  const flatStyle = StyleSheet.flatten(style) as TextStyle | undefined;
+  const callerWeight = flatStyle?.fontWeight;
+  // P2 (2026-10-19): once the cap is ENGAGED (fontScale > cap) it is applied as an explicit size
+  // (cappedType.ts), not left to `maxFontSizeMultiplier`: iOS can lay a capped Text out in an
+  // UNCAPPED twin's box (same string, same face, drawn uncapped on a screen that is still
+  // mounted behind this one). The size it replaces is the caller's own fontSize/lineHeight when
+  // the style overrides them, else the variant's. A caller that turned font scaling off has no
+  // cap to apply.
+  const capped = cappedSpText(typeStyle, flatStyle, callerAllowFontScaling, fontScale, resolvedMaxFontSizeMultiplier);
   const fontFamily = resolveFontFamily(typeStyle.fontFamily, callerWeight);
   const baseStyle = [
     styles.base,
@@ -82,6 +93,7 @@ export function Text({
     },
     typeStyle.tabularNums ? styles.tabularNums : null,
     style,
+    capped.style,
     callerWeight !== undefined && fontFamily !== typeStyle.fontFamily ? styles.weightInFace : null,
   ];
 
@@ -90,7 +102,8 @@ export function Text({
       <Animated.Text
         style={[baseStyle, animatedStyle]}
         numberOfLines={resolvedNumberOfLines}
-        maxFontSizeMultiplier={resolvedMaxFontSizeMultiplier}
+        allowFontScaling={capped.allowFontScaling}
+        maxFontSizeMultiplier={capped.maxFontSizeMultiplier}
         {...rest}
       >
         {content}
@@ -101,7 +114,8 @@ export function Text({
     <RNText
       style={baseStyle}
       numberOfLines={resolvedNumberOfLines}
-      maxFontSizeMultiplier={resolvedMaxFontSizeMultiplier}
+      allowFontScaling={capped.allowFontScaling}
+      maxFontSizeMultiplier={capped.maxFontSizeMultiplier}
       {...rest}
     >
       {content}

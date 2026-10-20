@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, Text as RNText, View } from 'react-native';
+import { StyleSheet, Text as RNText, useWindowDimensions, View } from 'react-native';
 
 import { radius, space, type } from '@/constants/tokens';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { phaseChipStyle, phaseChipText, phaseChipUppercase, type LeaguePhase } from '@/components/sp/logic/phaseChip';
 import { chipLook } from '@/components/sp/logic/gameNight';
+import { cappedTextProps } from '@/components/sp/logic/cappedType';
 
 // Stockpile — <PhaseChip>, the §9C "Chip" (Game Night, 2026-10-12; first built §9A).
 // SOURCE OF TRUTH: §3's "one league-lifecycle model" table and §9's
@@ -44,6 +45,8 @@ export function PhaseChip({ phase, label, onPageBackground = false }: PhaseChipP
   const { colors } = useTheme();
   const meta = { label: phaseChipText(phase, label), style: phaseChipStyle(phase) };
   const tagStyle = type.tag;
+  const { fontScale } = useWindowDimensions();
+  const capped = cappedTextProps(tagStyle, fontScale, tagStyle.maxScale);
 
   // Game Night (§9C "Chip"): live = `accentTint` + `liveText` with the dot drawn; FINAL (and
   // every other phase) = `inset` + `text`. On the page background the inset chips take the
@@ -63,11 +66,14 @@ export function PhaseChip({ phase, label, onPageBackground = false }: PhaseChipP
         // The tag's own ceiling (type.tag.maxScale): the raw RNText doesn't
         // get it from <Text>, and uncapped the chip outgrew its fixed dot
         // and the header it sits in at Accessibility XL (3b-1 capture).
-        maxFontSizeMultiplier={tagStyle.maxScale}
+        // Past that ceiling the tag is an explicit size (cappedType.ts): a capped Text can take an
+        // uncapped twin's box (P2, 2026-10-19).
+        allowFontScaling={capped.allowFontScaling}
+        maxFontSizeMultiplier={capped.maxFontSizeMultiplier}
         style={{
           fontFamily: tagStyle.fontFamily,
-          fontSize: tagStyle.fontSize,
-          lineHeight: tagStyle.lineHeight,
+          fontSize: capped.style?.fontSize ?? tagStyle.fontSize,
+          lineHeight: capped.style?.lineHeight ?? tagStyle.lineHeight,
           letterSpacing: tagStyle.letterSpacing,
           color: textColor,
         }}

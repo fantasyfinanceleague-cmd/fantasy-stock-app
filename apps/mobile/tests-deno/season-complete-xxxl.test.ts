@@ -25,7 +25,7 @@ Deno.test('the hero line ("Champion", "2nd place") is the card\'s tag: it takes 
   const card = src('components/home/SeasonCompleteCard.tsx');
   assert(card.includes('export const HERO_MAX_SCALE = typeScale.tag.maxScale;'), 'the hero cap IS the tag token\'s maxScale (the one PhaseChip uses)');
   assertEquals(TYPE.tag.maxScale, 1.4, 'the chips\' ceiling');
-  assert(src('components/sp/PhaseChip.tsx').includes('maxFontSizeMultiplier={tagStyle.maxScale}'), 'and the chips really use that token');
+  assert(src('components/sp/PhaseChip.tsx').includes('cappedTextProps(tagStyle, fontScale, tagStyle.maxScale)'), 'and the chips really use that token (through the sp capped-size path)');
   const heroes = card.match(/<Text variant="score\.lg"[^>]*>/g) ?? [];
   assertEquals(heroes.length, 2, 'both hero lines (a participant\'s place, a non-participant\'s champion)');
   for (const h of heroes) {
