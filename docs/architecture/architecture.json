@@ -2,50 +2,21 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "9f451af3edb5638841e4e158185af8e6c03aabab",
-    "commitShort": "9f451af3",
+    "commit": "51009dbbe6790923a0402408e948ed8b0bb85c43",
+    "commitShort": "51009dbb",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/hygiene-pre-1.3",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "apps/mobile/lib/notifications.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/lib/pushTokenStore.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/package-lock.json"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/package.json"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/push-token-store.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
-      },
-      {
-        "code": "??",
-        "path": "apps/mobile/tests-deno/supabase-client-pin.test.ts"
-      }
-    ],
-    "timestamp": "2026-10-21T16:57:07Z",
-    "sourceHash": "sha256:af1982a987da1eb30cbba582af5f7e1b7f8d86a1474356ac762eb0a7b1548e9a",
+    "branch": "feat/account-deletion-db",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-21T18:24:32Z",
+    "sourceHash": "sha256:171f33cbac5a594a7fd5167277f6b25674711940dc60206a651d35c4f2888754",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 138.7,
+    "ageHours": 140.2,
     "ageDays": 5.8,
     "staleAfterDays": 14,
     "stale": false,
@@ -1647,6 +1618,68 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:111"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._account_deletion_apple_rank",
+      "label": "_account_deletion_apple_rank()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 111
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:126"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._account_deletion_settle_apple",
+      "label": "_account_deletion_settle_apple()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 126
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public, pg_temp",
@@ -2088,6 +2121,37 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000004_leave_before_draft_shared.sql:42"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._leave_league_before_draft",
+      "label": "_leave_league_before_draft()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
+        "line": 42
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public, pg_temp",
@@ -2165,6 +2229,316 @@
       "source": {
         "path": "supabase/migrations/20261115000003_run_it_back_rpcs.sql",
         "line": 35
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000006_take_over_team.sql:312"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg._takeover_check",
+      "label": "_takeover_check()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 312
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:296"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_apple_revoked",
+      "label": "account_deletion_apple_revoked()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 296
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:274"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_apple_token",
+      "label": "account_deletion_apple_token()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 274
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:310"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_apple_unrevoked",
+      "label": "account_deletion_apple_unrevoked()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 310
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:192"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_cancel",
+      "label": "account_deletion_cancel()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 192
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:325"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_fail",
+      "label": "account_deletion_fail()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 325
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:342"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_mark_done",
+      "label": "account_deletion_mark_done()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 342
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:154"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_open",
+      "label": "account_deletion_open()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 154
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:215"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_set_apple",
+      "label": "account_deletion_set_apple()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 215
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql:246"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.account_deletion_stash_apple_token",
+      "label": "account_deletion_stash_apple_token()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 246
       }
     },
     {
@@ -2553,6 +2927,68 @@
       "source": {
         "path": "supabase/migrations/20261107000002_confirm_league_roster_rpc.sql",
         "line": 42
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000006_take_over_team.sql:214"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.create_takeover_invite",
+      "label": "create_takeover_invite()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 214
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000001_deleted_seat_and_label.sql:72"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.deleted_manager_label",
+      "label": "deleted_manager_label()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "line": 72
       }
     },
     {
@@ -3095,10 +3531,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261013000000_draft_order_modes.sql:431"
+          "supabase/migrations/20261013000000_draft_order_modes.sql:431",
+          "supabase/migrations/20261125000006_take_over_team.sql:147"
         ],
-        "latestDefinition": "supabase/migrations/20261013000000_draft_order_modes.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -3108,8 +3545,8 @@
       "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261013000000_draft_order_modes.sql",
-        "line": 431
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 147
       }
     },
     {
@@ -4475,10 +4912,11 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261118000000_get_visible_profiles.sql:53",
-          "supabase/migrations/20261119000000_frozen_leaver_names.sql:189"
+          "supabase/migrations/20261119000000_frozen_leaver_names.sql:189",
+          "supabase/migrations/20261125000001_deleted_seat_and_label.sql:184"
         ],
-        "latestDefinition": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "redefinitions": 2
+        "latestDefinition": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "redefinitions": 3
       },
       "drift": [],
       "annotation": null,
@@ -4488,8 +4926,8 @@
       "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "line": 189
+        "path": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "line": 184
       }
     },
     {
@@ -4538,6 +4976,68 @@
       "source": {
         "path": "supabase/migrations/20261005000001_signup_username_trigger.sql",
         "line": 46
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000007_heal_account_deletions.sql:67"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000007_heal_account_deletions.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.heal_account_deletions",
+      "label": "heal_account_deletions()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000007_heal_account_deletions.sql",
+        "line": 67
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000007_heal_account_deletions.sql:187"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000007_heal_account_deletions.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.heal_account_deletions_due",
+      "label": "heal_account_deletions_due()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000007_heal_account_deletions.sql",
+        "line": 187
       }
     },
     {
@@ -4612,10 +5112,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261124000000_invite_preview.sql:112"
+          "supabase/migrations/20261124000000_invite_preview.sql:112",
+          "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:149"
         ],
-        "latestDefinition": "supabase/migrations/20261124000000_invite_preview.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -4625,8 +5126,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261124000000_invite_preview.sql",
-        "line": 112
+        "path": "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql",
+        "line": 149
       }
     },
     {
@@ -4814,10 +5315,11 @@
           "supabase/migrations/20260716000000_preview_join_league_infra.sql:55",
           "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:33",
           "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:31",
-          "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:68"
+          "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:68",
+          "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:38"
         ],
-        "latestDefinition": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql",
-        "redefinitions": 4
+        "latestDefinition": "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql",
+        "redefinitions": 5
       },
       "drift": [],
       "annotation": "EXECUTE is service_role only, which is the correct shape: the client never calls it, the join-league edge function does, and that function passes the JWT-verified user id rather than anything from the request body. An earlier version was authenticated-callable with a forgeable p_user_id.",
@@ -4827,8 +5329,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql",
-        "line": 68
+        "path": "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql",
+        "line": 38
       }
     },
     {
@@ -4855,10 +5357,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261119000000_frozen_leaver_names.sql:94"
+          "supabase/migrations/20261119000000_frozen_leaver_names.sql:94",
+          "supabase/migrations/20261125000001_deleted_seat_and_label.sql:89"
         ],
-        "latestDefinition": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -4868,8 +5371,8 @@
       "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "line": 94
+        "path": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "line": 89
       }
     },
     {
@@ -4937,10 +5440,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261119000000_frozen_leaver_names.sql:153"
+          "supabase/migrations/20261119000000_frozen_leaver_names.sql:153",
+          "supabase/migrations/20261125000001_deleted_seat_and_label.sql:138"
         ],
-        "latestDefinition": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -4950,8 +5454,8 @@
       "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261119000000_frozen_leaver_names.sql",
-        "line": 153
+        "path": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
+        "line": 138
       }
     },
     {
@@ -5050,10 +5554,11 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261107000001_leave_league_rpc.sql:75",
-          "supabase/migrations/20261110000001_leave_league_transfer_first.sql:45"
+          "supabase/migrations/20261110000001_leave_league_transfer_first.sql:45",
+          "supabase/migrations/20261125000004_leave_before_draft_shared.sql:136"
         ],
-        "latestDefinition": "supabase/migrations/20261110000001_leave_league_transfer_first.sql",
-        "redefinitions": 2
+        "latestDefinition": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
+        "redefinitions": 3
       },
       "drift": [],
       "annotation": null,
@@ -5063,8 +5568,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261110000001_leave_league_transfer_first.sql",
-        "line": 45
+        "path": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
+        "line": 136
       }
     },
     {
@@ -5725,10 +6230,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261115000003_run_it_back_rpcs.sql:91"
+          "supabase/migrations/20261115000003_run_it_back_rpcs.sql:91",
+          "supabase/migrations/20261125000002_deleted_seat_guards.sql:119"
         ],
-        "latestDefinition": "supabase/migrations/20261115000003_run_it_back_rpcs.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000002_deleted_seat_guards.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -5738,8 +6244,8 @@
       "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261115000003_run_it_back_rpcs.sql",
-        "line": 91
+        "path": "supabase/migrations/20261125000002_deleted_seat_guards.sql",
+        "line": 119
       }
     },
     {
@@ -5896,6 +6402,37 @@
       "source": {
         "path": "supabase/migrations/20261108000001_schedule_snapshot_retry_timeout.sql",
         "line": 21
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000005_scrub_deleted_manager.sql:87"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000005_scrub_deleted_manager.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.scrub_deleted_manager",
+      "label": "scrub_deleted_manager()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000005_scrub_deleted_manager.sql",
+        "line": 87
       }
     },
     {
@@ -6335,6 +6872,99 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000006_take_over_team.sql:458"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.take_over_team",
+      "label": "take_over_team()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 458
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000006_take_over_team.sql:300"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.takeover_guess_try_lock",
+      "label": "takeover_guess_try_lock()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 300
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000006_take_over_team.sql:424"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.takeover_preview",
+      "label": "takeover_preview()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 424
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "securityDefiner": true,
         "searchPath": "public, pg_temp",
@@ -6364,10 +6994,11 @@
       "declared": {
         "definedIn": [
           "supabase/migrations/20261110000000_transfer_commissioner.sql:117",
-          "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:51"
+          "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:51",
+          "supabase/migrations/20261125000002_deleted_seat_guards.sql:48"
         ],
-        "latestDefinition": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
-        "redefinitions": 2
+        "latestDefinition": "supabase/migrations/20261125000002_deleted_seat_guards.sql",
+        "redefinitions": 3
       },
       "drift": [],
       "annotation": null,
@@ -6377,8 +7008,8 @@
       "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql",
-        "line": 51
+        "path": "supabase/migrations/20261125000002_deleted_seat_guards.sql",
+        "line": 48
       }
     },
     {
@@ -6668,6 +7299,28 @@
       "source": {
         "path": "supabase/migrations/20251210100000_create_user_profiles.sql",
         "line": 34
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261125000003_account_deletions_ledger.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.account_deletions",
+      "label": "account_deletions",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
+        "line": 84
       }
     },
     {
@@ -7454,7 +8107,8 @@
       "declared": {
         "touchedBy": [
           "supabase/migrations/20250818225829_create_leagues.sql",
-          "supabase/migrations/20260712000003_rls_b1_03_league_invites.sql"
+          "supabase/migrations/20260712000003_rls_b1_03_league_invites.sql",
+          "supabase/migrations/20261125000006_take_over_team.sql"
         ],
         "rlsEnabled": true
       },
@@ -7504,7 +8158,8 @@
           "supabase/migrations/20250818225829_create_leagues.sql",
           "supabase/migrations/20260712000002_rls_b1_02_league_members.sql",
           "supabase/migrations/20261107000000_leave_league_schema.sql",
-          "supabase/migrations/20261119000000_frozen_leaver_names.sql"
+          "supabase/migrations/20261119000000_frozen_leaver_names.sql",
+          "supabase/migrations/20261125000001_deleted_seat_and_label.sql"
         ],
         "rlsEnabled": true
       },
@@ -7554,7 +8209,8 @@
           "supabase/migrations/20261107000000_leave_league_schema.sql",
           "supabase/migrations/20261110000000_transfer_commissioner.sql",
           "supabase/migrations/20261111000000_draft_auto_start.sql",
-          "supabase/migrations/20261115000001_run_it_back_notifications.sql"
+          "supabase/migrations/20261115000001_run_it_back_notifications.sql",
+          "supabase/migrations/20261125000006_take_over_team.sql"
         ],
         "rlsEnabled": true
       },
@@ -8240,6 +8896,28 @@
     {
       "layer": "db",
       "facts": {},
+      "db": null,
+      "declared": {
+        "touchedBy": [
+          "supabase/migrations/20261125000006_take_over_team.sql"
+        ],
+        "rlsEnabled": true
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": false,
+      "id": "tbl.takeover_guess_limits",
+      "label": "takeover_guess_limits",
+      "sublabel": "not in snapshot",
+      "kind": "table",
+      "source": {
+        "path": "supabase/migrations/20261125000006_take_over_team.sql",
+        "line": 289
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
       "db": {
         "rlsEnabled": true,
         "rlsForced": false,
@@ -8262,7 +8940,8 @@
           "supabase/migrations/20251210000000_add_alpaca_order_id_to_trades.sql",
           "supabase/migrations/20260810000000_widen_draft_trade_quantity_numeric.sql",
           "supabase/migrations/20261006000000_trades_funded_by_trade_id.sql",
-          "supabase/migrations/20261103000000_trades_slot_id.sql"
+          "supabase/migrations/20261103000000_trades_slot_id.sql",
+          "supabase/migrations/20261125000000_trades_user_fk_drop.sql"
         ],
         "rlsEnabled": true
       },
@@ -11514,6 +12193,32 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg._account_deletion_settle_apple->tbl.account_deletions",
+      "from": "pg._account_deletion_settle_apple",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:131"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._account_deletion_settle_apple->tbl.account_deletions#update",
+      "from": "pg._account_deletion_settle_apple",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:144"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg._draft_order_finalize->tbl.league_draft_order_meta",
       "from": "pg._draft_order_finalize",
       "to": "tbl.league_draft_order_meta",
@@ -11856,6 +12561,99 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_members",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:62",
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:76",
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:80"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_members#delete",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:80"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_notifications#insert",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:109"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_renewal_responses",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_renewal_responses",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_renewal_responses (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:70"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_roster_reconfirm",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_roster_reconfirm",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_roster_reconfirm (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:88"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.league_roster_reconfirm#insert",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.league_roster_reconfirm",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_roster_reconfirm (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:96"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._leave_league_before_draft->tbl.leagues",
+      "from": "pg._leave_league_before_draft",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:58"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg._renewal_counts->tbl.league_members",
       "from": "pg._renewal_counts",
       "to": "tbl.league_members",
@@ -11906,6 +12704,300 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.account_deletions",
+      "from": "pg._takeover_check",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:380"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.league_invites",
+      "from": "pg._takeover_check",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:354",
+        "supabase/migrations/20261125000006_take_over_team.sql:357",
+        "supabase/migrations/20261125000006_take_over_team.sql:385"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.league_members",
+      "from": "pg._takeover_check",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:392",
+        "supabase/migrations/20261125000006_take_over_team.sql:395",
+        "supabase/migrations/20261125000006_take_over_team.sql:407"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.leagues",
+      "from": "pg._takeover_check",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:370",
+        "supabase/migrations/20261125000006_take_over_team.sql:372"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.takeover_guess_limits",
+      "from": "pg._takeover_check",
+      "to": "tbl.takeover_guess_limits",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT takeover_guess_limits (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:337",
+        "supabase/migrations/20261125000006_take_over_team.sql:339",
+        "supabase/migrations/20261125000006_take_over_team.sql:341"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.takeover_guess_limits#delete",
+      "from": "pg._takeover_check",
+      "to": "tbl.takeover_guess_limits",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE takeover_guess_limits (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:337"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg._takeover_check->tbl.takeover_guess_limits#insert",
+      "from": "pg._takeover_check",
+      "to": "tbl.takeover_guess_limits",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT takeover_guess_limits (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:361"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_apple_token->tbl.account_deletions",
+      "from": "pg.account_deletion_apple_token",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:282"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_cancel->tbl.account_deletions",
+      "from": "pg.account_deletion_cancel",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:201"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_cancel->tbl.account_deletions#delete",
+      "from": "pg.account_deletion_cancel",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:201"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_fail->tbl.account_deletions#update",
+      "from": "pg.account_deletion_fail",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:331"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_mark_done->tbl.account_deletions",
+      "from": "pg.account_deletion_mark_done",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:350"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_mark_done->tbl.account_deletions#update",
+      "from": "pg.account_deletion_mark_done",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:373"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_mark_done->tbl.league_members",
+      "from": "pg.account_deletion_mark_done",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:368"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_mark_done->tbl.user_profiles",
+      "from": "pg.account_deletion_mark_done",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:370"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_open->tbl.account_deletions",
+      "from": "pg.account_deletion_open",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:162",
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:172"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_open->tbl.account_deletions#insert",
+      "from": "pg.account_deletion_open",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:169"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_open->tbl.account_deletions#update",
+      "from": "pg.account_deletion_open",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:176"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_set_apple->tbl.account_deletions",
+      "from": "pg.account_deletion_set_apple",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:223"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_set_apple->tbl.account_deletions#update",
+      "from": "pg.account_deletion_set_apple",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:237"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_stash_apple_token->tbl.account_deletions",
+      "from": "pg.account_deletion_stash_apple_token",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:255"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.account_deletion_stash_apple_token->tbl.account_deletions#update",
+      "from": "pg.account_deletion_stash_apple_token",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000003_account_deletions_ledger.sql:265"
       ]
     },
     {
@@ -12309,6 +13401,71 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.create_takeover_invite->tbl.league_invites",
+      "from": "pg.create_takeover_invite",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:249"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.create_takeover_invite->tbl.league_invites#insert",
+      "from": "pg.create_takeover_invite",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:260"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.create_takeover_invite->tbl.league_invites#update",
+      "from": "pg.create_takeover_invite",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:246"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.create_takeover_invite->tbl.league_members",
+      "from": "pg.create_takeover_invite",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:237"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.create_takeover_invite->tbl.leagues",
+      "from": "pg.create_takeover_invite",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:229"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.draft_feasibility_pool->tbl.category_rules",
       "from": "pg.draft_feasibility_pool",
       "to": "tbl.category_rules",
@@ -12668,7 +13825,8 @@
       "payload": "SELECT league_draft_order (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261013000000_draft_order_modes.sql:462"
+        "supabase/migrations/20261013000000_draft_order_modes.sql:462",
+        "supabase/migrations/20261125000006_take_over_team.sql:191"
       ]
     },
     {
@@ -12681,7 +13839,21 @@
       "payload": "SELECT league_draft_order_meta (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261013000000_draft_order_modes.sql:437"
+        "supabase/migrations/20261013000000_draft_order_modes.sql:437",
+        "supabase/migrations/20261125000006_take_over_team.sql:153"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.enforce_league_draft_order_rows->tbl.league_members",
+      "from": "pg.enforce_league_draft_order_rows",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:168"
       ]
     },
     {
@@ -12694,7 +13866,8 @@
       "payload": "SELECT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261013000000_draft_order_modes.sql:447"
+        "supabase/migrations/20261013000000_draft_order_modes.sql:447",
+        "supabase/migrations/20261125000006_take_over_team.sql:176"
       ]
     },
     {
@@ -13605,7 +14778,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261118000000_get_visible_profiles.sql:99",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:235"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:235",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:230"
       ]
     },
     {
@@ -13623,7 +14797,12 @@
         "supabase/migrations/20261119000000_frozen_leaver_names.sql:213",
         "supabase/migrations/20261119000000_frozen_leaver_names.sql:223",
         "supabase/migrations/20261119000000_frozen_leaver_names.sql:247",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:252"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:252",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:208",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:218",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:242",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:247",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:257"
       ]
     },
     {
@@ -13637,7 +14816,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261118000000_get_visible_profiles.sql:90",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:226"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:226",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:221"
       ]
     },
     {
@@ -13653,7 +14833,9 @@
         "supabase/migrations/20261118000000_get_visible_profiles.sql:93",
         "supabase/migrations/20261118000000_get_visible_profiles.sql:96",
         "supabase/migrations/20261119000000_frozen_leaver_names.sql:229",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:232"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:232",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:224",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:227"
       ]
     },
     {
@@ -13667,7 +14849,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261118000000_get_visible_profiles.sql:102",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:238"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:238",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:233"
       ]
     },
     {
@@ -13681,7 +14864,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261118000000_get_visible_profiles.sql:107",
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:260"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:260",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:266"
       ]
     },
     {
@@ -13701,6 +14885,64 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.heal_account_deletions_due->tbl.account_deletions",
+      "from": "pg.heal_account_deletions_due",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:190"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.heal_account_deletions->tbl.account_deletions",
+      "from": "pg.heal_account_deletions",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:111",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:133",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:152",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:155",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:160",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:87"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.heal_account_deletions->tbl.account_deletions#delete",
+      "from": "pg.heal_account_deletions",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:160"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.heal_account_deletions->tbl.account_deletions#update",
+      "from": "pg.heal_account_deletions",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:124",
+        "supabase/migrations/20261125000007_heal_account_deletions.sql:99"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.invite_preview_lookup->tbl.invite_preview_limits",
       "from": "pg.invite_preview_lookup",
       "to": "tbl.invite_preview_limits",
@@ -13710,7 +14952,10 @@
       "callSites": [
         "supabase/migrations/20261124000000_invite_preview.sql:145",
         "supabase/migrations/20261124000000_invite_preview.sql:149",
-        "supabase/migrations/20261124000000_invite_preview.sql:151"
+        "supabase/migrations/20261124000000_invite_preview.sql:151",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:182",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:186",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:188"
       ]
     },
     {
@@ -13723,7 +14968,8 @@
       "payload": "DELETE invite_preview_limits (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261124000000_invite_preview.sql:145"
+        "supabase/migrations/20261124000000_invite_preview.sql:145",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:182"
       ]
     },
     {
@@ -13738,7 +14984,10 @@
       "callSites": [
         "supabase/migrations/20261124000000_invite_preview.sql:156",
         "supabase/migrations/20261124000000_invite_preview.sql:164",
-        "supabase/migrations/20261124000000_invite_preview.sql:188"
+        "supabase/migrations/20261124000000_invite_preview.sql:188",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:193",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:201",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:226"
       ]
     },
     {
@@ -13751,7 +15000,8 @@
       "payload": "SELECT league_invites (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261124000000_invite_preview.sql:178"
+        "supabase/migrations/20261124000000_invite_preview.sql:178",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:215"
       ]
     },
     {
@@ -13764,7 +15014,8 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261124000000_invite_preview.sql:208"
+        "supabase/migrations/20261124000000_invite_preview.sql:208",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:246"
       ]
     },
     {
@@ -13778,7 +15029,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261124000000_invite_preview.sql:175",
-        "supabase/migrations/20261124000000_invite_preview.sql:181"
+        "supabase/migrations/20261124000000_invite_preview.sql:181",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:212",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:219"
       ]
     },
     {
@@ -13791,7 +15044,8 @@
       "payload": "SELECT user_profiles (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261124000000_invite_preview.sql:198"
+        "supabase/migrations/20261124000000_invite_preview.sql:198",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:236"
       ]
     },
     {
@@ -13833,7 +15087,8 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:66",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:44",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:42",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:79"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:79",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:49"
       ]
     },
     {
@@ -13849,7 +15104,8 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:91",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:132"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:132",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:103"
       ]
     },
     {
@@ -13869,7 +15125,9 @@
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:67",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:82",
         "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:104",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:123"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:123",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:75",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:94"
       ]
     },
     {
@@ -13885,7 +15143,8 @@
         "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
         "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89",
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:87",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:128"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:128",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:99"
       ]
     },
     {
@@ -13899,7 +15158,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:95",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:136"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:136",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:107"
       ]
     },
     {
@@ -13913,7 +15173,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:95",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:136"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:136",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:107"
       ]
     },
     {
@@ -13937,7 +15198,10 @@
         "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:55",
         "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:77",
         "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:83",
-        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:92"
+        "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:92",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:47",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:54",
+        "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:63"
       ]
     },
     {
@@ -13950,7 +15214,8 @@
       "payload": "SELECT user_profiles (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:109"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:109",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:111"
       ]
     },
     {
@@ -13963,7 +15228,9 @@
       "payload": "SELECT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:161"
+        "supabase/migrations/20261119000000_frozen_leaver_names.sql:161",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:149",
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:155"
       ]
     },
     {
@@ -14042,7 +15309,8 @@
         "supabase/migrations/20261107000001_leave_league_rpc.sql:171",
         "supabase/migrations/20261110000001_leave_league_transfer_first.sql:109",
         "supabase/migrations/20261110000001_leave_league_transfer_first.sql:113",
-        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:68"
+        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:68",
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:152"
       ]
     },
     {
@@ -14071,7 +15339,8 @@
       "callSites": [
         "supabase/migrations/20261107000001_leave_league_rpc.sql:110",
         "supabase/migrations/20261107000001_leave_league_rpc.sql:164",
-        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:95"
+        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:95",
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:179"
       ]
     },
     {
@@ -14141,7 +15410,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261107000001_leave_league_rpc.sql:97",
-        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:65"
+        "supabase/migrations/20261110000001_leave_league_transfer_first.sql:65",
+        "supabase/migrations/20261125000004_leave_before_draft_shared.sql:149"
       ]
     },
     {
@@ -14782,7 +16052,10 @@
       "callSites": [
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:160",
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:161",
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:162"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:162",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:188",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:189",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:190"
       ]
     },
     {
@@ -14795,7 +16068,8 @@
       "payload": "INSERT league_draft_slots (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:158"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:158",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:186"
       ]
     },
     {
@@ -14809,7 +16083,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:176",
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:181"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:181",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:206",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:212"
       ]
     },
     {
@@ -14822,7 +16098,8 @@
       "payload": "INSERT league_members (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:168"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:168",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:196"
       ]
     },
     {
@@ -14835,7 +16112,8 @@
       "payload": "INSERT league_notifications (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:190"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:190",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:222"
       ]
     },
     {
@@ -14848,7 +16126,8 @@
       "payload": "SELECT league_renewal_responses (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:195"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:195",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:227"
       ]
     },
     {
@@ -14862,7 +16141,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:170",
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:179"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:179",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:198",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:210"
       ]
     },
     {
@@ -14875,7 +16156,8 @@
       "payload": "SELECT league_seasons (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:127"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:127",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:155"
       ]
     },
     {
@@ -14889,7 +16171,9 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261115000003_run_it_back_rpcs.sql:110",
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:116"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:116",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:138",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:144"
       ]
     },
     {
@@ -14902,7 +16186,8 @@
       "payload": "INSERT leagues (inside function body)",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:138"
+        "supabase/migrations/20261115000003_run_it_back_rpcs.sql:138",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:166"
       ]
     },
     {
@@ -15046,6 +16331,282 @@
         "supabase/migrations/20260618000001_migrate_snapshot_week_start_cron_auth.sql:118",
         "supabase/migrations/20260727000000_fix_schedule_snapshot_retry_cron_expression.sql:135",
         "supabase/migrations/20261108000001_schedule_snapshot_retry_timeout.sql:89"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.account_deletions",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:111",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:253"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.account_deletions#update",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.account_deletions",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE account_deletions (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:250"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.draft_queue",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.draft_queue",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT draft_queue (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:212"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.draft_queue#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.draft_queue",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE draft_queue (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:212"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_invites",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:218"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_invites#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:218"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_members",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:128",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:162",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:216",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:231",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:241"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_members#update",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:141",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:143",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:177"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_notifications",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:213"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_notifications#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:213"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_notifications#insert",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:145"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_renewal_responses",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_renewal_responses",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_renewal_responses (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:214"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.league_renewal_responses#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.league_renewal_responses",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE league_renewal_responses (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:214"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.leagues",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:118",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:122",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:151",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:155",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:166",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:236",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:238",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:239"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.leagues#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:155"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.leagues#update",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:140"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.push_tokens",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.push_tokens",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT push_tokens (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:211",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:230"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.push_tokens#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.push_tokens",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE push_tokens (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:211"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.user_profiles",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:210",
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:229"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.scrub_deleted_manager->tbl.user_profiles#delete",
+      "from": "pg.scrub_deleted_manager",
+      "to": "tbl.user_profiles",
+      "protocol": "plpgsql-delete",
+      "payload": "DELETE user_profiles (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000005_scrub_deleted_manager.sql:210"
       ]
     },
     {
@@ -15680,6 +17241,253 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.take_over_team->tbl.drafts",
+      "from": "pg.take_over_team",
+      "to": "tbl.drafts",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT drafts (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:532"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.drafts#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.drafts",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE drafts (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:498"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_draft_order",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:526"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_draft_order#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_draft_order",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_draft_order (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:480"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_invites#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_invites",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_invites (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:518"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_members",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:525"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_members#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:483"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_notifications#insert",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_notifications",
+      "protocol": "plpgsql-insert",
+      "payload": "INSERT league_notifications (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:520"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_seasons",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:534"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_seasons#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_seasons",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_seasons (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:502"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_standings",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:530"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.league_standings#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.league_standings",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE league_standings (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:494"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.leagues",
+      "from": "pg.take_over_team",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:536"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.matchups",
+      "from": "pg.take_over_team",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:527"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.matchups#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.matchups",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE matchups (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:487"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.trades",
+      "from": "pg.take_over_team",
+      "to": "tbl.trades",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT trades (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:533"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.trades#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.trades",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE trades (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:500"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.week_snapshots",
+      "from": "pg.take_over_team",
+      "to": "tbl.week_snapshots",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT week_snapshots (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:531"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.take_over_team->tbl.week_snapshots#update",
+      "from": "pg.take_over_team",
+      "to": "tbl.week_snapshots",
+      "protocol": "plpgsql-update",
+      "payload": "UPDATE week_snapshots (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000006_take_over_team.sql:496"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.transfer_commissioner->tbl.league_members",
       "from": "pg.transfer_commissioner",
       "to": "tbl.league_members",
@@ -15688,7 +17496,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:141",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:75"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:75",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:72"
       ]
     },
     {
@@ -15704,7 +17513,9 @@
         "supabase/migrations/20261110000000_transfer_commissioner.sql:151",
         "supabase/migrations/20261110000000_transfer_commissioner.sql:153",
         "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:86",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:88"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:88",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:84",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:86"
       ]
     },
     {
@@ -15718,7 +17529,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:156",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:91"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:91",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:89"
       ]
     },
     {
@@ -15732,7 +17544,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:163",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:98"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:98",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:96"
       ]
     },
     {
@@ -15746,7 +17559,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:128",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:62"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:62",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:59"
       ]
     },
     {
@@ -15760,7 +17574,8 @@
       "derivedFrom": "sql-body",
       "callSites": [
         "supabase/migrations/20261110000000_transfer_commissioner.sql:147",
-        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:82"
+        "supabase/migrations/20261120000000_transfer_commissioner_refuses_hidden.sql:82",
+        "supabase/migrations/20261125000002_deleted_seat_guards.sql:80"
       ]
     },
     {
@@ -16010,7 +17825,7 @@
       "payload": "trigger on league_members",
       "derivedFrom": "sql-body",
       "callSites": [
-        "supabase/migrations/20261119000000_frozen_leaver_names.sql:147"
+        "supabase/migrations/20261125000001_deleted_seat_and_label.sql:132"
       ]
     },
     {
@@ -18851,7 +20666,8 @@
             "supabase/migrations/20260716000000_preview_join_league_infra.sql:101",
             "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:89",
             "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:87",
-            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:128"
+            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:128",
+            "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:99"
           ]
         },
         {
@@ -18862,7 +20678,8 @@
             "supabase/migrations/20260716000000_preview_join_league_infra.sql:105",
             "supabase/migrations/20260930000000_join_league_refuse_mid_draft.sql:93",
             "supabase/migrations/20261107000005_join_clears_invite_reconfirm.sql:91",
-            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:132"
+            "supabase/migrations/20261123000000_join_refuses_once_room_opens.sql:132",
+            "supabase/migrations/20261125000008_takeover_codes_not_join_codes.sql:103"
           ]
         }
       ],
@@ -19399,6 +21216,216 @@
   ],
   "drift": [
     {
+      "node": "pg._account_deletion_apple_rank",
+      "label": "_account_deletion_apple_rank()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg._account_deletion_settle_apple",
+      "label": "_account_deletion_settle_apple()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg._leave_league_before_draft",
+      "label": "_leave_league_before_draft()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg._takeover_check",
+      "label": "_takeover_check()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_apple_revoked",
+      "label": "account_deletion_apple_revoked()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_apple_token",
+      "label": "account_deletion_apple_token()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_apple_unrevoked",
+      "label": "account_deletion_apple_unrevoked()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_cancel",
+      "label": "account_deletion_cancel()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_fail",
+      "label": "account_deletion_fail()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_mark_done",
+      "label": "account_deletion_mark_done()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_open",
+      "label": "account_deletion_open()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_set_apple",
+      "label": "account_deletion_set_apple()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.account_deletion_stash_apple_token",
+      "label": "account_deletion_stash_apple_token()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.create_takeover_invite",
+      "label": "create_takeover_invite()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.deleted_manager_label",
+      "label": "deleted_manager_label()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.heal_account_deletions",
+      "label": "heal_account_deletions()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.heal_account_deletions_due",
+      "label": "heal_account_deletions_due()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.scrub_deleted_manager",
+      "label": "scrub_deleted_manager()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.take_over_team",
+      "label": "take_over_team()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.takeover_guess_try_lock",
+      "label": "takeover_guess_try_lock()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
+      "node": "pg.takeover_preview",
+      "label": "takeover_preview()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.categories",
       "label": "categories",
       "groupKey": "authenticated-role-policies-ungated",
@@ -19715,6 +21742,25 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg._account_deletion_apple_rank",
+      "label": "_account_deletion_apple_rank()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:111",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg._account_deletion_settle_apple",
+      "label": "_account_deletion_settle_apple()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:126",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg._draft_order_finalize",
       "label": "_draft_order_finalize(p_league_id uuid)",
       "kind": "pg-function",
@@ -19828,6 +21874,22 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg._leave_league_before_draft",
+      "label": "_leave_league_before_draft()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000004_leave_before_draft_shared.sql:42",
+      "outbound": [
+        "tbl.league_members",
+        "tbl.league_members",
+        "tbl.league_notifications",
+        "tbl.league_renewal_responses",
+        "tbl.league_roster_reconfirm",
+        "tbl.league_roster_reconfirm",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg._renewal_counts",
       "label": "_renewal_counts(p_league_id uuid)",
       "kind": "pg-function",
@@ -19846,6 +21908,116 @@
       "outbound": [
         "tbl.league_invites",
         "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg._takeover_check",
+      "label": "_takeover_check()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000006_take_over_team.sql:312",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.league_invites",
+        "tbl.league_members",
+        "tbl.leagues",
+        "tbl.takeover_guess_limits",
+        "tbl.takeover_guess_limits",
+        "tbl.takeover_guess_limits"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_apple_revoked",
+      "label": "account_deletion_apple_revoked()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:296",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_apple_token",
+      "label": "account_deletion_apple_token()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:274",
+      "outbound": [
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_apple_unrevoked",
+      "label": "account_deletion_apple_unrevoked()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:310",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_cancel",
+      "label": "account_deletion_cancel()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:192",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_fail",
+      "label": "account_deletion_fail()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:325",
+      "outbound": [
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_mark_done",
+      "label": "account_deletion_mark_done()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:342",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions",
+        "tbl.league_members",
+        "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_open",
+      "label": "account_deletion_open()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:154",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions",
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_set_apple",
+      "label": "account_deletion_set_apple()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:215",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.account_deletion_stash_apple_token",
+      "label": "account_deletion_stash_apple_token()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:246",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -19870,6 +22042,28 @@
         "tbl.leagues",
         "tbl.leagues"
       ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.create_takeover_invite",
+      "label": "create_takeover_invite()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000006_take_over_team.sql:214",
+      "outbound": [
+        "tbl.league_invites",
+        "tbl.league_invites",
+        "tbl.league_invites",
+        "tbl.league_members",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.deleted_manager_label",
+      "label": "deleted_manager_label()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000001_deleted_seat_and_label.sql:72",
+      "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
@@ -19946,6 +22140,28 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.heal_account_deletions",
+      "label": "heal_account_deletions()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000007_heal_account_deletions.sql:67",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions",
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.heal_account_deletions_due",
+      "label": "heal_account_deletions_due()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000007_heal_account_deletions.sql:187",
+      "outbound": [
+        "tbl.account_deletions"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.invite_preview_ip_salt",
       "label": "invite_preview_ip_salt()",
       "kind": "pg-function",
@@ -19965,7 +22181,7 @@
       "node": "pg.league_participant_display_name",
       "label": "league_participant_display_name(p_league_id uuid, p_user_id text)",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261119000000_frozen_leaver_names.sql:153",
+      "source": "supabase/migrations/20261125000001_deleted_seat_and_label.sql:138",
       "outbound": [
         "tbl.league_members"
       ],
@@ -20046,6 +22262,35 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.scrub_deleted_manager",
+      "label": "scrub_deleted_manager()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000005_scrub_deleted_manager.sql:87",
+      "outbound": [
+        "tbl.account_deletions",
+        "tbl.account_deletions",
+        "tbl.draft_queue",
+        "tbl.draft_queue",
+        "tbl.league_invites",
+        "tbl.league_invites",
+        "tbl.league_members",
+        "tbl.league_members",
+        "tbl.league_notifications",
+        "tbl.league_notifications",
+        "tbl.league_notifications",
+        "tbl.league_renewal_responses",
+        "tbl.league_renewal_responses",
+        "tbl.leagues",
+        "tbl.leagues",
+        "tbl.leagues",
+        "tbl.push_tokens",
+        "tbl.push_tokens",
+        "tbl.user_profiles",
+        "tbl.user_profiles"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.set_draft_order",
       "label": "set_draft_order(p_league_id uuid, p_user_ids text[])",
       "kind": "pg-function",
@@ -20084,6 +22329,50 @@
       "label": "symbols_touch_updated_at()",
       "kind": "pg-function",
       "source": "supabase/migrations/20260811000007_symbols_enrichment_support.sql:42",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.take_over_team",
+      "label": "take_over_team()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000006_take_over_team.sql:458",
+      "outbound": [
+        "tbl.drafts",
+        "tbl.drafts",
+        "tbl.league_draft_order",
+        "tbl.league_draft_order",
+        "tbl.league_invites",
+        "tbl.league_members",
+        "tbl.league_members",
+        "tbl.league_notifications",
+        "tbl.league_seasons",
+        "tbl.league_seasons",
+        "tbl.league_standings",
+        "tbl.league_standings",
+        "tbl.leagues",
+        "tbl.matchups",
+        "tbl.matchups",
+        "tbl.trades",
+        "tbl.trades",
+        "tbl.week_snapshots",
+        "tbl.week_snapshots"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.takeover_guess_try_lock",
+      "label": "takeover_guess_try_lock()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000006_take_over_team.sql:300",
+      "outbound": [],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "pg.takeover_preview",
+      "label": "takeover_preview()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000006_take_over_team.sql:424",
       "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -20295,6 +22584,132 @@
   },
   "unverified": [
     {
+      "scope": "pg.deleted_manager_label",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._account_deletion_apple_rank",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._account_deletion_settle_apple",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_open",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_cancel",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_set_apple",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_stash_apple_token",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_apple_token",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_apple_revoked",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_apple_unrevoked",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_fail",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.account_deletion_mark_done",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._leave_league_before_draft",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.scrub_deleted_manager",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.create_takeover_invite",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.takeover_guess_try_lock",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg._takeover_check",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.takeover_preview",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.take_over_team",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.heal_account_deletions",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
+      "scope": "pg.heal_account_deletions_due",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -20302,6 +22717,18 @@
     },
     {
       "scope": "tbl.notification_log",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.account_deletions",
+      "claim": "table exists in prod",
+      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot."
+    },
+    {
+      "scope": "tbl.takeover_guess_limits",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -20363,13 +22790,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 275,
-    "edges": 657,
+    "nodes": 298,
+    "edges": 737,
     "flows": 7,
-    "drift": 30,
-    "driftHigh": 0,
-    "deadCode": 45,
-    "unverified": 11
+    "drift": 51,
+    "driftHigh": 21,
+    "deadCode": 66,
+    "unverified": 34
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -20941,7 +23368,16 @@
       "20261122000000_symbols_last_price_at.sql",
       "20261122000002_draft_note_bounded.sql",
       "20261123000000_join_refuses_once_room_opens.sql",
-      "20261124000000_invite_preview.sql"
+      "20261124000000_invite_preview.sql",
+      "20261125000000_trades_user_fk_drop.sql",
+      "20261125000001_deleted_seat_and_label.sql",
+      "20261125000002_deleted_seat_guards.sql",
+      "20261125000003_account_deletions_ledger.sql",
+      "20261125000004_leave_before_draft_shared.sql",
+      "20261125000005_scrub_deleted_manager.sql",
+      "20261125000006_take_over_team.sql",
+      "20261125000007_heal_account_deletions.sql",
+      "20261125000008_takeover_codes_not_join_codes.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
