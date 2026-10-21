@@ -65,6 +65,7 @@
   /* v3.1 roles the Game Night frames inherited from the page theme until 2026-10-14 (so a Light
      frame on a Dark board took Dark values). The app's color.ts, key for key. */
   --c-danger: #FB8371; --c-gain-tint: rgba(57, 238, 186, 0.12); --c-on-you: #FAFCFE; --c-scrim: rgba(2, 3, 12, 0.55);
+  --c-loss-fill: #C12440; /* destructive fills (Sell, Leave league, Delete my account); ink = on-you, both themes */
   --c-warn-tint: rgba(244, 191, 63, 0.1); --c-warn-line: rgba(244, 191, 63, 0.35); --c-warn-text: #FAC547;
 }
 
@@ -284,6 +285,7 @@
   --d-on-cat: oklch(99.6% 0.003 272);  /* white ink on the darker Light category fills */
   --c-on-opp: oklch(15% 0.04 272);
   --c-danger: #B7191C; --c-gain-tint: rgba(0, 108, 71, 0.1); --c-on-you: #FAFCFE; --c-scrim: rgba(14, 20, 44, 0.38);
+  --c-loss-fill: #BD1F3D;
   --c-warn-tint: #FAE7B3; --c-warn-line: #EFCC83; --c-warn-text: #784900;
 }
 /* the dark on-the-clock cell keeps its own light ink */

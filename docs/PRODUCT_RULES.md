@@ -576,6 +576,27 @@ building anything, and don't reopen a rule without him.
   auto-picks and takeover opens once the draft is complete; after deletion the sign-in
   screen says once "Your account is deleted."; the same email may sign up again as a new
   account with no history.
+  **Giorgio's board picks (2026-10-21, `#call-del-label`, `#call-del-screen`, `#call-del-find`):**
+  - **The seat's label is "Former manager"** (A), everywhere a deleted manager's name would
+    be (standings, matchups, history, Members, Home), with the default avatar (a person glyph
+    on a neutral disc, never initials of the label), in the secondary text colour.
+  - **The delete screen explains each league on its own line** (B): "Delete your account?",
+    then "This deletes your account right away.", then one line per league, verbatim:
+    "Your team stays as “Former manager”. {Earliest member} becomes the commissioner." (a
+    league you run, with other managers) / "Your team stays as “Former manager”. The
+    commissioner can hand it to a new manager." (a league you play in) / "It hasn’t drafted
+    yet, so you leave it." (before its draft) / "No other managers, so it’s deleted with your
+    account." (a league you run alone); then "Past seasons keep your results under “Former
+    manager”." Then the proof and "Delete my account".
+  - **"Find a new manager" is a pill on the seat's Members row** (B), for the commissioner
+    only. The standings row looks like every other row and opens the seat's team view (as
+    every row does), where "Find a new manager" is the commissioner's button.
+  - **The new words, approved verbatim ("Use as written"):** "Confirm it's you to continue"
+    (above the Apple / Google button; the password version keeps the plan's "Enter your
+    password to continue"); "Confirmed with Apple" / "Confirmed with Google" (after the
+    proof); the share text "Take over a team in {league}"; on a takeover link already used,
+    "Someone already took this team." with "Go to Home" (no heading); "Not now" under "Take
+    the team" (reused from the notifications ask); and the league lines above.
 - **Playoffs:** the commissioner sets any playoff team count P from 2 up to the number of
   managers (never more). The bracket is derived (weeks = ceil(log2 P); byes to the top
   seeds). Rounds are named by teams left: Final / Semifinals / Quarterfinals / Round of
