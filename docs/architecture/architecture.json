@@ -2,14 +2,14 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "51009dbbe6790923a0402408e948ed8b0bb85c43",
-    "commitShort": "51009dbb",
+    "commit": "1d60e1270d771a01f013a01e7cd62544cecd5a19",
+    "commitShort": "1d60e127",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
     "branch": "feat/account-deletion-db",
     "dirty": false,
     "dirtyPaths": [],
-    "timestamp": "2026-10-21T18:24:32Z",
-    "sourceHash": "sha256:171f33cbac5a594a7fd5167277f6b25674711940dc60206a651d35c4f2888754",
+    "timestamp": "2026-10-21T18:27:45Z",
+    "sourceHash": "sha256:1bcdc2d0c8c531e6d186f29de284fc7d621cce3d0ceabb3877ece0652e40f77b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
@@ -7155,6 +7155,37 @@
       "source": {
         "path": "supabase/migrations/20260105100000_add_week_snapshot_cron.sql",
         "line": 11
+      }
+    },
+    {
+      "layer": "db",
+      "facts": {},
+      "db": null,
+      "declared": {
+        "definedIn": [
+          "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql:41"
+        ],
+        "latestDefinition": "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql",
+        "redefinitions": 1
+      },
+      "drift": [
+        {
+          "field": "existence",
+          "declared": "created by migration",
+          "live": "ABSENT from prod snapshot",
+          "severity": "high",
+          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+        }
+      ],
+      "annotation": null,
+      "verified": false,
+      "id": "pg.unclocked_deleted_seat_turns",
+      "label": "unclocked_deleted_seat_turns()",
+      "sublabel": "not in snapshot",
+      "kind": "pg-function",
+      "source": {
+        "path": "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql",
+        "line": 41
       }
     },
     {
@@ -17581,6 +17612,32 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.pg.unclocked_deleted_seat_turns->tbl.league_members",
+      "from": "pg.unclocked_deleted_seat_turns",
+      "to": "tbl.league_members",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT league_members (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql:48"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.pg.unclocked_deleted_seat_turns->tbl.leagues",
+      "from": "pg.unclocked_deleted_seat_turns",
+      "to": "tbl.leagues",
+      "protocol": "plpgsql-select",
+      "payload": "SELECT leagues (inside function body)",
+      "derivedFrom": "sql-body",
+      "callSites": [
+        "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql:44"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.pg.unhide_league->tbl.league_members",
       "from": "pg.unhide_league",
       "to": "tbl.league_members",
@@ -21426,6 +21483,16 @@
       "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
     },
     {
+      "node": "pg.unclocked_deleted_seat_turns",
+      "label": "unclocked_deleted_seat_turns()",
+      "groupKey": "existence",
+      "field": "existence",
+      "declared": "created by migration",
+      "live": "ABSENT from prod snapshot",
+      "severity": "high",
+      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+    },
+    {
       "node": "tbl.categories",
       "label": "categories",
       "groupKey": "authenticated-role-policies-ungated",
@@ -22401,6 +22468,17 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
+      "node": "pg.unclocked_deleted_seat_turns",
+      "label": "unclocked_deleted_seat_turns()",
+      "kind": "pg-function",
+      "source": "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql:41",
+      "outbound": [
+        "tbl.league_members",
+        "tbl.leagues"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "pg.unhide_league",
       "label": "unhide_league(p_league_id uuid, p_user_id text)",
       "kind": "pg-function",
@@ -22710,6 +22788,12 @@
       "resolve": "Re-capture the snapshot, or confirm the migration was applied."
     },
     {
+      "scope": "pg.unclocked_deleted_seat_turns",
+      "claim": "function exists in prod",
+      "reason": "Present in migrations, absent from db-snapshot.json.",
+      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
+    },
+    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -22790,13 +22874,13 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 298,
-    "edges": 737,
+    "nodes": 299,
+    "edges": 739,
     "flows": 7,
-    "drift": 51,
-    "driftHigh": 21,
-    "deadCode": 66,
-    "unverified": 34
+    "drift": 52,
+    "driftHigh": 22,
+    "deadCode": 67,
+    "unverified": 35
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -23377,7 +23461,8 @@
       "20261125000005_scrub_deleted_manager.sql",
       "20261125000006_take_over_team.sql",
       "20261125000007_heal_account_deletions.sql",
-      "20261125000008_takeover_codes_not_join_codes.sql"
+      "20261125000008_takeover_codes_not_join_codes.sql",
+      "20261125000009_unclocked_deleted_seat_turns.sql"
     ],
     "config": [
       "draft-autopick-sweep=false",
