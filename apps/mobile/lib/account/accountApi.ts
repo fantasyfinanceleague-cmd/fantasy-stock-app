@@ -7,6 +7,7 @@
 import { supabase } from '../supabase';
 import { seamInvoke, seamRpc } from '../game/seamCalls';
 import { readFunctionRefusal } from '../functionRefusal';
+import { readTakeoverReply } from './takeoverReply';
 import { accountCheckFromGetUser, runDeleteFlow, type DeleteRunDeps } from './deleteRun';
 import { proveWithApple, proveWithGoogle } from '../auth/socialSignIn';
 import type { DeleteOutcome, DeleteRequestBody } from './deleteFlow';
@@ -32,7 +33,7 @@ export function deleteAccount(body: DeleteRequestBody, proofAt: number | null): 
 async function joinLeague(body: Record<string, unknown>) {
   try {
     const { data, error } = await seamInvoke('join-league', { body });
-    return readFunctionRefusal(data, error);
+    return readTakeoverReply(data, error);
   } catch {
     return { transport: true } as const;
   }

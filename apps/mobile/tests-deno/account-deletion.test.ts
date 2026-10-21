@@ -24,6 +24,7 @@ import { PROOF_MAX_AGE_MS, accountCheckFromGetUser, proofIsStale, runDelete, run
 import type { SocialProofResult } from '../lib/auth/socialOutcome.ts';
 import { canFindNewManager, membersRows } from '../lib/account/findManager.ts';
 import { leagueLine, successorOf, type DeleteLeagueInput, type LeagueMemberFact } from '../lib/account/leagueLines.ts';
+import { rateWaitOf, readTakeoverReply } from '../lib/account/takeoverReply.ts';
 import { deadLine, interpretTakeover, interpretTakeoverPreview, recordLine } from '../lib/account/takeoverView.ts';
 import { isDeletedNotice, setDeletedNotice, subscribeDeletedNotice } from '../lib/account/deletedNotice.ts';
 import { blockMessage } from '../lib/join/joinPreview.ts';
@@ -394,8 +395,8 @@ Deno.test('takeover view: the write — only {ok:true, status:"taken_over"} is a
   assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over', league: { id: 'not-a-uuid' } })), { kind: 'taken_over', leagueId: null }, 'a malformed id is never navigated to');
   assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over', league: 'x' })), { kind: 'taken_over', leagueId: null });
   // too many wrong codes: a wait, never the dead-link page, and it never reads as a takeover
-  assertEquals(interpretTakeover(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
-  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
+  assertEquals(interpretTakeover(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited', wait: 'later' });
+  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited', wait: 'later' });
   assertEquals(interpretTakeover(await refusal(200, { ok: true })).kind, 'unknown');
   assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'joined' })).kind, 'unknown');
   assertEquals(interpretTakeover(await refusal(200, { ok: false, reason: 'taken' })), { kind: 'taken' });
@@ -754,6 +755,40 @@ Deno.test('DL copy: takeover reasons — dead / taken / already in / rate limite
   // the shipped sentence, from the shipped function
   assertEquals(blockMessage('already_member', { name: 'Stock Scudetto', max: 0 }), "You're already in Stock Scudetto.");
   // BOTH rate limits read as the longer wait (never understate an hour's lockout)
-  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
-  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
+  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited', wait: 'later' });
+  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited', wait: 'later' });
+});
+
+// ── A takeover 429's two body shapes (W3) ───────────────────────────────────
+
+const http = (status: number, body: unknown, raw = false) =>
+  ({ context: new Response(raw ? String(body) : JSON.stringify(body), { status, headers: { 'content-type': raw ? 'text/html' : 'application/json' } }) });
+const MOMENT = 'Too many tries. Wait a moment, then try again.';
+
+Deno.test('429 shapes: the edge limiter {error:"rate_limited"} is a MOMENT; the SQL lockout {ok:false,reason} is LATER', async () => {
+  const edge = interpretTakeoverPreview(await readTakeoverReply(null, http(429, { error: 'rate_limited', message: 'slow down' })));
+  assertEquals(edge, { kind: 'rate_limited', wait: 'moment' });
+  const sql429 = interpretTakeoverPreview(await readTakeoverReply(null, http(429, { ok: false, reason: 'rate_limited' })));
+  assertEquals(sql429, { kind: 'rate_limited', wait: 'later' });
+  const sql200 = interpretTakeover(await readTakeoverReply({ ok: false, reason: 'rate_limited' }, null));
+  assertEquals(sql200, { kind: 'rate_limited', wait: 'later' });
+  // the write path reads the same two shapes
+  assertEquals(interpretTakeover(await readTakeoverReply(null, http(429, { error: 'rate_limited' }))), { kind: 'rate_limited', wait: 'moment' });
+});
+
+Deno.test('429 shapes: anything else on a 429 is LATER (never understate a lockout), a non-JSON 429 included', async () => {
+  for (const body of [{}, { error: 'something_else' }, { error: 'rate_limited', reason: 'rate_limited' }, { error: 'rate_limited', ok: false }, [], 'x', null]) {
+    const v = interpretTakeoverPreview(await readTakeoverReply(null, http(429, body)));
+    assertEquals(v, { kind: 'rate_limited', wait: 'later' }, JSON.stringify(body));
+  }
+  assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, http(429, '<html>slow</html>', true))), { kind: 'rate_limited', wait: 'later' });
+  assertEquals(rateWaitOf({ error: 'rate_limited' }), 'moment');
+  assertEquals(rateWaitOf(undefined), 'later');
+});
+
+Deno.test('429 shapes: only a 429 is read this way — other statuses and plain replies go through the shared reader unchanged', async () => {
+  assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, http(500, { error: 'rate_limited' }))), { kind: 'unknown' }, 'a 500 with that body is not a rate limit');
+  assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, http(400, { ok: false, reason: 'invalid_code' }))), { kind: 'dead' });
+  assertEquals(interpretTakeoverPreview(await readTakeoverReply({ ok: true, league_name: 'X', wins: 1, losses: 0, rank: 1 }, null)).kind, 'found');
+  assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, new Error('network'))), { kind: 'unknown' });
 });

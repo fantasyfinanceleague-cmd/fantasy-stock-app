@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { TakeoverLanding, type TakeoverLandingState } from '@/components/shell/TakeoverLanding';
 import { previewTakeover, takeOverTeam } from '@/lib/account/accountApi';
 import { useDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
+import type { RateWait } from '@/lib/account/takeoverReply';
 import type { TakeoverPreview } from '@/lib/account/takeoverView';
 import { useLeagueContext } from '@/lib/LeagueContext';
 import { pendingTakeover, useTakeoverSnapshot } from '@/lib/invite/pendingTakeoverStore';
@@ -18,7 +19,7 @@ export default function TakeoverScreen() {
   const label = useDeletedManagerLabel();
   const { refresh, setActiveLeagueId } = useLeagueContext();
   const [view, setView] = useState<TakeoverLandingState>({ kind: 'loading' });
-  const [takeFailed, setTakeFailed] = useState<'unreachable' | 'rate_limited' | null>(null);
+  const [takeFailed, setTakeFailed] = useState<'unreachable' | RateWait | null>(null);
   const alive = useRef(true);
   const memberLeagueId = useRef<string | null>(null);
   useEffect(() => () => { alive.current = false; }, []);
@@ -68,7 +69,7 @@ export default function TakeoverScreen() {
       return;
     }
     if (r.kind === 'unknown' || r.kind === 'rate_limited') {
-      setTakeFailed(r.kind === 'rate_limited' ? 'rate_limited' : 'unreachable');
+      setTakeFailed(r.kind === 'rate_limited' ? r.wait : 'unreachable');
       setView(view); // keep the link; the person's tap retries (no loop)
       return;
     }

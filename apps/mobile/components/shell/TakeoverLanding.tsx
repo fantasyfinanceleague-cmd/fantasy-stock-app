@@ -11,6 +11,7 @@ import { WARN_TEXT_MAX_SCALE, WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
+import type { RateWait } from '@/lib/account/takeoverReply';
 import { deadLine, recordLine, type TakeoverPreview } from '@/lib/account/takeoverView';
 import { JOIN_COPY, blockMessage } from '@/lib/join/joinPreview';
 import { ARRIVAL_COPY } from '@/lib/invite/arrivalView';
@@ -24,6 +25,11 @@ const DISC = 64;
 
 /** One sentence capped so it stays a panel at XXXL. */
 const LINK_MAX_SCALE = WARN_TEXT_MAX_SCALE;
+
+/** The edge limiter's short window is "a moment" (shipped Join line); the hour's lockout, or anything we can't tell, is "later" (NEW). */
+export function waitLine(w: RateWait): string {
+  return w === 'moment' ? JOIN_COPY.rateLimited : TRY_LATER;
+}
 
 export type TakeoverLandingState =
   | { kind: 'loading' }
@@ -43,7 +49,7 @@ export function TakeoverLanding({
   onOpen: () => void;
   onRetry: () => void;
   /** The write came back unknown: say so under the buttons (the preview's own "couldn't reach" line). */
-  takeFailed: 'unreachable' | 'rate_limited' | null;
+  takeFailed: 'unreachable' | RateWait | null;
 }) {
   const { colors } = useTheme();
 
@@ -82,7 +88,7 @@ export function TakeoverLanding({
     return (
       <AuthScaffold centerBody>
         <View style={styles.actions}>
-          <WarnPanel text={state.kind === 'rate_limited' ? TRY_LATER : JOIN_COPY.unreachable} />
+          <WarnPanel text={state.kind === 'rate_limited' ? waitLine(state.wait) : JOIN_COPY.unreachable} />
           <Link label={ARRIVAL_COPY.tryAgain} onPress={onRetry} />
           <Link label={NOT_NOW} onPress={onNotNow} muted />
         </View>
@@ -97,7 +103,7 @@ export function TakeoverLanding({
       centerBody
       footer={
         <View style={styles.actions}>
-          {takeFailed ? <WarnPanel text={takeFailed === 'rate_limited' ? TRY_LATER : JOIN_COPY.unreachable} /> : null}
+          {takeFailed ? <WarnPanel text={takeFailed === 'unreachable' ? JOIN_COPY.unreachable : waitLine(takeFailed)} /> : null}
           <Button label={TAKE_THE_TEAM} status={taking ? 'loading' : 'idle'} onPress={onTake} fullWidth />
           <Link label={NOT_NOW} onPress={onNotNow} muted disabled={taking} />
         </View>

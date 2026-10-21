@@ -7,7 +7,7 @@ import { initialDeleteState, type DeleteState } from './deleteFlow';
 import type { DeleteLeagueInput, LeagueMemberFact } from './leagueLines';
 import type { DeleteProof, ProofKind } from './proofKind';
 
-export const DELETE_FIXTURES = ['password', 'password_ready', 'apple', 'apple_done', 'google', 'google_done', 'failed', 'running', 'alert'] as const;
+export const DELETE_FIXTURES = ['password', 'password_ready', 'apple', 'apple_done', 'google', 'google_done', 'failed', 'running', 'alert', 'password_rejected', 'apple_rejected', 'google_rejected', 'limited'] as const;
 export type DeleteFixture = (typeof DELETE_FIXTURES)[number];
 
 export function parseDeleteFixture(isDev: boolean, raw: string | undefined): DeleteFixture | null {
@@ -42,6 +42,13 @@ export function fixtureState(f: DeleteFixture | null, real: ProofKind): DeleteSt
       return { ...base, proof: FIXTURE_PROOF[kind], proofAt: Date.now(), failed: true };
     case 'running':
       return { ...base, proof: FIXTURE_PROOF[kind], proofAt: Date.now(), phase: 'sending' };
+    // The proof was refused (no proof in hand: the field is empty / the provider button is offered again) or the proof limit answered.
+    case 'password_rejected':
+    case 'apple_rejected':
+    case 'google_rejected':
+      return { ...base, proofRejected: true };
+    case 'limited':
+      return { ...base, rateLimited: true };
     case 'password_ready':
     case 'apple_done':
     case 'google_done':
