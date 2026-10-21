@@ -74,6 +74,8 @@ export type DeleteOutcome =
   | { kind: 'deleted' }
   | { kind: 'bad_proof' }
   | { kind: 'apple_required' }
+  /** The account has a Google identity: a password is refused (W3 `google_proof_required`); offer Google. */
+  | { kind: 'google_required' }
   /** The Apple/Google token was over ~10 minutes old (does not count toward the proof limit): ask for a fresh one, never the generic failure. */
   | { kind: 'proof_expired' }
   /** The proof limit (429): its own line, never the generic failure. */
@@ -85,10 +87,17 @@ export type DeleteOutcome =
 /** Reads the function's answer. Only an explicit `ok: true` is deleted; a transport failure is an unknown, shown as failed. */
 export function deleteOutcome(r: FunctionRefusal): DeleteOutcome {
   if (r.transport) return { kind: 'failed' };
+  // THE LEDGER RULE (W3 security review): once delete-account has opened its ledger the deletion is COMMITTED. Nothing
+  // cancels it and the hourly heal finishes it, but a later fault still answers 500 {ok:false, reason, stage}. ANY
+  // non-null string `stage` (requested, scrubbed, done) therefore means the account is going: treat it as deleted, so the
+  // person is signed out instead of told to "try again" and left playing on an account that vanishes within the hour.
+  // Only `stage: null` (or no stage) is a real failure. Checked FIRST, before any reason.
+  if (typeof r.body.stage === 'string' && r.body.stage.length > 0) return { kind: 'deleted' };
   // ok:true AND stage 'done' (W3: ok is returned only when the deletion is fully done; apple_revoke pending/unrevoked is the server's to retry, not ours to show).
   if (r.reason === null) return r.body.ok === true && r.body.stage === 'done' ? { kind: 'deleted' } : { kind: 'failed' };
   if (r.reason === 'bad_proof') return { kind: 'bad_proof' };
   if (r.reason === 'apple_proof_required') return { kind: 'apple_required' };
+  if (r.reason === 'google_proof_required') return { kind: 'google_required' };
   if (r.reason === 'proof_expired') return { kind: 'proof_expired' };
   if (r.reason === 'rate_limited') return { kind: 'rate_limited' };
   return { kind: 'failed' };
@@ -104,6 +113,8 @@ export function applyOutcome(s: DeleteState, o: DeleteOutcome): DeleteState {
       return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: true };
     case 'apple_required':
       return { ...s, phase: 'editing', kind: 'apple', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
+    case 'google_required':
+      return { ...s, phase: 'editing', kind: 'google', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
     case 'proof_expired':
     case 'cancelled':
       // Re-ask: the proof block is back (the button's reason), with no failure line.

@@ -20,7 +20,7 @@ import { proofInHand, proofKindFor, type DeleteProof } from '../lib/account/proo
 import {
   applyOutcome, askConfirm, canAsk, confirmDelete, deleteOutcome, initialDeleteState, keepAccount, setProof, type DeleteState,
 } from '../lib/account/deleteFlow.ts';
-import { PROOF_MAX_AGE_MS, accountCheckFromGetUser, proofIsStale, runDelete, runDeleteFlow, type DeleteFlowDeps, type DeleteRunDeps } from '../lib/account/deleteRun.ts';
+import { PROOF_MAX_AGE_MS, accountCheckFromGetUser, proofIsStale, readDeleteReply, runDelete, runDeleteFlow, type DeleteFlowDeps, type DeleteRunDeps } from '../lib/account/deleteRun.ts';
 import type { SocialProofResult } from '../lib/auth/socialOutcome.ts';
 import { canFindNewManager, membersRows } from '../lib/account/findManager.ts';
 import { leagueLine, successorOf, type DeleteLeagueInput, type LeagueMemberFact } from '../lib/account/leagueLines.ts';
@@ -218,7 +218,7 @@ Deno.test('reasons: ok:true is the ONLY success', async () => {
   assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'done', apple_revoke: 'none' })), { kind: 'deleted' });
   for (const revoke of ['done', 'pending', 'unrevoked']) assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'done', apple_revoke: revoke })), { kind: 'deleted' }, 'the revoke state is the server\'s to retry, never ours to show');
   assertEquals(deleteOutcome(await refusal(200, { ok: true })).kind, 'failed', 'ok without stage done is not a deletion (the re-check recovers a real one)');
-  assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'scrubbed' })).kind, 'failed');
+  assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'scrubbed' })).kind, 'deleted', 'any string stage: the deletion is committed');
   assertEquals(deleteOutcome(await refusal(200, {})).kind, 'failed', 'a 200 with no ok is not a deletion');
   assertEquals(deleteOutcome(await refusal(200, { ok: 'true' })).kind, 'failed');
   assertEquals(deleteOutcome(await refusal(200, { ok: 1 })).kind, 'failed');
@@ -231,7 +231,7 @@ Deno.test('reasons: bad_proof and apple_proof_required have their own paths; eve
   const others: Array<[number, Record<string, unknown>]> = [
     [503, { ok: false, reason: 'try_again' }],
     [500, { ok: false, reason: 'server_config_error', stage: null }],
-    [500, { ok: false, reason: 'scrub_failed', stage: 'requested' }],
+    [500, { ok: false, reason: 'scrub_failed', stage: null }],
     [400, { ok: false, reason: 'bad_request' }],
     [401, { ok: false, reason: 'not_authenticated' }],
     [200, { ok: false, reason: 'some_future_reason' }],
@@ -791,4 +791,51 @@ Deno.test('429 shapes: only a 429 is read this way — other statuses and plain 
   assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, http(400, { ok: false, reason: 'invalid_code' }))), { kind: 'dead' });
   assertEquals(interpretTakeoverPreview(await readTakeoverReply({ ok: true, league_name: 'X', wins: 1, losses: 0, rank: 1 }, null)).kind, 'found');
   assertEquals(interpretTakeoverPreview(await readTakeoverReply(null, new Error('network'))), { kind: 'unknown' });
+});
+
+// ── The ledger rule + google_proof_required (W3 security review) ────────────
+
+Deno.test('ledger rule: ANY string stage means the deletion is committed — a 500 with stage requested/scrubbed/done is DELETED', async () => {
+  for (const stage of ['requested', 'scrubbed', 'done']) {
+    assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'auth_delete_failed', stage })), { kind: 'deleted' }, `500 ${stage}`);
+  }
+  assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'done', apple_revoke: 'none' })), { kind: 'deleted' }, '200 done');
+  // a 500 with stage null, or no stage, is a real failure
+  assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'server_config_error', stage: null })).kind, 'failed');
+  assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'boom' })).kind, 'failed');
+  assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'boom', stage: '' })).kind, 'failed', 'an empty stage is not a stage');
+  assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'boom', stage: 3 })).kind, 'failed');
+  assertEquals(deleteOutcome({ transport: true }).kind, 'failed');
+});
+
+Deno.test('ledger rule: a stage wins over any reason, and a 500 with a stage but NO reason is still deleted', async () => {
+  assertEquals(deleteOutcome(await refusal(500, { ok: false, reason: 'bad_proof', stage: 'requested' })), { kind: 'deleted' });
+  assertEquals(deleteOutcome(await readDeleteReply(null, http(500, { ok: false, stage: 'scrubbed' }))), { kind: 'deleted' });
+  assertEquals(deleteOutcome(await readDeleteReply(null, http(500, { ok: false, stage: null }))).kind, 'failed');
+  assertEquals(deleteOutcome(await readDeleteReply(null, http(500, '<html>', true))).kind, 'failed');
+  // the shared contract still holds for reason-bearing bodies and plain replies
+  assertEquals(deleteOutcome(await readDeleteReply(null, http(400, { ok: false, reason: 'bad_proof' }))), { kind: 'bad_proof' });
+  assertEquals(deleteOutcome(await readDeleteReply({ ok: true, stage: 'done' }, null)), { kind: 'deleted' });
+});
+
+Deno.test('ledger rule: runDelete turns a committed-but-faulted 500 into deleted WITHOUT the re-check', async () => {
+  let checked = 0;
+  const r = await runDelete({ proof: PW }, deps({
+    invoke: () => Promise.resolve({ data: null, error: http(500, { ok: false, reason: 'auth_delete_failed', stage: 'scrubbed' }) }),
+    checkAccount: () => { checked++; return Promise.resolve('exists'); },
+  }));
+  assertEquals(r, { kind: 'deleted' });
+  assertEquals(checked, 0);
+  // a FunctionsHttpError resolves { data:null, error } in supabase-js: the same through invoke's resolved shape
+  const r2 = await runDelete({ proof: PW }, deps({ invoke: () => Promise.resolve({ data: null, error: http(500, { ok: false, reason: 'x', stage: 'requested' }) }) }));
+  assertEquals(r2, { kind: 'deleted' });
+});
+
+Deno.test('google_proof_required: re-offers Google with the existing copy, like apple_proof_required', async () => {
+  assertEquals(deleteOutcome(await refusal(200, { ok: false, reason: 'google_proof_required' })), { kind: 'google_required' });
+  const sending = confirmDelete(askConfirm(setProof(initialDeleteState('password'), PW, T0))).state;
+  const s = applyOutcome(sending, { kind: 'google_required' });
+  assertEquals([s.phase, s.kind, s.proof, s.failed, s.proofRejected], ['editing', 'google', null, false, false]);
+  assertFalse(canAsk(s));
+  assert(canAsk(setProof(s, GO, T0 + 1)));
 });

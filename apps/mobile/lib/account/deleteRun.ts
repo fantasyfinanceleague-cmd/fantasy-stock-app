@@ -9,10 +9,37 @@
 // account. So a failure is followed by one read of the session's user: if the server says that user no longer
 // exists, the deletion happened and the outcome is `deleted`. An unreadable answer stays `failed` (never guessed).
 
-import { readFunctionRefusal } from '../functionRefusal';
+import { readFunctionRefusal, type FunctionRefusal } from '../functionRefusal';
 import type { SocialProofResult } from '../auth/socialOutcome';
 import { deleteOutcome, type DeleteOutcome, type DeleteRequestBody } from './deleteFlow';
 import type { DeleteProof } from './proofKind';
+
+/**
+ * The function's answer. readFunctionRefusal drops a non-2xx body that has no string `reason` (it is "transport"), but a
+ * 500 that carries a `stage` means the deletion is COMMITTED whether or not it has a reason, so a non-2xx body is read
+ * here first and only the shared reader's contract (reason-bearing bodies) is reproduced for the rest.
+ */
+export async function readDeleteReply(data: unknown, error: unknown): Promise<FunctionRefusal> {
+  const ctx = (error !== null && typeof error === 'object' ? (error as { context?: unknown }).context : null) as
+    | { status?: unknown; json?: unknown }
+    | null
+    | undefined;
+  if (error && ctx && typeof ctx.json === 'function') {
+    let parsed: unknown = null;
+    try {
+      parsed = await (ctx.json as () => Promise<unknown>)();
+    } catch {
+      return { transport: true };
+    }
+    const body = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+    if (!body) return { transport: true };
+    const status = typeof ctx.status === 'number' ? ctx.status : null;
+    if (typeof body.stage === 'string' && body.stage.length > 0) return { transport: false, status, reason: typeof body.reason === 'string' ? body.reason : 'in_progress', body };
+    if (typeof body.reason !== 'string') return { transport: true };
+    return { transport: false, status, reason: body.reason, body };
+  }
+  return readFunctionRefusal(data, error);
+}
 
 export type AccountCheck = 'gone' | 'exists' | 'unknown';
 
@@ -29,7 +56,7 @@ export async function runDelete(body: DeleteRequestBody, deps: DeleteRunDeps): P
   } catch {
     res = { data: null, error: new Error('network') };
   }
-  const outcome = deleteOutcome(await readFunctionRefusal(res.data, res.error));
+  const outcome = deleteOutcome(await readDeleteReply(res.data, res.error));
   if (outcome.kind !== 'failed') return outcome;
   let check: AccountCheck = 'unknown';
   try {
