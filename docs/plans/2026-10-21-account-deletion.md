@@ -1,6 +1,6 @@
 # In-app account deletion
 
-Status: Draft (rulings taken 2026-10-21; approval pending)
+Status: Approved (Giorgio, 2026-10-21)
 Planner session: Planner (Fable 5.1) · Orchestrator hand-off: —
 
 ## Goal
