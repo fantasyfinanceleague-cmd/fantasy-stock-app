@@ -1097,6 +1097,37 @@ Deno.test({
       await q(`delete from account_deletions where user_id in ($1, $2)`, [x, y]);
     });
 
+    await t.step('heal: a failing RE-scrub (late live state) blocks nobody', async () => {
+      const [x, y] = [U(14), U(15)];
+      for (const u of [x, y]) {
+        await q(`insert into auth.users (id) values ($1)`, [u]);
+        await svc('account_deletion_open', [u, false]);
+        await svc('scrub_deleted_manager', [u]);
+      }
+      // x joined a pre-draft league after its scrub; removing that seat fails this pass.
+      const LX = '10000000-0000-4000-8000-0000000000ff';
+      await q(`insert into auth.users (id) values ($1)`, [U(16)]);
+      await q(`insert into leagues (id, name, commissioner_id, invite_code, num_participants, league_type)
+               values ($1, 'Late', $2, 'LATEX12345', 8, 'duration')`, [LX, U(16)]);
+      await q(`insert into league_members (league_id, user_id, role) values ($1, $2, 'commissioner'), ($1, $3, 'member')`, [LX, U(16), x]);
+      await q(`create function pg_temp.seat_boom() returns trigger language plpgsql as $$
+               begin if old.user_id = '${x}' then raise exception 'seat delete failed'; end if; return old; end $$`);
+      await q(`create trigger zz_seat_boom before delete on public.league_members for each row execute function pg_temp.seat_boom()`);
+      const h = await svc('heal_account_deletions', []);
+      assertMatch(JSON.stringify(h.scrub_errors), /seat delete failed/);
+      assert(h.auth_delete.includes(y), 'the other account still flows to its auth delete');
+      assertMatch((await row(x)).last_error, /^heal re-scrub: seat delete failed/);
+      await q(`drop trigger zz_seat_boom on public.league_members`);
+      const h2 = await svc('heal_account_deletions', []);
+      assertEquals(h2.scrub_results.map((r: Row) => r.left.map((l: Row) => l.league_id)), [[LX]]);
+      for (const u of [x, y]) {
+        await q(`delete from auth.users where id = $1`, [u]);
+        assertEquals((await svc('account_deletion_mark_done', [u])).stage, 'done');
+      }
+      await q(`delete from account_deletions`);
+      await q(`delete from leagues where id = $1`, [LX]);
+    });
+
     await t.step('due agrees with the heal: a stalled requested row and a scrubbed row', async () => {
       const r1 = U(9);
       await svc('account_deletion_open', [r1, false]);
