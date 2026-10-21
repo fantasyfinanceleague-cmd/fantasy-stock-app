@@ -5,7 +5,7 @@ Update this file at the end of any session that changes prod state or lands a
 workstream. Per-workstream detail lives in the documents linked below and in the
 PRs; this page summarises and points.
 
-**Last verified against prod: 2026-10-12** (read-only SQL, deploy downloads and
+**Last verified against prod: 2026-10-16** (most recently: the onboarding invite-preview limiter #284, migration + 2 functions + HTTP checks, 2026-10-15; the legacy web client hardening #286, Vercel prod deploy checked live 2026-10-16. Before that: read-only SQL, deploy downloads and
 effect tests run with Giorgio; results recorded inline; scoring/snapshot hardening released 2026-10-04/05; draft-never-skips #105 and the record-trade concurrency fix #113/#115 and tier trade slots #117 released 2026-10-06; then the freeze #123, the auto-pick sweep #120, leave-league #126, truthful cron status #121 and the join preview #125, all released and verified 2026-10-06; then commissioner transfer #132 (2026-10-06) and the server-side "your turn" push #160 (2026-10-07), both released and verified; then draft auto-start #133 (2026-10-07, live-tested), the game + League-setup screens #171 and Money screens #172 (their migrations applied 2026-10-07/08), and Giorgio's "nothing scrapable" lockdown: symbols signed-in only #175/#177 and market-data guards #183 (2026-10-08/09), all verified; then on 2026-10-10 Run it back #94 (server side; the app keeps it behind its kill switch), scrape hardening #195 and profile visibility stage 1 #198, all released and verified). Anything marked
 **UNVERIFIED** has not been checked against prod and must be confirmed before
 anyone builds on it. Resolved defects are collapsed into §5. Their full reasoning
@@ -15,7 +15,23 @@ lives in the linked PRs and in git history (`git log -p -- docs/STATUS.md`).
 
 ## 1. Where things stand
 
-**2026-10-13 (latest):** the 1.3 "Game Night" rebuild is underway on `main` (Home, Matchup + the player card, the Draft room and League merged; Portfolio next). **Do not `eas update` from `main`**: 1.2.0 hotfixes ship only from `release/1.2.x`. Drafting rules hardened and live: late manual picks refused (#258); the auto-pick always picks within the league's rules and never stalls on stale prices, with no budget cushion (#261, migrations + 5 functions byte-verified); `db-snapshot.json` re-captured 2026-10-14 (0 high drift rows).
+**2026-10-20 (latest): the 1.3 code on `main` is feature-complete for onboarding and through its pre-release sweep. What's left is Giorgio's real-phone pass and the parked launch prep (§4, top).** Not released: `main` is the 1.3 line, so **never `eas update` from `main`**.
+- **Onboarding** (plan `docs/plans/2026-10-14-onboarding.md`):
+  - Sign in with Apple/Google, email confirmation and PKCE one-time-code email links (#277);
+  - gamertag usernames, the push ask, first-time tips (Home + draft room), one no-league state on every tab (fixes Matchup's and Portfolio's blank tabs), and the invite arrival screen (#283);
+  - invite links: universal links, pending invite + auto-join (only the https link auto-joins; a scheme link waits for a tap), and the no-session `invite-preview` (#284, **live and verified 2026-10-15**).
+  - The web invite page / web sign-up is **draft PR #279, parked**: it needs the App Store URL and the web sign-in setup. Giorgio chose not to make a public TestFlight link before the app is finished.
+- **The leaguemate team view** (#291): tap a manager in Standings or the Matchup scoreboard to see their team, read-only (rules #288).
+- **Pre-release sweep** (all Design Lead PASS, L pixel-identical to the previous `main` unless noted):
+  - the device tap-through (#287, #289, #299: 160 PASS, the rest listed for the phone pass);
+  - money amounts never break (#293);
+  - labels never break mid-word (#294);
+  - sheets scroll with a pinned action, which fixes the P1 where Review buy/sell was unreachable at XXXL (#295);
+  - the Portfolio XXXL digits and the app-wide capped-Text "measure twin" fix (#292, #298; Matchup XXXL spacing corrected);
+  - the season-complete card no longer truncates, and its place never contradicts the server's result (#296, #297).
+- **Web:** the paused app's legacy Supabase client no longer patches global `fetch` and only reads a session from its own root return (#286, deployed).
+
+**2026-10-13:** the 1.3 "Game Night" rebuild is underway on `main` (Home, Matchup + the player card, the Draft room and League merged; Portfolio next). **Do not `eas update` from `main`**: 1.2.0 hotfixes ship only from `release/1.2.x`. Drafting rules hardened and live: late manual picks refused (#258); the auto-pick always picks within the league's rules and never stalls on stale prices, with no budget cushion (#261, migrations + 5 functions byte-verified); `db-snapshot.json` re-captured 2026-10-14 (0 high drift rows).
 
 The whole mobile league loop now works in prod **on current code**: a commissioner
 creates a league, sets a draft date, fills with bots (test account only), starts the
@@ -164,7 +180,7 @@ day, and a no-op never overwrites earlier same-day work):
 
 | Surface | State |
 |---|---|
-| Web (Vercel, auto-deploys `main`) | Deployed. `APP_PAUSED = true`, so the landing page only (the pre-redesign landing, plus #24's heading fix). The web design foundation (PR #35) is merged, and the prod bundle was proven byte-identical. Web drafting was fixed (PR #17) but is paused. |
+| Web (Vercel, auto-deploys `main`) | Deployed (latest prod deploy `db2783ab`, #286, 2026-10-16: verified the landing loads with no console errors and the bundle no longer patches `fetch`). `APP_PAUSED = true`, so the landing page only. The onboarding web pages (`/join`, `/auth/*`, the Apple link file) are draft PR #279, not merged (the pre-redesign landing, plus #24's heading fix). The web design foundation (PR #35) is merged, and the prod bundle was proven byte-identical. Web drafting was fixed (PR #17) but is paused. |
 | Mobile | **1.1.0 on `main`, NOT released.** It has everything from 2026-09-25 (design system, server-side draft start and bots, name search, finalize UI, the PR #9 client fixes). It also has, since then:
   - pre-season/draft-pending labels and Start Draft re-enabling (#26);
   - the zero-league Matchup state (#28);
@@ -196,11 +212,25 @@ Phase 3: **app first**.
 | Phase 3 backend asks | ✅ #1 Home summary + #2 display names (#42); ✅ #5 trades ∪ picks, #6 signup username, #7 market calendar, #9 draft recap (verified existing) (#43/#49); ✅ #3 met client-side (`buildPLSeries`, #37). ✅ #11 season result (`get_season_result`, #77, LIVE 2026-09-29). Open, and nice-to-have for 3c: #4 intraday samples, #10 scoring status | `docs/design/prompts/phase3-plan.md` |
 | Product name | Deferred to pre-launch. Stockpile must go (a live third-party TM); **Stockade** is the front-runner and Odd Lot the runner-up. The rename is prepared on a local, unpushed branch `chore/rename-to-stockade`. Keep the bundle id, slug and scheme | `docs/design/NAMING.md` |
 | Mobile design-system pass (PR #15) | ✅ Merged; ships with 1.1.0 | — |
-| Architecture map | Current on `main`; db-snapshot re-captured 2026-09-30 (#81): drift 26 rows, 1 high (`symbols` anon read, decided KEEP 2026-07-28) | `docs/architecture/`, CLAUDE.md |
+| Architecture map | Current on `main`; db-snapshot re-captured **2026-10-15** after #284 (#285): **0 high** drift rows (30 rows: 6 medium, 24 low) | `docs/architecture/`, CLAUDE.md |
+| Onboarding (plan 2026-10-14) | ✅ W1 board, W2 auth (#277), W3 invite links (#284, server live), W4 screens (#283). ⏸ W5 web (#279, draft, parked until launch prep). Remaining: launch-prep dashboard steps (§4 top) | `docs/plans/2026-10-14-onboarding.md`, `docs/security/universal-links.md` |
+| Pre-1.3 sweep (tap-through + large text) | ✅ #287 #289 #292 #293 #294 #295 #296 #297 #298 #299; leaguemate team view #291 | `docs/design/reviews/tap-through-2026-10.md`, `docs/design/captures/*` |
 
 ---
 
 ## 4. Open items (ordered by launch impact)
+
+> **2026-10-20: before the 1.3 build (Giorgio).**
+> 1. **Real-phone pass**, on a 1.3 dev/TestFlight build:
+>    - VoiceOver: Home's standings card and the Matchup halves read their content, then "button", then "View {name}'s team"; one amount each on the Join preview and in Trade history reads as normal money.
+>    - XXXL: the Transfer commissioner, Renewal change and sale-picker sheets, plus the trade review and pre-draft Home with Share visible (no fixture reaches these).
+>    - The server writes the simulator couldn't confirm: Move forward / Invite someone new, the playoff-teams stepper, Save queue, the nudge, Schedule the draft.
+>    - Watch for: Get started dead on the very first launch (seen once in the simulator), and the Portfolio tab drawing blank for ~10 s (seen once). Either becomes a P1 if seen on a phone.
+> 2. **Launch prep, parked by Giorgio 2026-10-16.** Order matters: the web must be live before the 1.3 build reaches people.
+>    - Supabase Auth: Redirect URLs (`https://fantasy-stock-app.vercel.app/auth/confirm` exact, `…/auth/web-callback**`, plus the W2 scheme entries); Confirm email; Apple and Google providers (Google "Skip nonce checks" ON, Apple OFF; Client IDs exactly ours); manual linking OFF; the Before-User-Created hook effect test; **custom SMTP** (the built-in sender is rate-capped project-wide).
+>    - Apple web sign-in: a Services ID, and an OAuth secret from the .p8 that **expires within 6 months** (calendar the rotation; note the date here).
+>    - The App Store / TestFlight URL into `apps/web/universal-links.config.json`, then merge #279 (a Vercel prod deploy).
+>    - The 1.3 EAS build (native: associatedDomains, the Apple/Google modules), then the device checks in `docs/security/universal-links.md` and the W2 hand-back (SHA-256("abc"), a real sign-up / confirm / reset, Android back on reset).
 
 > **Releasing while 1.3 (Game Night) is built (2026-10-12):** `main` carries the 1.3 reskin
 > from W3 onward, and its tokens change EVERY screen. **Never `eas update` from `main` until
@@ -476,7 +506,8 @@ Phase 3: **app first**.
 
 | Branch | State |
 |---|---|
-| `main` | Deployed to Vercel prod (landing only). |
+| `main` | Deployed to Vercel prod (landing only). The mobile 1.3 line: do not `eas update` from it. |
+| `feat/onboarding-w5-web-join` | PR #279, **draft, parked** until launch prep: the web invite page + web sign-up. Merging it is a Vercel prod deploy, and its build fails until the App Store URL is set. |
 | `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
 | `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
 | `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
