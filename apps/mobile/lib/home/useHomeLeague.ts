@@ -140,6 +140,7 @@ type FixtureHomeLeague = {
 
 /** DEV capture (EXPO_PUBLIC_DELETED_SEAT=1): Gianluigi's seat reads as the deleted-seat label (lib/game/seamAccountDeletion.ts). Off: the raw fixture, untouched. */
 export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): FixtureHomeLeague {
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define -- a hoisted function declaration (no TDZ); kept below so the diff against the original body stays one hunk
   const r = fixtureHomeLeagueRaw(fixture);
   return process.env.EXPO_PUBLIC_DELETED_SEAT === '1' ? { ...r, data: seatify(r.data, true) } : r;
 }
