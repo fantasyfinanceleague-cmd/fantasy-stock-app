@@ -24,12 +24,14 @@ export interface DeleteState {
   proofAt: number | null;
   /** The plain line "Couldn't delete your account. Try again." is showing. */
   failed: boolean;
+  /** The proof rate limit answered (429): "Too many tries. Try again later." is showing. */
+  rateLimited: boolean;
   /** The last proof was refused: the password field is marked invalid (no new copy), the social button is offered again. */
   proofRejected: boolean;
 }
 
 export function initialDeleteState(kind: ProofKind): DeleteState {
-  return { phase: 'editing', kind, proof: null, proofAt: null, failed: false, proofRejected: false };
+  return { phase: 'editing', kind, proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
 }
 
 /** Whether "Delete my account" is live: editing, with the proof in hand. */
@@ -46,7 +48,7 @@ export function setProof(s: DeleteState, proof: DeleteProof | null, now: number)
 
 /** "Delete my account" tapped: opens the alert. Sends nothing. */
 export function askConfirm(s: DeleteState): DeleteState {
-  return canAsk(s) ? { ...s, phase: 'confirming', failed: false } : s;
+  return canAsk(s) ? { ...s, phase: 'confirming', failed: false, rateLimited: false } : s;
 }
 
 /** The alert's "Keep my account" (or a dismissal): back to editing, nothing sent. A social proof is discarded. */
@@ -65,7 +67,7 @@ export interface DeleteRequestBody {
  */
 export function confirmDelete(s: DeleteState): { state: DeleteState; body: DeleteRequestBody | null; proofAt: number | null } {
   if (s.phase !== 'confirming' || !proofInHand(s.proof, s.kind) || s.proof === null) return { state: s, body: null, proofAt: null };
-  return { state: { ...s, phase: 'sending', failed: false }, body: { proof: s.proof }, proofAt: s.proofAt };
+  return { state: { ...s, phase: 'sending', failed: false, rateLimited: false }, body: { proof: s.proof }, proofAt: s.proofAt };
 }
 
 export type DeleteOutcome =
@@ -74,6 +76,8 @@ export type DeleteOutcome =
   | { kind: 'apple_required' }
   /** The Apple/Google token was over ~10 minutes old (does not count toward the proof limit): ask for a fresh one, never the generic failure. */
   | { kind: 'proof_expired' }
+  /** The proof limit (429): its own line, never the generic failure. */
+  | { kind: 'rate_limited' }
   /** The person closed the Apple/Google sheet that refreshed an aged proof: nothing was sent, nothing to say. */
   | { kind: 'cancelled' }
   | { kind: 'failed' };
@@ -86,6 +90,7 @@ export function deleteOutcome(r: FunctionRefusal): DeleteOutcome {
   if (r.reason === 'bad_proof') return { kind: 'bad_proof' };
   if (r.reason === 'apple_proof_required') return { kind: 'apple_required' };
   if (r.reason === 'proof_expired') return { kind: 'proof_expired' };
+  if (r.reason === 'rate_limited') return { kind: 'rate_limited' };
   return { kind: 'failed' };
 }
 
@@ -94,16 +99,18 @@ export function applyOutcome(s: DeleteState, o: DeleteOutcome): DeleteState {
   if (s.phase !== 'sending') return s;
   switch (o.kind) {
     case 'deleted':
-      return { ...s, phase: 'done', failed: false, proofRejected: false };
+      return { ...s, phase: 'done', failed: false, rateLimited: false, proofRejected: false };
     case 'bad_proof':
-      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, proofRejected: true };
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: true };
     case 'apple_required':
-      return { ...s, phase: 'editing', kind: 'apple', proof: null, proofAt: null, failed: false, proofRejected: false };
+      return { ...s, phase: 'editing', kind: 'apple', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
     case 'proof_expired':
     case 'cancelled':
       // Re-ask: the proof block is back (the button's reason), with no failure line.
-      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, proofRejected: false };
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
+    case 'rate_limited':
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, rateLimited: true, proofRejected: false };
     case 'failed':
-      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: true, proofRejected: false };
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: true, rateLimited: false, proofRejected: false };
   }
 }

@@ -20,6 +20,7 @@ export default function TakeoverScreen() {
   const [view, setView] = useState<TakeoverLandingState>({ kind: 'loading' });
   const [takeFailed, setTakeFailed] = useState<'unreachable' | 'rate_limited' | null>(null);
   const alive = useRef(true);
+  const memberLeagueId = useRef<string | null>(null);
   useEffect(() => () => { alive.current = false; }, []);
 
   const home = useCallback(() => {
@@ -30,8 +31,15 @@ export default function TakeoverScreen() {
   const settle = useCallback(async (v: TakeoverPreview) => {
     if (!alive.current) return;
     if (v.kind === 'member') {
+      // The shipped "You're already in {league}." + "Open the league", when the reply names the league. With no name there
+      // is nothing true to say, so the app just opens (Home), as join-league's silent open does.
+      if (v.leagueName) {
+        if (alive.current) setView({ kind: 'member', leagueName: v.leagueName });
+        memberLeagueId.current = v.leagueId;
+        return;
+      }
       if (code) await pendingTakeover.clear(code);
-      router.replace('/(tabs)'); // already in this league: the app just opens
+      router.replace('/(tabs)');
       return;
     }
     if (v.kind === 'taken' || v.kind === 'dead') if (code) await pendingTakeover.clear(code);
@@ -67,10 +75,16 @@ export default function TakeoverScreen() {
     await settle(r);
   }, [view, code, refresh, settle]);
 
+  const open = useCallback(async () => {
+    if (code) await pendingTakeover.clear(code);
+    if (memberLeagueId.current) setActiveLeagueId(memberLeagueId.current);
+    router.replace('/(tabs)');
+  }, [code, setActiveLeagueId]);
+
   const notNow = useCallback(async () => {
     if (code) await pendingTakeover.clear(code);
     home();
   }, [code, home]);
 
-  return <TakeoverLanding state={view} label={label} onTake={take} onNotNow={notNow} onHome={home} onRetry={load} takeFailed={takeFailed} />;
+  return <TakeoverLanding state={view} label={label} onTake={take} onNotNow={notNow} onHome={home} onOpen={open} onRetry={load} takeFailed={takeFailed} />;
 }

@@ -209,7 +209,8 @@ Deno.test('takeover landing: only "Take the team" writes; "Not now" and a dead l
 Deno.test('takeover landing: rate_limited shows the wait line (never the dead-link page) and a taken_over opens its league', () => {
   const landing = src('components/shell/TakeoverLanding.tsx');
   assert(landing.includes("state.kind === 'unknown' || state.kind === 'rate_limited'"));
-  assert(landing.includes('JOIN_COPY.rateLimited'));
+  assert(landing.includes('TRY_LATER'));
+  assertFalse(landing.includes('JOIN_COPY.rateLimited'), 'never understate an hour\'s lockout');
   const dead = landing.slice(landing.indexOf("state.kind === 'taken' || state.kind === 'dead'"), landing.indexOf("state.kind === 'loading'"));
   assertFalse(dead.includes('rate_limited'));
   const screen = src('app/takeover.tsx');
@@ -245,4 +246,28 @@ Deno.test('league_invites: the scanner flags an unfiltered list (the mutation) a
   assertEquals(unfilteredInviteReads(bad).length, 1, 'a takeover row would show as a pending invite');
   assertEquals(unfilteredInviteReads(good), []);
   assertEquals(unfilteredInviteReads("supabase.from('league_invites').insert(row);"), [], 'a write is not a list');
+});
+
+Deno.test('DL copy: the wrong-password line sits in the field\'s error style, the unconfirmed line under the provider button, and the field refocuses', () => {
+  const view = src('components/shell/DeleteAccountView.tsx');
+  assert(view.includes('error={state.proofRejected ? PASSWORD_WRONG : null}'));
+  assert(view.includes('{PROOF_UNCONFIRMED}'));
+  assert(view.indexOf('<ProviderButton') < view.indexOf('{PROOF_UNCONFIRMED}'), 'under the button');
+  assert(view.includes('{state.rateLimited ? <WarnPanel text={TRY_LATER} /> : null}'));
+  const screen = src('app/delete-account.tsx');
+  assert(screen.includes("inputRef.current?.focus()") && screen.includes("setPassword('')"));
+  // every NEW line is marked NEW in code
+  const copy = strip(SOURCES['lib/account/deleteCopy.ts']) + SOURCES['lib/account/deleteCopy.ts'];
+  for (const name of ['PASSWORD_WRONG', 'PROOF_UNCONFIRMED', 'TRY_LATER']) {
+    assert(new RegExp(`/\\*\\* NEW[^*]*\\*/\\s*export const ${name}`).test(SOURCES['lib/account/deleteCopy.ts']), `${name} is marked NEW`);
+  }
+});
+
+Deno.test('DL copy: the landing shows "You\'re already in {league}." + "Open the league" for an already-in answer, and a name-less reply just opens', () => {
+  const landing = src('components/shell/TakeoverLanding.tsx');
+  assert(landing.includes("blockMessage('already_member', { name: state.leagueName, max: 0 })"));
+  assert(landing.includes('OPEN_THE_LEAGUE'));
+  const screen = src('app/takeover.tsx');
+  assert(screen.includes('if (v.leagueName) {'));
+  assert(screen.includes('if (memberLeagueId.current) setActiveLeagueId(memberLeagueId.current);'));
 });

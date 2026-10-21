@@ -17,22 +17,30 @@ import { isUuid } from '../uuid';
 import { INVITE_COPY } from '../invite/inviteCopy';
 import { TAKEN_LINE } from './deleteCopy';
 
-const DEAD_REASONS = ['gone', 'invalid_code', 'not_deleted', 'window', 'not_eligible'] as const;
+const DEAD_REASONS = ['gone', 'invalid_code', 'not_deleted', 'window'] as const;
 
 export type TakeoverPreview =
   | { kind: 'found'; leagueName: string; wins: number; losses: number; rank: number }
   | { kind: 'taken' }
   | { kind: 'dead' }
-  | { kind: 'member' }
+  /** Already in the league (already_member, or not_eligible): the shipped "You're already in {league}." + "Open the league". `leagueName` is null when the reply names none. */
+  | { kind: 'member'; leagueName: string | null; leagueId: string | null }
   /** Too many wrong codes: a wait, never the dead-link page (the link may be fine). */
   | { kind: 'rate_limited' }
   | { kind: 'unknown' };
 
 const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < 10000 ? v : null);
 
-function reasonView(reason: string): TakeoverPreview {
+function memberView(body: Record<string, unknown>): TakeoverPreview {
+  const league = body.league as { id?: unknown; name?: unknown } | null | undefined;
+  const rawName = typeof body.league_name === 'string' ? body.league_name : league && typeof league === 'object' && typeof league.name === 'string' ? league.name : '';
+  const rawId = typeof body.league_id === 'string' ? body.league_id : league && typeof league === 'object' && typeof league.id === 'string' ? league.id : null;
+  return { kind: 'member', leagueName: rawName.trim() ? rawName.trim().slice(0, 80) : null, leagueId: isUuid(rawId) ? rawId : null };
+}
+
+function reasonView(reason: string, body: Record<string, unknown> = {}): TakeoverPreview {
   if (reason === 'taken') return { kind: 'taken' };
-  if (reason === 'already_member') return { kind: 'member' };
+  if (reason === 'already_member' || reason === 'not_eligible') return memberView(body);
   if (reason === 'rate_limited') return { kind: 'rate_limited' };
   return (DEAD_REASONS as readonly string[]).includes(reason) ? { kind: 'dead' } : { kind: 'unknown' };
 }
@@ -48,7 +56,7 @@ export function interpretTakeoverPreview(r: FunctionRefusal): TakeoverPreview {
     if (b.ok !== true || !name || wins === null || losses === null || rank === null || rank < 1) return { kind: 'unknown' };
     return { kind: 'found', leagueName: name.slice(0, 80), wins, losses, rank };
   }
-  return reasonView(r.reason);
+  return reasonView(r.reason, r.body);
 }
 
 /** `leagueId` is the league the seat is in (the taken_over reply carries league.id), or null when absent/malformed. */
@@ -63,7 +71,7 @@ export function interpretTakeover(r: FunctionRefusal): TakeoverResult {
     const id = league && typeof league === 'object' && typeof league.id === 'string' && isUuid(league.id) ? league.id : null;
     return { kind: 'taken_over', leagueId: id };
   }
-  return reasonView(r.reason);
+  return reasonView(r.reason, r.body);
 }
 
 /** The dead-link panel's sentence: no heading, centred (the invite arrival's dead-link pattern). */

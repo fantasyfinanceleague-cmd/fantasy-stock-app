@@ -8,6 +8,7 @@
  */
 import { assert, assertEquals, assertFalse, assertNotEquals } from 'jsr:@std/assert';
 import {
+  OPEN_THE_LEAGUE, PASSWORD_WRONG, PROOF_UNCONFIRMED, TRY_LATER,
   ACCOUNT_DELETED, ALERT_BODY, ALERT_DELETE, ALERT_KEEP, ALERT_TITLE, CONFIRMED_WITH_APPLE, CONFIRMED_WITH_GOOGLE, DELETE_BUTTON, DELETE_FAILED, DELETE_LEAD,
   DELETE_ROW, DELETE_TITLE, FIND_NEW_MANAGER, GO_TO_HOME, NO_OTHERS_LINE, NOT_DRAFTED_LINE, NOT_NOW, PROOF_PASSWORD, PROOF_SOCIAL, TAKE_THE_TEAM,
   TAKEN_LINE, handOverLine, pastSeasonsLine, stayLine, successorLine, takeoverQuestion, takeoverShareSentence,
@@ -25,6 +26,7 @@ import { canFindNewManager, membersRows } from '../lib/account/findManager.ts';
 import { leagueLine, successorOf, type DeleteLeagueInput, type LeagueMemberFact } from '../lib/account/leagueLines.ts';
 import { deadLine, interpretTakeover, interpretTakeoverPreview, recordLine } from '../lib/account/takeoverView.ts';
 import { isDeletedNotice, setDeletedNotice, subscribeDeletedNotice } from '../lib/account/deletedNotice.ts';
+import { blockMessage } from '../lib/join/joinPreview.ts';
 import { readFunctionRefusal } from '../lib/functionRefusal.ts';
 import { INVITE_COPY } from '../lib/invite/inviteCopy.ts';
 import { parseInviteArrival } from '../lib/invite/inviteLink.ts';
@@ -226,7 +228,6 @@ Deno.test('reasons: bad_proof and apple_proof_required have their own paths; eve
   assertEquals(deleteOutcome(await refusal(200, { ok: false, reason: 'bad_proof' })), { kind: 'bad_proof' });
   assertEquals(deleteOutcome(await refusal(200, { ok: false, reason: 'apple_proof_required' })), { kind: 'apple_required' });
   const others: Array<[number, Record<string, unknown>]> = [
-    [429, { ok: false, reason: 'rate_limited' }],
     [503, { ok: false, reason: 'try_again' }],
     [500, { ok: false, reason: 'server_config_error', stage: null }],
     [500, { ok: false, reason: 'scrub_failed', stage: 'requested' }],
@@ -372,11 +373,11 @@ Deno.test('lines: the label is a parameter (the server\'s word), never baked in'
 
 Deno.test('takeover view: preview answers', async () => {
   assertEquals(interpretTakeoverPreview(await refusal(200, { ok: true, league_name: 'Stock Scudetto', wins: 1, losses: 5, rank: 6 })), { kind: 'found', leagueName: 'Stock Scudetto', wins: 1, losses: 5, rank: 6 });
-  for (const reason of ['gone', 'invalid_code', 'not_deleted', 'window', 'not_eligible']) {
+  for (const reason of ['gone', 'invalid_code', 'not_deleted', 'window']) {
     assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason })), { kind: 'dead' }, reason);
   }
   assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'taken' })), { kind: 'taken' });
-  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'already_member' })), { kind: 'member' });
+  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'already_member' })), { kind: 'member', leagueName: null, leagueId: null });
   assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'from_the_future' })), { kind: 'unknown' });
   assertEquals(interpretTakeoverPreview({ transport: true }), { kind: 'unknown' });
   // a half-built success is never drawn
@@ -565,9 +566,9 @@ Deno.test('pending takeover: claim stamps once; markAutoOpened is per code; clea
 // ── Mutation survivors, pinned ──────────────────────────────────────────────
 
 Deno.test('nothing sent: an alert opened over an EMPTY proof still yields no body (the proof is re-checked at Delete)', () => {
-  const forced: DeleteState = { phase: 'confirming', kind: 'password', proofAt: T0, proof: { kind: 'password', password: '' }, failed: false, proofRejected: false };
+  const forced: DeleteState = { phase: 'confirming', kind: 'password', proofAt: T0, proof: { kind: 'password', password: '' }, failed: false, rateLimited: false, proofRejected: false };
   assertEquals(confirmDelete(forced).body, null);
-  const forcedApple: DeleteState = { phase: 'confirming', kind: 'apple', proofAt: T0, proof: { kind: 'apple', identityToken: 't', authorizationCode: '', nonce: 'n' }, failed: false, proofRejected: false };
+  const forcedApple: DeleteState = { phase: 'confirming', kind: 'apple', proofAt: T0, proof: { kind: 'apple', identityToken: 't', authorizationCode: '', nonce: 'n' }, failed: false, rateLimited: false, proofRejected: false };
   assertEquals(confirmDelete(forcedApple).body, null);
 });
 
@@ -612,7 +613,7 @@ Deno.test('reasons: proof_expired is its own outcome (never the generic failure)
   assertEquals([s.phase, s.kind, s.proof, s.proofAt, s.failed, s.proofRejected], ['editing', 'apple', null, null, false, false]);
   const c = applyOutcome(sending, { kind: 'cancelled' });
   assertEquals([c.phase, c.proof, c.failed], ['editing', null, false]);
-  for (const [status, reason] of [[429, 'rate_limited'], [503, 'try_again'], [400, 'bad_request']] as const) {
+  for (const [status, reason] of [[503, 'try_again'], [400, 'bad_request']] as const) {
     assertEquals(deleteOutcome(await refusal(status, { ok: false, reason })).kind, 'failed', reason);
   }
 });
@@ -701,4 +702,58 @@ Deno.test('takeover codes: EXACTLY 10 upper-case A-Z/0-9 (W3), ASCII-checked bef
   assertEquals(parseTakeoverLink(`${BASE}/take/QX7P4K`, false), null, 'a 6-character code is an invite\'s, not a takeover\'s');
   assertEquals(parseTakeoverLink(`${BASE}/take/QX7P4KM3ABC`, false), null);
   assertEquals(buildTakeoverUrl('QX7P4K'), null);
+});
+
+// ── The Design Lead's copy rulings (2026-10-21) ─────────────────────────────
+
+Deno.test('DL copy: the three NEW delete lines, verbatim', () => {
+  assertEquals(PASSWORD_WRONG, "That password isn't right. Try again.");
+  assertEquals(PROOF_UNCONFIRMED, "Couldn't confirm it's you. Try again.");
+  assertEquals(TRY_LATER, 'Too many tries. Try again later.');
+  assertEquals(OPEN_THE_LEAGUE, 'Open the league');
+});
+
+Deno.test('DL copy: the proof limit (429 rate_limited) is its own state, not the generic failure; it clears the proof', async () => {
+  assertEquals(deleteOutcome(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
+  const sending = confirmDelete(askConfirm(setProof(initialDeleteState('apple'), AP, T0))).state;
+  const s = applyOutcome(sending, { kind: 'rate_limited' });
+  assertEquals([s.phase, s.proof, s.failed, s.rateLimited, s.proofRejected], ['editing', null, false, true, false]);
+  assertEquals(canAsk(s), false);
+  // the next attempt clears the line
+  assertEquals(askConfirm(setProof(s, AP, T0 + 1)).rateLimited, false);
+  assertEquals(setProof(s, AP, T0 + 1).rateLimited, s.rateLimited, 'typing/proving alone leaves the notice until the next ask');
+});
+
+Deno.test('DL copy: a wrong password clears the proof, marks the field, and keeps Delete dimmed until they type again', () => {
+  const sending = confirmDelete(askConfirm(setProof(initialDeleteState('password'), PW, T0))).state;
+  let s = applyOutcome(sending, { kind: 'bad_proof' });
+  assertEquals([s.proofRejected, s.proof, canAsk(s)], [true, null, false]);
+  s = setProof(s, { kind: 'password', password: 'x' }, T0 + 2);
+  assertEquals([s.proofRejected, canAsk(s)], [false, true]);
+});
+
+Deno.test('DL copy: a finished league you RAN with others names the successor; one you only played in is the short sentence', () => {
+  const ran = league({ season: 'completed', commissionerId: ME, members: [member(ME, '2026-01-01'), member('u-p', '2026-01-03', { displayName: 'Paolo M.' })] });
+  assertEquals(leagueLine(ran, ME, L, NOW).line, 'Your team stays as \u201cFormer manager\u201d. Paolo M. becomes the commissioner.');
+  assertEquals(leagueLine(league({ season: 'completed' }), ME, L, NOW).line, 'Your team stays as \u201cFormer manager\u201d.');
+  // ...and one you ran alone is deleted
+  assertEquals(leagueLine(league({ season: 'completed', commissionerId: ME, members: [member(ME, '2026-01-01')] }), ME, L, NOW).line, NO_OTHERS_LINE);
+});
+
+Deno.test('DL copy: takeover reasons — dead / taken / already in / rate limited', async () => {
+  for (const reason of ['invalid_code', 'gone', 'not_deleted', 'window']) assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason })), { kind: 'dead' }, reason);
+  assertEquals(deadLine({ kind: 'dead' }), "This invite link doesn't work anymore. Ask for a new one.");
+  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'taken' })), { kind: 'taken' });
+  const LID = '3f2b8a1e-5c4d-4e6f-8a9b-0c1d2e3f4a5b';
+  for (const reason of ['already_member', 'not_eligible']) {
+    assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason, league_name: 'Stock Scudetto', league_id: LID })), { kind: 'member', leagueName: 'Stock Scudetto', leagueId: LID }, reason);
+    assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason, league: { id: LID, name: 'Stock Scudetto' } })), { kind: 'member', leagueName: 'Stock Scudetto', leagueId: LID });
+    assertEquals(interpretTakeover(await refusal(200, { ok: false, reason })), { kind: 'member', leagueName: null, leagueId: null });
+  }
+  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'already_member', league_name: 'X', league_id: 'nope' })), { kind: 'member', leagueName: 'X', leagueId: null });
+  // the shipped sentence, from the shipped function
+  assertEquals(blockMessage('already_member', { name: 'Stock Scudetto', max: 0 }), "You're already in Stock Scudetto.");
+  // BOTH rate limits read as the longer wait (never understate an hour's lockout)
+  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
+  assertEquals(interpretTakeoverPreview(await refusal(200, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
 });

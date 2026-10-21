@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, type TextInput } from 'react-native';
 import { router } from 'expo-router';
 
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -35,6 +35,7 @@ export default function DeleteAccountScreen() {
   const stateRef = useRef(state);
   stateRef.current = state;
   const [password, setPassword] = useState(() => (fixtureKind(DELETE_FIXTURE, realKind) === 'password' && DELETE_FIXTURE && DELETE_FIXTURE !== 'password' ? 'fixture-password' : ''));
+  const inputRef = useRef<TextInput>(null);
   const [inputs, setInputs] = useState<DeleteLeagueInput[] | null>(null);
 
   useEffect(() => {
@@ -51,6 +52,13 @@ export default function DeleteAccountScreen() {
       live = false;
     };
   }, [meId, label]);
+  // A refused password: clear the field and put the cursor back in it (the button stays dimmed until they type again).
+  const rejected = state.proofRejected && state.kind === 'password';
+  useEffect(() => {
+    if (!rejected) return;
+    setPassword('');
+    inputRef.current?.focus();
+  }, [rejected]);
   const leagues = useMemo(() => (inputs ? inputs.map((l) => leagueLine(l, meId, label, Date.now())) : null), [inputs, meId, label]);
 
   const onPassword = useCallback((v: string) => {
@@ -109,6 +117,7 @@ export default function DeleteAccountScreen() {
         leagues={leagues}
         label={label}
         password={password}
+        inputRef={inputRef}
         onPassword={onPassword}
         onApple={onApple}
         onGoogle={onGoogle}

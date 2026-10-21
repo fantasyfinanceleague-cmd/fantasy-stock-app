@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
-import { StyleSheet, View } from 'react-native';
+import type { RefObject } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { radius, space } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
@@ -14,7 +15,7 @@ import { loadApple } from '@/lib/auth/socialSignIn';
 import { canAsk, type DeleteState } from '@/lib/account/deleteFlow';
 import {
   CONFIRMED_WITH_APPLE, CONFIRMED_WITH_GOOGLE, CONTINUE_WITH_GOOGLE, DELETE_BUTTON, DELETE_FAILED, DELETE_LEAD, DELETE_TITLE,
-  PROOF_PASSWORD, PROOF_SOCIAL, pastSeasonsLine,
+  PASSWORD_WRONG, PROOF_PASSWORD, PROOF_SOCIAL, PROOF_UNCONFIRMED, TRY_LATER, pastSeasonsLine,
 } from '@/lib/account/deleteCopy';
 import type { DeleteLeagueLine } from '@/lib/account/leagueLines';
 import { proofInHand } from '@/lib/account/proofKind';
@@ -38,13 +39,15 @@ export interface DeleteAccountViewProps {
   leagues: DeleteLeagueLine[] | null;
   label: string;
   password: string;
+  /** The password field's input, so a refused password can refocus it. */
+  inputRef?: RefObject<TextInput | null>;
   onPassword: (v: string) => void;
   onApple: () => void;
   onGoogle: () => void;
   onDelete: () => void;
 }
 
-export function DeleteAccountView({ state, leagues, label, password, onPassword, onApple, onGoogle, onDelete }: DeleteAccountViewProps) {
+export function DeleteAccountView({ state, leagues, label, password, inputRef, onPassword, onApple, onGoogle, onDelete }: DeleteAccountViewProps) {
   const { colors } = useTheme();
   const sending = state.phase === 'sending';
   const proven = proofInHand(state.proof, state.kind);
@@ -77,6 +80,7 @@ export function DeleteAccountView({ state, leagues, label, password, onPassword,
 
       {state.kind === 'password' ? (
         <Field
+          ref={inputRef}
           label={PROOF_PASSWORD}
           value={password}
           onChangeText={onPassword}
@@ -84,7 +88,7 @@ export function DeleteAccountView({ state, leagues, label, password, onPassword,
           autoComplete="current-password"
           textContentType="password"
           returnKeyType="done"
-          invalid={state.proofRejected}
+          error={state.proofRejected ? PASSWORD_WRONG : null}
           editable={!sending}
         />
       ) : proven ? (
@@ -100,10 +104,16 @@ export function DeleteAccountView({ state, leagues, label, password, onPassword,
             {PROOF_SOCIAL}
           </Text>
           <ProviderButton kind={state.kind} onApple={onApple} onGoogle={onGoogle} />
+          {state.proofRejected ? (
+            <Text variant="callout" color={colors.danger} maxFontSizeMultiplier={BODY_MAX_SCALE} accessibilityRole="alert" accessibilityLiveRegion="polite">
+              {PROOF_UNCONFIRMED}
+            </Text>
+          ) : null}
         </View>
       )}
 
       {state.failed ? <WarnPanel text={DELETE_FAILED} /> : null}
+      {state.rateLimited ? <WarnPanel text={TRY_LATER} /> : null}
 
       <Button
         label={DELETE_BUTTON}

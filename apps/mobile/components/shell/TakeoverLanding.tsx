@@ -10,9 +10,9 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { WARN_TEXT_MAX_SCALE, WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { GO_TO_HOME, NOT_NOW, TAKE_THE_TEAM, takeoverQuestion } from '@/lib/account/deleteCopy';
+import { GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
 import { deadLine, recordLine, type TakeoverPreview } from '@/lib/account/takeoverView';
-import { JOIN_COPY } from '@/lib/join/joinPreview';
+import { JOIN_COPY, blockMessage } from '@/lib/join/joinPreview';
 import { ARRIVAL_COPY } from '@/lib/invite/arrivalView';
 
 // Account deletion (W4) — the takeover landing (board "Takeover landing" and "Already taken"). The default avatar
@@ -28,16 +28,19 @@ const LINK_MAX_SCALE = WARN_TEXT_MAX_SCALE;
 export type TakeoverLandingState =
   | { kind: 'loading' }
   | Exclude<TakeoverPreview, { kind: 'member' }>
+  | { kind: 'member'; leagueName: string }
   | { kind: 'taking'; found: Extract<TakeoverPreview, { kind: 'found' }> };
 
 export function TakeoverLanding({
-  state, label, onTake, onNotNow, onHome, onRetry, takeFailed,
+  state, label, onTake, onNotNow, onHome, onOpen, onRetry, takeFailed,
 }: {
   state: TakeoverLandingState;
   label: string;
   onTake: () => void;
   onNotNow: () => void;
   onHome: () => void;
+  /** "Open the league" for someone already in it. */
+  onOpen: () => void;
   onRetry: () => void;
   /** The write came back unknown: say so under the buttons (the preview's own "couldn't reach" line). */
   takeFailed: 'unreachable' | 'rate_limited' | null;
@@ -55,6 +58,18 @@ export function TakeoverLanding({
     );
   }
 
+  // Already in this league (already_member / not_eligible): the shipped Join line and button, not a dead link.
+  if (state.kind === 'member') {
+    return (
+      <AuthScaffold centerBody>
+        <View style={styles.actions}>
+          <WarnPanel text={blockMessage('already_member', { name: state.leagueName, max: 0 })} />
+          <Link label={OPEN_THE_LEAGUE} onPress={onOpen} />
+        </View>
+      </AuthScaffold>
+    );
+  }
+
   if (state.kind === 'loading') {
     return (
       <AuthScaffold centerBody>
@@ -67,7 +82,7 @@ export function TakeoverLanding({
     return (
       <AuthScaffold centerBody>
         <View style={styles.actions}>
-          <WarnPanel text={state.kind === 'rate_limited' ? JOIN_COPY.rateLimited : JOIN_COPY.unreachable} />
+          <WarnPanel text={state.kind === 'rate_limited' ? TRY_LATER : JOIN_COPY.unreachable} />
           <Link label={ARRIVAL_COPY.tryAgain} onPress={onRetry} />
           <Link label={NOT_NOW} onPress={onNotNow} muted />
         </View>
@@ -82,7 +97,7 @@ export function TakeoverLanding({
       centerBody
       footer={
         <View style={styles.actions}>
-          {takeFailed ? <WarnPanel text={takeFailed === 'rate_limited' ? JOIN_COPY.rateLimited : JOIN_COPY.unreachable} /> : null}
+          {takeFailed ? <WarnPanel text={takeFailed === 'rate_limited' ? TRY_LATER : JOIN_COPY.unreachable} /> : null}
           <Button label={TAKE_THE_TEAM} status={taking ? 'loading' : 'idle'} onPress={onTake} fullWidth />
           <Link label={NOT_NOW} onPress={onNotNow} muted disabled={taking} />
         </View>

@@ -19,6 +19,13 @@ export const ALERT_BODY = "This can't be undone. Your account and sign-in are de
 export const ALERT_KEEP = 'Keep my account'; // the default (cancel style)
 export const ALERT_DELETE = 'Delete'; // destructive
 
+/** NEW (Design Lead ruling, 2026-10-21; bad_proof, under the password field in the field's error style). */
+export const PASSWORD_WRONG = "That password isn't right. Try again.";
+/** NEW (same ruling; an Apple / Google bad_proof, under the provider button). */
+export const PROOF_UNCONFIRMED = "Couldn't confirm it's you. Try again.";
+/** NEW (same ruling; the proof rate limit, and a takeover code lockout: never understate an hour's lockout). */
+export const TRY_LATER = 'Too many tries. Try again later.';
+
 export const DELETE_FAILED = "Couldn't delete your account. Try again.";
 export const ACCOUNT_DELETED = 'Your account is deleted.'; // Sign in, once
 
@@ -27,6 +34,7 @@ export const TAKE_THE_TEAM = 'Take the team';
 export const NOT_NOW = 'Not now';
 export const TAKEN_LINE = 'Someone already took this team.';
 export const GO_TO_HOME = 'Go to Home';
+export const OPEN_THE_LEAGUE = 'Open the league'; // shipped (Join's already-a-member button)
 
 /** The line under the lead on a league the person plays in or runs (the board's B lines, verbatim). */
 export function stayLine(label: string): string {
