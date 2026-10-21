@@ -1,7 +1,17 @@
 -- ============================================================================
 -- FREEZE LEAGUE RULES EFFECT TEST — run in the Supabase SQL editor AFTER
--- `db push` of 20261104000000_freeze_league_rules_after_draft_start.sql.
+-- `db push` of 20261104000000_freeze_league_rules_after_draft_start.sql, and again
+-- after any later migration that guards leagues / league_members / drafts.
 -- Read-only in effect: NOTHING persists.
+--
+-- COVERS THE CHAIN THROUGH 20261111000001 (hygiene pre-1.3). It had stopped at
+-- 20261104000000, so six lines described rules that were since replaced (R5's
+-- message, R7, D1, L1-L3) and none of the guards that came after were exercised:
+--   20261107000004  the [I5] delete-self policy is dropped (leaving is leave_league)  L1-L3
+--   20261107000006  trg_leagues_roster_reconfirm_gate                                 W1-W2
+--   20261110000000  trg_leagues_commissioner_via_transfer                             T1-T2, R5
+--   20261111000001  draft_status server-only, trg_leagues_insert_not_started,
+--                   trg_leagues_draft_time                                           X1-X2, R7, D1, I1-I2, H1-H7
 -- ============================================================================
 -- Same shape as docs/security/draft-order-modes-effect-test.sql:
 --   * The SQL editor shows only the LAST statement's output and a failing
@@ -17,13 +27,22 @@
 --     would also revert a switch made inside it).
 --   * Fixture leagues are named __FREEZE_*__ with random invite codes. Their
 --     draft_date is 5h out, so the draft-order triggers never finalize them.
---   * supabase/tests/freeze_league_rules.pglite.test.ts runs THIS file
---     verbatim on real Postgres and requires every line to PASS.
+--   * supabase/tests/freeze_league_rules_later_guards.pglite.test.ts runs THIS file
+--     verbatim on real Postgres, on the FULL migration chain, and requires every
+--     line to PASS (and, per guard, that the guard's refusal is real: it drops the
+--     guard and expects the line to FAIL).
 --
 -- EXPECTED OUTPUT (the final "ERROR:" text): every line ends in PASS.
 --   G1  all four triggers present and enabled                       PASS
 --   G2  all four functions: no PUBLIC/anon/authenticated EXECUTE,
 --       slots/members/drafts fns SECURITY DEFINER, search_path
+--       pinned                                                      PASS
+--   G3  the four LATER leagues triggers present and enabled
+--       (reconfirm gate, commissioner-via-transfer, insert-not-
+--       started, draft-time)                                        PASS
+--   G4  their four functions: no PUBLIC/anon/authenticated/
+--       service_role EXECUTE, reconfirm gate + draft time SECURITY
+--       DEFINER, transfer + insert SECURITY INVOKER, search_path
 --       pinned                                                      PASS
 --   F1  the only FK touching league_members is its league_id ->
 --       leagues ON DELETE CASCADE (else: a cascade path to review)  PASS
@@ -36,6 +55,11 @@
 --   V2  service_role: num_rounds change on a completed league       PASS
 --   V3  service_role: removes a member from a completed league      PASS
 --   V4  service_role: deletes a pick in a completed league          PASS
+--   T2  service_role: changes commissioner_id (the transfer
+--       RPC's path) -> 1 row                                        PASS
+--   W1  service_role: starts a league that owes a roster
+--       reconfirmation -> roster_reconfirm_required                 PASS
+--   W2  service_role: starts a league that owes none -> 1 row       PASS
 --   P1  commissioner, pre-draft: slot UPDATE -> 1 row               PASS
 --   P2  commissioner, pre-draft: num_rounds change -> 1 row         PASS
 --   P3  commissioner, pre-draft: deletes a pick -> 1 row            PASS
@@ -47,21 +71,43 @@
 --   R3  commissioner, completed: same-value settings patch + rename
 --       (the league-settings.tsx shape) -> 1 row                    PASS
 --   R4  commissioner, completed: current_week -> league_rules_locked PASS
---   R5  commissioner, completed: commissioner_id (transfer)
---       -> league_rules_locked                                      PASS
+--   T1  commissioner, PRE-draft: commissioner_id
+--       -> commissioner_transfer_only                               PASS
+--   R5  commissioner, completed: commissioner_id
+--       -> commissioner_transfer_only (that guard fires first)      PASS
 --   R6  commissioner, completed: stamp a NULL league_start_date
 --       outside the completing UPDATE -> league_rules_locked        PASS
---   R7  commissioner, in_progress: the completing UPDATE
---       (draft_status -> completed + first-time dates, F1's
---       carve-out) -> 1 row                                         PASS
+--   X1  commissioner, PRE-draft: not_started -> in_progress
+--       -> draft_status_server_only                                 PASS
+--   X2  member, in_progress: the completion stamp
+--       (draft_status -> completed + dates) -> draft_status_server_only  PASS
+--   R7  commissioner, in_progress: the same completing UPDATE
+--       -> draft_status_server_only (F1's carve-out is unreachable
+--       for a user session now)                                     PASS
 --   D1  commissioner, completed -> not_started
---       -> league_draft_status_locked                               PASS
+--       -> draft_status_server_only                                 PASS
+--   I1  commissioner: INSERT a league already in_progress
+--       -> draft_status_server_only                                 PASS
+--   I2  commissioner: INSERT a not_started league -> 1 row          PASS
+--   H1  commissioner: draft_date off the quarter hour
+--       -> draft_time_invalid                                       PASS
+--   H2  commissioner: draft_date on the grid, under an hour away
+--       -> draft_time_too_soon                                      PASS
+--   H3  commissioner: a valid new draft_date -> 1 row               PASS
+--   H4  commissioner: the same-value draft_date patch of a legacy
+--       off-grid time (the league-settings.tsx shape) -> 1 row      PASS
+--   H5  commissioner: change the time once the room has opened
+--       -> draft_time_locked                                        PASS
+--   H6  commissioner: change the time of a POSTPONED league -> 1 row PASS
+--   H7  commissioner: INSERT a league with an off-grid draft_date
+--       -> draft_time_invalid                                       PASS
 --   K1  commissioner, completed: deletes a pick
 --       -> draft_picks_locked                                       PASS
 --   K2  member, completed: UPDATEs a pick -> 0 rows (no policy)     PASS
---   L1  commissioner, completed: leaves -> league_membership_locked PASS
---   L2  member, completed: leaves -> league_membership_locked       PASS
---   L3  member, pre-draft: leaves -> 1 row (unchanged behaviour)    PASS
+--   L1  commissioner, completed: direct DELETE of own membership
+--       -> 0 rows (no policy: leave_league is the only path)        PASS
+--   L2  member, completed: the same -> 0 rows                       PASS
+--   L3  member, pre-draft: the same -> 0 rows                       PASS
 --   C1  every live public.leagues column is classified (frozen,
 --       stamp-once, guarded elsewhere, or deliberately editable)    PASS
 --       A FAIL lists the unclassified columns: a column added in prod
@@ -77,11 +123,22 @@ declare
   l_prog  uuid;                              -- in_progress
   s_open  uuid;
   s_done  uuid;
+  l_xfer  uuid;                              -- not_started, for the commissioner-transfer guard (T1)
+  l_x1    uuid;                              -- not_started, for the pre-draft status jump (X1)
+  l_h     uuid;                              -- not_started, for the draft-time edits (H1-H3)
+  l_legacy uuid;                             -- not_started, an off-grid legacy draft_date (H4)
+  -- One league per refused-write case: a guard that is missing lets its write through, and a shared league would then
+  -- change under the lines after it. Each line fails alone.
+  l_rc    uuid;                              -- not_started, owes a roster reconfirmation
+  l_start uuid;                              -- not_started, owes none (the service role starts it)
+  l_room  uuid;                              -- not_started, room already open (draft_date 50 min out)
+  l_post  uuid;                              -- the same, POSTPONED
+  q_next  timestamptz := date_trunc('hour', now()) + (ceil(extract(minute from now()) / 15.0)::int * interval '15 minutes');  -- next quarter hour: on the grid, <= 15 min away
   n       int;
   acl     text;
   out     text := E'\n';
-  -- Keep in sync with CLASSIFICATION in supabase/tests/freeze_league_rules.pglite.test.ts
-  -- (the suite checks the two lists are identical).
+  -- Keep in sync with CLASSIFICATION in supabase/tests/freeze_harness.ts
+  -- (freeze_league_rules_later_guards.pglite.test.ts checks the two lists are identical).
   c_classified text[] := array[
     'stake_mode', 'budget_amount', 'notional_per_slot', 'num_rounds', 'allow_undraftable',
     'num_weeks', 'duration_days', 'league_type', 'num_participants',
@@ -114,6 +171,30 @@ begin
      and proname in ('enforce_league_draft_slots_frozen', 'enforce_league_rules_frozen_after_draft_start',
                      'enforce_league_members_frozen_after_draft_start', 'enforce_drafts_frozen_after_draft_start');
   out := out || format(E'G2 fn grants/secdef/path   %s (found %s/4)  %s\n', coalesce(acl, 'ok'), n,
+    case when acl is null and n = 4 then 'PASS' else 'FAIL' end);
+
+  select count(*) into n from pg_trigger
+   where tgname in ('trg_leagues_roster_reconfirm_gate', 'trg_leagues_commissioner_via_transfer',
+                    'trg_leagues_insert_not_started', 'trg_leagues_draft_time')
+     and tgrelid = 'public.leagues'::regclass and tgenabled = 'O';
+  out := out || format(E'G3 later leagues triggers present+enabled = %s/4  %s\n', n, case when n = 4 then 'PASS' else 'FAIL' end);
+
+  select string_agg(proname || ':' || coalesce(proacl::text, 'NULL') || ':' || prosecdef::text
+                    || ':' || coalesce(array_to_string(proconfig, ','), 'NOCONFIG'), ' ') into acl
+    from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+   where ns.nspname = 'public'
+     and proname in ('enforce_league_roster_reconfirm_gate', 'enforce_commissioner_change_via_transfer',
+                     'enforce_leagues_insert_not_started', 'enforce_leagues_draft_time')
+     and (proacl is null
+          or proacl::text ~ '(anon|authenticated|service_role)='
+          or proacl::text ~ '(^|[{,])=X'
+          or not coalesce(proconfig @> array['search_path=public, pg_temp'], false)
+          or (proname in ('enforce_league_roster_reconfirm_gate', 'enforce_leagues_draft_time')) <> prosecdef);
+  select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+   where ns.nspname = 'public'
+     and proname in ('enforce_league_roster_reconfirm_gate', 'enforce_commissioner_change_via_transfer',
+                     'enforce_leagues_insert_not_started', 'enforce_leagues_draft_time');
+  out := out || format(E'G4 later fn grants/secdef/path   %s (found %s/4)  %s\n', coalesce(acl, 'ok'), n,
     case when acl is null and n = 4 then 'PASS' else 'FAIL' end);
 
   select string_agg(conrelid::regclass || '.' || conname || '->' || confrelid::regclass || ':' || confdeltype::text, ' ') into acl
@@ -166,6 +247,47 @@ begin
   values (l_done, 0, 3, null, 50) returning id into s_done;
   insert into public.league_draft_slots (league_id, slot_index, slot_count, price_min, price_max)
   values (l_done, 1, 3, 50, null);
+  -- The later-guard fixtures. draft_date 50 minutes out = the room is open (an hour before), yet the league has only 2
+  -- members, under the order-finalizing floor of 4, so the draft-order triggers leave it alone.
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_XFER__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_xfer;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_X1__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_x1;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_H__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_h;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_LEGACY__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_legacy;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_RECONFIRM__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_rc;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_START__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '5 hours')
+  returning id into l_start;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_ROOM__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '50 minutes')
+  returning id into l_room;
+  insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks,
+                              draft_status, draft_date)
+  values ('__FREEZE_POSTPONED__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started', now() + interval '50 minutes')
+  returning id into l_post;
+  insert into public.league_members (league_id, user_id, role)
+  select l, u, case when u = c_uid then 'commissioner' else 'member' end
+    from unnest(array[l_xfer, l_x1, l_h, l_legacy, l_rc, l_start, l_room, l_post]) l, unnest(array[c_uid, m_uid]) u;
+  insert into public.league_roster_reconfirm (league_id, departed, members_before)
+  values (l_rc, jsonb_build_array(jsonb_build_object('user_id', x_uid, 'name', 'Leaver', 'left_at', now())), 3);
+  insert into public.draft_postponements (league_id, postponed_from, stage, reason)
+  values (l_post, now() + interval '50 minutes', 'room_open', 'fixture');
   update public.leagues set draft_status = 'completed' where id = l_done;
   update public.leagues set draft_status = 'in_progress' where id = l_prog;
   -- Picks, in the shape the service-role writer (insertGatedPick) uses. They are
@@ -208,6 +330,30 @@ begin
     out := out || format(E'V4 service pick delete (completed) rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
   exception when others then
     out := out || format(E'V4 service pick delete (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
+  begin
+    update public.leagues set commissioner_id = m_uid where id = l_xfer;
+    get diagnostics n = row_count;
+    out := out || format(E'T2 service commissioner_id change rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+    update public.leagues set commissioner_id = c_uid where id = l_xfer;   -- back, for the commissioner's own case T1
+  exception when others then
+    out := out || format(E'T2 service commissioner_id change -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    update public.leagues set draft_status = 'in_progress' where id = l_rc;
+    get diagnostics n = row_count;
+    out := out || format(E'W1 service start with a reconfirmation owed -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'W1 service start with a reconfirmation owed -> %s  %s\n', sqlstate,
+      case when sqlstate = '22023' and sqlerrm like 'roster_reconfirm_required:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set draft_status = 'in_progress' where id = l_start;
+    get diagnostics n = row_count;
+    out := out || format(E'W2 service start, nothing owed rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'W2 service start, nothing owed -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
   -- ---- the commissioner (authenticated, real RLS) ----------------------------
@@ -270,6 +416,23 @@ begin
   end;
 
   begin
+    update public.leagues set commissioner_id = m_uid where id = l_xfer;
+    get diagnostics n = row_count;
+    out := out || format(E'T1 pre-draft commissioner_id -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'T1 pre-draft commissioner_id -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'commissioner_transfer_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set draft_status = 'in_progress' where id = l_x1;
+    get diagnostics n = row_count;
+    out := out || format(E'X1 pre-draft not_started -> in_progress -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'X1 pre-draft not_started -> in_progress -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'draft_status_server_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
+  begin
     update public.leagues set num_rounds = 9 where id = l_done;
     get diagnostics n = row_count;
     out := out || format(E'R1 completed num_rounds -> allowed rows=%s  FAIL\n', n);
@@ -312,7 +475,7 @@ begin
     out := out || format(E'R5 completed commissioner_id -> allowed rows=%s  FAIL\n', n);
   exception when others then
     out := out || format(E'R5 completed commissioner_id -> %s  %s\n', sqlstate,
-      case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(commissioner_id)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+      case when sqlstate = '42501' and sqlerrm like 'commissioner_transfer_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
   begin
     -- The fixture was created with league_start_date NULL: stamping it now, with hindsight, is refused.
@@ -324,13 +487,16 @@ begin
       case when sqlstate = '42501' and sqlerrm like 'league_rules_locked:%(league_start_date)' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
   begin
+    -- F1's carve-out shape (the completing UPDATE with first-time dates) is a draft_status change, which a user session
+    -- may no longer make at all (20261111000001): the server finishes the draft.
     update public.leagues
        set draft_status = 'completed', league_start_date = now(), league_end_date = now() + interval '11 weeks'
      where id = l_prog and league_start_date is null and league_end_date is null;
     get diagnostics n = row_count;
-    out := out || format(E'R7 completing UPDATE with first-time dates rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+    out := out || format(E'R7 completing UPDATE with first-time dates -> allowed rows=%s  FAIL\n', n);
   exception when others then
-    out := out || format(E'R7 completing UPDATE with first-time dates -> %s %s  FAIL\n', sqlstate, sqlerrm);
+    out := out || format(E'R7 completing UPDATE with first-time dates -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'draft_status_server_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
 
   begin
@@ -339,17 +505,93 @@ begin
     out := out || format(E'D1 completed -> not_started -> allowed rows=%s  FAIL\n', n);
   exception when others then
     out := out || format(E'D1 completed -> not_started -> %s  %s\n', sqlstate,
-      case when sqlstate = '42501' and sqlerrm like 'league_draft_status_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+      case when sqlstate = '42501' and sqlerrm like 'draft_status_server_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
   end;
 
-  -- ---- L: leaving the league ([I5] delete-self) -----------------------------
+  -- ---- I: a user session creates leagues in not_started only -------------------
   begin
+    insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks, draft_status)
+    values ('__FREEZE_INSERT_BAD__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'in_progress');
+    out := out || E'I1 INSERT an in_progress league -> allowed  FAIL\n';
+  exception when others then
+    out := out || format(E'I1 INSERT an in_progress league -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'draft_status_server_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks, draft_status)
+    values ('__FREEZE_INSERT_OK__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started');
+    get diagnostics n = row_count;
+    out := out || format(E'I2 INSERT a not_started league rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'I2 INSERT a not_started league -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
+  -- ---- H: the draft time (a quarter hour, an hour ahead, frozen once the room is open) -----------
+  begin
+    update public.leagues set draft_date = date_trunc('hour', now()) + interval '10 hours 7 minutes' where id = l_h;
+    get diagnostics n = row_count;
+    out := out || format(E'H1 off-grid draft_date -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'H1 off-grid draft_date -> %s  %s\n', sqlstate,
+      case when sqlstate = '22023' and sqlerrm like 'draft_time_invalid:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set draft_date = q_next where id = l_h;
+    get diagnostics n = row_count;
+    out := out || format(E'H2 draft_date under an hour away -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'H2 draft_date under an hour away -> %s  %s\n', sqlstate,
+      case when sqlstate = '22023' and sqlerrm like 'draft_time_too_soon:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set draft_date = date_trunc('hour', now()) + interval '10 hours' where id = l_h;
+    get diagnostics n = row_count;
+    out := out || format(E'H3 valid new draft_date rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'H3 valid new draft_date -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    -- The fixture's draft_date is off-grid (now() + 5h, with seconds): the always-sent same-value patch must pass.
+    update public.leagues l set draft_date = l.draft_date where l.id = l_legacy;
+    get diagnostics n = row_count;
+    out := out || format(E'H4 same-value legacy draft_date rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'H4 same-value legacy draft_date -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    update public.leagues set draft_date = date_trunc('hour', now()) + interval '10 hours' where id = l_room;
+    get diagnostics n = row_count;
+    out := out || format(E'H5 draft_date once the room is open -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'H5 draft_date once the room is open -> %s  %s\n', sqlstate,
+      case when sqlstate = '22023' and sqlerrm like 'draft_time_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
+    update public.leagues set draft_date = date_trunc('hour', now()) + interval '10 hours' where id = l_post;
+    get diagnostics n = row_count;
+    out := out || format(E'H6 draft_date of a postponed league rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+  exception when others then
+    out := out || format(E'H6 draft_date of a postponed league -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
+    insert into public.leagues (name, commissioner_id, invite_code, num_participants, num_rounds, num_weeks, draft_status, draft_date)
+    values ('__FREEZE_INSERT_TIME__', c_uid, 'FRZ-' || gen_random_uuid(), 8, 6, 11, 'not_started',
+            date_trunc('hour', now()) + interval '10 hours 7 minutes');
+    out := out || E'H7 INSERT with an off-grid draft_date -> allowed  FAIL\n';
+  exception when others then
+    out := out || format(E'H7 INSERT with an off-grid draft_date -> %s  %s\n', sqlstate,
+      case when sqlstate = '22023' and sqlerrm like 'draft_time_invalid:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+
+  -- ---- L: leaving the league ([I5] delete-self, DROPPED by 20261107000004) -------
+  begin
+    -- No DELETE policy any more: the row is invisible to the statement, so 0 rows and no error. Leaving is leave_league
+    -- (a service-role path, V3 shows the role keeps its rights); the trigger stays as the second line behind it.
     delete from public.league_members where league_id = l_done and user_id = c_uid;
     get diagnostics n = row_count;
-    out := out || format(E'L1 commissioner leaves completed -> allowed rows=%s  FAIL\n', n);
+    out := out || format(E'L1 commissioner direct DELETE of own membership (completed) rows=%s  %s\n', n, case when n = 0 then 'PASS' else 'FAIL' end);
   exception when others then
-    out := out || format(E'L1 commissioner leaves completed -> %s  %s\n', sqlstate,
-      case when sqlstate = '42501' and sqlerrm like 'league_membership_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+    out := out || format(E'L1 commissioner direct DELETE of own membership (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
   perform set_config('request.jwt.claims', json_build_object('sub', m_uid, 'role', 'authenticated')::text, true);
@@ -361,17 +603,28 @@ begin
     out := out || format(E'K2 member pick UPDATE -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
   begin
+    -- [I2b]: any member could flip in_progress -> completed (F1's carve-out for the dates). Now only the server does.
+    update public.leagues
+       set draft_status = 'completed', league_start_date = now(), league_end_date = now() + interval '11 weeks'
+     where id = l_prog and league_start_date is null and league_end_date is null;
+    get diagnostics n = row_count;
+    -- Not refused: either it went through (the hole) or RLS hid the row (the guard was never reached): both are a FAIL.
+    out := out || format(E'X2 member completing UPDATE (in_progress) -> allowed rows=%s  FAIL\n', n);
+  exception when others then
+    out := out || format(E'X2 member completing UPDATE (in_progress) -> %s  %s\n', sqlstate,
+      case when sqlstate = '42501' and sqlerrm like 'draft_status_server_only:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+  end;
+  begin
     delete from public.league_members where league_id = l_done and user_id = m_uid;
     get diagnostics n = row_count;
-    out := out || format(E'L2 member leaves completed -> allowed rows=%s  FAIL\n', n);
+    out := out || format(E'L2 member direct DELETE of own membership (completed) rows=%s  %s\n', n, case when n = 0 then 'PASS' else 'FAIL' end);
   exception when others then
-    out := out || format(E'L2 member leaves completed -> %s  %s\n', sqlstate,
-      case when sqlstate = '42501' and sqlerrm like 'league_membership_locked:%' then 'PASS' else 'FAIL (' || sqlerrm || ')' end);
+    out := out || format(E'L2 member direct DELETE of own membership (completed) -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
   begin
     delete from public.league_members where league_id = l_open and user_id = m_uid;
     get diagnostics n = row_count;
-    out := out || format(E'L3 member leaves pre-draft rows=%s  %s\n', n, case when n = 1 then 'PASS' else 'FAIL' end);
+    out := out || format(E'L3 member direct DELETE of own membership (pre-draft) rows=%s  %s\n', n, case when n = 0 then 'PASS' else 'FAIL' end);
   exception when others then
     out := out || format(E'L3 member leaves pre-draft -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;

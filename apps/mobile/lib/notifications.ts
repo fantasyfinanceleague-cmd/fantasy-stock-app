@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { foregroundQuiet } from './foregroundQuiet';
 import { foregroundPushPlan } from './game/yourTurnPush';
 import { alertYourTurn } from './game/yourTurnAlert';
+import { deletePushToken, upsertPushToken } from './pushTokenStore';
 
 // Configure how notifications are displayed when app is in foreground
 // Foreground banners stay quiet while the app already shows what they'd say
@@ -61,48 +62,19 @@ export async function registerForPushNotifications(prompt = true): Promise<strin
 }
 
 /**
- * Save push token to user's profile in database
+ * Save the push token to the owner-scoped push_tokens table (F8: the only store; user_profiles.expo_push_token is dropped).
+ * lib/pushTokenStore.ts checks the resolved { error } and logs its code.
  */
 export async function savePushToken(userId: string, token: string): Promise<boolean> {
-  // Writes to the owner-scoped push_tokens table if it exists, else the legacy
-  // user_profiles column. The fallback makes this ONE client ship work both
-  // before and after the phase-2 relocation migration, so the two phases can be
-  // deployed and verified independently instead of having to land together.
-  // Remove the fallback once the migration is applied everywhere.
-  try {
-    const { error: newErr } = await supabase
-      .from('push_tokens')
-      .upsert({ user_id: userId, token, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
-    if (!newErr) return true;
-
-    const { error: legacyErr } = await supabase
-      .from('user_profiles')
-      .update({ expo_push_token: token })
-      .eq('id', userId);
-    if (legacyErr) {
-      console.error('Failed to save push token (both paths):', legacyErr.message ?? legacyErr);
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error('Error saving push token:', error);
-    return false;
-  }
+  return upsertPushToken(supabase, userId, token);
 }
 
 /**
- * Remove push token when user logs out
+ * Remove the push token when the user logs out. Best-effort: sign-out proceeds whatever happens here, but a failed delete is
+ * logged (a token left behind is a live capability for a device the user just signed out of).
  */
 export async function removePushToken(userId: string): Promise<void> {
-  // Clear from BOTH stores — during the phase-1/phase-2 overlap a token may exist
-  // in either, and a logout that leaves one behind leaves a live capability
-  // pointing at a device the user just signed out of.
-  try {
-    await supabase.from('push_tokens').delete().eq('user_id', userId);
-  } catch { /* table may not exist yet (pre-phase-2) */ }
-  try {
-    await supabase.from('user_profiles').update({ expo_push_token: null }).eq('id', userId);
-  } catch { /* column may be gone (post-phase-2) */ }
+  await deletePushToken(supabase, userId);
 }
 
 /**

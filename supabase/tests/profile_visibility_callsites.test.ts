@@ -32,7 +32,6 @@ const SOURCES = [
 /** The only files allowed to touch user_profiles directly, all own-row. */
 const SELF_ROW_FILES = new Set([
   'apps/mobile/lib/SessionProvider.tsx', // the caller's username; the signup upsert
-  'apps/mobile/lib/notifications.ts', // legacy push-token column on the caller's row
   'apps/web/src/pages/Profile.jsx', // the caller's own profile screen
   'apps/web/src/pages/Login.jsx', // the signup upsert
 ]);
@@ -52,7 +51,9 @@ Deno.test('no client reads another player\'s user_profiles row directly', () => 
       assert(ownRow, `${f}: a user_profiles access that is not provably the caller's own row:\n${chain.split(';')[0]}`);
     }
   }
-  assert(found.length >= 6, 'guard found fewer self-row accesses than exist -- has the scan broken?');
+  // Five today (Profile.jsx x3, Login.jsx, SessionProvider.tsx). notifications.ts had two more (the legacy expo_push_token writes) until
+  // F8's column was dropped and they were removed: it is no longer allowlisted, so a user_profiles access there fails above.
+  assert(found.length >= 5, 'guard found fewer self-row accesses than exist -- has the scan broken?');
 });
 
 Deno.test('every Realtime subscription on user_profiles is filtered to one id', () => {

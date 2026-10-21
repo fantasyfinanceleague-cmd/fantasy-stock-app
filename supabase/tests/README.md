@@ -530,12 +530,31 @@ It covers:
 - fail closed: an unknown or NULL `draft_status` (with the CHECK dropped) freezes
   everything and allows no move
 - `proacl`, `prosecdef` and the `search_path` pin of both trigger functions
-- the human post-push block `docs/security/freeze-league-rules-effect-test.sql`, run
-  **verbatim** (via `request.jwt.claims` and Supabase's real `auth.uid()` definition):
-  all 28 lines PASS, including F2 (`drafts.league_id` cascades; prints REVIEW in prod if
-  the prod-only FK differs), F1 (the only FK touching `league_members` is its
-  `league_id` cascade) and C1 (every live `leagues` column classified; its list must
-  equal the test's `CLASSIFICATION`), and nothing persists
+- (the human post-push block `docs/security/freeze-league-rules-effect-test.sql` moved to
+  `freeze_league_rules_later_guards.pglite.test.ts` below: it now covers the chain through
+  `20261111000001`, which this suite does not load)
+
+## freeze_league_rules_later_guards.pglite.test.ts
+
+The guards that came AFTER the freeze (`20261104000000`) and act on the same tables, on the
+**full** chain (`freeze_harness.ts` holds the schema, the `leagues` column replay and
+`CLASSIFICATION`, shared with the suite above). It loads, verbatim and in prod order, the
+freeze chain plus `20261004000000`, `20261101000001`, `20261107000000`, `20261107000004`,
+`20261107000006`, `20261110000000`/`01`/`02` and `20261111000000`/`01`, then:
+
+- runs the human post-push block `docs/security/freeze-league-rules-effect-test.sql`
+  **verbatim**: every line PASS, the file's EXPECTED OUTPUT header lists exactly the lines
+  it prints, its `c_classified` list equals `CLASSIFICATION`, and nothing persists. It covers
+  the reconfirm gate (W), commissioner-via-transfer (T), draft_status server-only (X, R7, D1),
+  the insert guard (I), the draft-time guard (H: invalid, too soon, locked, postponed, the
+  legacy same-value patch, INSERT), the dropped delete-self policy (L) and the later
+  functions' grants (G3, G4). It had stopped at `20261104000000`, so six of its lines
+  described replaced rules (hygiene pre-1.3).
+- for EACH guard, a **bad case**: a fresh database with that one guard removed (a trigger
+  dropped, rule (1) cut from the freeze function, the `[I5]` policy restored, a function
+  re-granted or losing its `search_path`), and the guard's own lines must FAIL while every
+  other line still PASSES (each refused-write case has its own fixture league, so a missing
+  guard cannot change the fixtures under the lines after it)
 
 **PR #94 (Run it back) pointer.** On `origin/feat/run-it-back` (not on `main` when this
 test was written), `renew_league` and `start_renewed_season` write slots and rules with

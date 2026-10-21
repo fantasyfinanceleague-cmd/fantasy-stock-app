@@ -18,7 +18,7 @@
 --     real Postgres and requires every line to PASS (C1/C2 read SKIP there:
 --     PGlite has no pg_cron).
 --
--- SUPERSEDES two lines of docs/security/freeze-league-rules-effect-test.sql:
+-- SUPERSEDES two lines of docs/security/freeze-league-rules-effect-test.sql (updated since, 2026-10-21: its R7/D1 expect this):
 -- after 20261111000001 its R7 (a user-session completing UPDATE -> 1 row) and
 -- D1 (expects 'league_draft_status_locked') are refused with
 -- 'draft_status_server_only' instead. That file is the record of the

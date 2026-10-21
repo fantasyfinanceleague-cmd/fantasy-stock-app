@@ -2,39 +2,51 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "31d4992c9885836463b18926020a331990f32cc0",
-    "commitShort": "31d4992c",
+    "commit": "9f451af3edb5638841e4e158185af8e6c03aabab",
+    "commitShort": "9f451af3",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "",
+    "branch": "chore/hygiene-pre-1.3",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/devSeamGate.ts"
+        "path": "apps/mobile/lib/notifications.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/lib/pushTokenStore.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/useRenewalRoster.ts"
+        "path": "apps/mobile/package-lock.json"
       },
       {
         "code": "M",
-        "path": "apps/mobile/lib/game/useRosterData.ts"
+        "path": "apps/mobile/package.json"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/push-token-store.test.ts"
       },
       {
         "code": "M",
-        "path": "apps/mobile/tests-deno/game-dev-seam.test.ts"
+        "path": "apps/mobile/tests-deno/sourceManifest.generated.ts"
+      },
+      {
+        "code": "??",
+        "path": "apps/mobile/tests-deno/supabase-client-pin.test.ts"
       }
     ],
-    "timestamp": "2026-10-20T16:45:44Z",
-    "sourceHash": "sha256:d840a07f5180e06c158ab678c6b37277ec5d459dd16787f5ca610cefe0b234eb",
+    "timestamp": "2026-10-21T16:57:07Z",
+    "sourceHash": "sha256:af1982a987da1eb30cbba582af5f7e1b7f8d86a1474356ac762eb0a7b1548e9a",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 114.5,
-    "ageDays": 4.8,
+    "ageHours": 138.7,
+    "ageDays": 5.8,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da",
@@ -9124,12 +9136,12 @@
       "drift": [],
       "annotation": null,
       "verified": true,
-      "id": "ui.notifications",
-      "label": "notifications.ts",
-      "sublabel": "mobile/lib/notifications.ts",
+      "id": "ui.pushTokenStore",
+      "label": "pushTokenStore.ts",
+      "sublabel": "mobile/lib/pushTokenStore.ts",
       "kind": "client-screen",
       "source": {
-        "path": "apps/mobile/lib/notifications.ts",
+        "path": "apps/mobile/lib/pushTokenStore.ts",
         "line": 1
       }
     },
@@ -17813,41 +17825,27 @@
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.notifications->tbl.push_tokens#delete",
-      "from": "ui.notifications",
+      "id": "e.ui.pushTokenStore->tbl.push_tokens#delete",
+      "from": "ui.pushTokenStore",
       "to": "tbl.push_tokens",
       "protocol": "postgrest-delete",
       "payload": ".from('push_tokens').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:101"
+        "apps/mobile/lib/pushTokenStore.ts:42"
       ]
     },
     {
       "annotation": null,
       "verified": true,
-      "id": "e.ui.notifications->tbl.push_tokens#upsert",
-      "from": "ui.notifications",
+      "id": "e.ui.pushTokenStore->tbl.push_tokens#upsert",
+      "from": "ui.pushTokenStore",
       "to": "tbl.push_tokens",
       "protocol": "postgrest-upsert",
       "payload": ".from('push_tokens').upsert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/notifications.ts:74"
-      ]
-    },
-    {
-      "annotation": null,
-      "verified": true,
-      "id": "e.ui.notifications->tbl.user_profiles#update",
-      "from": "ui.notifications",
-      "to": "tbl.user_profiles",
-      "protocol": "postgrest-update",
-      "payload": ".from('user_profiles').update()",
-      "columns": [],
-      "callSites": [
-        "apps/mobile/lib/notifications.ts:104",
-        "apps/mobile/lib/notifications.ts:79"
+        "apps/mobile/lib/pushTokenStore.ts:27"
       ]
     },
     {
@@ -20366,7 +20364,7 @@
   "orphanAnnotations": [],
   "stats": {
     "nodes": 275,
-    "edges": 658,
+    "edges": 657,
     "flows": 7,
     "drift": 30,
     "driftHigh": 0,
@@ -20583,10 +20581,8 @@
       "apps/mobile/lib/game/useSymbolCategories.ts:27 -> category_rules.select",
       "apps/mobile/lib/game/useWeekOne.ts:17 -> matchups.select",
       "apps/mobile/lib/home/useDraftingData.ts:86 -> drafts.select",
-      "apps/mobile/lib/notifications.ts:101 -> push_tokens.delete",
-      "apps/mobile/lib/notifications.ts:104 -> user_profiles.update",
-      "apps/mobile/lib/notifications.ts:74 -> push_tokens.upsert",
-      "apps/mobile/lib/notifications.ts:79 -> user_profiles.update",
+      "apps/mobile/lib/pushTokenStore.ts:27 -> push_tokens.upsert",
+      "apps/mobile/lib/pushTokenStore.ts:42 -> push_tokens.delete",
       "apps/mobile/lib/useLeagues.ts:33 -> league_members.select",
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
