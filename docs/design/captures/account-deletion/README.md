@@ -1,7 +1,7 @@
 # Account deletion W4 on the app: gate captures (`feat/account-deletion-app`)
 
 **Screenshots stay out of the repo.** Every still is in **`~/fantasy-stock-design-review/feat-account-deletion-app/`**
-(232 stills, 29 frame ids, plus `diffs/` and `not-reachable/`). This file is the index.
+(248 stills, 31 frame ids, plus `diffs/` and `not-reachable/`). This file is the index.
 
 **Build.** Branch `feat/account-deletion-app`. Captured on `1c82faa4` (F06-F27, F29-later and the F20-F23 re-shoot), `4260fee3` (F29-moment and the baseline diffs) and
 `aec957b3`..`86635477` (F01-F05, F16, F17, shot while the build session was still committing copy and contract
@@ -70,6 +70,14 @@ the first is kept). All 8 combinations (17e and 17 Pro, L and XXXL, dark and lig
 isn't right. Try again." AND the dimmed "Delete my account" fully above the keyboard, with the empty red-rimmed field
 above them. The earlier passes (hidden in 5 of 16 shots with the single-timer scroll) are in `superseded-run2/`
 (`runA-F24-*`, `runB-F24-*`).
+
+## F30, F31 and the spot check on `364198b7` (scheme-origin takeover links wait for a tap; no code is the dead view)
+
+| Frame | State | Result |
+|---|---|---|
+| F30 | takeover **tap view** (`TAKEOVER_FIXTURE=tap`, a scheme-origin link): the default avatar, then "Find league" (primary) and "Not now" docked at the bottom | 8 stills. The avatar is centred horizontally and sits in the middle of the space above the docked buttons; no heading, no text. At XXXL the buttons grow, nothing clips or overlaps |
+| F31 | takeover with **no pending code** (`SHELL_INITIAL_ROUTE=/takeover`, no knob, fresh simulators so nothing stored) | 8 stills: the dead-link view ("This invite link doesn't work anymore. Ask for a new one." + "Go to Home", no heading, centred), never a spinner. Two stills (17e and 17 Pro, L, light) were first caught on Home with a "No native module" dev toast, because the DEV initial-route push did not land on that launch; they were re-shot and the first versions are in `superseded-run2/F31-NOTROUTED-*` |
+| F20, F21 | spot check, 17e L dark and light (also 17 Pro) | unchanged: F20 shows the found question with the record and "Take the team" / "Not now" (no tap view); F21 shows "Someone already took this team." + "Go to Home" |
 
 ## Known notes
 
