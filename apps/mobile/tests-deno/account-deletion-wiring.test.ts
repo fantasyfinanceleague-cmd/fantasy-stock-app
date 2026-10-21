@@ -216,3 +216,33 @@ Deno.test('takeover landing: rate_limited shows the wait line (never the dead-li
   assert(screen.includes('if (r.leagueId) setActiveLeagueId(r.leagueId);'));
   assert(screen.includes("r.kind === 'unknown' || r.kind === 'rate_limited'"));
 });
+
+// ── Takeover codes live in league_invites (kind = 'takeover'): no list may show one as a pending invite ─────────────
+
+/** The `.from('league_invites')` reads in `s` whose statement (to the next `;`) does not filter `.eq('kind', 'invite')`. */
+function unfilteredInviteReads(s: string): string[] {
+  const out: string[] = [];
+  const re = /\.from\(\s*['"]league_invites['"]\s*\)([^;]*);?/g;
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    if (!/\.eq\(\s*['"]kind['"]\s*,\s*['"]invite['"]\s*\)/.test(m[1]) && /\.select\(/.test(m[1])) out.push(m[0].slice(0, 80));
+  }
+  return out;
+}
+
+Deno.test('league_invites: no mobile screen lists invites today, and any future list must filter kind = invite', () => {
+  const offenders: string[] = [];
+  for (const [path, text] of Object.entries(SOURCES)) {
+    for (const hit of unfilteredInviteReads(strip(text))) offenders.push(`${path}: ${hit}`);
+  }
+  assertEquals(offenders, []);
+  // Today there is no read at all (the web's commissioner invite list is the only one; apps/web/src/hooks/useLeagues.js).
+  assertEquals(Object.entries(SOURCES).filter(([, t]) => /\.from\(\s*['"]league_invites['"]/.test(strip(t))).map(([p]) => p), []);
+});
+
+Deno.test('league_invites: the scanner flags an unfiltered list (the mutation) and accepts a filtered one', () => {
+  const bad = "const { data } = await supabase.from('league_invites').select('code').eq('league_id', id);";
+  const good = "const { data } = await supabase.from('league_invites').select('code').eq('league_id', id).eq('kind', 'invite');";
+  assertEquals(unfilteredInviteReads(bad).length, 1, 'a takeover row would show as a pending invite');
+  assertEquals(unfilteredInviteReads(good), []);
+  assertEquals(unfilteredInviteReads("supabase.from('league_invites').insert(row);"), [], 'a write is not a list');
+});
