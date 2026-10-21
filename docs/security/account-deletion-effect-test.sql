@@ -1,6 +1,7 @@
 -- ============================================================================
 -- ACCOUNT DELETION EFFECT TEST: run in the Supabase SQL editor AFTER `db push`
--- of 20261125000000-07 (plan docs/plans/2026-10-21-account-deletion.md, W2).
+-- of 20261125000000-07 (plan docs/plans/2026-10-21-account-deletion.md, W2),
+-- and BEFORE W3's 20261125000010 cron (this file does not read cron.job).
 -- Read-only in effect: NOTHING persists (the block ends by RAISING, which rolls
 -- back every fixture: auth.users rows, leagues, the ledger row, vault entries).
 -- ============================================================================
@@ -25,8 +26,8 @@
 --   G1  trades has NO foreign key to auth.users                           PASS
 --   G2  league_members.deleted_at + freeze trigger fires on it            PASS
 --   G3  deleted_manager_label() = 'Former manager', never a username       PASS
---   G4  service-only functions: definer, path pinned, service_role only    PASS
---   G5  internals: owner only; authenticated: the 3 client RPCs            PASS
+--   G4  16 service-only functions: definer, path pinned, service_role only PASS
+--   G5  7 internals: owner only; authenticated: the 3 client RPCs          PASS
 --   G6  account_deletions: RLS on, no policies, no API-role privilege      PASS
 --   G7  policies: insert_self needs deleted_at null; invites kind = invite PASS
 --   G8  notification kinds include seat_taken_over (and every old kind)    PASS
@@ -36,6 +37,7 @@
 --   S4  scrub re-run: no new notice, nothing changes                       PASS
 --   V1  B, get_league_display_names(LM/LA): A = the label                  PASS
 --   V2  B, get_visible_profiles([A]): (A, label, NULL avatar)              PASS
+--   P1  takeover_preview: A's seat record 1-0, league name, nothing else   PASS
 --   T1  B makes a takeover code; E takes the seat; every row moves         PASS
 --   T2  a second taker gets 'taken'                                        PASS
 --   D1  auth delete: trades survive; mark_done -> 'done'                   PASS
@@ -66,7 +68,8 @@ declare
   svc_fns constant text[] := array['scrub_deleted_manager', 'take_over_team', 'heal_account_deletions',
     'account_deletion_open', 'account_deletion_cancel', 'account_deletion_set_apple',
     'account_deletion_stash_apple_token', 'account_deletion_apple_token', 'account_deletion_apple_revoked',
-    'account_deletion_fail', 'account_deletion_mark_done', 'leave_league', 'transfer_commissioner'];
+    'account_deletion_fail', 'account_deletion_mark_done', 'leave_league', 'transfer_commissioner',
+    'account_deletion_apple_unrevoked', 'takeover_preview', 'heal_account_deletions_due'];
 begin
   -- ---- G: catalog -------------------------------------------------------------
   select count(*) into n from pg_constraint
@@ -98,7 +101,8 @@ begin
     from pg_proc p join pg_namespace s on s.oid = p.pronamespace
    where s.nspname = 'public'
      and ((proname in ('_leave_league_before_draft', 'league_participant_display_name',
-                       'league_members_freeze_leaver', 'enforce_league_draft_order_rows')
+                       'league_members_freeze_leaver', 'enforce_league_draft_order_rows',
+                       '_takeover_check', '_account_deletion_settle_apple', '_account_deletion_apple_rank')
            and coalesce(proacl::text, '') ~ '(anon|authenticated|service_role)=|(^|[{,])=X')
        or (proname in ('get_visible_profiles', 'create_takeover_invite', 'renew_league')
            and (coalesce(proacl::text, '') !~ 'authenticated=X'
@@ -186,7 +190,7 @@ begin
   exception when others then out := out || format(E'S1 scrub without ledger -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
   begin
-    res := public.account_deletion_open(a_uid);
+    res := public.account_deletion_open(a_uid, false);
     res := public.scrub_deleted_manager(a_uid);
     select commissioner_id into got from public.leagues where id = lm;
     select r.departed -> 0 ->> 'name' into got2 from public.league_roster_reconfirm r where r.league_id = lp;
@@ -247,8 +251,18 @@ begin
   perform set_config('role', 'service_role', true);
   perform set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
   begin
+    res := public.takeover_preview(code, e_uid);
+    out := out || format(E'P1 preview ok=%s league=%s record=%s-%s keys=%s  %s\n', res ->> 'ok', res ->> 'league_name',
+      res ->> 'wins', res ->> 'losses', (select string_agg(k, ',' order by k) from jsonb_object_keys(res) k),
+      case when res ->> 'ok' = 'true' and res ->> 'league_name' = '__ACCTDEL_LM__' and (res ->> 'wins')::numeric = 1
+                and (res ->> 'losses')::numeric = 0
+                and (select string_agg(k, ',' order by k) from jsonb_object_keys(res) k) = 'league_name,losses,ok,rank,wins'
+           then 'PASS' else 'FAIL' end);
+  exception when others then out := out || format(E'P1 preview -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+  begin
     select count(*) into n from public.matchups where league_id = lm and (team1_user_id = a_uid::text or team2_user_id = a_uid::text);
-    res := public.take_over_team(lm, code, e_uid);
+    res := public.take_over_team(code, e_uid);
     select (select count(*) from public.matchups where league_id = lm and (team1_user_id = e_uid::text or team2_user_id = e_uid::text))
          + (select count(*) from public.league_standings where league_id = lm and user_id = e_uid::text)
          + (select count(*) from public.drafts where league_id = lm and user_id = e_uid::text)
@@ -263,7 +277,7 @@ begin
   exception when others then out := out || format(E'T1 takeover -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
   begin
-    res2 := public.take_over_team(lm, code, f_uid);
+    res2 := public.take_over_team(code, f_uid);
     out := out || format(E'T2 second taker -> %s  %s\n', res2 ->> 'reason',
       case when res2 ->> 'reason' = 'taken' then 'PASS' else 'FAIL' end);
   exception when others then out := out || format(E'T2 second taker -> %s %s  FAIL\n', sqlstate, sqlerrm);
@@ -293,6 +307,6 @@ begin
   -- Deliberate: rolls back every fixture and shows the result.
   raise exception E'ACCOUNT DELETION EFFECT TEST: % (all rolled back)\n%',
     case when out ~ 'FAIL' then 'FAIL' else 'PASS' end
-      || format(' (%s/18 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
+      || format(' (%s/19 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
 end;
 $$;

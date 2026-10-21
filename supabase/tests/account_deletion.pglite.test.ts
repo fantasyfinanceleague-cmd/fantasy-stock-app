@@ -20,6 +20,9 @@
  *   LOLD   completed, A + a bot only, renewed as LNEW      -> kept (ON DELETE RESTRICT), seat marked
  *   LNEW   the renewal, commissioner A, C in, B pending    -> C commissioner, A leaves
  *   LR2    a renewal of LAFTER by C, A's reply pending     -> A's reply deleted (the gate frees)
+ *   LRS    a renewal of LPRE2 that has DRAFTED, A 'in'     -> A's seat kept, so its 'in' reply stays
+ * LOLD also holds a hidden leaver B and an earlier-deleted seat Z, both joined before
+ * anyone: neither may inherit the title. I's scrub is sabotaged to prove the effect check.
  */
 import { assert, assertEquals, assertMatch, assertNotEquals, assertRejects } from 'jsr:@std/assert';
 import { PGlite } from 'npm:@electric-sql/pglite@0.2';
@@ -39,10 +42,12 @@ const E = 'e5e5e5e5-0000-4000-8000-0000000000e5';
 const F = 'f6f6f6f6-0000-4000-8000-0000000000f6';
 const G = '07070707-0000-4000-8000-000000000007';
 const H = '08080808-0000-4000-8000-000000000008';
+const I = '09090909-0000-4000-8000-000000000009';
+const Z = '0a0a0a0a-0000-4000-8000-00000000000a'; // an account deleted before this test (no auth row)
 const A_FALLBACK = 'Player A1A1'; // participant_display_name's missing-username label for A
 const lg = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const LPRE = lg(1), LPRE2 = lg(2), LPC = lg(3), LMID = lg(4), LDRAFT = lg(5), LAFTER = lg(6),
-  LEMPTY = lg(7), LOLD = lg(8), LNEW = lg(9), LR2 = lg(10);
+  LEMPTY = lg(7), LOLD = lg(8), LNEW = lg(9), LR2 = lg(10), LRS = lg(11);
 
 /** The exact text from `start` up to and including the first `end` after it. */
 function slice(src: string, start: string, end: string): string {
@@ -234,7 +239,7 @@ Deno.test({
 
     // ---- fixtures (superuser, auth.uid() NULL: the service path) ----------------
     const users: [string, string][] = [[A, 'alice_a'], [B, 'bob_b'], [C, 'cara_c'], [D, 'dan_d'], [E, 'eve_e'],
-      [F, 'fay_f'], [G, 'gus_g'], [H, 'hal_h']];
+      [F, 'fay_f'], [G, 'gus_g'], [H, 'hal_h'], [I, 'ivy_i']];
     for (const [id, name] of users) {
       await q(`insert into auth.users (id, raw_user_meta_data) values ($1, $2)`, [id, { username: name }]);
     }
@@ -297,6 +302,9 @@ Deno.test({
     await league(LEMPTY, 'Empty', A); await members(LEMPTY, [[A, 0], ['bot-1', 1]], A);
 
     await league(LOLD, 'Old', A); await members(LOLD, [[A, 0], ['bot-1', 1]], A);
+    // Joined before anyone, but neither can run a league: a hidden leaver and a deleted seat.
+    await q(`insert into league_members (league_id, user_id, role, joined_at, hidden_at) values ($1, $2, 'member', ${minutes(-3)}, now())`, [LOLD, B]);
+    await q(`insert into league_members (league_id, user_id, role, joined_at, deleted_at) values ($1, $2, 'member', ${minutes(-5)}, now())`, [LOLD, Z]);
     await start(LOLD); await finish(LOLD);
     await q(`update leagues set season_status = 'completed' where id = $1`, [LOLD]);
     await league(LNEW, 'New', A, 'matchup', LOLD); await members(LNEW, [[A, 0], [C, 1]], A);
@@ -316,18 +324,39 @@ Deno.test({
              values ($1, $2, 'renewal_invite', $3, '{"commissioner_name":"cara_c"}')`, [LR2, A, C]);
     await q(`insert into push_tokens (user_id, token) values ($1, 'ExponentPushToken[a]')`, [A]);
 
+    // LRS: a renewal that has drafted, with A 'in' and seated: the seat (and so the reply) stays.
+    await league(LRS, 'RS', B, 'matchup', LPRE2); await members(LRS, [[B, 0], [A, 1], [C, 2], [D, 3]], B);
+    await q(`insert into league_renewal_responses (league_id, user_id, status) values ($1, $2, 'pending'), ($1, $3, 'pending'),
+             ($1, $4, 'pending'), ($1, $5, 'pending')`, [LRS, A, B, C, D]);
+    await q(`update league_renewal_responses set status = 'in', decided_by = 'player', responded_at = now() where league_id = $1`, [LRS]);
+    await start(LRS); await finish(LRS);
+
+    // The waiver-wire plan's tables, as that plan specifies them (not on main yet): the scrub and
+    // the takeover reach them dynamically, so they must work once they exist.
+    await q(`create table public.watchlist (league_id uuid, user_id text, symbol text, primary key (league_id, user_id, symbol))`);
+    await q(`create table public.claims (id uuid primary key default gen_random_uuid(), league_id uuid, user_id text,
+             symbol text, status text check (status in ('pending','won','lost','failed','cancelled')))`);
+    await q(`create table public.waiver_order (league_id uuid, user_id text, position smallint, primary key (league_id, user_id))`);
+    await q(`insert into watchlist values ($1, $2, 'AAPL'), ($1, $3, 'AAPL')`, [LMID, A, B]);
+    await q(`insert into claims (league_id, user_id, symbol, status) values ($1, $2, 'NVDA', 'pending'), ($1, $2, 'TSLA', 'won'),
+             ($1, $3, 'NVDA', 'pending')`, [LMID, A, B]);
+    await q(`insert into waiver_order values ($1, $2, 1), ($1, $3, 2)`, [LMID, A, B]);
+
     // ---- grants -------------------------------------------------------------------
     await t.step('grants: every function and the ledger table, proacl exact', async () => {
       const SVC = '{postgres=X/postgres,service_role=X/postgres}';
       const OWNER = '{postgres=X/postgres}';
       const AUTH = '{postgres=X/postgres,authenticated=X/postgres}';
       const want: Record<string, string> = {
-        scrub_deleted_manager: SVC, take_over_team: SVC, heal_account_deletions: SVC, leave_league: SVC,
+        scrub_deleted_manager: SVC, take_over_team: SVC, takeover_preview: SVC, heal_account_deletions: SVC,
+        heal_account_deletions_due: SVC, leave_league: SVC,
         transfer_commissioner: SVC, account_deletion_open: SVC, account_deletion_cancel: SVC,
         account_deletion_set_apple: SVC, account_deletion_stash_apple_token: SVC, account_deletion_apple_token: SVC,
-        account_deletion_apple_revoked: SVC, account_deletion_fail: SVC, account_deletion_mark_done: SVC,
+        account_deletion_apple_revoked: SVC, account_deletion_apple_unrevoked: SVC, account_deletion_fail: SVC,
+        account_deletion_mark_done: SVC,
         _leave_league_before_draft: OWNER, league_participant_display_name: OWNER, league_members_freeze_leaver: OWNER,
-        enforce_league_draft_order_rows: OWNER,
+        enforce_league_draft_order_rows: OWNER, _takeover_check: OWNER, _account_deletion_settle_apple: OWNER,
+        _account_deletion_apple_rank: OWNER,
         get_visible_profiles: AUTH, create_takeover_invite: AUTH, renew_league: AUTH,
         deleted_manager_label: '{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}',
       };
@@ -337,7 +366,9 @@ Deno.test({
       for (const r of rows) {
         assertEquals(r.a, want[r.proname], `${r.proname} proacl`);
         assertEquals(r.c, '{"search_path=public, pg_temp"}', `${r.proname} search_path`);
-        assertEquals(r.prosecdef, r.proname !== 'deleted_manager_label', `${r.proname} security mode`);
+        // The two constants need no privilege; everything else is a definer.
+        assertEquals(r.prosecdef, !['deleted_manager_label', '_account_deletion_apple_rank'].includes(r.proname),
+          `${r.proname} security mode`);
       }
       const t1 = await one(`select relrowsecurity, relacl::text a from pg_class where oid = 'public.account_deletions'::regclass`);
       assert(t1.relrowsecurity);
@@ -356,9 +387,11 @@ Deno.test({
     await t.step('grants: refused callers (anon / authenticated / service_role on tables)', async () => {
       const denied = async (role: string, sub: string | null, sql: string, args: unknown[] = []) =>
         await assertRejects(() => as(role, sub, () => q(sql, args)), Error, 'permission denied');
-      for (const [fn, args] of [['scrub_deleted_manager', [A]], ['take_over_team', [LMID, 'X', E]],
-        ['heal_account_deletions', []], ['account_deletion_open', [A]], ['account_deletion_mark_done', [A]],
-        ['account_deletion_apple_token', [A]], ['leave_league', [LPRE, A, null]]] as [string, unknown[]][]) {
+      for (const [fn, args] of [['scrub_deleted_manager', [A]], ['take_over_team', ['X', E]],
+        ['takeover_preview', ['X', E]], ['heal_account_deletions', []], ['heal_account_deletions_due', []],
+        ['account_deletion_open', [A, false]], ['account_deletion_mark_done', [A]],
+        ['account_deletion_apple_token', [A]], ['account_deletion_apple_unrevoked', [A]],
+        ['leave_league', [LPRE, A, null]]] as [string, unknown[]][]) {
         const call = `select public.${fn}(${args.map((_, i) => `$${i + 1}`).join(', ')})`;
         await denied('anon', null, call, args);
         await denied('authenticated', A, call, args);
@@ -370,6 +403,8 @@ Deno.test({
       }
       // The internals are callable by nobody but the owner.
       await denied('service_role', null, `select public._leave_league_before_draft($1, $2, 'x')`, [LPRE, A]);
+      await denied('service_role', null, `select public._takeover_check('X', $1, false)`, [E]);
+      await denied('service_role', null, `select public._account_deletion_settle_apple($1, 'done')`, [A]);
       await denied('authenticated', A, `select public.league_participant_display_name($1, $2)`, [LMID, A]);
       assertEquals(await as('authenticated', A, () => rpc('deleted_manager_label', [])), LABEL);
     });
@@ -377,7 +412,7 @@ Deno.test({
     // ---- the ledger guards -------------------------------------------------------------
     await t.step('ledger: no ledger, no scrub; no account, no ledger', async () => {
       assertEquals(await svcRpc('scrub_deleted_manager', [A]), { status: 'refused', reason: 'no_ledger' });
-      assertEquals((await svcRpc('account_deletion_open', ['99999999-0000-4000-8000-000000000099'])).reason, 'no_such_user');
+      assertEquals((await svcRpc('account_deletion_open', ['99999999-0000-4000-8000-000000000099', false])).reason, 'no_such_user');
       assertEquals((await one(`select count(*)::int n from user_profiles where id = $1`, [A])).n, 1, 'nothing scrubbed');
     });
 
@@ -389,7 +424,7 @@ Deno.test({
 
     let scrub: Row;
     await t.step('scrub: open the ledger and scrub A', async () => {
-      const open = await svcRpc('account_deletion_open', [A]);
+      const open = await svcRpc('account_deletion_open', [A, false]);
       assertEquals(open, { status: 'open', stage: 'requested', apple_revoke: 'none' });
       scrub = await svcRpc('scrub_deleted_manager', [A]);
       assertEquals(scrub.status, 'scrubbed');
@@ -399,6 +434,8 @@ Deno.test({
 
     await t.step('scrub: succession to the earliest-joined other current human, in every window', async () => {
       const succ = Object.fromEntries(scrub.successions.map((s: Row) => [s.league_id, s.new_commissioner]));
+      for (const x of scrub.successions) assertEquals([x.recipient, typeof x.notice_id, typeof x.league_name],
+        [x.new_commissioner, 'string', 'string'], 'what W3 needs to push, without a read');
       assertEquals(succ, { [LPC]: D, [LMID]: B, [LNEW]: C });
       for (const [l, who] of [[LPC, D], [LMID, B], [LNEW, C]]) {
         assertEquals((await one(`select commissioner_id from leagues where id = $1`, [l])).commissioner_id, who);
@@ -409,7 +446,8 @@ Deno.test({
       }
       assertEquals(scrub.leagues_deleted, [LEMPTY]);
       assertEquals((await one(`select count(*)::int n from leagues where id = $1`, [LEMPTY])).n, 0, 'the empty league is gone');
-      assertEquals(scrub.leagues_kept, [LOLD], 'a renewed league is kept as history (ON DELETE RESTRICT)');
+      assertEquals(scrub.leagues_kept, [LOLD], 'a renewed league is kept as history (ON DELETE RESTRICT); '
+        + 'its hidden leaver and its deleted seat never inherit the title');
       assertEquals((await one(`select commissioner_id from leagues where id = $1`, [LOLD])).commissioner_id, A);
     });
 
@@ -430,8 +468,8 @@ Deno.test({
     });
 
     await t.step('scrub: every other seat stays, marked deleted, frozen_* NULL (hidden too)', async () => {
-      assertEquals([...scrub.seats_marked].sort(), [LMID, LDRAFT, LAFTER, LOLD].sort());
-      for (const l of [LMID, LDRAFT, LAFTER, LOLD]) {
+      assertEquals([...scrub.seats_marked].sort(), [LMID, LDRAFT, LAFTER, LOLD, LRS].sort());
+      for (const l of [LMID, LDRAFT, LAFTER, LOLD, LRS]) {
         const m = await one(`select deleted_at, frozen_username, frozen_avatar, frozen_at from league_members
           where league_id = $1 and user_id = $2`, [l, A]);
         assert(m.deleted_at, `${l}: deleted_at set`);
@@ -449,7 +487,8 @@ Deno.test({
       assertEquals(await n(`select count(*)::int n from push_tokens where user_id = $1`, [A]), 0);
       assertEquals(await n(`select count(*)::int n from draft_queue where user_id = $1`, [A]), 0);
       assertEquals(await n(`select count(*)::int n from league_notifications where user_id = $1`, [A]), 0);
-      assertEquals(await n(`select count(*)::int n from league_renewal_responses where user_id = $1`, [A]), 0);
+      assertEquals((await q(`select league_id, status from league_renewal_responses where user_id = $1`, [A])),
+        [{ league_id: LRS, status: 'in' }], 'replies go where the seat went; a kept seat keeps its in (in <=> member)');
       assertEquals(await n(`select count(*)::int n from league_renewal_responses where league_id = $1 and user_id = $2`, [LNEW, B]), 1,
         'other invitees untouched');
       assertEquals((await q(`select code from league_invites where inviter_id = $1 order by code`, [A])).map((r: Row) => r.code),
@@ -457,6 +496,9 @@ Deno.test({
       const det = (await one(`select detail from league_notifications where league_id = $1 and user_id = $2`, [LNEW, B])).detail;
       assertEquals(det, { commissioner_name: LABEL, league_name: 'New' }, 'their name in others\' notifications');
       assertEquals(await n(`select count(*)::int n from trades where user_id = $1`, [A]), 3, 'trades stay');
+      assertEquals(await n(`select count(*)::int n from watchlist where user_id = $1`, [A]), 0);
+      assertEquals((await q(`select user_id, status from claims order by user_id, status`)).map((r: Row) => `${r.user_id === A ? 'A' : 'B'}:${r.status}`),
+        ['A:won', 'B:pending'], 'their PENDING claims go; a resolved claim is history');
       assertEquals(await n(`select count(*)::int n from matchups where team1_user_id = $1 or team2_user_id = $1`, [A]), 3);
       assertEquals((await one(`select champion_user_id from league_seasons where league_id = $1`, [LAFTER])).champion_user_id, A);
     });
@@ -511,6 +553,12 @@ Deno.test({
       assertEquals(ren.invited, 2, 'C and D only');
       assertEquals((await q(`select user_id from league_renewal_responses where league_id = $1 and status = 'pending' order by 1`,
         [ren.league_id])).map((r: Row) => r.user_id), [C, D]);
+      // After the season, the title can't go to a deleted seat that is NOT hidden either.
+      assertEquals((await svcRpc('transfer_commissioner', [LM2, B, A])).reason, 'target_invalid');
+      assertEquals((await svcRpc('transfer_commissioner', [LM2, B, C])).status, 'transferred', 'a live member still can');
+      // The shared leave's own preconditions (a backstop behind its callers) raise on a breach.
+      await assertRejects(() => q(`select public._leave_league_before_draft($1, $2, 'x')`, [LMID, C]), Error, 'precondition failed');
+      await assertRejects(() => q(`select public._leave_league_before_draft($1, $2, 'x')`, [LPRE, B]), Error, 'precondition failed');
       // A commissioner cannot insert their own seat born deleted.
       const LX = lg(21);
       await league(LX, 'X', E);
@@ -540,7 +588,8 @@ Deno.test({
       const r = await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, A]));
       assertEquals([r.status, r.created], ['ok', true]);
       code = r.code;
-      assertMatch(code, /^[A-HJ-NP-Z2-9]{10}$/);
+      assertMatch(code, /^[A-Z0-9]{10}$/, 'the invite-code shape the client validates');
+      assertMatch(code, /^[A-HJ-NP-Z2-9]{10}$/, 'from the app\'s 32-symbol alphabet');
       assertEquals((await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, A]))).code, code, 'the same code again');
       assertEquals((await as('authenticated', C, () => rpc('create_takeover_invite', [LMID, A]))).reason, 'not_commissioner');
       assertEquals((await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, D]))).reason, 'not_deleted');
@@ -565,23 +614,62 @@ Deno.test({
       (select count(*)::int from drafts where league_id = $1 and user_id = $2) dr,
       (select count(*)::int from trades where league_id = $1 and user_id::text = $2) tr`, [l, u]));
 
-    await t.step('takeover: refusals write nothing', async () => {
+    await t.step('takeover: refusals write nothing, and the preview agrees with the takeover on every one', async () => {
+      // Fixture codes: a live seat; a code issued in LPRE naming A's id (A holds no seat THERE,
+      // so it cannot reach LMID's seat); an expired code.
+      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id, expires_at)
+               values ($1, $2, 'takeover', 'LIVESEAT22', 'takeover', $3, null),
+                      ($4, $2, 'takeover', 'OTHERLG222', 'takeover', $5, null),
+                      ($6, $2, 'takeover', 'EXPIRED222', 'takeover', $5, now() - interval '1 minute')`,
+        [LMID, B, D, LPRE, A, LDRAFT]);
       const before = await countsOf(A, LMID);
-      const r = (args: unknown[]) => svcRpc('take_over_team', args);
-      assertEquals((await r([LMID, 'NOPE234567', E])).reason, 'invalid_code');
-      assertEquals((await r([LMID, code, C])).reason, 'already_member');
-      assertEquals((await r([LMID, code, A])).reason, 'not_eligible', 'a deleted account cannot take a seat');
-      assertEquals((await r([LMID, code, '99999999-0000-4000-8000-000000000099'])).reason, 'not_eligible', 'no forged ids');
-      assertEquals((await r([lg(99), code, E])).reason, 'gone');
-      assertEquals((await r([LAFTER, code, E])).reason, 'invalid_code', 'a code works only in its own league');
+      const writes = async () => JSON.stringify(await q(`select (select count(*) from league_notifications) n,
+        (select jsonb_agg(jsonb_build_array(code, status) order by code) from league_invites) inv`));
+      const w0 = await writes();
+      const both = async (c: string, u: string, reason: string, why: string) => {
+        const pv = await svcRpc('takeover_preview', [c, u]);
+        assertEquals(pv, { ok: false, reason }, `preview: ${why}`);
+        const tk = await svcRpc('take_over_team', [c, u]);
+        assertEquals(tk, { status: 'refused', reason }, `takeover: ${why}`);
+      };
+      await both('NOPE234567', E, 'invalid_code', 'an unknown code');
+      await both(code.toLowerCase(), E, 'invalid_code', 'codes match exactly (the client upper-cases)');
+      await both(` ${code}`, E, 'invalid_code', 'codes match exactly (the client trims)');
+      await both(code, C, 'already_member', 'a member of the league');
+      await both(code, A, 'not_eligible', 'a deleted account cannot take a seat');
+      await both(code, '99999999-0000-4000-8000-000000000099', 'not_eligible', 'no forged ids');
+      await both('LIVESEAT22', F, 'not_deleted', 'a live manager\'s seat is never taken');
+      await both('OTHERLG222', F, 'taken', 'a code from one league cannot take a seat in another');
+      await both('EXPIRED222', F, 'invalid_code', 'an expired code');
       assertEquals(await countsOf(A, LMID), before);
+      assertEquals(await writes(), w0, 'refusals and previews write nothing');
+      // The preview of a takeable seat: its record and rank, nothing else.
+      const pv = await svcRpc('takeover_preview', [code, E]);
+      assertEquals(Object.keys(pv).sort(), ['league_name', 'losses', 'ok', 'rank', 'wins']);
+      assertEquals([pv.ok, pv.league_name, Number(pv.wins), Number(pv.losses)], [true, 'Mid', 1, 0]);
+      const ranked = await one(`select rank from public.league_standings_ranked($1) where user_id = $2`, [LMID, A]);
+      assertEquals(pv.rank, ranked.rank);
+    });
+
+    await t.step('takeover: gone (the league vanished under a live code; the FK normally cascades it away)', async () => {
+      const LG = lg(30);
+      await league(LG, 'Gone', B);
+      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id)
+               values ($1, $2, 'takeover', 'GONECODE22', 'takeover', $3)`, [LG, B, A]);
+      // replica mode skips the ON DELETE CASCADE (an RI trigger on leagues), leaving the code orphaned.
+      await q(`set session_replication_role = replica`);
+      await q(`delete from leagues where id = $1`, [LG]);
+      await q(`set session_replication_role = origin`);
+      assertEquals(await svcRpc('takeover_preview', ['GONECODE22', F]), { ok: false, reason: 'gone' });
+      assertEquals(await svcRpc('take_over_team', ['GONECODE22', F]), { status: 'refused', reason: 'gone' });
+      await q(`delete from league_invites where code = 'GONECODE22'`);
     });
 
     await t.step('takeover: every row of the seat moves; the record is kept; a second taker gets taken', async () => {
       const before = await countsOf(A, LMID);
       const joined = (await one(`select joined_at from league_members where league_id = $1 and user_id = $2`, [LMID, A])).joined_at;
       const pos = (await one(`select position from league_draft_order where league_id = $1 and user_id = $2`, [LMID, A])).position;
-      const res = await svcRpc('take_over_team', [LMID, code.toLowerCase(), E]);
+      const res = await svcRpc('take_over_team', [code, E]);
       assertEquals(res.status, 'taken_over');
       assertEquals([res.notify_user_id, res.new_name, res.seat_label, res.league_name], [B, 'eve_e', LABEL, 'Mid']);
       assertEquals(await countsOf(E, LMID), before, 'E holds exactly what A held');
@@ -594,7 +682,11 @@ Deno.test({
       assertEquals((await one(`select count(*)::int n from league_notifications where league_id = $1 and user_id = $2
         and kind = 'seat_taken_over' and subject_user_id = $3`, [LMID, B, E])).n, 1);
       assertEquals((await namesIn(B, LMID))[E], 'eve_e', 'past weeks now read the new manager');
-      assertEquals((await svcRpc('take_over_team', [LMID, code, F])).reason, 'taken');
+      assertEquals((await one(`select user_id from waiver_order where league_id = $1 and position = 1`, [LMID])).user_id, E,
+        'the waiver position comes with the seat');
+      assertEquals((await one(`select count(*)::int n from claims where user_id = $1 and status = 'won'`, [E])).n, 1);
+      assertEquals((await svcRpc('take_over_team', [code, F])).reason, 'taken');
+      assertEquals(await svcRpc('takeover_preview', [code, F]), { ok: false, reason: 'taken' }, 'the preview agrees');
       // A's seats in OTHER leagues are untouched.
       assert((await one(`select deleted_at from league_members where league_id = $1 and user_id = $2`, [LDRAFT, A])).deleted_at);
     });
@@ -609,12 +701,13 @@ Deno.test({
     await t.step('takeover: a seat in the season window via a stray code still refuses after the season', async () => {
       await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id)
                values ($1, $2, 'takeover', 'LATECODE22', 'takeover', $3)`, [LAFTER, C, A]);
-      assertEquals((await svcRpc('take_over_team', [LAFTER, 'LATECODE22', F])).reason, 'window');
+      assertEquals((await svcRpc('take_over_team', ['LATECODE22', F])).reason, 'window');
+      assertEquals(await svcRpc('takeover_preview', ['LATECODE22', F]), { ok: false, reason: 'window' });
     });
 
     // ---- the final stage ------------------------------------------------------------------
     await t.step('ledger: done only after the auth user is really gone; trades survive it', async () => {
-      assertEquals((await svcRpc('account_deletion_mark_done', [A])).reason, 'auth_user_exists');
+      assertEquals(await svcRpc('account_deletion_mark_done', [A]), { status: 'refused', reason: 'auth_user_exists', stage: 'scrubbed' });
       const tr = (await one(`select count(*)::int n from trades where user_id = $1`, [A])).n;
       await q(`delete from auth.users where id = $1`, [A]);
       assertEquals((await one(`select count(*)::int n from trades where user_id = $1`, [A])).n, tr, 'no cascade');
@@ -625,7 +718,8 @@ Deno.test({
     });
 
     await t.step('ledger: apple revoke state is forward-only; the token lives in vault until revoked', async () => {
-      assertEquals((await svcRpc('account_deletion_open', [G])).stage, 'requested');
+      assertEquals(await svcRpc('account_deletion_open', [G, true]), { status: 'open', stage: 'requested', apple_revoke: 'required' });
+      assertEquals((await svcRpc('account_deletion_open', [G, false])).apple_revoke, 'required', 'a re-open never changes it');
       assertEquals((await svcRpc('account_deletion_stash_apple_token', [G, 'r.secret-refresh'])).apple_revoke, 'pending');
       assertEquals((await svcRpc('account_deletion_apple_token', [G])).token, 'r.secret-refresh');
       assertEquals((await svcRpc('account_deletion_set_apple', [G, 'none'])).reason, 'backward');
@@ -634,29 +728,46 @@ Deno.test({
       assertEquals((await svcRpc('account_deletion_apple_token', [G])).token, null);
       assertEquals((await svcRpc('account_deletion_stash_apple_token', [G, 'again'])).reason, 'backward');
       assertEquals((await svcRpc('account_deletion_set_apple', [G, 'pending'])).reason, 'backward');
+      assertEquals((await svcRpc('account_deletion_apple_unrevoked', [G])).reason, 'backward', 'done never becomes unrevoked');
       const err = await svcRpc('account_deletion_fail', [G, 'x'.repeat(5000)]);
       assertEquals(err.recorded, true);
       assertEquals((await one(`select length(last_error) n from account_deletions where user_id = $1`, [G])).n, 1000);
       // cancel works ONLY at 'requested' (the bad-proof path), and clears any stashed token.
-      await svcRpc('account_deletion_open', [H]);
+      await svcRpc('account_deletion_open', [H, true]);
       await svcRpc('account_deletion_stash_apple_token', [H, 'h-token']);
       assertEquals((await svcRpc('account_deletion_cancel', [H])).cancelled, true);
       assertEquals((await one(`select count(*)::int n from vault.secrets where name = $1`, [`apple_revoke:${H}`])).n, 0);
       assertEquals((await one(`select count(*)::int n from account_deletions where user_id = $1`, [H])).n, 0);
-      assertEquals((await svcRpc('account_deletion_mark_done', [G])).reason, 'not_scrubbed', 'never skip the scrub');
+      assertEquals(await svcRpc('account_deletion_mark_done', [G]), { status: 'refused', reason: 'not_scrubbed', stage: 'requested' },
+        'never skip the scrub; a refusal reports the current stage');
+    });
+
+    await t.step('scrub verifies its EFFECT: a delete that silently does nothing rolls everything back', async () => {
+      await q(`insert into push_tokens (user_id, token) values ($1, 'ExponentPushToken[i]')`, [I]);
+      await q(`create function pg_temp.keep() returns trigger language plpgsql as $$ begin return null; end $$`);
+      await q(`create trigger zz_keep before delete on public.push_tokens for each row execute function pg_temp.keep()`);
+      await svcRpc('account_deletion_open', [I, false]);
+      await assertRejects(() => svcRpc('scrub_deleted_manager', [I]), Error, 'effect check failed');
+      assertEquals((await one(`select count(*)::int n from user_profiles where id = $1`, [I])).n, 1, 'the profile delete rolled back too');
+      await q(`drop trigger zz_keep on public.push_tokens`);
+      assertEquals((await svcRpc('scrub_deleted_manager', [I])).stage, 'scrubbed');
+      await q(`delete from auth.users where id = $1`, [I]);
+      assertEquals((await svcRpc('account_deletion_mark_done', [I])).stage, 'done');
     });
 
     await t.step('heal: an interrupted request at each stage reaches done; one failure blocks nobody', async () => {
       // G: opened, never scrubbed (the request died). H: opened, and its scrub FAILS.
-      await svcRpc('account_deletion_open', [H]);
+      await svcRpc('account_deletion_open', [H, false]);
       await q(`update account_deletions set updated_at = now() - interval '1 hour' where user_id in ($1, $2)`, [G, H]);
       await q(`create function pg_temp.boom() returns trigger language plpgsql as $$
                begin if old.id = '${H}' then raise exception 'injected failure'; end if; return old; end $$`);
       await q(`create trigger zz_boom before delete on public.user_profiles for each row execute function pg_temp.boom()`);
       // A fresh request (in flight) is left alone.
-      await svcRpc('account_deletion_open', [F]);
+      await svcRpc('account_deletion_open', [F, false]);
       const h1 = await svcRpc('heal_account_deletions', []);
       assertEquals(h1.scrubbed, [G]);
+      assertEquals(h1.scrub_results.map((x: Row) => [x.status, x.stage]), [['scrubbed', 'scrubbed']],
+        'each heal-run scrub body, for the handler\'s pushes');
       assertEquals(h1.scrub_errors.map((e: Row) => e.user_id), [H]);
       assertMatch(h1.scrub_errors[0].error, /injected failure/);
       assertEquals(h1.auth_delete, [G], 'the scrubbed one is owed an auth delete; A is already done');
@@ -688,11 +799,146 @@ Deno.test({
       assertEquals(h.apple_pending, [F]);
       await q(`update account_deletions set updated_at = now() - interval '8 days' where stage = 'done'`);
       const p = await svcRpc('heal_account_deletions', []);
-      assertEquals(p.purged, 3, 'A, G, H');
+      assertEquals(p.purged, 4, 'A, G, H, I');
       assertEquals((await q(`select user_id from account_deletions order by 1`)).map((r: Row) => r.user_id), [F]);
       await assertRejects(() => svcRpc('heal_account_deletions', ['-1 minute']), Error, 'invalid_arguments');
     });
 
+    await db.close();
+  },
+});
+
+// ---------------------------------------------------------------------------
+// The ledger state machines, the heal's Apple expiry, and heal_account_deletions_due,
+// on a fresh full chain (no league fixtures: only ledger rows and auth users).
+// ---------------------------------------------------------------------------
+Deno.test({
+  name: 'account deletion: ledger states, updated_at bumps, Apple expiry, heal_account_deletions_due',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn(t) {
+    const db = new PGlite();
+    await loadChain(db);
+    const q = async (s: string, p: unknown[] = []) => (await db.query<Row>(s, p)).rows;
+    const one = async (s: string, p: unknown[] = []) => (await q(s, p))[0];
+    const svc = async (fn: string, args: unknown[]) => {
+      await db.exec('set role service_role');
+      try {
+        return (await one(`select public.${fn}(${args.map((_, i) => `$${i + 1}`).join(', ')}) r`, args)).r;
+      } finally { await db.exec('reset role'); }
+    };
+    const U = (n: number) => `0b0b0b0b-0000-4000-8000-${String(n).padStart(12, '0')}`;
+    for (let n = 1; n <= 9; n++) await q(`insert into auth.users (id) values ($1)`, [U(n)]);
+    const row = (u: string) => one(`select stage, apple_revoke, updated_at, requested_at, last_error from account_deletions where user_id = $1`, [u]);
+    const age = (u: string, col: string, iv: string) => q(`update account_deletions set ${col} = now() - interval '${iv}' where user_id = $1`, [u]);
+    const due = async () => (await svc('heal_account_deletions_due', [])) as boolean;
+
+    await t.step('every ledger write bumps updated_at', async () => {
+      const u = U(1);
+      const writes: [string, unknown[]][] = [
+        ['account_deletion_open', [u, true]],          // insert
+        ['account_deletion_open', [u, true]],          // re-open
+        ['account_deletion_set_apple', [u, 'pending']],
+        ['account_deletion_stash_apple_token', [u, 'tok-1']],
+        ['account_deletion_fail', [u, 'boom']],
+        ['account_deletion_apple_revoked', [u]],
+        ['scrub_deleted_manager', [u]],
+      ];
+      for (const [fn, args] of writes) {
+        if (fn !== 'account_deletion_open' || (await q(`select 1 from account_deletions where user_id = $1`, [u])).length) {
+          await age(u, 'updated_at', '1 hour');
+        }
+        await svc(fn, args);
+        const r = await row(u);
+        assert(Date.now() - new Date(r.updated_at).getTime() < 60_000, `${fn} must bump updated_at`);
+      }
+      await q(`delete from auth.users where id = $1`, [u]);
+      await age(u, 'updated_at', '1 hour');
+      assertEquals((await svc('account_deletion_mark_done', [u])).stage, 'done');
+      assert(Date.now() - new Date((await row(u)).updated_at).getTime() < 60_000, 'mark_done must bump updated_at');
+      // apple_unrevoked bumps too (on a row that can still settle).
+      const v = U(2);
+      await svc('account_deletion_open', [v, true]);
+      await age(v, 'updated_at', '1 hour');
+      assertEquals((await svc('account_deletion_apple_unrevoked', [v])).apple_revoke, 'unrevoked');
+      assert(Date.now() - new Date((await row(v)).updated_at).getTime() < 60_000, 'apple_unrevoked must bump updated_at');
+    });
+
+    await t.step('apple_revoke: forward only by rank, terminal states final, every settlement drops the vault entry', async () => {
+      const u = U(3);
+      assertEquals((await svc('account_deletion_open', [u, false])).apple_revoke, 'none');
+      assertEquals((await svc('account_deletion_set_apple', [u, 'required'])).apple_revoke, 'required');
+      assertEquals((await svc('account_deletion_set_apple', [u, 'none'])).reason, 'backward');
+      assertEquals((await svc('account_deletion_stash_apple_token', [u, 'tok-3'])).apple_revoke, 'pending');
+      assertEquals((await svc('account_deletion_set_apple', [u, 'required'])).reason, 'backward');
+      assertEquals((await svc('account_deletion_apple_token', [u])).token, 'tok-3');
+      assertEquals((await svc('account_deletion_set_apple', [u, 'unrevoked'])).apple_revoke, 'unrevoked');
+      assertEquals((await one(`select count(*)::int n from vault.secrets where name = $1`, [`apple_revoke:${u}`])).n, 0,
+        'set_apple settling drops the vault entry too');
+      assertEquals((await svc('account_deletion_apple_revoked', [u])).reason, 'backward', 'unrevoked never becomes done');
+      assertEquals((await svc('account_deletion_stash_apple_token', [u, 'tok-again'])).reason, 'backward');
+      assertEquals((await svc('account_deletion_apple_token', [u])).token, null);
+      const n = U(4);
+      await svc('account_deletion_open', [n, false]);
+      assertEquals((await svc('account_deletion_apple_unrevoked', [n])).reason, 'backward', 'no Apple identity, nothing to settle');
+      await assertRejects(() => svc('account_deletion_set_apple', [n, 'bogus']), Error, 'invalid_arguments');
+      await assertRejects(() => svc('account_deletion_open', [n, null]), Error, 'invalid_arguments');
+      // Clean slate for the heal steps below.
+      await q(`delete from account_deletions`);
+    });
+
+    await t.step('heal + due: stale required and expired pending settle as unrevoked; fresh ones are left alone', async () => {
+      assertEquals(await due(), false, 'an empty ledger: no HTTP call');
+      const fresh = U(5), stale = U(6), oldPending = U(7), newPending = U(8);
+      for (const u of [fresh, stale, oldPending, newPending]) await svc('account_deletion_open', [u, true]);
+      // Scrub them all so only the Apple state is in play here (scrubbed rows are 'due' for their auth delete).
+      for (const u of [fresh, stale, oldPending, newPending]) await svc('scrub_deleted_manager', [u]);
+      for (const u of [fresh, stale, oldPending, newPending]) { await q(`delete from auth.users where id = $1`, [u]); await svc('account_deletion_mark_done', [u]); }
+      await svc('account_deletion_stash_apple_token', [oldPending, 'old-tok']);
+      await svc('account_deletion_stash_apple_token', [newPending, 'new-tok']);
+      await age(stale, 'updated_at', '20 minutes');
+      await age(oldPending, 'requested_at', '8 days');
+      await svc('account_deletion_fail', [oldPending, 'apple 503']);   // a recent retry bumps updated_at, not requested_at
+      assertEquals(await due(), true);
+      const h = await svc('heal_account_deletions', []);
+      assertEquals([...h.apple_unrevoked].sort(), [stale, oldPending].sort());
+      assertEquals(h.apple_pending, [newPending], 'only revokes still worth retrying');
+      assertEquals((await row(fresh)).apple_revoke, 'required', 'a fresh required row belongs to an in-flight request');
+      assertEquals((await one(`select count(*)::int n from vault.secrets where name = $1`, [`apple_revoke:${oldPending}`])).n, 0);
+      assertEquals((await one(`select count(*)::int n from vault.secrets where name = $1`, [`apple_revoke:${newPending}`])).n, 1);
+    });
+
+    await t.step('purge: done rows with nothing owed go after 7 days; a pending or required revoke keeps its row', async () => {
+      const [fresh, stale, oldPending, newPending] = [U(5), U(6), U(7), U(8)];
+      for (const u of [fresh, stale, oldPending, newPending]) await age(u, 'updated_at', '8 days');
+      const h = await svc('heal_account_deletions', ['1 year']);   // a long age: no required row is settled here
+      assertEquals(h.purged, 2, 'stale + oldPending (both unrevoked)');
+      assertEquals((await q(`select user_id from account_deletions order by user_id`)).map((r: Row) => r.user_id),
+        [fresh, newPending].sort());
+      // newPending is still due (a revoke to retry); then it settles, and nothing is due until it ages out.
+      assertEquals(await due(), true);
+      await svc('account_deletion_apple_revoked', [newPending]);
+      await svc('account_deletion_apple_unrevoked', [fresh]);
+      assertEquals(await due(), false, 'settled and recent: nothing to do');
+      for (const u of [fresh, newPending]) await age(u, 'updated_at', '8 days');
+      assertEquals(await due(), true, 'purgeable');
+      assertEquals((await svc('heal_account_deletions', [])).purged, 2);
+      assertEquals(await due(), false);
+    });
+
+    await t.step('due agrees with the heal: a stalled requested row and a scrubbed row', async () => {
+      const r1 = U(9);
+      await svc('account_deletion_open', [r1, false]);
+      assertEquals(await due(), false, 'in flight (under 10 minutes)');
+      await age(r1, 'updated_at', '11 minutes');
+      assertEquals(await due(), true, 'stalled requested');
+      const h = await svc('heal_account_deletions', []);
+      assertEquals([h.scrubbed, h.auth_delete], [[r1], [r1]]);
+      assertEquals(await due(), true, 'scrubbed: its auth delete is owed');
+      await q(`delete from auth.users where id = $1`, [r1]);
+      await svc('account_deletion_mark_done', [r1]);
+      assertEquals(await due(), false);
+    });
     await db.close();
   },
 });

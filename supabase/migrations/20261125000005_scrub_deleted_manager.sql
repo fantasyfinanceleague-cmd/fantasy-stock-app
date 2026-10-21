@@ -69,7 +69,8 @@
 --
 -- RETURNS (for the edge function's pushes; never forwarded to a client):
 --   { status: 'scrubbed', stage,
---     successions: [{league_id, new_commissioner, notice_id, league_name}],
+--     successions: [{league_id, new_commissioner, recipient (= new_commissioner),
+--                    notice_id, league_name}],
 --     leagues_deleted: [league_id], leagues_kept: [league_id],
 --     left: [{league_id, notice_id, notify_user_id, league_name}],
 --     seats_marked: [league_id] }
@@ -149,7 +150,7 @@ begin
       values (r.id, v_succ, 'commissioner_transferred')
       returning id into v_notice;
       v_successions := v_successions || jsonb_build_array(jsonb_build_object(
-        'league_id', r.id, 'new_commissioner', v_succ, 'notice_id', v_notice,
+        'league_id', r.id, 'new_commissioner', v_succ, 'recipient', v_succ, 'notice_id', v_notice,
         'league_name', v_l.name));
     elsif exists (select 1 from public.leagues s where s.previous_league_id = r.id) then
       -- A later season points here (ON DELETE RESTRICT): keep it as history.

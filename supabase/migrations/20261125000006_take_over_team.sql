@@ -30,38 +30,49 @@
 --    the caller is auth.uid() and must be the league's commissioner, so no id
 --    is forgeable. Only for a deleted seat, from draft complete through the
 --    playoffs (decision 14). Returns the seat's pending code if it has one.
--- 5. take_over_team(p_league_id, p_code, p_user_id) -> jsonb. SERVICE ROLE ONLY
---    (the join-league edge function's `takeover` action, user id from the
---    JWT). Locks the league, then the invite, then the seat (FOR UPDATE), and
---    checks in order:
---      league exists                              else 'gone'
---      caller is a live account (auth.users row, no deletion ledger row)
---                                                  else 'not_eligible'
---      the code is a takeover code of THIS league  else 'invalid_code'
---      the code is still pending                   'accepted' -> 'taken',
---                                                  expired/other -> 'invalid_code'
---      the seat row still exists                   else 'taken'
---      the seat is deleted                         else 'not_deleted'
---      draft completed, season not completed       else 'window'
---      the caller holds no row in this league      else 'already_member'
---    Then, in this transaction, every row of the old id in THIS league moves to
---    the caller: league_draft_order (first; see 3), league_members (deleted_at
---    NULL, joined_at kept, role member), matchups (team1, team2, winner),
---    league_standings, week_snapshots, drafts, trades, league_seasons (champion,
---    runner-up), and, when those tables exist, the waiver-wire plan's
---    waiver_order and claims. The invite is marked accepted; one
---    seat_taken_over notice goes to the commissioner. Then it VERIFIES that no
---    row of the old id is left in the league (a breach raises and rolls back).
---    A second caller waits on the league lock, then sees the accepted invite:
---    'taken'. league_participant_display_name then resolves the new manager's
---    live name on every past week.
+-- 5. _takeover_check(p_code, p_user_id, p_lock) -> jsonb, owner only: the ONE
+--    eligibility check behind both functions below, so the preview and the
+--    takeover can never disagree. The league comes from the code (the takeover
+--    link carries only the code); codes are matched EXACTLY (they are issued
+--    ^[A-Z0-9]{10}$ by _renewal_invite_code, and the client sends them
+--    upper-cased and trimmed). In order:
+--      a takeover invite with exactly this code       else 'invalid_code'
+--      its league still exists (locked when p_lock)   else 'gone'
+--      the caller is a live account (an auth.users row and no deletion ledger
+--      row)                                            else 'not_eligible'
+--      the code is still pending                       'accepted' -> 'taken',
+--                                                      expired/other -> 'invalid_code'
+--      the seat row still exists in that league        else 'taken'
+--      the seat is deleted                             else 'not_deleted'
+--      draft completed, season not completed           else 'window'
+--      the caller holds no row in this league          else 'already_member'
+-- 6. takeover_preview(p_code, p_user_id) -> jsonb. SERVICE ROLE ONLY, read-only
+--    (no lock, no write): {ok: true, league_name, wins, losses, rank} for the
+--    seat the code points to (league_standings_ranked's rank), or {ok: false,
+--    reason}. No ids, no other member, nothing else.
+-- 7. take_over_team(p_code, p_user_id) -> jsonb. SERVICE ROLE ONLY (the
+--    join-league edge function's `takeover` action, user id from the JWT).
+--    Runs _takeover_check WITH locks (the league, then the invite, then the
+--    seat, FOR UPDATE). Then, in this transaction, every row of the old id in
+--    THAT league moves to the caller: league_draft_order (first; see 3),
+--    league_members (deleted_at NULL, joined_at kept, role member), matchups
+--    (team1, team2, winner), league_standings, week_snapshots, drafts, trades,
+--    league_seasons (champion, runner-up), and, when those tables exist, the
+--    waiver-wire plan's waiver_order and claims. The invite is marked accepted;
+--    one seat_taken_over notice goes to the commissioner. Then it VERIFIES that
+--    no row of the old id is left in the league (a breach raises and rolls
+--    back). A second caller waits on the league lock, then sees the accepted
+--    invite: 'taken'. league_participant_display_name then resolves the new
+--    manager's live name on every past week.
 --
 -- PROVISIONAL TIMESTAMP: see 20261125000000.
 --
 -- POST-PUSH CHECKS (SQL editor):
 --   SELECT proname, proacl, prosecdef, proconfig FROM pg_proc
---    WHERE proname IN ('take_over_team', 'create_takeover_invite', 'enforce_league_draft_order_rows');
---   -- take_over_team {postgres=X/postgres,service_role=X/postgres};
+--    WHERE proname IN ('take_over_team', 'takeover_preview', '_takeover_check',
+--                      'create_takeover_invite', 'enforce_league_draft_order_rows');
+--   -- take_over_team, takeover_preview {postgres=X/postgres,service_role=X/postgres};
+--   -- _takeover_check {postgres=X/postgres};
 --   -- create_takeover_invite {postgres=X/postgres,authenticated=X/postgres};
 --   -- enforce_league_draft_order_rows {postgres=X/postgres}; all t, {"search_path=public, pg_temp"}
 --   SELECT with_check FROM pg_policies WHERE policyname = 'league_invites_insert_commissioner';
@@ -235,132 +246,205 @@ comment on function public.create_takeover_invite(uuid, text) is
 revoke all on function public.create_takeover_invite(uuid, text) from public, anon, service_role;
 grant execute on function public.create_takeover_invite(uuid, text) to authenticated;
 
--- ---- 5. take_over_team (the new manager, via the edge function) -----------------------
-create or replace function public.take_over_team(p_league_id uuid, p_code text, p_user_id uuid)
+-- ---- 5. the one eligibility check ------------------------------------------------
+create or replace function public._takeover_check(p_code text, p_user_id uuid, p_lock boolean)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_new    text;
-  v_l      public.leagues%rowtype;
   v_inv    public.league_invites%rowtype;
+  v_l      public.leagues%rowtype;
   v_seat   public.league_members%rowtype;
-  v_old    text;
-  v_notice uuid;
-  v_left   int;
 begin
-  if p_league_id is null or p_user_id is null or p_code is null or btrim(p_code) = '' then
+  if p_code is null or p_user_id is null or p_lock is null then
     raise exception 'invalid_arguments' using errcode = '22023';
   end if;
-  v_new := lower(p_user_id::text);
 
-  -- The league lock serializes every taker (and a league delete) first.
-  select * into v_l from public.leagues where id = p_league_id for update;
+  -- Exact match only: the code's shape is fixed at issue, so nothing is normalized here.
+  select * into v_inv from public.league_invites i where i.code = p_code and i.kind = 'takeover';
   if not found then
-    return jsonb_build_object('status', 'refused', 'reason', 'gone');
+    return jsonb_build_object('ok', false, 'reason', 'invalid_code');
+  end if;
+
+  -- The league lock serializes every taker (and a league delete) first; then the
+  -- invite and the seat are re-read under their own locks.
+  if p_lock then
+    select * into v_l from public.leagues where id = v_inv.league_id for update;
+  else
+    select * into v_l from public.leagues where id = v_inv.league_id;
+  end if;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'gone');
   end if;
 
   -- A live account only: never a forged id, never one being deleted.
   if not exists (select 1 from auth.users u where u.id = p_user_id)
      or exists (select 1 from public.account_deletions d where d.user_id = p_user_id) then
-    return jsonb_build_object('status', 'refused', 'reason', 'not_eligible');
+    return jsonb_build_object('ok', false, 'reason', 'not_eligible');
   end if;
 
-  select * into v_inv from public.league_invites i
-   where i.code = upper(btrim(p_code)) and i.league_id = p_league_id and i.kind = 'takeover'
-     for update;
-  if not found then
-    return jsonb_build_object('status', 'refused', 'reason', 'invalid_code');
+  if p_lock then
+    select * into v_inv from public.league_invites i where i.id = v_inv.id for update;
+    if not found then
+      return jsonb_build_object('ok', false, 'reason', 'invalid_code');
+    end if;
   end if;
   if v_inv.status = 'accepted' then
-    return jsonb_build_object('status', 'refused', 'reason', 'taken');
+    return jsonb_build_object('ok', false, 'reason', 'taken');
   end if;
   if v_inv.status <> 'pending' or (v_inv.expires_at is not null and v_inv.expires_at < now()) then
-    return jsonb_build_object('status', 'refused', 'reason', 'invalid_code');
+    return jsonb_build_object('ok', false, 'reason', 'invalid_code');
   end if;
 
-  select * into v_seat from public.league_members m
-   where m.league_id = p_league_id and m.user_id = v_inv.seat_user_id
-     for update;
+  if p_lock then
+    select * into v_seat from public.league_members m
+     where m.league_id = v_l.id and m.user_id = v_inv.seat_user_id for update;
+  else
+    select * into v_seat from public.league_members m
+     where m.league_id = v_l.id and m.user_id = v_inv.seat_user_id;
+  end if;
   if not found then
-    return jsonb_build_object('status', 'refused', 'reason', 'taken');
+    return jsonb_build_object('ok', false, 'reason', 'taken');
   end if;
   if v_seat.deleted_at is null then
-    return jsonb_build_object('status', 'refused', 'reason', 'not_deleted');
+    return jsonb_build_object('ok', false, 'reason', 'not_deleted');
   end if;
   if v_l.draft_status is distinct from 'completed' or v_l.season_status = 'completed' then
-    return jsonb_build_object('status', 'refused', 'reason', 'window');
+    return jsonb_build_object('ok', false, 'reason', 'window');
   end if;
   if exists (select 1 from public.league_members m
-              where m.league_id = p_league_id and lower(m.user_id) = v_new) then
-    return jsonb_build_object('status', 'refused', 'reason', 'already_member');
+              where m.league_id = v_l.id and lower(m.user_id) = lower(p_user_id::text)) then
+    return jsonb_build_object('ok', false, 'reason', 'already_member');
+  end if;
+
+  return jsonb_build_object('ok', true, 'league_id', v_l.id, 'league_name', v_l.name,
+    'commissioner_id', v_l.commissioner_id, 'invite_id', v_inv.id, 'seat_user_id', v_seat.user_id);
+end;
+$$;
+
+revoke all on function public._takeover_check(text, uuid, boolean) from public, anon, authenticated, service_role;
+
+-- ---- 6. takeover_preview (what the landing shows before "Take the team") -----------
+create or replace function public.takeover_preview(p_code text, p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_chk  jsonb;
+  v_r    record;
+begin
+  v_chk := public._takeover_check(p_code, p_user_id, false);
+  if not (v_chk ->> 'ok')::boolean then
+    return jsonb_build_object('ok', false, 'reason', v_chk ->> 'reason');
+  end if;
+  select s.wins, s.losses, s.rank into v_r
+    from public.league_standings_ranked((v_chk ->> 'league_id')::uuid) s
+   where s.user_id = v_chk ->> 'seat_user_id';
+  return jsonb_build_object(
+    'ok', true,
+    'league_name', v_chk ->> 'league_name',
+    'wins', coalesce(v_r.wins, 0),
+    'losses', coalesce(v_r.losses, 0),
+    'rank', v_r.rank);   -- NULL when the league keeps no standings (a duration league)
+end;
+$$;
+
+comment on function public.takeover_preview(text, uuid) is
+  'Account deletion (2026-10-21): the record and rank of the seat a takeover code hands on, or why it cannot be '
+  'taken (the same check as take_over_team). Read-only. Service role only.';
+
+revoke all on function public.takeover_preview(text, uuid) from public, anon, authenticated;
+grant execute on function public.takeover_preview(text, uuid) to service_role;
+
+-- ---- 7. take_over_team (the new manager, via the edge function) -----------------------
+create or replace function public.take_over_team(p_code text, p_user_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_chk    jsonb;
+  v_lg     uuid;
+  v_new    text;
+  v_old    text;
+  v_notice uuid;
+  v_left   int;
+begin
+  v_chk := public._takeover_check(p_code, p_user_id, true);
+  if not (v_chk ->> 'ok')::boolean then
+    return jsonb_build_object('status', 'refused', 'reason', v_chk ->> 'reason');
   end if;
 
   -- Every refusal is above this line: nothing has been written yet.
-  v_old := v_seat.user_id;
+  v_lg  := (v_chk ->> 'league_id')::uuid;
+  v_new := lower(p_user_id::text);
+  v_old := v_chk ->> 'seat_user_id';
 
   -- The order row FIRST, while the seat is still marked deleted (the trigger's
   -- one allowed transition).
   update public.league_draft_order set user_id = v_new
-   where league_id = p_league_id and lower(user_id) = lower(v_old);
+   where league_id = v_lg and lower(user_id) = lower(v_old);
 
   update public.league_members
      set user_id = v_new, deleted_at = null, role = 'member'
-   where league_id = p_league_id and user_id = v_old;
+   where league_id = v_lg and user_id = v_old;
 
   update public.matchups
      set team1_user_id  = case when lower(team1_user_id)  = lower(v_old) then v_new else team1_user_id  end,
          team2_user_id  = case when lower(team2_user_id)  = lower(v_old) then v_new else team2_user_id  end,
          winner_user_id = case when lower(winner_user_id) = lower(v_old) then v_new else winner_user_id end
-   where league_id = p_league_id
+   where league_id = v_lg
      and (lower(team1_user_id) = lower(v_old) or lower(team2_user_id) = lower(v_old)
           or lower(winner_user_id) = lower(v_old));
   update public.league_standings set user_id = v_new
-   where league_id = p_league_id and lower(user_id) = lower(v_old);
+   where league_id = v_lg and lower(user_id) = lower(v_old);
   update public.week_snapshots set user_id = v_new
-   where league_id = p_league_id and lower(user_id) = lower(v_old);
+   where league_id = v_lg and lower(user_id) = lower(v_old);
   update public.drafts set user_id = v_new
-   where league_id = p_league_id and lower(user_id) = lower(v_old);
+   where league_id = v_lg and lower(user_id) = lower(v_old);
   update public.trades set user_id = p_user_id
-   where league_id = p_league_id and user_id::text = lower(v_old);
+   where league_id = v_lg and user_id::text = lower(v_old);
   update public.league_seasons
      set champion_user_id  = case when lower(champion_user_id)  = lower(v_old) then v_new else champion_user_id  end,
          runner_up_user_id = case when lower(runner_up_user_id) = lower(v_old) then v_new else runner_up_user_id end
-   where league_id = p_league_id
+   where league_id = v_lg
      and (lower(champion_user_id) = lower(v_old) or lower(runner_up_user_id) = lower(v_old));
   -- The waiver-wire plan's per-league tables, when they exist ("waiver position").
   if to_regclass('public.waiver_order') is not null then
     execute 'update public.waiver_order set user_id = $1 where league_id = $2 and lower(user_id) = lower($3)'
-      using v_new, p_league_id, v_old;
+      using v_new, v_lg, v_old;
   end if;
   if to_regclass('public.claims') is not null then
     execute 'update public.claims set user_id = $1 where league_id = $2 and lower(user_id) = lower($3)'
-      using v_new, p_league_id, v_old;
+      using v_new, v_lg, v_old;
   end if;
 
-  update public.league_invites set status = 'accepted' where id = v_inv.id;
+  update public.league_invites set status = 'accepted' where id = (v_chk ->> 'invite_id')::uuid;
 
   insert into public.league_notifications (league_id, user_id, kind, subject_user_id)
-  values (p_league_id, v_l.commissioner_id, 'seat_taken_over', v_new)
+  values (v_lg, v_chk ->> 'commissioner_id', 'seat_taken_over', v_new)
   returning id into v_notice;
 
   -- VERIFY: nothing of the old id is left in this league.
-  select (select count(*) from public.league_members   where league_id = p_league_id and lower(user_id) = lower(v_old))
-       + (select count(*) from public.league_draft_order where league_id = p_league_id and lower(user_id) = lower(v_old))
-       + (select count(*) from public.matchups where league_id = p_league_id
+  select (select count(*) from public.league_members   where league_id = v_lg and lower(user_id) = lower(v_old))
+       + (select count(*) from public.league_draft_order where league_id = v_lg and lower(user_id) = lower(v_old))
+       + (select count(*) from public.matchups where league_id = v_lg
             and (lower(team1_user_id) = lower(v_old) or lower(team2_user_id) = lower(v_old)
                  or lower(winner_user_id) = lower(v_old)))
-       + (select count(*) from public.league_standings where league_id = p_league_id and lower(user_id) = lower(v_old))
-       + (select count(*) from public.week_snapshots   where league_id = p_league_id and lower(user_id) = lower(v_old))
-       + (select count(*) from public.drafts           where league_id = p_league_id and lower(user_id) = lower(v_old))
-       + (select count(*) from public.trades           where league_id = p_league_id and user_id::text = lower(v_old))
-       + (select count(*) from public.league_seasons where league_id = p_league_id
+       + (select count(*) from public.league_standings where league_id = v_lg and lower(user_id) = lower(v_old))
+       + (select count(*) from public.week_snapshots   where league_id = v_lg and lower(user_id) = lower(v_old))
+       + (select count(*) from public.drafts           where league_id = v_lg and lower(user_id) = lower(v_old))
+       + (select count(*) from public.trades           where league_id = v_lg and user_id::text = lower(v_old))
+       + (select count(*) from public.league_seasons where league_id = v_lg
             and (lower(champion_user_id) = lower(v_old) or lower(runner_up_user_id) = lower(v_old)))
     into v_left;
   if v_left <> 0 then
-    raise exception 'take_over_team: % rows of the old seat remain in league %', v_left, p_league_id
+    raise exception 'take_over_team: % rows of the old seat remain in league %', v_left, v_lg
       using errcode = 'P0001';
   end if;
 
@@ -368,16 +452,16 @@ begin
     'status', 'taken_over',
     -- For the edge function's push only; it never forwards these to the client.
     'notice_id', v_notice,
-    'notify_user_id', v_l.commissioner_id,
-    'league_name', v_l.name,
+    'notify_user_id', v_chk ->> 'commissioner_id',
+    'league_name', v_chk ->> 'league_name',
     'new_name', public.participant_display_name(v_new),
     'seat_label', public.deleted_manager_label());
 end;
 $$;
 
-comment on function public.take_over_team(uuid, text, uuid) is
+comment on function public.take_over_team(text, uuid) is
   'Account deletion (2026-10-21): hands a deleted manager''s seat, with its whole record, to a new manager by a '
-  'takeover code. Service role only (join-league, user id from the JWT).';
+  'takeover code (the league comes from the code). Service role only (join-league, user id from the JWT).';
 
-revoke all on function public.take_over_team(uuid, text, uuid) from public, anon, authenticated;
-grant execute on function public.take_over_team(uuid, text, uuid) to service_role;
+revoke all on function public.take_over_team(text, uuid) from public, anon, authenticated;
+grant execute on function public.take_over_team(text, uuid) to service_role;
