@@ -19,8 +19,12 @@
 --      participant). A failure is recorded in last_error and listed. Each
 --      successful scrub's full result body is returned in scrub_results, so the
 --      heal handler can push the succession / left notices it created.
+--   1b. Every row at 'scrubbed' is re-scrubbed (supabase-reviewer P2-4): the JWT
+--      stays valid until the auth delete, so a join or a new league can appear
+--      after the scrub. Idempotent; a re-scrub that did something adds its body to
+--      scrub_results. account_deletion_mark_done refuses while live state remains.
 --   2. Apple expiry, through _account_deletion_settle_apple (the vault entry
---      goes with it):
+--      goes with it), one subtransaction per row:
 --        - a 'required' row not touched for p_min_age: no request owns it any
 --          more and no authorization code can be obtained now -> 'unrevoked';
 --        - a 'pending' row whose REQUEST is over 7 days old (requested_at: the
@@ -106,7 +110,32 @@ begin
     end;
   end loop;
 
-  -- ---- 2. Apple expiry --------------------------------------------------------------
+  -- ---- 1b. re-scrub 'scrubbed' rows before their auth delete -------------------
+  -- The JWT stays valid until the auth delete, so state can appear between the
+  -- scrub and it (a join, a new league). The scrub is idempotent: on an untouched
+  -- account it writes nothing. Same per-user isolation as step 1.
+  for r in
+    select d.user_id from public.account_deletions d
+     where d.stage = 'scrubbed'
+     order by d.updated_at
+     limit p_limit
+  loop
+    begin
+      v_res := public.scrub_deleted_manager(r.user_id);
+      if v_res -> 'successions' <> '[]'::jsonb or v_res -> 'left' <> '[]'::jsonb
+         or v_res -> 'seats_marked' <> '[]'::jsonb or v_res -> 'leagues_deleted' <> '[]'::jsonb then
+        v_results := v_results || jsonb_build_array(v_res);   -- new notices to push
+      end if;
+    exception when others then
+      get stacked diagnostics v_err = message_text;
+      update public.account_deletions
+         set last_error = left('heal re-scrub: ' || v_err, 1000), updated_at = now()
+       where user_id = r.user_id;
+      v_errors := v_errors || jsonb_build_array(jsonb_build_object('user_id', r.user_id, 'error', v_err));
+    end;
+  end loop;
+
+  -- ---- 2. Apple expiry, one subtransaction each --------------------------------------
   for r in
     select d.user_id from public.account_deletions d
      where (d.apple_revoke = 'required' and d.updated_at < now() - p_min_age)
@@ -114,10 +143,15 @@ begin
      order by d.updated_at
      limit p_limit
   loop
-    v_res := public._account_deletion_settle_apple(r.user_id, 'unrevoked');
-    if v_res ->> 'status' = 'ok' then
-      v_unrevoked := v_unrevoked || jsonb_build_array(to_jsonb(r.user_id));
-    end if;
+    begin
+      v_res := public._account_deletion_settle_apple(r.user_id, 'unrevoked');
+      if v_res ->> 'status' = 'ok' then
+        v_unrevoked := v_unrevoked || jsonb_build_array(to_jsonb(r.user_id));
+      end if;
+    exception when others then
+      get stacked diagnostics v_err = message_text;
+      v_errors := v_errors || jsonb_build_array(jsonb_build_object('user_id', r.user_id, 'error', 'apple expiry: ' || v_err));
+    end;
   end loop;
 
   -- ---- 3. what the edge function still owes --------------------------------------

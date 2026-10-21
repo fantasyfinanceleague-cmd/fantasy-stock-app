@@ -42,6 +42,7 @@
 --   T1  B makes a takeover code; E takes the seat; every row moves         PASS
 --   T2  a second taker gets 'taken'                                        PASS
 --   T3  join_league_by_code treats a takeover code as unknown              PASS
+--   K1  Vault: stash, read back, revoke drops the secret (owner privileges) PASS
 --   D1  auth delete: trades survive; mark_done -> 'done'                   PASS
 --   N1  anon/authenticated cannot execute the service-only functions       PASS
 -- Any FAIL line is a real finding: stop and report it.
@@ -306,6 +307,20 @@ begin
   -- ---- D: the auth delete -----------------------------------------------------------
   reset role;
   perform set_config('request.jwt.claims', '', true);
+  -- ---- K: the Vault round-trip, as the OWNER (the definer functions run as it; this
+  -- proves it may write and delete vault.secrets in THIS project; PGlite only has a stub) -------
+  begin
+    res  := public.account_deletion_stash_apple_token(a_uid, 'fixture-refresh-' || sfx);
+    got  := public.account_deletion_apple_token(a_uid) ->> 'token';
+    res2 := public.account_deletion_apple_revoked(a_uid);
+    select count(*) into n from vault.secrets where name = 'apple_revoke:' || a_uid::text;
+    out := out || format(E'K1 vault stash=%s read=%s revoked=%s left=%s  %s\n', res ->> 'apple_revoke',
+      got = 'fixture-refresh-' || sfx, res2 ->> 'apple_revoke', n,
+      case when res ->> 'apple_revoke' = 'pending' and got = 'fixture-refresh-' || sfx
+                and res2 ->> 'apple_revoke' = 'done' and n = 0 then 'PASS' else 'FAIL' end);
+  exception when others then out := out || format(E'K1 vault round-trip -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
   begin
     select count(*) into n from public.trades where user_id = a_uid;
     delete from auth.users where id = a_uid;
@@ -327,6 +342,6 @@ begin
   -- Deliberate: rolls back every fixture and shows the result.
   raise exception E'ACCOUNT DELETION EFFECT TEST: % (all rolled back)\n%',
     case when out ~ 'FAIL' then 'FAIL' else 'PASS' end
-      || format(' (%s/21 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
+      || format(' (%s/22 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
 end;
 $$;

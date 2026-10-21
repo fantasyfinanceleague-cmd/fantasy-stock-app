@@ -222,10 +222,11 @@ begin
   delete from public.league_invites where lower(inviter_id) = v_uid and status = 'pending';
   -- The waiver-wire plan's tables, when they exist (dynamic: not on every database).
   if to_regclass('public.watchlist') is not null then
-    execute 'delete from public.watchlist where lower(user_id) = $1' using v_uid;
+    -- ::text so a uuid user_id works too (late binding would otherwise break every scrub).
+    execute 'delete from public.watchlist where lower(user_id::text) = $1' using v_uid;
   end if;
   if to_regclass('public.claims') is not null then
-    execute 'delete from public.claims where lower(user_id) = $1 and status = ''pending''' using v_uid;
+    execute 'delete from public.claims where lower(user_id::text) = $1 and status = ''pending''' using v_uid;
   end if;
 
   -- ---- 6. verify the effect ------------------------------------------------------------
@@ -233,6 +234,12 @@ begin
      or exists (select 1 from public.push_tokens where user_id = p_user_id)
      or exists (select 1 from public.league_members
                  where lower(user_id) = v_uid and deleted_at is null)
+     -- A league still commissioned by them is only ever one kept as history (a later
+     -- season points at it). Anything else means a concurrent change slipped past
+     -- step 1's snapshot (another account's scrub handed it to them): roll back, retry.
+     or exists (select 1 from public.leagues l
+                 where lower(l.commissioner_id) = v_uid
+                   and not exists (select 1 from public.leagues s where s.previous_league_id = l.id))
      or exists (select 1 from public.leagues l
                  where lower(l.commissioner_id) = v_uid
                    and exists (select 1 from public.league_members m

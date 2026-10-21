@@ -25,7 +25,7 @@
 -- user_profiles and push_tokens keep their ON DELETE CASCADE on purpose (they
 -- are the account's private rows, scrubbed with it).
 --
--- PROVISIONAL TIMESTAMP: 20261125000000-07 are re-stamped at release after
+-- PROVISIONAL TIMESTAMP: 20261125000000-08 are re-stamped at release after
 -- prod's latest applied version; re-stamp only unapplied files (CLAUDE.md).
 --
 -- POST-PUSH CHECK (SQL editor):
@@ -40,6 +40,9 @@ do $$
 declare
   r record;
 begin
+  -- Don't queue behind a long transaction while blocking record_trade_atomic:
+  -- fail fast and re-run the push instead (supabase-reviewer P3-9).
+  perform set_config('lock_timeout', '5s', true);
   for r in
     select c.conname
       from pg_constraint c

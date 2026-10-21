@@ -494,12 +494,13 @@ begin
      and (lower(champion_user_id) = lower(v_old) or lower(runner_up_user_id) = lower(v_old));
   -- The waiver-wire plan's per-league tables, when they exist ("waiver position").
   if to_regclass('public.waiver_order') is not null then
-    execute 'update public.waiver_order set user_id = $1 where league_id = $2 and lower(user_id) = lower($3)'
-      using v_new, v_lg, v_old;
+    -- %L: an untyped literal, so a text or a uuid user_id column both accept it.
+    execute format('update public.waiver_order set user_id = %L where league_id = $1 and lower(user_id::text) = lower($2)', v_new)
+      using v_lg, v_old;
   end if;
   if to_regclass('public.claims') is not null then
-    execute 'update public.claims set user_id = $1 where league_id = $2 and lower(user_id) = lower($3)'
-      using v_new, v_lg, v_old;
+    execute format('update public.claims set user_id = %L where league_id = $1 and lower(user_id::text) = lower($2)', v_new)
+      using v_lg, v_old;
   end if;
 
   update public.league_invites set status = 'accepted' where id = (v_chk ->> 'invite_id')::uuid;
@@ -520,6 +521,7 @@ begin
        + (select count(*) from public.trades           where league_id = v_lg and user_id::text = lower(v_old))
        + (select count(*) from public.league_seasons where league_id = v_lg
             and (lower(champion_user_id) = lower(v_old) or lower(runner_up_user_id) = lower(v_old)))
+       + (select count(*) from public.leagues where id = v_lg and lower(commissioner_id) = lower(v_old))
     into v_left;
   if v_left <> 0 then
     -- No id or code in the message (it can reach logs).

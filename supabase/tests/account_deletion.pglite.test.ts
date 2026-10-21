@@ -350,7 +350,8 @@ Deno.test({
     // The waiver-wire plan's tables, as that plan specifies them (not on main yet): the scrub and
     // the takeover reach them dynamically, so they must work once they exist.
     await q(`create table public.watchlist (league_id uuid, user_id text, symbol text, primary key (league_id, user_id, symbol))`);
-    await q(`create table public.claims (id uuid primary key default gen_random_uuid(), league_id uuid, user_id text,
+    // claims keys its user as uuid, the others as text: the dynamic SQL must take both.
+    await q(`create table public.claims (id uuid primary key default gen_random_uuid(), league_id uuid, user_id uuid,
              symbol text, status text check (status in ('pending','won','lost','failed','cancelled')))`);
     await q(`create table public.waiver_order (league_id uuid, user_id text, position smallint, primary key (league_id, user_id))`);
     await q(`insert into watchlist values ($1, $2, 'AAPL'), ($1, $3, 'AAPL')`, [LMID, A, B]);
@@ -517,7 +518,7 @@ Deno.test({
       assertEquals(det, { commissioner_name: LABEL, league_name: 'New' }, 'their name in others\' notifications');
       assertEquals(await n(`select count(*)::int n from trades where user_id = $1`, [A]), 3, 'trades stay');
       assertEquals(await n(`select count(*)::int n from watchlist where user_id = $1`, [A]), 0);
-      assertEquals((await q(`select user_id, status from claims order by user_id, status`)).map((r: Row) => `${r.user_id === A ? 'A' : 'B'}:${r.status}`),
+      assertEquals((await q(`select user_id::text, status from claims order by user_id, status`)).map((r: Row) => `${r.user_id === A ? 'A' : 'B'}:${r.status}`),
         ['A:won', 'B:pending'], 'their PENDING claims go; a resolved claim is history');
       assertEquals(await n(`select count(*)::int n from matchups where team1_user_id = $1 or team2_user_id = $1`, [A]), 3);
       assertEquals((await one(`select champion_user_id from league_seasons where league_id = $1`, [LAFTER])).champion_user_id, A);
@@ -795,6 +796,15 @@ Deno.test({
       const tr = (await one(`select count(*)::int n from trades where user_id = $1`, [A])).n;
       await q(`delete from auth.users where id = $1`, [A]);
       assertEquals((await one(`select count(*)::int n from trades where user_id = $1`, [A])).n, tr, 'no cascade');
+      // State that appeared between the scrub and the auth delete (the JWT was still valid):
+      // A joined a fresh pre-draft league. mark_done refuses; the heal re-scrubs; then it's done.
+      const LLATE = lg(40);
+      await league(LLATE, 'Late', F); await members(LLATE, [[F, 0], [A, 1]], F);
+      assertEquals(await svcRpc('account_deletion_mark_done', [A]), { status: 'refused', reason: 'live_state', stage: 'scrubbed' });
+      const hl = await svcRpc('heal_account_deletions', []);
+      assertEquals(hl.scrub_results.map((x: Row) => x.left.map((l: Row) => l.league_id)), [[LLATE]],
+        'the re-scrub left the late league, and its notice is returned for the push');
+      assert(hl.auth_delete.includes(A));
       assertEquals(await svcRpc('account_deletion_mark_done', [A]), { status: 'ok', stage: 'done' });
       assertEquals(await svcRpc('account_deletion_mark_done', [A]), { status: 'ok', stage: 'done' });
       assertEquals((await svcRpc('account_deletion_cancel', [A])).cancelled, false, 'never cancelled once scrubbed');
@@ -1023,6 +1033,28 @@ Deno.test({
       assertEquals(h.apple_pending, [], 'the other one is expired too: never offered for retry');
       const h2 = await svc('heal_account_deletions', ['10 minutes', 1]);
       assertEquals(h2.apple_unrevoked.length, 1, 'the next pass takes the next oldest');
+      for (const u of [x, y]) { await q(`delete from auth.users where id = $1`, [u]); }
+      await q(`delete from account_deletions where user_id in ($1, $2)`, [x, y]);
+    });
+
+    await t.step('heal: one failing Apple settlement blocks nobody (per-row subtransaction)', async () => {
+      const [x, y] = [U(12), U(13)];
+      for (const u of [x, y]) {
+        await q(`insert into auth.users (id) values ($1)`, [u]);
+        await svc('account_deletion_open', [u, true]);
+        await svc('scrub_deleted_manager', [u]);   // past step 1, so only the Apple expiry is in play
+        await age(u, 'updated_at', '1 hour');
+      }
+      await q(`create function pg_temp.vault_boom() returns trigger language plpgsql as $$
+               begin if old.name = 'apple_revoke:${x}' then raise exception 'vault down'; end if; return old; end $$`);
+      await q(`insert into vault.secrets (name, secret) values ($1, 'x-tok')`, [`apple_revoke:${x}`]);
+      await q(`create trigger zz_vault_boom before delete on vault.secrets for each row execute function pg_temp.vault_boom()`);
+      const h = await svc('heal_account_deletions', []);
+      assertEquals(h.apple_unrevoked, [y]);
+      assertMatch(JSON.stringify(h.scrub_errors), /apple expiry: vault down/);
+      assertEquals((await row(x)).apple_revoke, 'required', 'rolled back, retried next pass');
+      await q(`drop trigger zz_vault_boom on vault.secrets`);
+      assertEquals((await svc('heal_account_deletions', [])).apple_unrevoked, [x]);
       for (const u of [x, y]) { await q(`delete from auth.users where id = $1`, [u]); }
       await q(`delete from account_deletions where user_id in ($1, $2)`, [x, y]);
     });

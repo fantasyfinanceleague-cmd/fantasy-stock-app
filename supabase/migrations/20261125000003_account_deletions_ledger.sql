@@ -56,7 +56,8 @@
 --   scrub_deleted_manager(uid)              20261125000005; requested -> scrubbed
 --   account_deletion_mark_done(uid)         after auth.admin.deleteUser; verifies
 --                                           auth.users no longer has the id (the
---                                           EFFECT, not GoTrue's status); ALWAYS
+--                                           EFFECT, not GoTrue's status) and that no
+--                                           live seat or profile remains; ALWAYS
 --                                           returns the current stage, never raises
 --                                           on a refusal
 --   account_deletion_fail(uid, error)       records last_error at any step
@@ -364,6 +365,14 @@ begin
   -- The EFFECT, not GoTrue's response (CLAUDE.md: success signals are unreliable).
   if exists (select 1 from auth.users u where u.id = p_user_id) then
     return jsonb_build_object('status', 'refused', 'reason', 'auth_user_exists', 'stage', v_stage);
+  end if;
+  -- Nothing live may outlive the account: state created between the scrub and the
+  -- auth delete (the JWT stayed valid) keeps the row at 'scrubbed', and the heal
+  -- re-scrubs it before the next attempt.
+  if exists (select 1 from public.league_members m
+              where lower(m.user_id) = lower(p_user_id::text) and m.deleted_at is null)
+     or exists (select 1 from public.user_profiles p where p.id = p_user_id) then
+    return jsonb_build_object('status', 'refused', 'reason', 'live_state', 'stage', v_stage);
   end if;
   update public.account_deletions
      set stage = 'done', last_error = null, updated_at = now()
