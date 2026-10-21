@@ -15,3 +15,10 @@ export const CAPTURE = parseCaptureKnobs(__DEV__, {
   confirmed: process.env.EXPO_PUBLIC_CONFIRMED,
   invite: process.env.EXPO_PUBLIC_INVITE_FIXTURE,
 });
+
+// Account deletion (W4): the delete screen's state for a capture (lib/account/deleteCapture.ts), and the Sign in
+// line raised once (EXPO_PUBLIC_DELETED_NOTICE=1). Dev builds only, like the knobs above.
+import { parseDeleteFixture } from '../account/deleteCapture';
+
+export const DELETE_FIXTURE = parseDeleteFixture(__DEV__, process.env.EXPO_PUBLIC_DELETE_FIXTURE);
+export const DELETED_NOTICE_FIXTURE = __DEV__ && process.env.EXPO_PUBLIC_DELETED_NOTICE === '1';

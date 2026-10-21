@@ -3,7 +3,11 @@ import { Image, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
+import { Ionicons } from '@expo/vector-icons';
+import { ICON_GLYPHS } from '@/components/sp/logic/icon';
 import { discInitials, initialFontSize } from '@/components/sp/logic/avatar';
+import { isDeletedSeatName } from '@/lib/account/deletedSeat';
+import { useDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
 import type { ThemeColors } from '@/constants/tokens';
 
 // Stockpile — <Avatar> (§9A, "One design, two themes", 2026-09-29). Used for
@@ -30,6 +34,8 @@ export const AVATAR_RING = 2;
 export const AVATAR_RING_GAP = 2;
 
 const DEFAULT_SIZE = 36;
+/** The deleted seat's person glyph, as a share of its disc (the board's 0.58). */
+const DELETED_GLYPH_RATIO = 0.58;
 
 type Tone = NonNullable<AvatarProps['tone']>;
 const FILL: Record<Tone, (c: ThemeColors) => string> = { you: (c) => c.you, opp: (c) => c.opp, neutral: (c) => c.inset };
@@ -52,6 +58,18 @@ export function Avatar({ ring = false, ...props }: AvatarProps) {
 function AvatarFace({ uri, name, size = DEFAULT_SIZE, tone = 'you' }: Omit<AvatarProps, 'ring'>) {
   const { colors } = useTheme();
   const dimension = { width: size, height: size, borderRadius: size / 2 };
+  // Account deletion (W4, Giorgio's board pick): a deleted manager's seat gets the DEFAULT avatar (a person glyph on
+  // a neutral disc), never initials of the label ("FM") and never a photo. Every seat name arrives from the server
+  // through this component, so the one check lives here: lib/account/deletedSeat.ts decides what counts as the seat.
+  const deletedLabel = useDeletedManagerLabel();
+  if (isDeletedSeatName(name, deletedLabel)) {
+    return (
+      <View testID="avatar-deleted-seat" style={[styles.fallback, { backgroundColor: colors.inset }, dimension]} accessibilityLabel={name}>
+        {/* A glyph in a fixed-diameter disc, like the initial: proportional to the disc (the board's 0.58) and fixed, so Dynamic Type can't outgrow it. */}
+        <Ionicons name={ICON_GLYPHS.person as React.ComponentProps<typeof Ionicons>['name']} size={Math.round(size * DELETED_GLYPH_RATIO)} color={colors.text2} />
+      </View>
+    );
+  }
   // Two initials (Design Lead ruling, Phase 3b-1): "Roberto B." → "RB",
   // "roberto_b" → "RB", one word → one letter, nothing → "?". Under 24pt, one (§9C).
   const initial = discInitials(name, size);

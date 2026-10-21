@@ -9,6 +9,8 @@ export type IconName =
   | 'checkCircle' | 'pending'
   // The notifications ask's bell (onboarding W4).
   | 'bell'
+  // The deleted manager's default avatar (account deletion W4): a person glyph on a neutral disc.
+  | 'person'
   // The tab bar's four tabs: outline when idle, filled when selected (TabIcon).
   | 'tabHome' | 'tabHomeSelected' | 'tabMatchup' | 'tabMatchupSelected'
   | 'tabLeague' | 'tabLeagueSelected' | 'tabPortfolio' | 'tabPortfolioSelected';
@@ -43,6 +45,7 @@ export const ICON_GLYPHS: Record<IconName, string> = {
   pending: 'hourglass-outline',
   // The notifications ask (W4): the bell on its disc.
   bell: 'notifications-outline',
+  person: 'person-outline',
   // The tab bar (Design Lead ruling 2026-09-29): home, the line chart, the trophy, the bars.
   // The filled glyph is the selected state only, the one exception to "outline by default".
   tabHome: 'home-outline',

@@ -4,6 +4,7 @@ import { StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle }
 
 import { radius, space } from '@/constants/tokens';
 import { Avatar, AVATAR_RING, AVATAR_RING_GAP } from '@/components/sp/Avatar';
+import { useSeatInk } from '@/components/sp/useSeatInk';
 import { Card } from '@/components/sp/Card';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { keepMoney } from '@/lib/game/keepDots';
@@ -124,6 +125,7 @@ function Half({ side, team, mirror, size, halfWidth, open }: { side: 'you' | 'op
   const { colors } = useTheme();
   const { fontScale } = useWindowDimensions();
   const you = side === 'you';
+  const seatInk = useSeatInk(team.name);
   // A name is ONE line, beside its avatar while it fits at ≥ 75% of its size; otherwise the
   // avatar stacks over it and the name takes the half's whole width (never "Gianluigi" / "B.").
   const fontPt = NAME_PT[size] * Math.min(fontScale, NAME_MAX_SCALE);
@@ -159,7 +161,7 @@ function Half({ side, team, mirror, size, halfWidth, open }: { side: 'you' | 'op
         )}
         {/* The board's 15pt name (a 17pt headline cut "Roberto B." to "Robert…" beside the 44pt
             avatar on a 17e); a long name wraps to a second line before it truncates. */}
-        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale} maxFontSizeMultiplier={nameCap} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
+        <Text variant={size === 'compact' ? 'callout' : 'body'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={minScale} maxFontSizeMultiplier={nameCap} color={seatInk} style={[styles.name, mirror ? styles.right : null, you ? { fontWeight: YOUR_NAME_WEIGHT } : styles.oppName]}>
           {team.name}
         </Text>
       </View>

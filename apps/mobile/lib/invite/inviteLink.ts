@@ -50,11 +50,11 @@ export function inviteShareMessage(code: string): string {
 }
 
 /** Lower-cases A-Z only. String.toLowerCase() also folds non-ASCII letters onto ASCII ones (U+212A KELVIN SIGN -> 'k'). */
-function asciiLower(s: string): string {
+export function asciiLower(s: string): string {
   return s.replace(/[A-Z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 32));
 }
 
-function relativeToBase(url: string, dev: boolean): string | null {
+export function relativeToBase(url: string, dev: boolean): string | null {
   const direct = linkRelativePath(url, dev);
   if (direct !== null) return direct;
   // linkRelativePath matches bases case-sensitively; retry with the origin folded so

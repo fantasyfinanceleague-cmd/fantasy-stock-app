@@ -45,6 +45,15 @@ import { useLeagueContext } from '@/lib/LeagueContext';
 import { SEAM_ON } from '@/lib/game/devSeam';
 import { useCaptureAction } from '@/lib/money/captureScript';
 import { linkedName } from '@/lib/game/teamLink';
+import { Button } from '@/components/sp/Button';
+import { WarnPanel } from '@/components/sp/WarnPanel';
+import { useAuth } from '@/lib/useAuth';
+import { FIND_NEW_MANAGER } from '@/lib/account/deleteCopy';
+import { useDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
+import { isDeletedSeatName } from '@/lib/account/deletedSeat';
+import { canFindNewManager } from '@/lib/account/findManager';
+import { useFindNewManager } from '@/lib/account/useFindNewManager';
+import { JOIN_COPY } from '@/lib/join/joinPreview';
 
 /** The hero's sub-lines follow Dynamic Type to 1.3× (the value stays the standout), as Portfolio's do. */
 const HERO_LINE_MAX_SCALE = 1.3;
@@ -76,11 +85,21 @@ export function PlayerPortfolioScreen({ userId, username }: { userId: string; us
   const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { market } = useLeagueContext();
+  const { market, activeLeague } = useLeagueContext();
+  const { user } = useAuth();
+  const deletedLabel = useDeletedManagerLabel();
   const data = usePlayerPortfolioData(userId || null);
   const leagueId = data.leagueId;
   // The linked name shows only while loading; a failed load names no one (a crafted link can carry any text).
   const knownName = data.portfolio?.displayName ?? (data.status === 'loading' ? linkedName(username) : null);
+  // Account deletion (W4): on a deleted seat's team the COMMISSIONER gets "Find a new manager" (board: under the value).
+  const findManager = useFindNewManager(leagueId, activeLeague?.name ?? '');
+  const findable = !!activeLeague && canFindNewManager({
+    isCommissioner: activeLeague.commissioner_id === user?.id,
+    seatDeleted: isDeletedSeatName(data.portfolio?.displayName, deletedLabel),
+    draftStatus: activeLeague.draft_status,
+    seasonStatus: activeLeague.season_status,
+  });
 
   // The card's week: Matchup's own read for the clock, calendar and live quotes; the
   // leaguemate's own snapshots for their week (a member-gated read).
@@ -179,6 +198,13 @@ export function PlayerPortfolioScreen({ userId, username }: { userId: string; us
           {v.unpricedNote ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={HERO_LINE_MAX_SCALE}>{v.unpricedNote}</Text> : null}
         </View>
 
+        {findable ? (
+          <View style={styles.findBlock}>
+            <Button label={FIND_NEW_MANAGER} status={findManager.busyId ? 'loading' : 'idle'} onPress={() => void findManager.find(userId)} fullWidth />
+            {findManager.failed ? <WarnPanel text={JOIN_COPY.unreachable} /> : null}
+          </View>
+        ) : null}
+
         {v.cashValueText ? (
           <View style={styles.factRow} accessible accessibilityLabel={`${COPY.cashFromSales}, ${v.cashValueText}`}>
             <Text variant="callout" tone="secondary" maxFontSizeMultiplier={ROW_TEXT_MAX_SCALE}>{COPY.cashFromSales}</Text>
@@ -244,6 +270,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: space[6], paddingTop: space[2], paddingBottom: space[9] },
   blocks: { gap: space[7] },
   heroText: { gap: space[1] },
+  findBlock: { gap: space[3] },
   factRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', columnGap: space[3] },
   listHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: space[1] },
   heroLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },

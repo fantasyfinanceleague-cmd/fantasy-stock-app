@@ -1,0 +1,67 @@
+// Account deletion (W4) — what the takeover landing shows, from join-league's `takeover_preview` and `takeover`
+// answers (Orchestrator contract, 2026-10-21). Pure.
+//
+//   takeover_preview -> {ok:true, league_name, wins, losses, rank} | {ok:false, reason}
+//   takeover         -> {ok:true, status:'taken_over'} | {ok:false, reason}
+//   reasons: gone | taken | invalid_code | not_deleted | window | already_member | not_eligible
+//
+// Dead links follow the invite arrival's pattern: NO heading, the refusal alone, then one way out. "taken" has its
+// own approved line ("Someone already took this team." + "Go to Home"); every other dead reason reuses the invite's
+// existing dead-link sentence (lib/invite/inviteCopy.ts) so this adds no unapproved copy. already_member is not a
+// refusal: the person is in the league, so it opens Home. Anything unrecognised (an older app against a newer
+// server) and a failed call are an unknown: "Try again" is the person's tap, never a loop.
+
+import type { FunctionRefusal } from '../functionRefusal';
+import { ordinal } from '../home/ordinal';
+import { INVITE_COPY } from '../invite/inviteCopy';
+import { TAKEN_LINE } from './deleteCopy';
+
+const DEAD_REASONS = ['gone', 'invalid_code', 'not_deleted', 'window', 'not_eligible'] as const;
+
+export type TakeoverPreview =
+  | { kind: 'found'; leagueName: string; wins: number; losses: number; rank: number }
+  | { kind: 'taken' }
+  | { kind: 'dead' }
+  | { kind: 'member' }
+  | { kind: 'unknown' };
+
+const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < 10000 ? v : null);
+
+function reasonView(reason: string): TakeoverPreview {
+  if (reason === 'taken') return { kind: 'taken' };
+  if (reason === 'already_member') return { kind: 'member' };
+  return (DEAD_REASONS as readonly string[]).includes(reason) ? { kind: 'dead' } : { kind: 'unknown' };
+}
+
+export function interpretTakeoverPreview(r: FunctionRefusal): TakeoverPreview {
+  if (r.transport) return { kind: 'unknown' };
+  if (r.reason === null) {
+    const b = r.body;
+    const name = typeof b.league_name === 'string' ? b.league_name.trim() : '';
+    const wins = count(b.wins);
+    const losses = count(b.losses);
+    const rank = count(b.rank);
+    if (b.ok !== true || !name || wins === null || losses === null || rank === null || rank < 1) return { kind: 'unknown' };
+    return { kind: 'found', leagueName: name.slice(0, 80), wins, losses, rank };
+  }
+  return reasonView(r.reason);
+}
+
+export type TakeoverResult = { kind: 'taken_over' } | TakeoverPreview;
+
+/** The write's answer: only an explicit {ok:true, status:'taken_over'} is a takeover. */
+export function interpretTakeover(r: FunctionRefusal): TakeoverResult {
+  if (r.transport) return { kind: 'unknown' };
+  if (r.reason === null) return r.body.ok === true && r.body.status === 'taken_over' ? { kind: 'taken_over' } : { kind: 'unknown' };
+  return reasonView(r.reason);
+}
+
+/** The dead-link panel's sentence: no heading, centred (the invite arrival's dead-link pattern). */
+export function deadLine(v: Extract<TakeoverPreview, { kind: 'taken' | 'dead' }>): string {
+  return v.kind === 'taken' ? TAKEN_LINE : INVITE_COPY.dead;
+}
+
+/** The record under the question: "1\u20135, 6th" (the board's; lib/home/ordinal.ts spells the rank). */
+export function recordLine(wins: number, losses: number, rank: number): string {
+  return `${wins}\u2013${losses}, ${ordinal(rank)}`;
+}

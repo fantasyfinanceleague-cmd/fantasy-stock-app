@@ -22,6 +22,7 @@ export default function ProfileScreen() {
         onAppearance={() => router.push('/appearance')}
         onHowItWorks={() => setHowItWorks(true)}
         onSignOut={signOut}
+        onDeleteAccount={() => router.push('/delete-account')}
       />
       <HowItWorksSheet visible={howItWorks} onClose={() => setHowItWorks(false)} />
     </AuthScaffold>
