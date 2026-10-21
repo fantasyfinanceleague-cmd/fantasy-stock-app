@@ -84,3 +84,14 @@ above them. The earlier passes (hidden in 5 of 16 shots with the single-timer sc
 - F19 (share sheet) was opened by a capture-script action (a dev-only hook, since reverted and not committed).
 - A pending takeover link persists in AsyncStorage: a capture that leaves one (`unknown`) reopens the landing on the
   next launch of this build; the baseline run cleared it first.
+
+## Phone-pass notes (the real-device checks no simulator can make)
+
+Tick these on a TestFlight / dev-client build (the same list goes into `docs/testing/WALKTHROUGH_1.3.md`):
+
+- **Delete with Apple:** the Apple sheet, "Confirmed with Apple", the alert, then Sign in with "Your account is deleted."; the app is gone from Settings › Apple ID › Sign in with Apple (the revoke).
+- **Delete with email + password:** a wrong password shows "That password isn't right. Try again." above the keyboard; the right one deletes.
+- **Share a takeover link for real:** as the commissioner, tap "Find a new manager" on a deleted seat (Members, and the seat's team view) and send the link through Messages. The text is "Take over a team in {league}" with the https `/take/<CODE>` link on its own line. (The simulator stills opened the share sheet through a capture-script action, not a tap.)
+- **A real takeover between two phones:** open that link on a second phone with the app installed: https previews the seat by itself ("Take over Former manager's team in …?"); then "Take the team" lands in the league with the record kept. A second phone opening the same link sees "Someone already took this team."
+- **A scheme link waits for a tap:** `fantasystockapp://take/<CODE>` (tapped from Notes or a page) shows only "Find league" and "Not now" until you tap; nothing is looked up before the tap.
+- **The https link only opens the app once W5 ships** the `/take/*` entry in the apple-app-site-association file and the web "Get the app" page; until then the scheme link works in-app and the https link opens the web.
