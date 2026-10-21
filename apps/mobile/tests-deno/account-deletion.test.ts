@@ -20,6 +20,7 @@ import {
   applyOutcome, askConfirm, canAsk, confirmDelete, deleteOutcome, initialDeleteState, keepAccount, setProof, type DeleteState,
 } from '../lib/account/deleteFlow.ts';
 import { accountCheckFromGetUser, runDelete, type DeleteRunDeps } from '../lib/account/deleteRun.ts';
+import { canFindNewManager, membersRows } from '../lib/account/findManager.ts';
 import { leagueLine, successorOf, type DeleteLeagueInput, type LeagueMemberFact } from '../lib/account/leagueLines.ts';
 import { deadLine, interpretTakeover, interpretTakeoverPreview, recordLine } from '../lib/account/takeoverView.ts';
 import { isDeletedNotice, setDeletedNotice, subscribeDeletedNotice } from '../lib/account/deletedNotice.ts';
@@ -547,4 +548,45 @@ Deno.test('pending takeover: claim stamps once; markAutoOpened is per code; clea
   assertEquals(a.s.getSnapshot().autoOpenedCode, CODE);
   await a.s.clear('OTHERCODE');
   assertEquals(a.s.getSnapshot().code, CODE);
+});
+
+// ── Mutation survivors, pinned ──────────────────────────────────────────────
+
+Deno.test('nothing sent: an alert opened over an EMPTY proof still yields no body (the proof is re-checked at Delete)', () => {
+  const forced: DeleteState = { phase: 'confirming', kind: 'password', proof: { kind: 'password', password: '' }, failed: false, proofRejected: false };
+  assertEquals(confirmDelete(forced).body, null);
+  const forcedApple: DeleteState = { phase: 'confirming', kind: 'apple', proof: { kind: 'apple', identityToken: 't', authorizationCode: '', nonce: 'n' }, failed: false, proofRejected: false };
+  assertEquals(confirmDelete(forcedApple).body, null);
+});
+
+Deno.test('lines: the earliest-JOINED member succeeds, not the smallest id or the first listed', () => {
+  const ms = [member(ME, '2026-01-01'), member('u-a-late', '2026-03-01'), member('u-z-early', '2026-01-02')];
+  assertEquals(successorOf(ms, ME)?.user_id, 'u-z-early');
+  assertEquals(successorOf(ms.slice().reverse(), ME)?.user_id, 'u-z-early');
+});
+
+Deno.test('Find a new manager: the commissioner, on a deleted seat, from draft complete through the end of the season', () => {
+  const ok = { isCommissioner: true, seatDeleted: true, draftStatus: 'completed', seasonStatus: 'active' };
+  assert(canFindNewManager(ok));
+  assert(canFindNewManager({ ...ok, seasonStatus: 'playoffs' }), 'through the end of the playoffs');
+  assertFalse(canFindNewManager({ ...ok, seasonStatus: 'completed' }), 'nothing to take after the season');
+  assertFalse(canFindNewManager({ ...ok, draftStatus: 'in_progress' }), 'a live draft: the seat auto-picks');
+  assertFalse(canFindNewManager({ ...ok, draftStatus: 'not_started' }), 'before the draft there is no seat to hand over');
+  assertFalse(canFindNewManager({ ...ok, isCommissioner: false }), 'a member never sees it');
+  assertFalse(canFindNewManager({ ...ok, seatDeleted: false }), 'a live manager has nothing to find');
+  assertFalse(canFindNewManager({ ...ok, draftStatus: null }));
+});
+
+Deno.test('Members: you first, the rest A–Z, deleted seats last; only current members; the seat is marked, never renamed', () => {
+  const names = [
+    { user_id: 'u-b', display_name: 'beta' }, { user_id: 'u-seat', display_name: 'Former manager' }, { user_id: ME, display_name: 'Zed' },
+    { user_id: 'u-a', display_name: 'Alpha' }, { user_id: 'u-gone', display_name: 'Left' }, { user_id: 'u-null', display_name: null },
+  ];
+  const rows = membersRows(names, [ME, 'u-a', 'u-b', 'u-seat', 'u-null'], 'u-a', ME, 'Former manager');
+  assertEquals(rows.map((r) => r.userId), [ME, 'u-a', 'u-b', 'u-null', 'u-seat']);
+  assertEquals(rows.find((r) => r.userId === 'u-seat')?.deleted, true);
+  assertEquals(rows.find((r) => r.userId === 'u-a')?.isCommissioner, true);
+  assertEquals(rows.find((r) => r.userId === ME)?.isYou, true);
+  assertFalse(rows.some((r) => r.userId === 'u-gone'), 'a member who left is not listed');
+  assertEquals(rows.find((r) => r.userId === 'u-null')?.name, 'Former manager', 'a missing name reads as the placeholder, never blank');
 });
