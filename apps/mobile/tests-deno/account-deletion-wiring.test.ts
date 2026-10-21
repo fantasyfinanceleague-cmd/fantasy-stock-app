@@ -82,11 +82,11 @@ Deno.test('button: the destructive pill (lossFill / onYou), dimmed until the pro
 
 Deno.test('after deletion: the line is raised BEFORE the local sign-out, and the sign-out is local', () => {
   const screen = src('app/delete-account.tsx');
-  assert(screen.indexOf('setDeletedNotice(true)') > 0 && screen.indexOf('setDeletedNotice(true)') < screen.indexOf('endSessionAfterDeletion()'));
+  assert(screen.indexOf('setDeletedNotice(true)') > 0 && screen.indexOf('setDeletedNotice(true)') < screen.indexOf('endSessionAfterDeletion('));
   assert(screen.includes("if (outcome.kind !== 'deleted') return;"));
   const end = src('lib/account/endSession.ts');
   assert(end.includes("supabase.auth.signOut({ scope: 'local' })"));
-  assert(end.includes('signOutOfGoogle()'));
+  assert(end.includes('signOutOfGoogle,'));
 });
 
 Deno.test('Sign in: the notice is mounted, spent on a sign-in attempt, and spent on leaving', () => {
@@ -183,7 +183,7 @@ Deno.test('Find a new manager: only on a deleted seat, only when the commissione
 Deno.test('takeover link: native-intent captures it with its OWN parser into its OWN store, never as an invite or a route', () => {
   const intent = src('app/+native-intent.tsx');
   assert(intent.includes('parseTakeoverArrival(path)'));
-  assert(intent.includes('pendingTakeover.capture(takeover.code)'));
+  assert(intent.includes('pendingTakeover.capture(takeover.code, takeover.origin)'));
   const at = intent.indexOf('parseTakeoverArrival(path)');
   assert(intent.slice(at, at + 400).includes("return '/'"), 'the router just opens the root');
   assertFalse(intent.slice(at, at + 400).includes('pendingInvite'), 'a takeover is not an invite');

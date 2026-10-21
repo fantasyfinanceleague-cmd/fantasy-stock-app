@@ -12,6 +12,7 @@
 // Dependencies are injected so every branch is testable without React Native.
 
 import { normalizeTakeoverCode } from './takeoverLink';
+import type { InviteOrigin } from './inviteLink';
 
 export const TAKEOVER_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const TAKEOVER_STORAGE_KEY = 'sp.takeover.pending.v1';
@@ -19,6 +20,8 @@ export const TAKEOVER_STORAGE_KEY = 'sp.takeover.pending.v1';
 export interface TakeoverSnapshot {
   loaded: boolean;
   code: string | null;
+  /** Which kind of link brought it: the SHARED https universal link previews by itself; anything else (the custom scheme, which any web page can fire) waits for a tap, because a preview counts its misses toward the code lockout (Orchestrator, decision 18's rule). */
+  origin: InviteOrigin;
   /** The signed-in person it is stamped for (claim()), persisted; null until somebody signs in with it pending. */
   ownerUserId: string | null;
   /** The code the root layout already opened the landing for this launch (never persisted). */
@@ -41,9 +44,10 @@ interface Persisted {
   code: string;
   capturedAt: number;
   ownerUserId: string | null;
+  origin: InviteOrigin;
 }
 
-const EMPTY: TakeoverSnapshot = { loaded: false, code: null, ownerUserId: null, autoOpenedCode: null };
+const EMPTY: TakeoverSnapshot = { loaded: false, code: null, origin: 'scheme', ownerUserId: null, autoOpenedCode: null };
 
 /** Reads what the store wrote; anything malformed, stale or hostile is null (and removed by the caller). */
 export function parsePersistedTakeover(raw: string | null, now: number): Persisted | null {
@@ -61,7 +65,8 @@ export function parsePersistedTakeover(raw: string | null, now: number): Persist
   const capturedAt = typeof o.capturedAt === 'number' && Number.isFinite(o.capturedAt) ? o.capturedAt : null;
   if (capturedAt === null || now - capturedAt > TAKEOVER_TTL_MS || capturedAt - now > 24 * 60 * 60 * 1000) return null;
   const owner = typeof o.ownerUserId === 'string' && o.ownerUserId.length > 0 && o.ownerUserId.length <= 64 ? o.ownerUserId : null;
-  return { v: 1, code, capturedAt, ownerUserId: owner };
+  // Anything but an explicit 'https' is the weaker, tap-requiring origin: a stored record can never upgrade itself.
+  return { v: 1, code, capturedAt, ownerUserId: owner, origin: o.origin === 'https' ? 'https' : 'scheme' };
 }
 
 export function createPendingTakeover(deps: PendingTakeoverDeps) {
@@ -76,7 +81,7 @@ export function createPendingTakeover(deps: PendingTakeoverDeps) {
   };
   const persist = async () => {
     if (!snap.code) return;
-    const rec: Persisted = { v: 1, code: snap.code, capturedAt, ownerUserId: snap.ownerUserId };
+    const rec: Persisted = { v: 1, code: snap.code, capturedAt, ownerUserId: snap.ownerUserId, origin: snap.origin };
     try {
       await deps.storage.set(JSON.stringify(rec));
     } catch {
@@ -111,15 +116,15 @@ export function createPendingTakeover(deps: PendingTakeoverDeps) {
         }
       }
       capturedAt = p?.capturedAt ?? 0;
-      emit({ loaded: true, code: p?.code ?? null, ownerUserId: p?.ownerUserId ?? null, autoOpenedCode: null });
+      emit({ loaded: true, code: p?.code ?? null, origin: p?.origin ?? 'scheme', ownerUserId: p?.ownerUserId ?? null, autoOpenedCode: null });
     },
     /** A takeover link arrived. The newest link replaces an older one. Returns false for a code that fails the shape. */
-    capture(rawCode: string): boolean {
+    capture(rawCode: string, origin: InviteOrigin = 'scheme'): boolean {
       const code = normalizeTakeoverCode(rawCode);
       if (!code) return false;
       generation++;
       capturedAt = deps.now();
-      emit({ loaded: true, code, ownerUserId: null, autoOpenedCode: null });
+      emit({ loaded: true, code, origin, ownerUserId: null, autoOpenedCode: null });
       void persist();
       return true;
     },

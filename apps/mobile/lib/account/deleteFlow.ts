@@ -108,7 +108,7 @@ export function applyOutcome(s: DeleteState, o: DeleteOutcome): DeleteState {
   if (s.phase !== 'sending') return s;
   switch (o.kind) {
     case 'deleted':
-      return { ...s, phase: 'done', failed: false, rateLimited: false, proofRejected: false };
+      return { ...s, phase: 'done', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: false };
     case 'bad_proof':
       return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, rateLimited: false, proofRejected: true };
     case 'apple_required':

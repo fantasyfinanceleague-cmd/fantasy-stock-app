@@ -34,6 +34,7 @@ export const TAKE_THE_TEAM = 'Take the team';
 export const NOT_NOW = 'Not now';
 export const TAKEN_LINE = 'Someone already took this team.';
 export const GO_TO_HOME = 'Go to Home';
+export const FIND_LEAGUE = 'Find league'; // shipped (Join's lookup button); the tap that previews a scheme-origin takeover link
 export const OPEN_THE_LEAGUE = 'Open the league'; // shipped (Join's already-a-member button)
 
 /** The line under the lead on a league the person plays in or runs (the board's B lines, verbatim). */

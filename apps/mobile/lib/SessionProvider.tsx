@@ -12,6 +12,7 @@ import { setLiveSession } from './auth/liveSession';
 import { pkceCryptoReady } from './auth/pkceCrypto';
 import { confirmationCooldown, RESEND_TOO_SOON } from './auth/resendCooldown';
 import { removeLegacyAuthKeys } from './auth/legacyAuthKeys';
+import { subscribeForcedSignOut } from './account/forcedSignOut';
 import { signInWithApple as nativeAppleSignIn, signInWithGoogle as nativeGoogleSignIn, signOutOfGoogle } from './auth/socialSignIn';
 import type { SocialSignInResult } from './auth/socialOutcome';
 import { pendingRoute, type AuthPhase } from './shell/pendingRoute';
@@ -163,6 +164,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  // Account deletion (W4): the account is gone but supabase-js could not sign out on the wire (lib/account/endSessionCore.ts
+  // removed the stored session by hand). Clear the in-memory session exactly as a SIGNED_OUT event would.
+  useEffect(() => {
+    if (SHELL_FIXTURE) return;
+    return subscribeForcedSignOut(() => {
+      userIdRef.current = null;
+      notificationsSetup.current = false;
+      setLiveSession(null);
+      setSession(null);
+      setUser(null);
+      setUsername(null);
+      setProfileFor(null);
+    });
   }, []);
 
   // Push setup that a recovery hold deferred (see the SIGNED_IN handler above) runs when the hold ends.

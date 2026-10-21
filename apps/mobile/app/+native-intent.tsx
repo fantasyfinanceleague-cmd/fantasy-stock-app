@@ -57,7 +57,7 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
   // the landing waits for their tap. The router just opens the root.
   try {
     const takeover = parseTakeoverArrival(path);
-    if (takeover && pendingTakeover.capture(takeover.code)) {
+    if (takeover && pendingTakeover.capture(takeover.code, takeover.origin)) {
       markOnboardingSeen();
       return '/';
     }

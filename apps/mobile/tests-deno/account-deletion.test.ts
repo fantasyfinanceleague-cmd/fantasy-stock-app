@@ -305,7 +305,7 @@ Deno.test('run: getUser() errors map to gone only when definitive', () => {
   assertEquals(accountCheckFromGetUser({ data: { user: { id: 'u' } }, error: null }), 'exists');
   assertEquals(accountCheckFromGetUser({ data: { user: null }, error: null }), 'unknown');
   assertEquals(accountCheckFromGetUser({ error: { status: 403, code: 'user_not_found' } }), 'gone');
-  assertEquals(accountCheckFromGetUser({ error: { status: 401, code: 'bad_jwt' } }), 'gone');
+  assertEquals(accountCheckFromGetUser({ error: { status: 401, code: 'bad_jwt' } }), 'unknown');
   assertEquals(accountCheckFromGetUser({ error: { status: 500 } }), 'unknown');
   assertEquals(accountCheckFromGetUser({ error: {} }), 'unknown', 'a network error carries no status');
 });

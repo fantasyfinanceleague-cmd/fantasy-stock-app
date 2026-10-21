@@ -70,8 +70,10 @@ export async function runDelete(body: DeleteRequestBody, deps: DeleteRunDeps): P
 /** supabase.auth.getUser()'s error, read: a definitive "that user is gone" (a deleted user's JWT is rejected). */
 export function accountCheckFromGetUser(r: { data?: { user?: unknown } | null; error?: { status?: number; code?: string } | null }): AccountCheck {
   if (!r.error) return r.data?.user ? 'exists' : 'unknown';
-  const gone = r.error.code === 'user_not_found' || r.error.code === 'bad_jwt' || r.error.status === 404 || r.error.status === 403;
-  return gone ? 'gone' : 'unknown';
+  // ONLY `user_not_found` is a definitive "that user is gone". GoTrue also answers 403 session_not_found (a session revoked
+  // elsewhere) and a bad/expired JWT for a LIVE account, so those, and a bare 403/404, stay unknown: claiming "Your account is
+  // deleted." for a live account would be worse than saying "try again".
+  return r.error.code === 'user_not_found' ? 'gone' : 'unknown';
 }
 
 /**

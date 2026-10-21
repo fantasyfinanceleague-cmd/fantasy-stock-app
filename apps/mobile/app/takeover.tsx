@@ -52,7 +52,18 @@ export default function TakeoverScreen() {
     setView({ kind: 'loading' });
     await settle(await previewTakeover(code));
   }, [code, settle]);
-  useEffect(() => { void load(); }, [load]);
+  // Decision 18's rule: the shared https link previews by itself; a scheme link (any web page can fire one) waits for a tap,
+  // because a preview counts its misses toward the code lockout. And with NO pending code (fantasystockapp://takeover typed
+  // by hand, or a stale route) there is nothing to show but the dead-link view.
+  useEffect(() => {
+    if (!snap.loaded) return;
+    if (!code) {
+      setView({ kind: 'dead' });
+      return;
+    }
+    if (snap.origin === 'https') void load();
+    else setView({ kind: 'tap' });
+  }, [snap.loaded, snap.origin, code, load]);
 
   const take = useCallback(async () => {
     if (view.kind !== 'found' || !code) return;
@@ -87,5 +98,5 @@ export default function TakeoverScreen() {
     home();
   }, [code, home]);
 
-  return <TakeoverLanding state={view} label={label} onTake={take} onNotNow={notNow} onHome={home} onOpen={open} onRetry={load} takeFailed={takeFailed} />;
+  return <TakeoverLanding state={view} label={label} onTake={take} onNotNow={notNow} onHome={home} onOpen={open} onRetry={load} onFind={load} takeFailed={takeFailed} />;
 }

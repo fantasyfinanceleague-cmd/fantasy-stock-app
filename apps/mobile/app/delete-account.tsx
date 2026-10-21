@@ -95,12 +95,14 @@ export default function DeleteAccountScreen() {
     setState(next);
     const outcome = await deleteAccount(body, proofAt);
     setState((s) => applyOutcome(s, outcome));
+    // Whatever the answer, the typed password is spent (it must not sit in memory or on screen after a failure, a limit or a deletion).
+    setPassword('');
     if (outcome.kind !== 'deleted') return;
     // The server deleted the auth user: every device is signed out. Raise the line BEFORE the local clear so Sign in
     // shows it from its first render; the auth guard then lands the signed-out stack (Sign in) by itself.
     setDeletedNotice(true);
     if (SHELL_FIXTURE) await signOut();
-    else await endSessionAfterDeletion();
+    else await endSessionAfterDeletion(meId || null);
   }, [signOut]);
 
   // Open the native alert exactly when the state says so.

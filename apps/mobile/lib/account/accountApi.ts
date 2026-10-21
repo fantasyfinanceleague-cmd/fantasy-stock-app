@@ -5,6 +5,7 @@
 //   join-league {action:'takeover_preview', code} and {action:'takeover', code}
 
 import { supabase } from '../supabase';
+import { DELETE_FIXTURE } from '../shell/captureDev';
 import { seamInvoke, seamRpc } from '../game/seamCalls';
 import { readFunctionRefusal } from '../functionRefusal';
 import { readTakeoverReply } from './takeoverReply';
@@ -15,7 +16,9 @@ import { interpretTakeover, interpretTakeoverPreview, type TakeoverPreview, type
 import { normalizeTakeoverCode } from '../invite/takeoverLink';
 
 export const deleteRunDeps: DeleteRunDeps = {
-  invoke: (body) => seamInvoke('delete-account', { body: { proof: body.proof } }),
+  // DEV capture builds seed junk proofs (lib/account/deleteCapture.ts): with a fixture set, NOTHING is ever sent, so a
+  // seeded *_ready state can never hit a real server or burn the proof limit. The answer is a plain refusal.
+  invoke: (body) => (DELETE_FIXTURE ? Promise.resolve({ data: { ok: false, reason: 'fixture' }, error: null }) : seamInvoke('delete-account', { body: { proof: body.proof } })),
   checkAccount: async () => {
     const r = await supabase.auth.getUser();
     return accountCheckFromGetUser(r);

@@ -10,7 +10,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { WARN_TEXT_MAX_SCALE, WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
+import { FIND_LEAGUE, GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
 import type { RateWait } from '@/lib/account/takeoverReply';
 import { deadLine, recordLine, type TakeoverPreview } from '@/lib/account/takeoverView';
 import { JOIN_COPY, blockMessage } from '@/lib/join/joinPreview';
@@ -33,12 +33,14 @@ export function waitLine(w: RateWait): string {
 
 export type TakeoverLandingState =
   | { kind: 'loading' }
+  /** A scheme-origin link: nothing is looked up until the person taps (a preview counts its misses toward the code lockout, so any web page firing fantasystockapp://take/<random> could lock them out). */
+  | { kind: 'tap' }
   | Exclude<TakeoverPreview, { kind: 'member' }>
   | { kind: 'member'; leagueName: string }
   | { kind: 'taking'; found: Extract<TakeoverPreview, { kind: 'found' }> };
 
 export function TakeoverLanding({
-  state, label, onTake, onNotNow, onHome, onOpen, onRetry, takeFailed,
+  state, label, onTake, onNotNow, onHome, onOpen, onRetry, onFind, takeFailed,
 }: {
   state: TakeoverLandingState;
   label: string;
@@ -48,6 +50,8 @@ export function TakeoverLanding({
   /** "Open the league" for someone already in it. */
   onOpen: () => void;
   onRetry: () => void;
+  /** The tap that looks the seat up (a scheme-origin link). */
+  onFind: () => void;
   /** The write came back unknown: say so under the buttons (the preview's own "couldn't reach" line). */
   takeFailed: 'unreachable' | RateWait | null;
 }) {
@@ -71,6 +75,26 @@ export function TakeoverLanding({
         <View style={styles.actions}>
           <WarnPanel text={blockMessage('already_member', { name: state.leagueName, max: 0 })} />
           <Link label={OPEN_THE_LEAGUE} onPress={onOpen} />
+        </View>
+      </AuthScaffold>
+    );
+  }
+
+  // Decision 18's rule for takeovers: the shared https link previews by itself, a scheme link waits for this tap. Only words
+  // that already ship: Join's "Find league" and the notifications ask's "Not now".
+  if (state.kind === 'tap') {
+    return (
+      <AuthScaffold
+        centerBody
+        footer={
+          <View style={styles.actions}>
+            <Button label={FIND_LEAGUE} onPress={onFind} fullWidth />
+            <Link label={NOT_NOW} onPress={onNotNow} muted />
+          </View>
+        }
+      >
+        <View style={styles.block}>
+          <Avatar name={label} size={DISC} tone="neutral" />
         </View>
       </AuthScaffold>
     );
