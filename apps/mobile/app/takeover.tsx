@@ -16,9 +16,9 @@ export default function TakeoverScreen() {
   const snap = useTakeoverSnapshot();
   const code = snap.code;
   const label = useDeletedManagerLabel();
-  const { refresh } = useLeagueContext();
+  const { refresh, setActiveLeagueId } = useLeagueContext();
   const [view, setView] = useState<TakeoverLandingState>({ kind: 'loading' });
-  const [takeFailed, setTakeFailed] = useState(false);
+  const [takeFailed, setTakeFailed] = useState<'unreachable' | 'rate_limited' | null>(null);
   const alive = useRef(true);
   useEffect(() => () => { alive.current = false; }, []);
 
@@ -47,18 +47,20 @@ export default function TakeoverScreen() {
 
   const take = useCallback(async () => {
     if (view.kind !== 'found' || !code) return;
-    setTakeFailed(false);
+    setTakeFailed(null);
     setView({ kind: 'taking', found: view });
     const r = await takeOverTeam(code);
     if (!alive.current) return;
     if (r.kind === 'taken_over') {
       await pendingTakeover.clear(code);
       await refresh();
+      // The reply names the league: open it (the person just chose to take this team).
+      if (r.leagueId) setActiveLeagueId(r.leagueId);
       router.replace('/(tabs)');
       return;
     }
-    if (r.kind === 'unknown') {
-      setTakeFailed(true);
+    if (r.kind === 'unknown' || r.kind === 'rate_limited') {
+      setTakeFailed(r.kind === 'rate_limited' ? 'rate_limited' : 'unreachable');
       setView(view); // keep the link; the person's tap retries (no loop)
       return;
     }

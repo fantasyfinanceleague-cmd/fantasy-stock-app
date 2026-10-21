@@ -13,6 +13,7 @@
 
 import type { FunctionRefusal } from '../functionRefusal';
 import { ordinal } from '../home/ordinal';
+import { isUuid } from '../uuid';
 import { INVITE_COPY } from '../invite/inviteCopy';
 import { TAKEN_LINE } from './deleteCopy';
 
@@ -23,6 +24,8 @@ export type TakeoverPreview =
   | { kind: 'taken' }
   | { kind: 'dead' }
   | { kind: 'member' }
+  /** Too many wrong codes: a wait, never the dead-link page (the link may be fine). */
+  | { kind: 'rate_limited' }
   | { kind: 'unknown' };
 
 const count = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < 10000 ? v : null);
@@ -30,6 +33,7 @@ const count = (v: unknown): number | null => (typeof v === 'number' && Number.is
 function reasonView(reason: string): TakeoverPreview {
   if (reason === 'taken') return { kind: 'taken' };
   if (reason === 'already_member') return { kind: 'member' };
+  if (reason === 'rate_limited') return { kind: 'rate_limited' };
   return (DEAD_REASONS as readonly string[]).includes(reason) ? { kind: 'dead' } : { kind: 'unknown' };
 }
 
@@ -47,12 +51,18 @@ export function interpretTakeoverPreview(r: FunctionRefusal): TakeoverPreview {
   return reasonView(r.reason);
 }
 
-export type TakeoverResult = { kind: 'taken_over' } | TakeoverPreview;
+/** `leagueId` is the league the seat is in (the taken_over reply carries league.id), or null when absent/malformed. */
+export type TakeoverResult = { kind: 'taken_over'; leagueId: string | null } | TakeoverPreview;
 
 /** The write's answer: only an explicit {ok:true, status:'taken_over'} is a takeover. */
 export function interpretTakeover(r: FunctionRefusal): TakeoverResult {
   if (r.transport) return { kind: 'unknown' };
-  if (r.reason === null) return r.body.ok === true && r.body.status === 'taken_over' ? { kind: 'taken_over' } : { kind: 'unknown' };
+  if (r.reason === null) {
+    if (r.body.ok !== true || r.body.status !== 'taken_over') return { kind: 'unknown' };
+    const league = r.body.league as { id?: unknown } | null | undefined;
+    const id = league && typeof league === 'object' && typeof league.id === 'string' && isUuid(league.id) ? league.id : null;
+    return { kind: 'taken_over', leagueId: id };
+  }
   return reasonView(r.reason);
 }
 

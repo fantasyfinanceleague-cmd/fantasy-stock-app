@@ -205,3 +205,14 @@ Deno.test('takeover landing: only "Take the team" writes; "Not now" and a dead l
   const unknown = screen.slice(screen.indexOf("if (r.kind === 'unknown')"));
   assertFalse(unknown.slice(0, 160).includes('clear('));
 });
+
+Deno.test('takeover landing: rate_limited shows the wait line (never the dead-link page) and a taken_over opens its league', () => {
+  const landing = src('components/shell/TakeoverLanding.tsx');
+  assert(landing.includes("state.kind === 'unknown' || state.kind === 'rate_limited'"));
+  assert(landing.includes('JOIN_COPY.rateLimited'));
+  const dead = landing.slice(landing.indexOf("state.kind === 'taken' || state.kind === 'dead'"), landing.indexOf("state.kind === 'loading'"));
+  assertFalse(dead.includes('rate_limited'));
+  const screen = src('app/takeover.tsx');
+  assert(screen.includes('if (r.leagueId) setActiveLeagueId(r.leagueId);'));
+  assert(screen.includes("r.kind === 'unknown' || r.kind === 'rate_limited'"));
+});

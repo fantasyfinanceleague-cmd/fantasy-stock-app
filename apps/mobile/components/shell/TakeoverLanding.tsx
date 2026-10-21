@@ -40,7 +40,7 @@ export function TakeoverLanding({
   onHome: () => void;
   onRetry: () => void;
   /** The write came back unknown: say so under the buttons (the preview's own "couldn't reach" line). */
-  takeFailed: boolean;
+  takeFailed: 'unreachable' | 'rate_limited' | null;
 }) {
   const { colors } = useTheme();
 
@@ -63,11 +63,11 @@ export function TakeoverLanding({
     );
   }
 
-  if (state.kind === 'unknown') {
+  if (state.kind === 'unknown' || state.kind === 'rate_limited') {
     return (
       <AuthScaffold centerBody>
         <View style={styles.actions}>
-          <WarnPanel text={JOIN_COPY.unreachable} />
+          <WarnPanel text={state.kind === 'rate_limited' ? JOIN_COPY.rateLimited : JOIN_COPY.unreachable} />
           <Link label={ARRIVAL_COPY.tryAgain} onPress={onRetry} />
           <Link label={NOT_NOW} onPress={onNotNow} muted />
         </View>
@@ -82,7 +82,7 @@ export function TakeoverLanding({
       centerBody
       footer={
         <View style={styles.actions}>
-          {takeFailed ? <WarnPanel text={JOIN_COPY.unreachable} /> : null}
+          {takeFailed ? <WarnPanel text={takeFailed === 'rate_limited' ? JOIN_COPY.rateLimited : JOIN_COPY.unreachable} /> : null}
           <Button label={TAKE_THE_TEAM} status={taking ? 'loading' : 'idle'} onPress={onTake} fullWidth />
           <Link label={NOT_NOW} onPress={onNotNow} muted disabled={taking} />
         </View>

@@ -387,7 +387,14 @@ Deno.test('takeover view: preview answers', async () => {
 });
 
 Deno.test('takeover view: the write — only {ok:true, status:"taken_over"} is a takeover', async () => {
-  assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over' })), { kind: 'taken_over' });
+  assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over' })), { kind: 'taken_over', leagueId: null });
+  const LID = '3f2b8a1e-5c4d-4e6f-8a9b-0c1d2e3f4a5b';
+  assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over', league: { id: LID } })), { kind: 'taken_over', leagueId: LID });
+  assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over', league: { id: 'not-a-uuid' } })), { kind: 'taken_over', leagueId: null }, 'a malformed id is never navigated to');
+  assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'taken_over', league: 'x' })), { kind: 'taken_over', leagueId: null });
+  // too many wrong codes: a wait, never the dead-link page, and it never reads as a takeover
+  assertEquals(interpretTakeover(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
+  assertEquals(interpretTakeoverPreview(await refusal(429, { ok: false, reason: 'rate_limited' })), { kind: 'rate_limited' });
   assertEquals(interpretTakeover(await refusal(200, { ok: true })).kind, 'unknown');
   assertEquals(interpretTakeover(await refusal(200, { ok: true, status: 'joined' })).kind, 'unknown');
   assertEquals(interpretTakeover(await refusal(200, { ok: false, reason: 'taken' })), { kind: 'taken' });
