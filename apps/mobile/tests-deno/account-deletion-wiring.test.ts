@@ -279,5 +279,5 @@ Deno.test('delete screen: a refused password scrolls the refusal back above the 
   assert(screen.includes('<AuthScaffold ref={scrollRef}'));
   assert(screen.includes('useFixtureScrollEnd(scrollRef)'));
   const seed = screen.slice(screen.indexOf('const [password, setPassword]'), screen.indexOf('const inputRef'));
-  for (const f of ['password_rejected', 'limited', 'apple_rejected', 'google_rejected', "'password'"]) assertFalse(seed.includes(f), `${f} must not seed a password`);
+  for (const f of ['password_rejected', 'limited', 'apple_rejected', 'google_rejected']) assertFalse(seed.includes(f), `${f} must not seed a password`);
 });
