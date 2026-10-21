@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (5/8): leave_league's pre-draft branch, shared
+-- Account deletion (5/9): leave_league's pre-draft branch, shared
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, decision 7 ("Before the
 -- draft: same as leaving") and step 4 ("the pre-draft branch of leave_league

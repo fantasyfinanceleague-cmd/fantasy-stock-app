@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (6/8): scrub_deleted_manager
+-- Account deletion (6/9): scrub_deleted_manager
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, step 4 ("Scrub, one
 -- transaction"), decisions 2, 6, 7, 8, 9. Giorgio, 2026-10-21:
@@ -239,7 +239,8 @@ begin
                                 where m.league_id = l.id and lower(m.user_id) <> v_uid
                                   and m.user_id not like 'bot-%'
                                   and m.hidden_at is null and m.deleted_at is null)) then
-    raise exception 'scrub_deleted_manager: effect check failed for %', p_user_id using errcode = 'P0001';
+    -- No id in the message (it can reach logs; the ledger row already says whose).
+    raise exception 'scrub_deleted_manager: effect check failed' using errcode = 'P0001';
   end if;
 
   -- ---- 7. the ledger ---------------------------------------------------------------------

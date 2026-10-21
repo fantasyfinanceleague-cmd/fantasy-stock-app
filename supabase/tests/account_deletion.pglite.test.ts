@@ -78,6 +78,7 @@ const RECREATED: { fn: string; mine: string; source: string }[] = [
   { fn: 'renew_league', mine: '20261125000002_deleted_seat_guards.sql', source: '20261115000003_run_it_back_rpcs.sql' },
   { fn: 'leave_league', mine: '20261125000004_leave_before_draft_shared.sql', source: '20261110000001_leave_league_transfer_first.sql' },
   { fn: 'enforce_league_draft_order_rows', mine: '20261125000006_take_over_team.sql', source: '20261013000000_draft_order_modes.sql' },
+  { fn: 'invite_preview_lookup', mine: '20261125000008_takeover_codes_not_join_codes.sql', source: '20261124000000_invite_preview.sql' },
 ];
 
 Deno.test('account deletion: each re-created function supersedes exactly its latest source', async () => {
@@ -88,6 +89,10 @@ Deno.test('account deletion: each re-created function supersedes exactly its lat
     assertEquals(definers.at(-1), r.mine, `${r.fn}: the latest definition must be ${r.mine}`);
     assertEquals(definers.at(-2), r.source, `${r.fn}: the superseded definition must be ${r.source}`);
   }
+  // join_league_by_code is defined without the schema prefix.
+  const joins: string[] = [];
+  for (const f of files) if (/create or replace function (public\.)?join_league_by_code\(/.test(await readMigration(f))) joins.push(f);
+  assertEquals(joins.slice(-2), ['20261123000000_join_refuses_once_room_opens.sql', '20261125000008_takeover_codes_not_join_codes.sql']);
 });
 
 Deno.test('account deletion: re-created bodies differ from their source ONLY by the marked change', async () => {
@@ -156,6 +161,16 @@ begin
   const internal = await fnBody(M4, '_leave_league_before_draft');
   assert(internal.includes(srcTail.split('public.participant_display_name(p_user_id)').join('p_leaver_name')),
     '_leave_league_before_draft: the source tail verbatim, name -> p_leaver_name');
+
+  const M8 = '20261125000008_takeover_codes_not_join_codes.sql';
+  const joinBody = async (f: string) => slice(await readMigration(f), 'create or replace function join_league_by_code(', '\n$$;');
+  assertEquals(undo(await joinBody(M8), [[
+    "    select * into v_invite from league_invites where code = p_code\n      and kind = 'invite';   -- 20261125000008: never a takeover code",
+    '    select * into v_invite from league_invites where code = p_code;']]),
+    await joinBody('20261123000000_join_refuses_once_room_opens.sql'));
+  assertEquals(undo(await fnBody(M8, 'invite_preview_lookup'), [[
+    "\n         and kind = 'invite';   -- 20261125000008: a takeover code is a MISS here", ';']]),
+    await fnBody('20261124000000_invite_preview.sql', 'invite_preview_lookup'));
 
   const M6 = '20261125000006_take_over_team.sql';
   const order = await fnBody(M6, 'enforce_league_draft_order_rows');
@@ -267,8 +282,9 @@ Deno.test({
     await start(LMID); await finish(LMID);
     await q(`insert into league_seasons (league_id, season_number) values ($1, 1)`, [LMID]);
     await q(`insert into matchups (league_id, week_number, team1_user_id, team2_user_id, team1_gain, team2_gain, winner_user_id)
-             values ($1, 1, $2, $3, 5, 3, $2), ($1, 1, $4, $5, 1, 2, $5), ($1, 2, $3, $2, null, null, null)`, [LMID, A, B, C, D]);
-    for (const [u, w, l] of [[A, 1, 0], [B, 0, 1], [C, 0, 1], [D, 1, 0]] as const) {
+             values ($1, 1, $2, $3, 5, 3, $2), ($1, 1, $4, $5, 1, 2, $5), ($1, 2, $3, $2, 3, 1, $3),
+                    ($1, 3, $5, $4, 4, 1, $5)`, [LMID, A, B, C, D]);   // A 1-1, D 2-0: A is not 1st
+    for (const [u, w, l] of [[A, 1, 1], [B, 1, 1], [C, 0, 2], [D, 2, 0]] as const) {   // the ranker reads these
       await q(`insert into league_standings (league_id, user_id, wins, losses) values ($1, $2, $3, $4)`, [LMID, u, w, l]);
     }
     await q(`insert into drafts (league_id, user_id, symbol, entry_price, quantity, round, pick_number)
@@ -356,7 +372,8 @@ Deno.test({
         account_deletion_mark_done: SVC,
         _leave_league_before_draft: OWNER, league_participant_display_name: OWNER, league_members_freeze_leaver: OWNER,
         enforce_league_draft_order_rows: OWNER, _takeover_check: OWNER, _account_deletion_settle_apple: OWNER,
-        _account_deletion_apple_rank: OWNER,
+        _account_deletion_apple_rank: OWNER, takeover_guess_try_lock: OWNER,
+        join_league_by_code: SVC, invite_preview_lookup: SVC,
         get_visible_profiles: AUTH, create_takeover_invite: AUTH, renew_league: AUTH,
         deleted_manager_label: '{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}',
       };
@@ -365,15 +382,17 @@ Deno.test({
       assertEquals(rows.length, Object.keys(want).length, 'exactly one overload each');
       for (const r of rows) {
         assertEquals(r.a, want[r.proname], `${r.proname} proacl`);
-        assertEquals(r.c, '{"search_path=public, pg_temp"}', `${r.proname} search_path`);
-        // The two constants need no privilege; everything else is a definer.
-        assertEquals(r.prosecdef, !['deleted_manager_label', '_account_deletion_apple_rank'].includes(r.proname),
+        assertMatch(r.c, /^\{"search_path=public, pg_temp"/, `${r.proname} search_path`);
+        // The constants and the try-lock need no privilege; everything else is a definer.
+        assertEquals(r.prosecdef, !['deleted_manager_label', '_account_deletion_apple_rank', 'takeover_guess_try_lock'].includes(r.proname),
           `${r.proname} security mode`);
       }
-      const t1 = await one(`select relrowsecurity, relacl::text a from pg_class where oid = 'public.account_deletions'::regclass`);
-      assert(t1.relrowsecurity);
-      assertMatch(t1.a, /^\{postgres=[a-zA-Z]+\/postgres\}$/, 'account_deletions: owner only, no service_role either');
-      assertEquals((await one(`select count(*)::int n from pg_policies where tablename = 'account_deletions'`)).n, 0);
+      for (const tbl of ['account_deletions', 'takeover_guess_limits']) {
+        const t1 = await one(`select relrowsecurity, relacl::text a from pg_class where oid = ('public.' || $1)::regclass`, [tbl]);
+        assert(t1.relrowsecurity, `${tbl}: RLS on`);
+        assertMatch(t1.a, /^\{postgres=[a-zA-Z]+\/postgres\}$/, `${tbl}: owner only, no service_role either`);
+        assertEquals((await one(`select count(*)::int n from pg_policies where tablename = $1`, [tbl])).n, 0);
+      }
     });
 
     await t.step('grants: the check is sensitive (a REVOKE FROM PUBLIC alone is caught)', async () => {
@@ -400,6 +419,7 @@ Deno.test({
       await denied('anon', null, `select public.deleted_manager_label()`);
       for (const role of ['anon', 'authenticated', 'service_role']) {
         await denied(role, role === 'authenticated' ? A : null, `select * from public.account_deletions`);
+        await denied(role, role === 'authenticated' ? A : null, `select * from public.takeover_guess_limits`);
       }
       // The internals are callable by nobody but the owner.
       await denied('service_role', null, `select public._leave_league_before_draft($1, $2, 'x')`, [LPRE, A]);
@@ -591,6 +611,15 @@ Deno.test({
       assertMatch(code, /^[A-Z0-9]{10}$/, 'the invite-code shape the client validates');
       assertMatch(code, /^[A-HJ-NP-Z2-9]{10}$/, 'from the app\'s 32-symbol alphabet');
       assertEquals((await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, A]))).code, code, 'the same code again');
+      const ttl = await one(`select extract(epoch from (expires_at - now()))::int s from league_invites where code = $1`, [code]);
+      assert(Math.abs(ttl.s - 14 * 86400) < 120, 'valid 14 days');
+      // A pending code past its expiry is retired and replaced.
+      await q(`update league_invites set expires_at = now() - interval '1 second' where code = $1`, [code]);
+      const fresh = await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, A]));
+      assertEquals(fresh.created, true);
+      assertNotEquals(fresh.code, code);
+      assertEquals((await one(`select status from league_invites where code = $1`, [code])).status, 'expired');
+      code = fresh.code;
       assertEquals((await as('authenticated', C, () => rpc('create_takeover_invite', [LMID, A]))).reason, 'not_commissioner');
       assertEquals((await as('authenticated', B, () => rpc('create_takeover_invite', [LMID, D]))).reason, 'not_deleted');
       assertEquals((await as('authenticated', C, () => rpc('create_takeover_invite', [LAFTER, A]))).reason, 'window');
@@ -618,8 +647,8 @@ Deno.test({
       // Fixture codes: a live seat; a code issued in LPRE naming A's id (A holds no seat THERE,
       // so it cannot reach LMID's seat); an expired code.
       await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id, expires_at)
-               values ($1, $2, 'takeover', 'LIVESEAT22', 'takeover', $3, null),
-                      ($4, $2, 'takeover', 'OTHERLG222', 'takeover', $5, null),
+               values ($1, $2, 'takeover', 'LIVESEAT22', 'takeover', $3, now() + interval '1 day'),
+                      ($4, $2, 'takeover', 'OTHERLG222', 'takeover', $5, now() + interval '1 day'),
                       ($6, $2, 'takeover', 'EXPIRED222', 'takeover', $5, now() - interval '1 minute')`,
         [LMID, B, D, LPRE, A, LDRAFT]);
       const before = await countsOf(A, LMID);
@@ -646,16 +675,17 @@ Deno.test({
       // The preview of a takeable seat: its record and rank, nothing else.
       const pv = await svcRpc('takeover_preview', [code, E]);
       assertEquals(Object.keys(pv).sort(), ['league_name', 'losses', 'ok', 'rank', 'wins']);
-      assertEquals([pv.ok, pv.league_name, Number(pv.wins), Number(pv.losses)], [true, 'Mid', 1, 0]);
+      assertEquals([pv.ok, pv.league_name, Number(pv.wins), Number(pv.losses)], [true, 'Mid', 1, 1]);
       const ranked = await one(`select rank from public.league_standings_ranked($1) where user_id = $2`, [LMID, A]);
       assertEquals(pv.rank, ranked.rank);
+      assert(pv.rank > 1, 'A (1-1) is not first: the rank is read, not assumed');
     });
 
     await t.step('takeover: gone (the league vanished under a live code; the FK normally cascades it away)', async () => {
       const LG = lg(30);
       await league(LG, 'Gone', B);
-      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id)
-               values ($1, $2, 'takeover', 'GONECODE22', 'takeover', $3)`, [LG, B, A]);
+      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id, expires_at)
+               values ($1, $2, 'takeover', 'GONECODE22', 'takeover', $3, now() + interval '1 day')`, [LG, B, A]);
       // replica mode skips the ON DELETE CASCADE (an RI trigger on leagues), leaving the code orphaned.
       await q(`set session_replication_role = replica`);
       await q(`delete from leagues where id = $1`, [LG]);
@@ -663,6 +693,58 @@ Deno.test({
       assertEquals(await svcRpc('takeover_preview', ['GONECODE22', F]), { ok: false, reason: 'gone' });
       assertEquals(await svcRpc('take_over_team', ['GONECODE22', F]), { status: 'refused', reason: 'gone' });
       await q(`delete from league_invites where code = 'GONECODE22'`);
+    });
+
+    await t.step('takeover codes and join codes never cross, in either direction', async () => {
+      // A takeover code is not a join code, and not an invite-preview code.
+      const j = await svc(() => q(`select public.join_league_by_code($1, $2) r`, [code, F]));
+      assertEquals(j[0].r.reason, 'invalid_code', 'join_league_by_code treats a takeover code as unknown');
+      await q(`insert into vault.secrets (name, secret) values ('invite_preview_ip_salt', 'fixture-salt-0123456789abcdef')`);
+      const pvTake = await svc(() => rpc('invite_preview_lookup', [code, '203.0.113.7']));
+      assertEquals(pvTake.status, 'not_found', 'the no-session preview names no league for a takeover code');
+      const pvInvite = await svc(() => rpc('invite_preview_lookup', ['ACCPA1', '203.0.113.7']));
+      assertEquals(pvInvite.status, 'not_found', 'an accepted invite is a miss there too (unchanged behaviour)');
+      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code) values ($1, $2, 'x@example.com', 'PLAINVITE2')`, [LDRAFT, B]);
+      assertEquals((await svc(() => rpc('invite_preview_lookup', ['PLAINVITE2', '203.0.113.7']))).status, 'found',
+        'an ordinary pending invite still previews');
+      // And a join code is not a takeover code: an ordinary invite, a league's own invite_code.
+      const lcode = (await one(`select invite_code from leagues where id = $1`, [LMID])).invite_code;
+      for (const c of ['PLAINVITE2', lcode]) {
+        assertEquals(await svcRpc('takeover_preview', [c, F]), { ok: false, reason: 'invalid_code' });
+        assertEquals(await svcRpc('take_over_team', [c, F]), { status: 'refused', reason: 'invalid_code' });
+      }
+      await q(`delete from takeover_guess_limits`);   // the misses above are not this suite's budget
+    });
+
+    await t.step('limiter: a per-user lockout after 10 misses, a global ceiling, a contended lock; all fail closed', async () => {
+      const misses = async (u: string) => (await one(`select coalesce(sum(hits), 0)::int n from takeover_guess_limits
+        where subject = 'miss-user:' || $1`, [u])).n;
+      for (let i = 0; i < 5; i++) {
+        await svcRpc('takeover_preview', ['WRONGCODE' + i, F]);
+        await svcRpc('take_over_team', ['WRONGCODE' + i, F]);
+      }
+      assertEquals(await misses(F), 10);
+      assertEquals(await svcRpc('takeover_preview', [code, F]), { ok: false, reason: 'rate_limited' },
+        'locked out: even a valid code is refused');
+      assertEquals(await misses(F), 10, 'a refused caller spends nothing more');
+      assertEquals((await svcRpc('takeover_preview', [code, E])).ok, true, 'another user is not locked out');
+      // Global ceiling.
+      await q(`insert into takeover_guess_limits (subject, window_start, hits) values ('miss-all', date_trunc('hour', now()), 300)
+               on conflict (subject, window_start) do update set hits = 300`);
+      assertEquals(await svcRpc('takeover_preview', [code, E]), { ok: false, reason: 'rate_limited' });
+      await q(`delete from takeover_guess_limits`);
+      // A contended lock refuses, never queues (PGlite has one session: stub the try-lock).
+      const lockFn = slice(await readMigration('20261125000006_take_over_team.sql'),
+        'create or replace function public.takeover_guess_try_lock()', '\n$$;');
+      await q(`create or replace function public.takeover_guess_try_lock() returns boolean language sql as $$ select false $$`);
+      assertEquals(await svcRpc('take_over_team', [code, E]), { status: 'refused', reason: 'rate_limited' });
+      await db.exec(lockFn);
+      await q(`revoke all on function public.takeover_guess_try_lock() from public, anon, authenticated, service_role`);
+      // Old windows are pruned on every call.
+      await q(`insert into takeover_guess_limits (subject, window_start, hits) values ('miss-all', now() - interval '3 hours', 5)`);
+      await svcRpc('takeover_preview', [code, E]);
+      assertEquals((await one(`select count(*)::int n from takeover_guess_limits where window_start < now() - interval '2 hours'`)).n, 0);
+      await q(`delete from takeover_guess_limits`);
     });
 
     await t.step('takeover: every row of the seat moves; the record is kept; a second taker gets taken', async () => {
@@ -687,6 +769,8 @@ Deno.test({
       assertEquals((await one(`select count(*)::int n from claims where user_id = $1 and status = 'won'`, [E])).n, 1);
       assertEquals((await svcRpc('take_over_team', [code, F])).reason, 'taken');
       assertEquals(await svcRpc('takeover_preview', [code, F]), { ok: false, reason: 'taken' }, 'the preview agrees');
+      assertEquals((await one(`select count(*)::int n from takeover_guess_limits where subject = 'miss-user:' || $1`, [F])).n, 0,
+        'a used code is not a miss');
       // A's seats in OTHER leagues are untouched.
       assert((await one(`select deleted_at from league_members where league_id = $1 and user_id = $2`, [LDRAFT, A])).deleted_at);
     });
@@ -699,8 +783,8 @@ Deno.test({
     });
 
     await t.step('takeover: a seat in the season window via a stray code still refuses after the season', async () => {
-      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id)
-               values ($1, $2, 'takeover', 'LATECODE22', 'takeover', $3)`, [LAFTER, C, A]);
+      await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, kind, seat_user_id, expires_at)
+               values ($1, $2, 'takeover', 'LATECODE22', 'takeover', $3, now() + interval '1 day')`, [LAFTER, C, A]);
       assertEquals((await svcRpc('take_over_team', ['LATECODE22', F])).reason, 'window');
       assertEquals(await svcRpc('takeover_preview', ['LATECODE22', F]), { ok: false, reason: 'window' });
     });
@@ -915,15 +999,32 @@ Deno.test({
       assertEquals(h.purged, 2, 'stale + oldPending (both unrevoked)');
       assertEquals((await q(`select user_id from account_deletions order by user_id`)).map((r: Row) => r.user_id),
         [fresh, newPending].sort());
-      // newPending is still due (a revoke to retry); then it settles, and nothing is due until it ages out.
-      assertEquals(await due(), true);
-      await svc('account_deletion_apple_revoked', [newPending]);
+      // fresh settles first; then newPending is the ONLY reason anything is due (a revoke to retry).
       await svc('account_deletion_apple_unrevoked', [fresh]);
+      assertEquals(await due(), true, 'a pending revoke alone makes the heal due');
+      await svc('account_deletion_apple_revoked', [newPending]);
       assertEquals(await due(), false, 'settled and recent: nothing to do');
       for (const u of [fresh, newPending]) await age(u, 'updated_at', '8 days');
       assertEquals(await due(), true, 'purgeable');
       assertEquals((await svc('heal_account_deletions', [])).purged, 2);
       assertEquals(await due(), false);
+    });
+
+    await t.step('heal: an expired pending revoke the expiry did not reach (p_limit) is still not listed as worth retrying', async () => {
+      const [x, y] = [U(10), U(11)];
+      for (const u of [x, y]) {
+        await q(`insert into auth.users (id) values ($1)`, [u]);
+        await svc('account_deletion_open', [u, true]);
+        await svc('account_deletion_stash_apple_token', [u, `tok-${u}`]);
+        await age(u, 'requested_at', '8 days');
+      }
+      const h = await svc('heal_account_deletions', ['10 minutes', 1]);
+      assertEquals(h.apple_unrevoked.length, 1, 'p_limit bounds the expiry pass');
+      assertEquals(h.apple_pending, [], 'the other one is expired too: never offered for retry');
+      const h2 = await svc('heal_account_deletions', ['10 minutes', 1]);
+      assertEquals(h2.apple_unrevoked.length, 1, 'the next pass takes the next oldest');
+      for (const u of [x, y]) { await q(`delete from auth.users where id = $1`, [u]); }
+      await q(`delete from account_deletions where user_id in ($1, $2)`, [x, y]);
     });
 
     await t.step('due agrees with the heal: a stalled requested row and a scrubbed row', async () => {

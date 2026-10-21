@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (1/8): trades.user_id stops cascading from auth.users
+-- Account deletion (1/9): trades.user_id stops cascading from auth.users
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, §"The system's side",
 -- "Identity model". Giorgio, 2026-10-21: the team outlives the account ("A plus

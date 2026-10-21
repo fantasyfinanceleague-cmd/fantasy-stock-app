@@ -1,7 +1,7 @@
 -- ============================================================================
 -- ACCOUNT DELETION EFFECT TEST: run in the Supabase SQL editor AFTER `db push`
--- of 20261125000000-07 (plan docs/plans/2026-10-21-account-deletion.md, W2),
--- and BEFORE W3's 20261125000010 cron (this file does not read cron.job).
+-- of 20261125000000-08 (plan docs/plans/2026-10-21-account-deletion.md, W2).
+-- It does not depend on W3's 20261125000010 cron (it never reads cron.job).
 -- Read-only in effect: NOTHING persists (the block ends by RAISING, which rolls
 -- back every fixture: auth.users rows, leagues, the ledger row, vault entries).
 -- ============================================================================
@@ -26,11 +26,12 @@
 --   G1  trades has NO foreign key to auth.users                           PASS
 --   G2  league_members.deleted_at + freeze trigger fires on it            PASS
 --   G3  deleted_manager_label() = 'Former manager', never a username       PASS
---   G4  16 service-only functions: definer, path pinned, service_role only PASS
---   G5  7 internals: owner only; authenticated: the 3 client RPCs          PASS
+--   G4  18 service-only functions: definer, path pinned, service_role only PASS
+--   G5  8 internals: owner only; authenticated: the 3 client RPCs          PASS
 --   G6  account_deletions: RLS on, no policies, no API-role privilege      PASS
 --   G7  policies: insert_self needs deleted_at null; invites kind = invite PASS
 --   G8  notification kinds include seat_taken_over (and every old kind)    PASS
+--   G9  join resolvers read kind = 'invite' only; guess limiter locked     PASS
 --   S1  scrub refuses without a ledger row                                 PASS
 --   S2  scrub: LM -> B commissioner; LP -> A gone, reconfirm = label       PASS
 --   S3  scrub: A's seats in LM + LA deleted, frozen_* NULL; profile gone    PASS
@@ -40,6 +41,7 @@
 --   P1  takeover_preview: A's seat record 1-0, league name, nothing else   PASS
 --   T1  B makes a takeover code; E takes the seat; every row moves         PASS
 --   T2  a second taker gets 'taken'                                        PASS
+--   T3  join_league_by_code treats a takeover code as unknown              PASS
 --   D1  auth delete: trades survive; mark_done -> 'done'                   PASS
 --   N1  anon/authenticated cannot execute the service-only functions       PASS
 -- Any FAIL line is a real finding: stop and report it.
@@ -69,7 +71,8 @@ declare
     'account_deletion_open', 'account_deletion_cancel', 'account_deletion_set_apple',
     'account_deletion_stash_apple_token', 'account_deletion_apple_token', 'account_deletion_apple_revoked',
     'account_deletion_fail', 'account_deletion_mark_done', 'leave_league', 'transfer_commissioner',
-    'account_deletion_apple_unrevoked', 'takeover_preview', 'heal_account_deletions_due'];
+    'account_deletion_apple_unrevoked', 'takeover_preview', 'heal_account_deletions_due',
+    'join_league_by_code', 'invite_preview_lookup'];
 begin
   -- ---- G: catalog -------------------------------------------------------------
   select count(*) into n from pg_constraint
@@ -102,7 +105,8 @@ begin
    where s.nspname = 'public'
      and ((proname in ('_leave_league_before_draft', 'league_participant_display_name',
                        'league_members_freeze_leaver', 'enforce_league_draft_order_rows',
-                       '_takeover_check', '_account_deletion_settle_apple', '_account_deletion_apple_rank')
+                       '_takeover_check', '_account_deletion_settle_apple', '_account_deletion_apple_rank',
+                       'takeover_guess_try_lock')
            and coalesce(proacl::text, '') ~ '(anon|authenticated|service_role)=|(^|[{,])=X')
        or (proname in ('get_visible_profiles', 'create_takeover_invite', 'renew_league')
            and (coalesce(proacl::text, '') !~ 'authenticated=X'
@@ -131,6 +135,15 @@ begin
     'draft_at_risk', 'draft_at_risk_reminder', 'draft_postponed', 'draft_time_set', 'seat_taken_over']) k
    where got ~ ('''' || k || '''');
   out := out || format(E'G8 notification kinds present %s/15  %s\n', n, case when n = 15 then 'PASS' else 'FAIL' end);
+
+  select count(*) into n from pg_proc p join pg_namespace s on s.oid = p.pronamespace
+   where s.nspname = 'public' and proname in ('join_league_by_code', 'invite_preview_lookup')
+     and prosrc ~ 'kind = ''invite''';
+  select coalesce(relacl::text, 'NULL') into acl from pg_class where oid = 'public.takeover_guess_limits'::regclass;
+  out := out || format(E'G9 join resolvers invite-only %s/2; guess limiter rls=%s acl=%s  %s\n', n,
+    (select relrowsecurity from pg_class where oid = 'public.takeover_guess_limits'::regclass), acl,
+    case when n = 2 and (select relrowsecurity from pg_class where oid = 'public.takeover_guess_limits'::regclass)
+          and acl !~ '(anon|authenticated|service_role)=' and acl !~ '(^|[{,])=' then 'PASS' else 'FAIL' end);
 
   -- ---- fixture (the editor's own role) -------------------------------------------
   insert into auth.users (id, email, created_at, updated_at, aud, role, instance_id)
@@ -283,6 +296,13 @@ begin
   exception when others then out := out || format(E'T2 second taker -> %s %s  FAIL\n', sqlstate, sqlerrm);
   end;
 
+  begin
+    res := public.join_league_by_code(code, f_uid::text);
+    out := out || format(E'T3 takeover code via join_league_by_code -> %s  %s\n', res ->> 'reason',
+      case when res ->> 'reason' = 'invalid_code' then 'PASS' else 'FAIL' end);
+  exception when others then out := out || format(E'T3 join with takeover code -> %s %s  FAIL\n', sqlstate, sqlerrm);
+  end;
+
   -- ---- D: the auth delete -----------------------------------------------------------
   reset role;
   perform set_config('request.jwt.claims', '', true);
@@ -307,6 +327,6 @@ begin
   -- Deliberate: rolls back every fixture and shows the result.
   raise exception E'ACCOUNT DELETION EFFECT TEST: % (all rolled back)\n%',
     case when out ~ 'FAIL' then 'FAIL' else 'PASS' end
-      || format(' (%s/19 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
+      || format(' (%s/21 lines PASS)', (select count(*) from regexp_matches(out, 'PASS\n', 'g'))), out;
 end;
 $$;
