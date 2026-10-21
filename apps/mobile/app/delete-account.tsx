@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type TextInput } from 'react-native';
+import { Alert, type ScrollView, type TextInput } from 'react-native';
 import { router } from 'expo-router';
 
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -19,6 +19,7 @@ import { proveWithApple, proveWithGoogle } from '@/lib/auth/socialSignIn';
 import type { SocialProofResult } from '@/lib/auth/socialOutcome';
 import { DELETE_FIXTURE } from '@/lib/shell/captureDev';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
+import { useFixtureScrollEnd } from '@/lib/shell/fixtureRoute';
 
 // Account deletion (W4) — the delete screen's container (plan 2026-10-21; board "Decided"). It owns the state machine
 // (lib/account/deleteFlow.ts) and the calls; components/shell/DeleteAccountView.tsx only draws.
@@ -34,8 +35,10 @@ export default function DeleteAccountScreen() {
   const [state, setState] = useState<DeleteState>(() => fixtureState(DELETE_FIXTURE, realKind));
   const stateRef = useRef(state);
   stateRef.current = state;
-  const [password, setPassword] = useState(() => (fixtureKind(DELETE_FIXTURE, realKind) === 'password' && DELETE_FIXTURE && DELETE_FIXTURE !== 'password' ? 'fixture-password' : ''));
+  const [password, setPassword] = useState(() => (DELETE_FIXTURE === 'password_ready' || DELETE_FIXTURE === 'failed' || DELETE_FIXTURE === 'running' || DELETE_FIXTURE === 'alert') && fixtureKind(DELETE_FIXTURE, realKind) === 'password' ? 'fixture-password' : '');
   const inputRef = useRef<TextInput>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  useFixtureScrollEnd(scrollRef); // DEV captures only: EXPO_PUBLIC_SHELL_SCROLL_END=1 shows the foot of a long (XXXL) screen
   const [inputs, setInputs] = useState<DeleteLeagueInput[] | null>(null);
 
   useEffect(() => {
@@ -58,6 +61,9 @@ export default function DeleteAccountScreen() {
     if (!rejected) return;
     setPassword('');
     inputRef.current?.focus();
+    // The keyboard comes up over the foot of the screen: bring the refusal under the field (and the dimmed button) back into view.
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
+    return () => clearTimeout(t);
   }, [rejected]);
   const leagues = useMemo(() => (inputs ? inputs.map((l) => leagueLine(l, meId, label, Date.now())) : null), [inputs, meId, label]);
 
@@ -111,7 +117,7 @@ export default function DeleteAccountScreen() {
   }, [onAsk]);
 
   return (
-    <AuthScaffold back={{ label: 'Profile', onPress: () => (router.canGoBack() ? router.back() : router.replace('/profile')) }}>
+    <AuthScaffold ref={scrollRef} back={{ label: 'Profile', onPress: () => (router.canGoBack() ? router.back() : router.replace('/profile')) }}>
       <DeleteAccountView
         state={state}
         leagues={leagues}

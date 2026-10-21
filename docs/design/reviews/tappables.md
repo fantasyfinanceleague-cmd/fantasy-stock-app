@@ -4,8 +4,8 @@
 
 Every tappable element in `apps/mobile/app` and `apps/mobile/components` (the dev-only `design-gallery.tsx` excluded), with its handler and, where the code says, its destination. PRODUCT_RULES, "Nothing tappable does nothing": every control either does its job, or is not shown / disabled with its reason.
 
-- **237** tappables in **87** files.
-- **90** forward a prop (`prop …`): the destination is the caller's, listed at the call site.
+- **238** tappables in **87** files.
+- **91** forward a prop (`prop …`): the destination is the caller's, listed at the call site.
 - **49** carry a `disabled` expression: whether its reason is visible is checked on the simulator pass (W8 part 2).
 - Static no-op check (`apps/mobile/tests-deno/no-op-handlers.test.ts`): **0** findings.
 
@@ -69,7 +69,7 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `app/reset-password.tsx:139` | Pressable | onPress | `handleCancel` | route replace('/') |  |
 | `app/reset-password.tsx:157` | EmptyState | onAction | `inline: () => router.replace('/forgot-password')` | route replace('/forgot-password') |  |
 | `app/reset-password.tsx:159` | EmptyState | onSecondaryAction | `handleCancel` | route replace('/') |  |
-| `app/takeover.tsx:73` | TakeoverLanding | onRetry | `load` | fn load |  |
+| `app/takeover.tsx:90` | TakeoverLanding | onRetry | `load` | fn load |  |
 | `app/username.tsx:21` | UsernamePickerExit | onPress | `back` | route replace('/profile'); route back |  |
 | `components/SlotBuilder.tsx:133` | Pressable | onPress | `inline: () => !disabled && removeSlot(i)` | fn removeSlot | `disabled` |
 | `components/SlotBuilder.tsx:190` | SettingRow | onPress | `inline: () => !disabled && setCategoryPickerFor(i)` | sheet setCategoryPickerFor(i) | `disabled` |
@@ -186,8 +186,8 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ConfirmEmailSent.tsx:68` | EmptyState | onAction | `onBack` | prop onBack (the caller's) |  |
 | `components/shell/ConfirmEmailSent.tsx:70` | EmptyState | onSecondaryAction | `resend` | fn resend |  |
 | `components/shell/ConfirmedEmailNotice.tsx:40` | Pressable | onPress | `inline: () => setConfirmFailedNotice(false)` | sheet setConfirmFailedNotice(false) |  |
-| `components/shell/DeleteAccountView.tsx:113` | Button | onPress | `onDelete` | prop onDelete (the caller's) | `!canAsk(state) && !sending` |
-| `components/shell/DeleteAccountView.tsx:138` | Button | onPress | `onGoogle` | prop onGoogle (the caller's) |  |
+| `components/shell/DeleteAccountView.tsx:123` | Button | onPress | `onDelete` | prop onDelete (the caller's) | `!canAsk(state) && !sending` |
+| `components/shell/DeleteAccountView.tsx:148` | Button | onPress | `onGoogle` | prop onGoogle (the caller's) |  |
 | `components/shell/DeletedAccountNotice.tsx:36` | Pressable | onPress | `inline: () => setDeletedNotice(false)` | state setDeletedNotice |  |
 | `components/shell/FirstTimeTip.tsx:27` | Pressable | onPress | `inline: () => dismissTip(tip)` | fn dismissTip |  |
 | `components/shell/GetStarted.tsx:44` | Choice | onPress | `onCreate` | prop onCreate (the caller's) |  |
@@ -226,12 +226,13 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ShellTabBar.tsx:151` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:152` | Pressable | onLongPress | `onLongPress` | prop onLongPress (the caller's) |  |
 | `components/shell/SocialSignIn.tsx:107` | Button | onPress | `inline: () => run('google')` | fn run | `busy === 'apple'` |
-| `components/shell/TakeoverLanding.tsx:52` | Link | onPress | `onHome` | prop onHome (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:71` | Link | onPress | `onRetry` | prop onRetry (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:72` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:86` | Button | onPress | `onTake` | prop onTake (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:87` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) | `taking` |
-| `components/shell/TakeoverLanding.tsx:107` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/shell/TakeoverLanding.tsx:61` | Link | onPress | `onHome` | prop onHome (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:73` | Link | onPress | `onOpen` | prop onOpen (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:92` | Link | onPress | `onRetry` | prop onRetry (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:93` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:107` | Button | onPress | `onTake` | prop onTake (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:108` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) | `taking` |
+| `components/shell/TakeoverLanding.tsx:128` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
 | `components/shell/UsernamePicker.tsx:263` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
 | `components/shell/UsernamePicker.tsx:272` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
 | `components/shell/UsernamePicker.tsx:273` | Button | onPress | `startEditing` | fn startEditing |  |
