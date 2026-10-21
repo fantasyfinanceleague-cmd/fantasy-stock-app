@@ -754,7 +754,8 @@ Deno.test({
       const pos = (await one(`select position from league_draft_order where league_id = $1 and user_id = $2`, [LMID, A])).position;
       const res = await svcRpc('take_over_team', [code, E]);
       assertEquals(res.status, 'taken_over');
-      assertEquals([res.notify_user_id, res.new_name, res.seat_label, res.league_name], [B, 'eve_e', LABEL, 'Mid']);
+      assertEquals([res.league_id, res.notify_user_id, res.new_name, res.seat_label, res.league_name], [LMID, B, 'eve_e', LABEL, 'Mid']);
+      for (const x of [...scrub.successions, ...scrub.left]) assert(x.league_id, 'every notice entry carries its league_id');
       assertEquals(await countsOf(E, LMID), before, 'E holds exactly what A held');
       assertEquals(await countsOf(A, LMID), { mem: 0, ord: 0, mat: 0, win: 0, st: 0, ws: 0, dr: 0, tr: 0 });
       const m = await one(`select role, deleted_at, joined_at, frozen_username from league_members where league_id = $1 and user_id = $2`, [LMID, E]);

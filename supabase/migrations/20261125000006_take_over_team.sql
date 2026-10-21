@@ -530,6 +530,7 @@ begin
 
   return jsonb_build_object(
     'status', 'taken_over',
+    'league_id', v_lg,   -- the app opens the league; the push deep-links into it
     -- For the edge function's push only; it never forwards these to the client.
     'notice_id', v_notice,
     'notify_user_id', v_chk ->> 'commissioner_id',
