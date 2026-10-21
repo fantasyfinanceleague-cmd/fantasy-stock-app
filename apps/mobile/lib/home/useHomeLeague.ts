@@ -36,6 +36,7 @@ import type { MarketInfo } from './homePhase';
 import { standardWeekSessions, type MarketCalendarSession } from '../time/marketWeek';
 import { matchupWeekExtras, parseMatchupFixture } from '../game/matchupFixture';
 import type { HoldingRow } from './homeFixtureData';
+import { seatify } from '../game/seamAccountDeletion';
 import {
   HOME_FIXTURE,
   ROBERTO_HOLDINGS,
@@ -132,10 +133,18 @@ const STRESS_STANDINGS: GetHomeLeagueResult['standings'] = [
   { user_id: 'chiara', rank: 6, wins: 1, losses: 4, ties: 0, points_for: -815642.95, display_name: 'Chiara Rinaldi-Sforz', is_bot: false },
 ];
 
-export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): {
+type FixtureHomeLeague = {
   data: GetHomeLeagueResult; meta: HomeLeagueMeta; market: MarketInfo; now: Date;
   quote: (s: string) => number | null; bars: BarsBySymbol; marketCalendar: MarketCalendarSession[];
-} {
+};
+
+/** DEV capture (EXPO_PUBLIC_DELETED_SEAT=1): Gianluigi's seat reads as the deleted-seat label (lib/game/seamAccountDeletion.ts). Off: the raw fixture, untouched. */
+export function fixtureHomeLeague(fixture: import('./devFixture').HomeFixture | null): FixtureHomeLeague {
+  const r = fixtureHomeLeagueRaw(fixture);
+  return process.env.EXPO_PUBLIC_DELETED_SEAT === '1' ? { ...r, data: seatify(r.data, true) } : r;
+}
+
+function fixtureHomeLeagueRaw(fixture: import('./devFixture').HomeFixture | null): FixtureHomeLeague {
   // XL capture (2026-10-05): its own $100k roster, weeks and league; every
   // other fixture keeps the board sample exactly as before. XL million
   // (2026-10-07, X-1 re-capture): the same roster ×10 -- see
