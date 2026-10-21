@@ -33,7 +33,8 @@
 --    playoffs (decision 14). Returns the seat's pending code if it has one.
 -- 5. Failed-guess accounting (a takeover code is a bearer capability):
 --    takeover_guess_limits + takeover_guess_try_lock, the invite_preview_lookup
---    pattern. 300 misses an hour globally, 10 per user, checked first; a
+--    pattern. 10 misses an hour per user (the main control) and a HIGH global
+--    backstop of 2,000 an hour, checked first; a
 --    contended lock refuses ('rate_limited'), never queues.
 -- 6. _takeover_check(p_code, p_user_id, p_lock) -> jsonb, owner only: the ONE
 --    eligibility check behind both functions below, so the preview and the
@@ -91,9 +92,17 @@
 -- ============================================================================
 
 -- ---- 1. takeover codes in league_invites -----------------------------------------
+-- NOT NULL DEFAULT 'invite': Postgres fills the default into every EXISTING row as
+-- the column is added, so no old invite is ever NULL (a NULL kind would silently
+-- stop resolving once every reader filters kind = 'invite'). The UPDATE below is a
+-- belt-and-braces backfill for a re-run against a hand-made column; the PGlite
+-- suite proves a pre-existing invite still resolves.
 alter table public.league_invites
   add column if not exists kind text not null default 'invite',
   add column if not exists seat_user_id text;
+update public.league_invites set kind = 'invite' where kind is null;
+alter table public.league_invites alter column kind set default 'invite';
+alter table public.league_invites alter column kind set not null;
 
 alter table public.league_invites drop constraint if exists league_invites_kind_check;
 alter table public.league_invites
@@ -270,8 +279,8 @@ grant execute on function public.create_takeover_invite(uuid, text) to authentic
 -- ---- 5. failed-guess accounting --------------------------------------------------
 -- A takeover code is a bearer capability, and the edge limiters alone can be farmed
 -- with free accounts, so the database counts misses itself (invite_preview_lookup's
--- pattern, 20261124000000): a GLOBAL ceiling of 300 misses an hour and a per-user
--- lockout after 10 misses an hour. Both are checked BEFORE the lookup and do not
+-- pattern, 20261124000000): a per-user lockout after 10 misses an hour (the main
+-- control) and a GLOBAL backstop of 2,000 misses an hour. Both are checked BEFORE the lookup and do not
 -- bump, so a locked-out caller cannot spend more of the budget (valid codes are
 -- refused too while locked out). Only an unmatched code bumps. The check-then-bump
 -- runs one caller at a time behind a TRY advisory lock: a caller that cannot take
@@ -307,6 +316,13 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
+  -- The per-user lockout is the main control. The global ceiling is only a backstop
+  -- against a flood, so it is set HIGH on purpose: free accounts could otherwise trip
+  -- a low one on purpose and lock every real taker out for an hour (W3 security
+  -- review, round 5). 2,000 misses an hour still bounds a guesser to ~2^-39 per hour
+  -- against a 50-bit code space.
+  c_miss_per_user constant int := 10;
+  c_miss_global   constant int := 2000;
   v_hour   timestamptz := date_trunc('hour', now());
   v_all    int;
   v_mine   int;
@@ -327,7 +343,7 @@ begin
     from public.takeover_guess_limits where subject = 'miss-all' and window_start = v_hour;
   select coalesce(sum(hits), 0) into v_mine
     from public.takeover_guess_limits where subject = 'miss-user:' || p_user_id::text and window_start = v_hour;
-  if v_all >= 300 or v_mine >= 10 then
+  if v_all >= c_miss_global or v_mine >= c_miss_per_user then
     return jsonb_build_object('ok', false, 'reason', 'rate_limited');
   end if;
 

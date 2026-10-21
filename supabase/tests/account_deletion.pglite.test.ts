@@ -729,9 +729,13 @@ Deno.test({
         'locked out: even a valid code is refused');
       assertEquals(await misses(F), 10, 'a refused caller spends nothing more');
       assertEquals((await svcRpc('takeover_preview', [code, E])).ok, true, 'another user is not locked out');
-      // Global ceiling.
-      await q(`insert into takeover_guess_limits (subject, window_start, hits) values ('miss-all', date_trunc('hour', now()), 300)
-               on conflict (subject, window_start) do update set hits = 300`);
+      // Global ceiling: HIGH (a backstop; 1,999 misses still let a real taker through).
+      await q(`insert into takeover_guess_limits (subject, window_start, hits) values ('miss-all', date_trunc('hour', now()), 1999)
+               on conflict (subject, window_start) do update set hits = 1999`);
+      assertEquals((await svcRpc('takeover_preview', [code, E])).ok, true, 'under the ceiling');
+      await q(`delete from takeover_guess_limits`);
+      await q(`insert into takeover_guess_limits (subject, window_start, hits) values ('miss-all', date_trunc('hour', now()), 2000)
+               on conflict (subject, window_start) do update set hits = 2000`);
       assertEquals(await svcRpc('takeover_preview', [code, E]), { ok: false, reason: 'rate_limited' });
       await q(`delete from takeover_guess_limits`);
       // A contended lock refuses, never queues (PGlite has one session: stub the try-lock).
@@ -899,6 +903,39 @@ Deno.test({
       await assertRejects(() => svcRpc('heal_account_deletions', ['-1 minute']), Error, 'invalid_arguments');
     });
 
+    await db.close();
+  },
+});
+
+Deno.test({
+  name: 'account deletion: an invite that existed BEFORE these migrations still resolves (kind backfilled, never NULL)',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const db = new PGlite();
+    await loadChain(db, { untilBefore: '20261125000000' });
+    const q = async (s: string, p: unknown[] = []) => (await db.query<Row>(s, p)).rows;
+    await q(`insert into auth.users (id, raw_user_meta_data) values ($1, '{"username":"old_comm"}'), ($2, '{"username":"old_joiner"}')`, [B, C]);
+    await q(`insert into leagues (id, name, commissioner_id, invite_code, num_participants, league_type)
+             values ($1, 'Old', $2, 'OLDLEAGUE1', 8, 'duration')`, [LPRE, B]);
+    await q(`insert into league_members (league_id, user_id, role) values ($1, $2, 'commissioner')`, [LPRE, B]);
+    await q(`insert into league_invites (league_id, inviter_id, invited_identifier, code, status)
+             values ($1, $2, 'friend@example.com', 'OLDINVITE1', 'pending')`, [LPRE, B]);
+    await applyFrom(db, '20261125000000');
+    assertEquals(await q(`select kind, seat_user_id from league_invites where code = 'OLDINVITE1'`), [{ kind: 'invite', seat_user_id: null }]);
+    assertEquals((await q(`select count(*)::int n from league_invites where kind is null`))[0].n, 0);
+    const nn = await q(`select is_nullable, column_default from information_schema.columns
+                         where table_name = 'league_invites' and column_name = 'kind'`);
+    assertEquals(nn[0].is_nullable, 'NO');
+    assertMatch(nn[0].column_default, /'invite'/);
+    await q(`insert into vault.secrets (name, secret) values ('invite_preview_ip_salt', 'fixture-salt-0123456789abcdef')`);
+    await db.exec('set role service_role');
+    const pv = (await q(`select public.invite_preview_lookup('OLDINVITE1', '198.51.100.9') r`))[0].r;
+    const j = (await q(`select public.join_league_by_code('OLDINVITE1', $1) r`, [C]))[0].r;
+    await db.exec('reset role');
+    assertEquals(pv.status, 'found', 'the no-session preview still resolves an old invite');
+    assertEquals(j.ok, true, `join_league_by_code still accepts an old invite: ${JSON.stringify(j)}`);
+    assertEquals((await q(`select status from league_invites where code = 'OLDINVITE1'`))[0].status, 'accepted');
     await db.close();
   },
 });
