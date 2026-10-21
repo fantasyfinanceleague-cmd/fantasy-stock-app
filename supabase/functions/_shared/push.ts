@@ -79,12 +79,31 @@ export type PushSendResult =
  * { status: 'error' }; only a ticket with status 'ok' counts as sent.
  * Never logs a response body or Expo's `message` — both can echo the token.
  */
-export async function sendExpoPush(token: string, msg: PushMessage): Promise<PushSendResult> {
-  const res = await fetch('https://exp.host/--/api/v2/push/send', {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: token, sound: 'default', title: msg.title, body: msg.body, data: msg.data }),
-  });
+export async function sendExpoPush(
+  token: string,
+  msg: PushMessage,
+  /**
+   * OPT-IN bound (account deletion: a push sits between the scrub and the auth delete, so a hung Expo must
+   * not hold a deletion open). With `timeoutMs` the request is aborted after that long and reported as
+   * 'expo_error' instead of throwing, so the caller can settle the notice. Without it nothing changes: the
+   * callers that predate this (draft-order-notify, the sweeps) keep their exact behaviour.
+   */
+  opts?: { timeoutMs?: number },
+): Promise<PushSendResult> {
+  const bounded = typeof opts?.timeoutMs === 'number' && opts.timeoutMs > 0;
+  let res: Response;
+  try {
+    res = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: token, sound: 'default', title: msg.title, body: msg.body, data: msg.data }),
+      ...(bounded ? { signal: AbortSignal.timeout(opts!.timeoutMs!) } : {}),
+    });
+  } catch (e) {
+    if (!bounded) throw e;
+    console.error('Expo push unreachable or timed out:', e instanceof Error ? e.name : 'error'); // never the message
+    return { sent: false, reason: 'expo_error' };
+  }
   const resText = await res.text().catch(() => '');
   if (!res.ok) {
     console.error('Expo push failed: HTTP', res.status); // body omitted: may echo the token

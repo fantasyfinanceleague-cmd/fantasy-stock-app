@@ -135,15 +135,27 @@ export type AutoPickGate =
  *     Idempotent, and costs no Alpaca call.
  *  2. only an in_progress draft auto-picks;
  *  3. a pick number ahead of the draft is a stale client state;
- *  4. an unclocked draft (pick_clock_enabled=false) is never auto-picked;
+ *  4. an unclocked draft (pick_clock_enabled=false) is never auto-picked,
+ *     EXCEPT for a DELETED seat (`opts.seatDeleted`, set only by the sweep after it
+ *     read league_members.deleted_at for THIS turn's picker): the account is gone, so
+ *     nobody will ever pick, and "there can never be an instance where a player doesn't
+ *     get a pick" (Giorgio's standing rule) means the server picks as soon as it is
+ *     that seat's turn, within the same rules as any auto-pick. A clocked draft is
+ *     unchanged: its clock expiry already covers a deleted seat;
  *  5. the deadline, judged by the DB's server_now — never a client clock.
  */
-export function decideAutoPickGate(requestedPickNumber: number, clock: DraftClock): AutoPickGate {
+export function decideAutoPickGate(
+  requestedPickNumber: number,
+  clock: DraftClock,
+  opts: { seatDeleted?: boolean } = {},
+): AutoPickGate {
   if (!Number.isInteger(requestedPickNumber) || requestedPickNumber < 1) return { kind: 'stale_pick_number' };
   if (requestedPickNumber <= clock.picksMade) return { kind: 'already_recorded' };
   if (clock.draftStatus !== 'in_progress') return { kind: 'draft_not_in_progress' };
   if (requestedPickNumber !== clock.picksMade + 1) return { kind: 'stale_pick_number' };
-  if (!clock.clockRunning || !clock.deadlineAt) return { kind: 'clock_not_running' };
+  // draftStatus is in_progress here, so !clockRunning means exactly "pick_clock_enabled = false".
+  if (!clock.clockRunning) return opts.seatDeleted === true ? { kind: 'go' } : { kind: 'clock_not_running' };
+  if (!clock.deadlineAt) return { kind: 'clock_not_running' };
   const deadline = Date.parse(clock.deadlineAt);
   const now = Date.parse(clock.serverNow);
   if (!Number.isFinite(deadline) || !Number.isFinite(now)) return { kind: 'clock_not_running' };

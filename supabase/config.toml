@@ -95,6 +95,24 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/leave-league/index.ts"
 
+# Account deletion (docs/plans/2026-10-21-account-deletion.md): the player deletes
+# their own account after re-proving who they are. verify_jwt=true + in-code
+# getUser(); the user id comes only from the JWT. The scrub and the vault RPCs are
+# SECURITY DEFINER, EXECUTE service_role ONLY, so this function is their caller.
+[functions.delete-account]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-account/index.ts"
+
+# Hourly heal for interrupted account deletions (20261125000010). CRON ONLY:
+# verify_jwt=false, so the constant-time apikey check (_shared/cron-auth.ts) is the
+# entire auth boundary. Finishes ledger rows left at 'requested'/'scrubbed' and
+# retries pending Apple revokes from vault.
+[functions.heal-account-deletions]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/heal-account-deletions/index.ts"
+
 # Mobile draft launch-blocker (docs/STATUS.md §4/§5): server-side draft start +
 # bot seeding. verify_jwt=true + in-code getUser() + in-code commissioner check
 # (from the leagues row, never the request body) — same auth shape as
