@@ -14,15 +14,43 @@
     "tables": [
         {
             "acl": [
+                "postgres=arwdDxtm/postgres"
+            ],
+            "name": "account_deletions",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "columnAcls": {
+            },
+            "rlsEnabled": true,
+            "checkConstraints": [
+                {
+                    "name": "account_deletions_apple_revoke_check",
+                    "definition": "CHECK ((apple_revoke = ANY (ARRAY['none'::text, 'required'::text, 'pending'::text, 'done'::text, 'unrevoked'::text])))"
+                },
+                {
+                    "name": "account_deletions_last_error_len",
+                    "definition": "CHECK (((last_error IS NULL) OR (length(last_error) <= 1000)))"
+                },
+                {
+                    "name": "account_deletions_stage_check",
+                    "definition": "CHECK ((stage = ANY (ARRAY['requested'::text, 'scrubbed'::text, 'done'::text])))"
+                }
+            ]
+        },
+        {
+            "acl": [
                 "postgres=arwdDxtm/postgres",
                 "anon=arwdDxtm/postgres",
                 "authenticated=arwdDxtm/postgres",
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "app_config",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -37,11 +65,14 @@
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "auto_pick_price_failures",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -64,9 +95,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -89,9 +122,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -114,7 +149,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -129,9 +165,11 @@
                 "service_role=rm/postgres"
             ],
             "name": "draft_postponements",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -160,7 +198,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -208,7 +247,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -248,9 +288,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -272,9 +314,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -282,11 +326,14 @@
                 "service_role=rm/postgres"
             ],
             "name": "draft_start_watch",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -294,11 +341,14 @@
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "draft_turn_outages",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -331,7 +381,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -349,11 +400,14 @@
                 "postgres=arwdDxtm/postgres"
             ],
             "name": "invite_preview_limits",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -375,7 +429,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -404,7 +459,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -472,7 +528,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -501,7 +558,7 @@
                     ],
                     "using": null,
                     "command": "INSERT",
-                    "withCheck": "(is_commissioner(league_id) AND (inviter_id = (auth.uid())::text))",
+                    "withCheck": "(is_commissioner(league_id) AND (inviter_id = (auth.uid())::text) AND (kind = 'invite'::text))",
                     "permissive": true
                 },
                 {
@@ -516,12 +573,21 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
+                    "name": "league_invites_kind_check",
+                    "definition": "CHECK ((kind = ANY (ARRAY['invite'::text, 'takeover'::text])))"
+                },
+                {
                     "name": "league_invites_status_check",
                     "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'expired'::text])))"
+                },
+                {
+                    "name": "league_invites_takeover_seat",
+                    "definition": "CHECK (((kind = 'takeover'::text) = (seat_user_id IS NOT NULL)))"
                 }
             ]
         },
@@ -541,7 +607,7 @@
                     ],
                     "using": null,
                     "command": "INSERT",
-                    "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))) AND (hidden_at IS NULL))",
+                    "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))) AND (hidden_at IS NULL) AND (deleted_at IS NULL))",
                     "permissive": true
                 },
                 {
@@ -556,7 +622,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -603,7 +670,7 @@
             "checkConstraints": [
                 {
                     "name": "league_notifications_kind_check",
-                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text, 'commissioner_transferred'::text, 'draft_room_open'::text, 'draft_started'::text, 'draft_at_risk'::text, 'draft_at_risk_reminder'::text, 'draft_postponed'::text, 'draft_time_set'::text])))"
+                    "definition": "CHECK ((kind = ANY (ARRAY['draft_order_set'::text, 'renewal_invite'::text, 'renewal_reply'::text, 'renewal_nudge'::text, 'renewal_removed'::text, 'season_set'::text, 'member_left'::text, 'commissioner_transferred'::text, 'draft_room_open'::text, 'draft_started'::text, 'draft_at_risk'::text, 'draft_at_risk_reminder'::text, 'draft_postponed'::text, 'draft_time_set'::text, 'seat_taken_over'::text])))"
                 },
                 {
                     "name": "league_notifications_push_status_check",
@@ -617,9 +684,11 @@
                 "service_role=r/postgres"
             ],
             "name": "league_renewal_responses",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -660,7 +729,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -702,9 +772,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -727,9 +799,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -782,7 +856,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -859,7 +934,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -888,7 +964,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -922,7 +999,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -985,9 +1063,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -997,11 +1077,14 @@
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "rate_limit_counters",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -1011,9 +1094,11 @@
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "signup_allowlist",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -1028,9 +1113,11 @@
                 "service_role=arwdDxtm/postgres"
             ],
             "name": "splits",
-            "policies": [],
+            "policies": [
+            ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -1073,7 +1160,8 @@
                 ]
             },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -1095,9 +1183,25 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
+        },
+        {
+            "acl": [
+                "postgres=arwdDxtm/postgres"
+            ],
+            "name": "takeover_guess_limits",
+            "policies": [
+            ],
+            "rlsForced": false,
+            "columnAcls": {
+            },
+            "rlsEnabled": true,
+            "checkConstraints": [
+            ]
         },
         {
             "acl": [
@@ -1120,7 +1224,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -1185,7 +1290,8 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
             "checkConstraints": [
                 {
@@ -1215,9 +1321,11 @@
                 }
             ],
             "rlsForced": false,
-            "columnAcls": {},
+            "columnAcls": {
+            },
             "rlsEnabled": true,
-            "checkConstraints": []
+            "checkConstraints": [
+            ]
         }
     ],
     "_comment": "Hand-captured from prod. Regenerate with docs/architecture/db-snapshot.sql. Not generated by gen-architecture.mjs.",
@@ -1342,6 +1450,34 @@
     ],
     "database": "postgres",
     "functions": [
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_state text",
+            "name": "_account_deletion_apple_rank",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "immutable",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_user_id uuid, p_outcome text",
+            "name": "_account_deletion_settle_apple",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
         {
             "acl": [
                 "postgres=X/postgres"
@@ -1489,6 +1625,20 @@
             "acl": [
                 "postgres=X/postgres"
             ],
+            "args": "p_league_id uuid, p_user_id text, p_leaver_name text",
+            "name": "_leave_league_before_draft",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
             "args": "p_league_id uuid",
             "name": "_renewal_counts",
             "owner": "postgres",
@@ -1505,6 +1655,155 @@
             ],
             "args": "",
             "name": "_renewal_invite_code",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "p_code text, p_user_id uuid, p_lock boolean",
+            "name": "_takeover_check",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "account_deletion_apple_revoked",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "account_deletion_apple_token",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "account_deletion_apple_unrevoked",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "account_deletion_cancel",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid, p_error text",
+            "name": "account_deletion_fail",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "account_deletion_mark_done",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid, p_has_apple boolean",
+            "name": "account_deletion_open",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid, p_state text",
+            "name": "account_deletion_set_apple",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid, p_refresh_token text",
+            "name": "account_deletion_stash_apple_token",
             "owner": "postgres",
             "proconfig": [
                 "search_path=public, pg_temp"
@@ -1632,6 +1931,37 @@
             "searchPath": "public, pg_temp",
             "volatility": "volatile",
             "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres"
+            ],
+            "args": "p_league_id uuid, p_seat_user_id text",
+            "name": "create_takeover_invite",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "authenticated=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "deleted_manager_label",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "immutable",
+            "securityDefiner": false
         },
         {
             "acl": [
@@ -2256,6 +2586,36 @@
         },
         {
             "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_min_age interval, p_limit integer",
+            "name": "heal_account_deletions",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "",
+            "name": "heal_account_deletions_due",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
                 "postgres=X/postgres"
             ],
             "args": "",
@@ -2693,6 +3053,21 @@
         {
             "acl": [
                 "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_user_id uuid",
+            "name": "scrub_deleted_manager",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
                 "authenticated=X/postgres"
             ],
             "args": "p_league_id uuid, p_user_ids text[]",
@@ -2830,6 +3205,50 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "p_code text, p_user_id uuid",
+            "name": "take_over_team",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres"
+            ],
+            "args": "",
+            "name": "takeover_guess_try_lock",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": false
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
+            "args": "p_code text, p_user_id uuid",
+            "name": "takeover_preview",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "volatile",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "p_league_id uuid, p_user_id text, p_new_commissioner text",
             "name": "transfer_commissioner",
             "owner": "postgres",
@@ -2890,6 +3309,21 @@
                 "postgres=X/postgres",
                 "service_role=X/postgres"
             ],
+            "args": "",
+            "name": "unclocked_deleted_seat_turns",
+            "owner": "postgres",
+            "proconfig": [
+                "search_path=public, pg_temp"
+            ],
+            "searchPath": "public, pg_temp",
+            "volatility": "stable",
+            "securityDefiner": true
+        },
+        {
+            "acl": [
+                "postgres=X/postgres",
+                "service_role=X/postgres"
+            ],
             "args": "p_league_id uuid, p_user_id text",
             "name": "unhide_league",
             "owner": "postgres",
@@ -2923,13 +3357,14 @@
             "args": "",
             "name": "update_user_profiles_updated_at",
             "owner": "postgres",
-            "proconfig": [],
+            "proconfig": [
+            ],
             "searchPath": null,
             "volatility": "volatile",
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-10-15T22:13:36Z",
+    "capturedAt": "2026-10-21T18:45:14Z",
     "publications": [
         {
             "table": "drafts",
@@ -3184,7 +3619,8 @@
             "publication": "supabase_realtime_messages_publication"
         }
     ],
-    "storageBuckets": [],
+    "storageBuckets": [
+    ],
     "postgresVersion": "17.4",
     "defaultPrivileges": [
         {
