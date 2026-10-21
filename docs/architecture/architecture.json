@@ -2,30 +2,35 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "1d60e1270d771a01f013a01e7cd62544cecd5a19",
-    "commitShort": "1d60e127",
+    "commit": "8d8d142b20ec164a55a66acfdbf6ee46f7fcc696",
+    "commitShort": "8d8d142b",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/account-deletion-db",
-    "dirty": false,
-    "dirtyPaths": [],
-    "timestamp": "2026-10-21T18:27:45Z",
-    "sourceHash": "sha256:1bcdc2d0c8c531e6d186f29de284fc7d621cce3d0ceabb3877ece0652e40f77b",
+    "branch": "chore/db-snapshot-2026-10-21",
+    "dirty": true,
+    "dirtyPaths": [
+      {
+        "code": "M",
+        "path": "docs/architecture/db-snapshot.json"
+      }
+    ],
+    "timestamp": "2026-10-21T18:45:47Z",
+    "sourceHash": "sha256:8bb0f0940a1a9fe640381fb99208c39364067deef5d63aec33b1c32789c716f4",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-10-15T22:13:36Z",
-    "ageHours": 140.2,
-    "ageDays": 5.8,
+    "capturedAt": "2026-10-21T18:45:14Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da",
+    "hash": "sha256:e6237aa0b0c28a3a27cb9ce62b1728763dbddaf2c4eaff911ad87b9014e6b2a7",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
-      "functions": 107,
-      "tables": 37,
+      "functions": 129,
+      "tables": 39,
       "cronJobs": 13
     }
   },
@@ -1618,7 +1623,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "immutable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:111"
@@ -1626,20 +1649,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._account_deletion_apple_rank",
-      "label": "_account_deletion_apple_rank()",
-      "sublabel": "not in snapshot",
+      "label": "_account_deletion_apple_rank(p_state text)",
+      "sublabel": "owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -1649,7 +1664,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:126"
@@ -1657,20 +1690,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._account_deletion_settle_apple",
-      "label": "_account_deletion_settle_apple()",
-      "sublabel": "not in snapshot",
+      "label": "_account_deletion_settle_apple(p_user_id uuid, p_outcome text)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2121,7 +2146,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000004_leave_before_draft_shared.sql:42"
@@ -2129,20 +2172,12 @@
         "latestDefinition": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._leave_league_before_draft",
-      "label": "_leave_league_before_draft()",
-      "sublabel": "not in snapshot",
+      "label": "_leave_league_before_draft(p_league_id uuid, p_user_id text, p_leaver_name text)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000004_leave_before_draft_shared.sql",
@@ -2234,7 +2269,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000006_take_over_team.sql:312"
@@ -2242,20 +2295,12 @@
         "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg._takeover_check",
-      "label": "_takeover_check()",
-      "sublabel": "not in snapshot",
+      "label": "_takeover_check(p_code text, p_user_id uuid, p_lock boolean)",
+      "sublabel": "SECURITY DEFINER · owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -2265,7 +2310,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:296"
@@ -2273,20 +2343,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_apple_revoked",
-      "label": "account_deletion_apple_revoked()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_apple_revoked(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2296,7 +2358,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:274"
@@ -2304,20 +2391,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_apple_token",
-      "label": "account_deletion_apple_token()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_apple_token(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2327,7 +2406,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:310"
@@ -2335,20 +2439,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_apple_unrevoked",
-      "label": "account_deletion_apple_unrevoked()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_apple_unrevoked(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2358,7 +2454,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:192"
@@ -2366,20 +2487,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_cancel",
-      "label": "account_deletion_cancel()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_cancel(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2389,7 +2502,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:325"
@@ -2397,20 +2535,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_fail",
-      "label": "account_deletion_fail()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_fail(p_user_id uuid, p_error text)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2420,7 +2550,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:342"
@@ -2428,20 +2583,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_mark_done",
-      "label": "account_deletion_mark_done()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_mark_done(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2451,7 +2598,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:154"
@@ -2459,20 +2631,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_open",
-      "label": "account_deletion_open()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_open(p_user_id uuid, p_has_apple boolean)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2482,7 +2646,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:215"
@@ -2490,20 +2679,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_set_apple",
-      "label": "account_deletion_set_apple()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_set_apple(p_user_id uuid, p_state text)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2513,7 +2694,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql:246"
@@ -2521,20 +2727,12 @@
         "latestDefinition": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.account_deletion_stash_apple_token",
-      "label": "account_deletion_stash_apple_token()",
-      "sublabel": "not in snapshot",
+      "label": "account_deletion_stash_apple_token(p_user_id uuid, p_refresh_token text)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -2932,7 +3130,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000006_take_over_team.sql:214"
@@ -2940,20 +3163,12 @@
         "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.create_takeover_invite",
-      "label": "create_takeover_invite()",
-      "sublabel": "not in snapshot",
+      "label": "create_takeover_invite(p_league_id uuid, p_seat_user_id text)",
+      "sublabel": "SECURITY DEFINER · authenticated",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -2963,7 +3178,39 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "authenticated",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "authenticated=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": true,
+        "owner": "postgres",
+        "volatility": "immutable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000001_deleted_seat_and_label.sql:72"
@@ -2973,18 +3220,18 @@
       },
       "drift": [
         {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
+          "field": "grants",
+          "declared": "n/a",
+          "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+          "severity": "low",
+          "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
         }
       ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.deleted_manager_label",
       "label": "deleted_manager_label()",
-      "sublabel": "not in snapshot",
+      "sublabel": "authenticated, service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000001_deleted_seat_and_label.sql",
@@ -4981,7 +5228,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000007_heal_account_deletions.sql:67"
@@ -4989,20 +5261,12 @@
         "latestDefinition": "supabase/migrations/20261125000007_heal_account_deletions.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.heal_account_deletions",
-      "label": "heal_account_deletions()",
-      "sublabel": "not in snapshot",
+      "label": "heal_account_deletions(p_min_age interval, p_limit integer)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000007_heal_account_deletions.sql",
@@ -5012,7 +5276,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000007_heal_account_deletions.sql:187"
@@ -5020,20 +5309,12 @@
         "latestDefinition": "supabase/migrations/20261125000007_heal_account_deletions.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.heal_account_deletions_due",
       "label": "heal_account_deletions_due()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000007_heal_account_deletions.sql",
@@ -6407,7 +6688,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000005_scrub_deleted_manager.sql:87"
@@ -6415,20 +6721,12 @@
         "latestDefinition": "supabase/migrations/20261125000005_scrub_deleted_manager.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.scrub_deleted_manager",
-      "label": "scrub_deleted_manager()",
-      "sublabel": "not in snapshot",
+      "label": "scrub_deleted_manager(p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000005_scrub_deleted_manager.sql",
@@ -6872,7 +7170,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000006_take_over_team.sql:458"
@@ -6880,20 +7203,12 @@
         "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.take_over_team",
-      "label": "take_over_team()",
-      "sublabel": "not in snapshot",
+      "label": "take_over_team(p_code text, p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -6903,7 +7218,25 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": false,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000006_take_over_team.sql:300"
@@ -6911,20 +7244,12 @@
         "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.takeover_guess_try_lock",
       "label": "takeover_guess_try_lock()",
-      "sublabel": "not in snapshot",
+      "sublabel": "owner only",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -6934,7 +7259,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "volatile"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000006_take_over_team.sql:424"
@@ -6942,20 +7292,12 @@
         "latestDefinition": "supabase/migrations/20261125000006_take_over_team.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.takeover_preview",
-      "label": "takeover_preview()",
-      "sublabel": "not in snapshot",
+      "label": "takeover_preview(p_code text, p_user_id uuid)",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -7160,7 +7502,32 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "securityDefiner": true,
+        "searchPath": "public, pg_temp",
+        "grants": [
+          {
+            "role": "postgres",
+            "privileges": [
+              "EXECUTE"
+            ]
+          },
+          {
+            "role": "service_role",
+            "privileges": [
+              "EXECUTE"
+            ]
+          }
+        ],
+        "grantsRaw": [
+          "postgres=X/postgres",
+          "service_role=X/postgres"
+        ],
+        "anonCallable": false,
+        "authenticatedCallable": false,
+        "owner": "postgres",
+        "volatility": "stable"
+      },
       "declared": {
         "definedIn": [
           "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql:41"
@@ -7168,20 +7535,12 @@
         "latestDefinition": "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql",
         "redefinitions": 1
       },
-      "drift": [
-        {
-          "field": "existence",
-          "declared": "created by migration",
-          "live": "ABSENT from prod snapshot",
-          "severity": "high",
-          "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-        }
-      ],
+      "drift": [],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "pg.unclocked_deleted_seat_turns",
       "label": "unclocked_deleted_seat_turns()",
-      "sublabel": "not in snapshot",
+      "sublabel": "SECURITY DEFINER · service_role",
       "kind": "pg-function",
       "source": {
         "path": "supabase/migrations/20261125000009_unclocked_deleted_seat_turns.sql",
@@ -7335,19 +7694,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261125000003_account_deletions_ledger.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.account_deletions",
       "label": "account_deletions",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261125000003_account_deletions_ledger.sql",
@@ -8120,7 +8491,7 @@
             ],
             "using": null,
             "command": "INSERT",
-            "withCheck": "(is_commissioner(league_id) AND (inviter_id = (auth.uid())::text))",
+            "withCheck": "(is_commissioner(league_id) AND (inviter_id = (auth.uid())::text) AND (kind = 'invite'::text))",
             "permissive": true
           },
           {
@@ -8169,7 +8540,7 @@
             ],
             "using": null,
             "command": "INSERT",
-            "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))) AND (hidden_at IS NULL))",
+            "withCheck": "((user_id = (auth.uid())::text) AND (role = 'commissioner'::text) AND (EXISTS ( SELECT 1\n   FROM leagues l\n  WHERE ((l.id = league_members.league_id) AND (l.commissioner_id = (auth.uid())::text) AND (l.draft_status = 'not_started'::text)))) AND (hidden_at IS NULL) AND (deleted_at IS NULL))",
             "permissive": true
           },
           {
@@ -8927,19 +9298,31 @@
     {
       "layer": "db",
       "facts": {},
-      "db": null,
+      "db": {
+        "rlsEnabled": true,
+        "rlsForced": false,
+        "policies": []
+      },
       "declared": {
         "touchedBy": [
           "supabase/migrations/20261125000006_take_over_team.sql"
         ],
         "rlsEnabled": true
       },
-      "drift": [],
+      "drift": [
+        {
+          "field": "policies",
+          "declared": "n/a",
+          "live": "RLS on, ZERO policies",
+          "severity": "low",
+          "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+        }
+      ],
       "annotation": null,
-      "verified": false,
+      "verified": true,
       "id": "tbl.takeover_guess_limits",
       "label": "takeover_guess_limits",
-      "sublabel": "not in snapshot",
+      "sublabel": "RLS · 0 policies",
       "kind": "table",
       "source": {
         "path": "supabase/migrations/20261125000006_take_over_team.sql",
@@ -21273,226 +21656,6 @@
   ],
   "drift": [
     {
-      "node": "pg._account_deletion_apple_rank",
-      "label": "_account_deletion_apple_rank()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._account_deletion_settle_apple",
-      "label": "_account_deletion_settle_apple()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._leave_league_before_draft",
-      "label": "_leave_league_before_draft()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg._takeover_check",
-      "label": "_takeover_check()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_apple_revoked",
-      "label": "account_deletion_apple_revoked()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_apple_token",
-      "label": "account_deletion_apple_token()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_apple_unrevoked",
-      "label": "account_deletion_apple_unrevoked()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_cancel",
-      "label": "account_deletion_cancel()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_fail",
-      "label": "account_deletion_fail()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_mark_done",
-      "label": "account_deletion_mark_done()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_open",
-      "label": "account_deletion_open()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_set_apple",
-      "label": "account_deletion_set_apple()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.account_deletion_stash_apple_token",
-      "label": "account_deletion_stash_apple_token()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.create_takeover_invite",
-      "label": "create_takeover_invite()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.deleted_manager_label",
-      "label": "deleted_manager_label()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.heal_account_deletions",
-      "label": "heal_account_deletions()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.heal_account_deletions_due",
-      "label": "heal_account_deletions_due()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.scrub_deleted_manager",
-      "label": "scrub_deleted_manager()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.take_over_team",
-      "label": "take_over_team()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.takeover_guess_try_lock",
-      "label": "takeover_guess_try_lock()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.takeover_preview",
-      "label": "takeover_preview()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
-      "node": "pg.unclocked_deleted_seat_turns",
-      "label": "unclocked_deleted_seat_turns()",
-      "groupKey": "existence",
-      "field": "existence",
-      "declared": "created by migration",
-      "live": "ABSENT from prod snapshot",
-      "severity": "high",
-      "note": "A migration creates this function but it is not in the live catalog. Either the migration was never pushed, or it was later dropped."
-    },
-    {
       "node": "tbl.categories",
       "label": "categories",
       "groupKey": "authenticated-role-policies-ungated",
@@ -21563,6 +21726,16 @@
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
     },
     {
+      "node": "pg.deleted_manager_label",
+      "label": "deleted_manager_label()",
+      "groupKey": "grants",
+      "field": "grants",
+      "declared": "n/a",
+      "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
+      "severity": "low",
+      "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
       "node": "pg.get_draft_clock",
       "label": "get_draft_clock(p_league_id uuid)",
       "groupKey": "grants",
@@ -21601,6 +21774,16 @@
       "live": "postgres=X/postgres, authenticated=X/postgres, service_role=X/postgres",
       "severity": "low",
       "note": "SECURITY INVOKER, so it runs with the caller's own privileges and RLS applies — broad EXECUTE here is low risk. Listed for inventory completeness."
+    },
+    {
+      "node": "tbl.account_deletions",
+      "label": "account_deletions",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
     },
     {
       "node": "tbl.app_config",
@@ -21773,6 +21956,16 @@
       "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
     },
     {
+      "node": "tbl.takeover_guess_limits",
+      "label": "takeover_guess_limits",
+      "groupKey": "policies",
+      "field": "policies",
+      "declared": "n/a",
+      "live": "RLS on, ZERO policies",
+      "severity": "low",
+      "note": "RLS with no policies denies all access except to roles that bypass RLS (service_role, table owner). This is the correct shape for a service-role-only table — confirm that is the intent."
+    },
+    {
       "node": "tbl.trades",
       "label": "trades",
       "groupKey": "public-role-policies-gated",
@@ -21810,7 +22003,7 @@
     },
     {
       "node": "pg._account_deletion_apple_rank",
-      "label": "_account_deletion_apple_rank()",
+      "label": "_account_deletion_apple_rank(p_state text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:111",
       "outbound": [],
@@ -21818,7 +22011,7 @@
     },
     {
       "node": "pg._account_deletion_settle_apple",
-      "label": "_account_deletion_settle_apple()",
+      "label": "_account_deletion_settle_apple(p_user_id uuid, p_outcome text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:126",
       "outbound": [
@@ -21942,7 +22135,7 @@
     },
     {
       "node": "pg._leave_league_before_draft",
-      "label": "_leave_league_before_draft()",
+      "label": "_leave_league_before_draft(p_league_id uuid, p_user_id text, p_leaver_name text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000004_leave_before_draft_shared.sql:42",
       "outbound": [
@@ -21980,7 +22173,7 @@
     },
     {
       "node": "pg._takeover_check",
-      "label": "_takeover_check()",
+      "label": "_takeover_check(p_code text, p_user_id uuid, p_lock boolean)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000006_take_over_team.sql:312",
       "outbound": [
@@ -21996,7 +22189,7 @@
     },
     {
       "node": "pg.account_deletion_apple_revoked",
-      "label": "account_deletion_apple_revoked()",
+      "label": "account_deletion_apple_revoked(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:296",
       "outbound": [],
@@ -22004,7 +22197,7 @@
     },
     {
       "node": "pg.account_deletion_apple_token",
-      "label": "account_deletion_apple_token()",
+      "label": "account_deletion_apple_token(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:274",
       "outbound": [
@@ -22014,7 +22207,7 @@
     },
     {
       "node": "pg.account_deletion_apple_unrevoked",
-      "label": "account_deletion_apple_unrevoked()",
+      "label": "account_deletion_apple_unrevoked(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:310",
       "outbound": [],
@@ -22022,7 +22215,7 @@
     },
     {
       "node": "pg.account_deletion_cancel",
-      "label": "account_deletion_cancel()",
+      "label": "account_deletion_cancel(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:192",
       "outbound": [
@@ -22033,7 +22226,7 @@
     },
     {
       "node": "pg.account_deletion_fail",
-      "label": "account_deletion_fail()",
+      "label": "account_deletion_fail(p_user_id uuid, p_error text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:325",
       "outbound": [
@@ -22043,7 +22236,7 @@
     },
     {
       "node": "pg.account_deletion_mark_done",
-      "label": "account_deletion_mark_done()",
+      "label": "account_deletion_mark_done(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:342",
       "outbound": [
@@ -22056,7 +22249,7 @@
     },
     {
       "node": "pg.account_deletion_open",
-      "label": "account_deletion_open()",
+      "label": "account_deletion_open(p_user_id uuid, p_has_apple boolean)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:154",
       "outbound": [
@@ -22068,7 +22261,7 @@
     },
     {
       "node": "pg.account_deletion_set_apple",
-      "label": "account_deletion_set_apple()",
+      "label": "account_deletion_set_apple(p_user_id uuid, p_state text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:215",
       "outbound": [
@@ -22079,7 +22272,7 @@
     },
     {
       "node": "pg.account_deletion_stash_apple_token",
-      "label": "account_deletion_stash_apple_token()",
+      "label": "account_deletion_stash_apple_token(p_user_id uuid, p_refresh_token text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000003_account_deletions_ledger.sql:246",
       "outbound": [
@@ -22113,7 +22306,7 @@
     },
     {
       "node": "pg.create_takeover_invite",
-      "label": "create_takeover_invite()",
+      "label": "create_takeover_invite(p_league_id uuid, p_seat_user_id text)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000006_take_over_team.sql:214",
       "outbound": [
@@ -22208,7 +22401,7 @@
     },
     {
       "node": "pg.heal_account_deletions",
-      "label": "heal_account_deletions()",
+      "label": "heal_account_deletions(p_min_age interval, p_limit integer)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000007_heal_account_deletions.sql:67",
       "outbound": [
@@ -22330,7 +22523,7 @@
     },
     {
       "node": "pg.scrub_deleted_manager",
-      "label": "scrub_deleted_manager()",
+      "label": "scrub_deleted_manager(p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000005_scrub_deleted_manager.sql:87",
       "outbound": [
@@ -22401,7 +22594,7 @@
     },
     {
       "node": "pg.take_over_team",
-      "label": "take_over_team()",
+      "label": "take_over_team(p_code text, p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000006_take_over_team.sql:458",
       "outbound": [
@@ -22437,7 +22630,7 @@
     },
     {
       "node": "pg.takeover_preview",
-      "label": "takeover_preview()",
+      "label": "takeover_preview(p_code text, p_user_id uuid)",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000006_take_over_team.sql:424",
       "outbound": [],
@@ -22662,138 +22855,6 @@
   },
   "unverified": [
     {
-      "scope": "pg.deleted_manager_label",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._account_deletion_apple_rank",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._account_deletion_settle_apple",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_open",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_cancel",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_set_apple",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_stash_apple_token",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_apple_token",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_apple_revoked",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_apple_unrevoked",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_fail",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.account_deletion_mark_done",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._leave_league_before_draft",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.scrub_deleted_manager",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.create_takeover_invite",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.takeover_guess_try_lock",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg._takeover_check",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.takeover_preview",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.take_over_team",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.heal_account_deletions",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.heal_account_deletions_due",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
-      "scope": "pg.unclocked_deleted_seat_turns",
-      "claim": "function exists in prod",
-      "reason": "Present in migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot, or confirm the migration was applied."
-    },
-    {
       "scope": "tbl.broker_credentials",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
@@ -22801,18 +22862,6 @@
     },
     {
       "scope": "tbl.notification_log",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.account_deletions",
-      "claim": "table exists in prod",
-      "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
-      "resolve": "Re-capture the snapshot."
-    },
-    {
-      "scope": "tbl.takeover_guess_limits",
       "claim": "table exists in prod",
       "reason": "Referenced in code or migrations, absent from db-snapshot.json.",
       "resolve": "Re-capture the snapshot."
@@ -22877,10 +22926,10 @@
     "nodes": 299,
     "edges": 739,
     "flows": 7,
-    "drift": 52,
-    "driftHigh": 22,
+    "drift": 33,
+    "driftHigh": 0,
     "deadCode": 67,
-    "unverified": 35
+    "unverified": 11
   },
   "sourceIndex": {
     "edgeFunctions": [
@@ -23487,6 +23536,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:c0fb9dd92c83f779e05c8d34d758b23e4825621deb238c82a864cf1d7b7eb6da"
+    "dbSnapshot": "sha256:e6237aa0b0c28a3a27cb9ce62b1728763dbddaf2c4eaff911ad87b9014e6b2a7"
   }
 }
