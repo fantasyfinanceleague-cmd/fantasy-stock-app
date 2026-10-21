@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (3/9): a deleted seat is never a commissioner, an invitee,
+-- Account deletion (3/10): a deleted seat is never a commissioner, an invitee,
 -- or born on insert
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md. 20261125000001 adds the

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (4/9): the account_deletions ledger and its write functions
+-- Account deletion (4/10): the account_deletions ledger and its write functions
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, "The function:
 -- delete-account" steps 2-5 and "Heal pass". Deletion spans three systems

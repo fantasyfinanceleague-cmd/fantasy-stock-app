@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (6/9): scrub_deleted_manager
+-- Account deletion (6/10): scrub_deleted_manager
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, step 4 ("Scrub, one
 -- transaction"), decisions 2, 6, 7, 8, 9. Giorgio, 2026-10-21:

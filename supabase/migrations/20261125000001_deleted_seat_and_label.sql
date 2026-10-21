@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (2/9): the deleted seat, its label, and the two name seams
+-- Account deletion (2/10): the deleted seat, its label, and the two name seams
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, "The seat mark" and "The
 -- name seam". Giorgio, 2026-10-21, on the leaver rule's "No 'Former manager'

@@ -366,7 +366,7 @@ Deno.test({
       const AUTH = '{postgres=X/postgres,authenticated=X/postgres}';
       const want: Record<string, string> = {
         scrub_deleted_manager: SVC, take_over_team: SVC, takeover_preview: SVC, heal_account_deletions: SVC,
-        heal_account_deletions_due: SVC, leave_league: SVC,
+        heal_account_deletions_due: SVC, unclocked_deleted_seat_turns: SVC, leave_league: SVC,
         transfer_commissioner: SVC, account_deletion_open: SVC, account_deletion_cancel: SVC,
         account_deletion_set_apple: SVC, account_deletion_stash_apple_token: SVC, account_deletion_apple_token: SVC,
         account_deletion_apple_revoked: SVC, account_deletion_apple_unrevoked: SVC, account_deletion_fail: SVC,
@@ -409,6 +409,7 @@ Deno.test({
         await assertRejects(() => as(role, sub, () => q(sql, args)), Error, 'permission denied');
       for (const [fn, args] of [['scrub_deleted_manager', [A]], ['take_over_team', ['X', E]],
         ['takeover_preview', ['X', E]], ['heal_account_deletions', []], ['heal_account_deletions_due', []],
+        ['unclocked_deleted_seat_turns', []],
         ['account_deletion_open', [A, false]], ['account_deletion_mark_done', [A]],
         ['account_deletion_apple_token', [A]], ['account_deletion_apple_unrevoked', [A]],
         ['leave_league', [LPRE, A, null]]] as [string, unknown[]][]) {
@@ -936,6 +937,49 @@ Deno.test({
     assertEquals(pv.status, 'found', 'the no-session preview still resolves an old invite');
     assertEquals(j.ok, true, `join_league_by_code still accepts an old invite: ${JSON.stringify(j)}`);
     assertEquals((await q(`select status from league_invites where code = 'OLDINVITE1'`))[0].status, 'accepted');
+    await db.close();
+  },
+});
+
+Deno.test({
+  name: 'account deletion: unclocked_deleted_seat_turns lists only unclocked live drafts holding a deleted seat (decision 16)',
+  sanitizeResources: false,
+  sanitizeOps: false,
+  async fn() {
+    const db = new PGlite();
+    await loadChain(db);
+    const q = async (s: string, p: unknown[] = []) => (await db.query<Row>(s, p)).rows;
+    const turns = async () => {
+      await db.exec('set role service_role');
+      try { return await q(`select league_id, pick_number from public.unclocked_deleted_seat_turns()`); }
+      finally { await db.exec('reset role'); }
+    };
+    const mk = async (id: string, clocked: boolean, deleted: boolean, status: 'in_progress' | 'completed') => {
+      await q(`insert into leagues (id, name, commissioner_id, invite_code, num_participants, league_type)
+               values ($1::uuid, 'L', $2, upper(substr(md5($1::text), 1, 10)), 8, 'duration')`, [id, B]);
+      for (const [u, role] of [[B, 'commissioner'], [C, 'member'], [D, 'member'], [A, 'member']]) {
+        await q(`insert into league_members (league_id, user_id, role) values ($1, $2, $3)`, [id, u, role]);
+      }
+      await q(`update leagues set draft_status = 'in_progress', draft_started_at = now() where id = $1`, [id]);
+      // Every draft START is forced clocked (enforce_leagues_pick_clock); an unclocked live
+      // draft exists only as the 2026-10-10 push-time hold or an operator's service-path opt-out.
+      if (!clocked) await q(`update leagues set pick_clock_enabled = false where id = $1`, [id]);
+      await q(`insert into drafts (league_id, user_id, symbol, entry_price, quantity, round, pick_number, recorded_at)
+               values ($1, $2, 'AAPL', 1, 1, 1, 1, now()), ($1, $3, 'MSFT', 1, 1, 1, 2, now())`, [id, B, C]);
+      if (deleted) await q(`update league_members set deleted_at = now() where league_id = $1 and user_id = $2`, [id, A]);
+      if (status === 'completed') await q(`update leagues set draft_status = 'completed' where id = $1`, [id]);
+    };
+    const [UNCLOCKED_DEL, CLOCKED_DEL, UNCLOCKED_LIVE, DONE_DEL] = [lg(50), lg(51), lg(52), lg(53)];
+    await mk(UNCLOCKED_DEL, false, true, 'in_progress');
+    await mk(CLOCKED_DEL, true, true, 'in_progress');
+    await mk(UNCLOCKED_LIVE, false, false, 'in_progress');
+    await mk(DONE_DEL, false, true, 'completed');
+    assertEquals(await turns(), [{ league_id: UNCLOCKED_DEL, pick_number: 3 }],
+      'only the unclocked, live draft holding a deleted seat; the next pick after 2 recorded');
+    // Its numbering is get_draft_clock's, the same overdue_draft_turns uses.
+    const clock = (await q(`select picks_made from public.get_draft_clock($1)`, [UNCLOCKED_DEL]))[0];
+    assertEquals(clock.picks_made + 1, 3);
+    // Clocked drafts stay on overdue_draft_turns (unchanged): not listed here.
     await db.close();
   },
 });

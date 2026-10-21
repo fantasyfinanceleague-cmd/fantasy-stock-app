@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (1/9): trades.user_id stops cascading from auth.users
+-- Account deletion (1/10): trades.user_id stops cascading from auth.users
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, §"The system's side",
 -- "Identity model". Giorgio, 2026-10-21: the team outlives the account ("A plus
@@ -25,7 +25,7 @@
 -- user_profiles and push_tokens keep their ON DELETE CASCADE on purpose (they
 -- are the account's private rows, scrubbed with it).
 --
--- PROVISIONAL TIMESTAMP: 20261125000000-08 are re-stamped at release after
+-- PROVISIONAL TIMESTAMP: 20261125000000-09 are re-stamped at release after
 -- prod's latest applied version; re-stamp only unapplied files (CLAUDE.md).
 --
 -- POST-PUSH CHECK (SQL editor):

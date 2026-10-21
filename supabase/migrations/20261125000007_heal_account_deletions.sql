@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (8/9): heal_account_deletions + heal_account_deletions_due,
+-- Account deletion (8/10): heal_account_deletions + heal_account_deletions_due,
 -- the hourly heal's SQL half
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, "Heal pass" and §Risks

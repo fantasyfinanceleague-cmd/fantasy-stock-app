@@ -1,6 +1,6 @@
 -- ============================================================================
 -- ACCOUNT DELETION EFFECT TEST: run in the Supabase SQL editor AFTER `db push`
--- of 20261125000000-08 (plan docs/plans/2026-10-21-account-deletion.md, W2).
+-- of 20261125000000-09 (plan docs/plans/2026-10-21-account-deletion.md, W2).
 -- It does not depend on W3's 20261125000010 cron (it never reads cron.job).
 -- Read-only in effect: NOTHING persists (the block ends by RAISING, which rolls
 -- back every fixture: auth.users rows, leagues, the ledger row, vault entries).
@@ -26,7 +26,7 @@
 --   G1  trades has NO foreign key to auth.users                           PASS
 --   G2  league_members.deleted_at + freeze trigger fires on it            PASS
 --   G3  deleted_manager_label() = 'Former manager', never a username       PASS
---   G4  18 service-only functions: definer, path pinned, service_role only PASS
+--   G4  19 service-only functions: definer, path pinned, service_role only PASS
 --   G5  8 internals: owner only; authenticated: the 3 client RPCs          PASS
 --   G6  account_deletions: RLS on, no policies, no API-role privilege      PASS
 --   G7  policies: insert_self needs deleted_at null; invites kind = invite PASS
@@ -73,7 +73,7 @@ declare
     'account_deletion_stash_apple_token', 'account_deletion_apple_token', 'account_deletion_apple_revoked',
     'account_deletion_fail', 'account_deletion_mark_done', 'leave_league', 'transfer_commissioner',
     'account_deletion_apple_unrevoked', 'takeover_preview', 'heal_account_deletions_due',
-    'join_league_by_code', 'invite_preview_lookup'];
+    'join_league_by_code', 'invite_preview_lookup', 'unclocked_deleted_seat_turns'];
 begin
   -- ---- G: catalog -------------------------------------------------------------
   select count(*) into n from pg_constraint

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (9/9): a takeover code is never a join code
+-- Account deletion (9/10): a takeover code is never a join code
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, "Takeover"; W3's security
 -- review (via the Orchestrator, 2026-10-21): a takeover code is a bearer

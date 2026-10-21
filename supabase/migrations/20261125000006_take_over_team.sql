@@ -1,5 +1,5 @@
 -- ============================================================================
--- Account deletion (7/9): takeover codes and take_over_team
+-- Account deletion (7/10): takeover codes and take_over_team
 -- ============================================================================
 -- Plan: docs/plans/2026-10-21-account-deletion.md, decisions 5, 13, 14 and
 -- "Takeover". Giorgio, 2026-10-21, on the team after a takeover: "keep the teams
