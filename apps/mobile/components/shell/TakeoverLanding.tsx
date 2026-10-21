@@ -12,6 +12,7 @@ import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { FIND_LEAGUE, GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
 import type { RateWait } from '@/lib/account/takeoverReply';
+import { keepName } from '@/lib/account/keepName';
 import { deadLine, recordLine, type TakeoverPreview } from '@/lib/account/takeoverView';
 import { JOIN_COPY, blockMessage } from '@/lib/join/joinPreview';
 import { ARRIVAL_COPY } from '@/lib/invite/arrivalView';
@@ -113,7 +114,8 @@ export function TakeoverLanding({
       <AuthScaffold centerBody>
         <View style={styles.actions}>
           <WarnPanel text={state.kind === 'rate_limited' ? waitLine(state.wait) : JOIN_COPY.unreachable} />
-          <Link label={ARRIVAL_COPY.tryAgain} onPress={onRetry} />
+          {/* The hour's lockout has nothing to retry now: only "Not now" (Design Lead gate). A moment's wait, and an unreachable league, keep "Try again". */}
+          {state.kind === 'rate_limited' && state.wait === 'later' ? null : <Link label={ARRIVAL_COPY.tryAgain} onPress={onRetry} />}
           <Link label={NOT_NOW} onPress={onNotNow} muted />
         </View>
       </AuthScaffold>
@@ -135,7 +137,7 @@ export function TakeoverLanding({
     >
       <View style={styles.block}>
         <Avatar name={label} size={DISC} tone="neutral" />
-        <ScreenTitle style={styles.title}>{takeoverQuestion(label, found.leagueName)}</ScreenTitle>
+        <ScreenTitle style={styles.title}>{takeoverQuestion(keepName(label), keepName(found.leagueName))}</ScreenTitle>
         <Card style={styles.record}>
           <Text variant="headline" maxFontSizeMultiplier={LINK_MAX_SCALE} style={styles.num}>
             {recordLine(found.wins, found.losses, found.rank)}

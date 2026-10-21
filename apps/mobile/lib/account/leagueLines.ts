@@ -54,7 +54,7 @@ export interface DeleteLeagueLine {
   window: LeaveWindow;
 }
 
-export function leagueLine(league: DeleteLeagueInput, meId: string, label: string, nowMs: number): DeleteLeagueLine {
+export function leagueLine(league: DeleteLeagueInput, meId: string, label: string, nowMs: number, keep: (name: string) => string = (n) => n): DeleteLeagueLine {
   const window = leaveWindow(league.facts, nowMs);
   const isCommissioner = league.commissionerId === meId;
   const successor = successorOf(league.members, meId);
@@ -63,8 +63,8 @@ export function leagueLine(league: DeleteLeagueInput, meId: string, label: strin
   else if (window === 'before_draft') line = NOT_DRAFTED_LINE;
   else if (isCommissioner) {
     const name = successor?.displayName?.trim();
-    line = name ? successorLine(label, name) : stayLine(label);
-  } else if (window === 'after_season') line = stayLine(label);
-  else line = handOverLine(label);
-  return { id: league.id, name: league.name, line, window };
+    line = name ? successorLine(keep(label), keep(name)) : stayLine(keep(label));
+  } else if (window === 'after_season') line = stayLine(keep(label));
+  else line = handOverLine(keep(label));
+  return { id: league.id, name: keep(league.name), line, window };
 }

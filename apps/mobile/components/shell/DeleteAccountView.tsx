@@ -9,7 +9,7 @@ import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { WarnPanel } from '@/components/sp/WarnPanel';
-import { Field } from '@/components/shell/Field';
+import { Field, FieldError, FieldLabel } from '@/components/shell/Field';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
 import { loadApple } from '@/lib/auth/socialSignIn';
 import { canAsk, type DeleteState } from '@/lib/account/deleteFlow';
@@ -18,6 +18,7 @@ import {
   PASSWORD_WRONG, PROOF_PASSWORD, PROOF_SOCIAL, PROOF_UNCONFIRMED, TRY_LATER, pastSeasonsLine,
 } from '@/lib/account/deleteCopy';
 import type { DeleteLeagueLine } from '@/lib/account/leagueLines';
+import { keepName } from '@/lib/account/keepName';
 import { proofInHand } from '@/lib/account/proofKind';
 
 // Account deletion (W4) — the delete screen, board "Decided" (B: one line per league). Presentational: the route
@@ -75,7 +76,7 @@ export function DeleteAccountView({ state, leagues, label, password, inputRef, o
       ) : null}
 
       <Text variant="body" tone="secondary" maxFontSizeMultiplier={BODY_MAX_SCALE}>
-        {pastSeasonsLine(label)}
+        {pastSeasonsLine(keepName(label))}
       </Text>
 
       {state.kind === 'password' ? (
@@ -94,21 +95,14 @@ export function DeleteAccountView({ state, leagues, label, password, inputRef, o
       ) : proven ? (
         <View style={styles.confirmed} accessible accessibilityLiveRegion="polite">
           <Icon name="check" size="body" tone="gain" />
-          <Text variant="callout" color={colors.gain} maxFontSizeMultiplier={BODY_MAX_SCALE} style={styles.bold}>
-            {state.kind === 'apple' ? CONFIRMED_WITH_APPLE : CONFIRMED_WITH_GOOGLE}
-          </Text>
+          {/* The Field label's style (not a capped label of its own), in the gain colour: it reads as the password prompt does. */}
+          <FieldLabel color={colors.gain}>{state.kind === 'apple' ? CONFIRMED_WITH_APPLE : CONFIRMED_WITH_GOOGLE}</FieldLabel>
         </View>
       ) : (
         <View style={styles.proofBlock}>
-          <Text variant="callout" tone="secondary" maxFontSizeMultiplier={BODY_MAX_SCALE} style={styles.bold}>
-            {PROOF_SOCIAL}
-          </Text>
+          <FieldLabel>{PROOF_SOCIAL}</FieldLabel>
           <ProviderButton kind={state.kind} onApple={onApple} onGoogle={onGoogle} />
-          {state.proofRejected ? (
-            <Text variant="callout" color={colors.danger} maxFontSizeMultiplier={BODY_MAX_SCALE} accessibilityRole="alert" accessibilityLiveRegion="polite">
-              {PROOF_UNCONFIRMED}
-            </Text>
-          ) : null}
+          {state.proofRejected ? <FieldError>{PROOF_UNCONFIRMED}</FieldError> : null}
         </View>
       )}
 

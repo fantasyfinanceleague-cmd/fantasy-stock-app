@@ -37,6 +37,25 @@ export interface FieldProps extends Omit<TextInputProps, 'style' | 'placeholderT
   inputFontSize?: number;
 }
 
+/** The field's label style (callout, headline weight), exported so a proof line that is not a field (Apple / Google) reads the same as the password prompt. */
+export function FieldLabel({ children, color }: { children: ReactNode; color?: string }) {
+  return (
+    <Text variant="callout" color={color} style={styles.label}>
+      {children}
+    </Text>
+  );
+}
+
+/** The field's error style (callout, headline weight, danger, announced politely). */
+export function FieldError({ children }: { children: ReactNode }) {
+  const { colors } = useTheme();
+  return (
+    <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite" style={styles.error}>
+      {children}
+    </Text>
+  );
+}
+
 export const Field = forwardRef<TextInput, FieldProps>(function Field(
   { label, error, invalid = false, helper, rules, trailing, chosen = false, inputFontSize, onFocus, onBlur, ...input },
   ref
@@ -49,9 +68,7 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
 
   return (
     <View style={styles.field}>
-      <Text variant="callout" style={styles.label}>
-        {label}
-      </Text>
+      <FieldLabel>{label}</FieldLabel>
       <View
         style={[
           styles.box,
@@ -85,9 +102,7 @@ export const Field = forwardRef<TextInput, FieldProps>(function Field(
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
       {error ? (
-        <Text variant="callout" color={colors.danger} accessibilityLiveRegion="polite" style={styles.error}>
-          {error}
-        </Text>
+        <FieldError>{error}</FieldError>
       ) : null}
       {helper ? (
         <Text variant="caption" tone="secondary">

@@ -13,6 +13,7 @@ import { loadDeleteLeagues } from '@/lib/account/deleteLeaguesApi';
 import { useDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
 import { setDeletedNotice } from '@/lib/account/deletedNotice';
 import { endSessionAfterDeletion } from '@/lib/account/endSession';
+import { keepName } from '@/lib/account/keepName';
 import { leagueLine, type DeleteLeagueInput } from '@/lib/account/leagueLines';
 import { proofKindFor } from '@/lib/account/proofKind';
 import { proveWithApple, proveWithGoogle } from '@/lib/auth/socialSignIn';
@@ -72,7 +73,7 @@ export default function DeleteAccountScreen() {
       timers.forEach(clearTimeout);
     };
   }, [rejected]);
-  const leagues = useMemo(() => (inputs ? inputs.map((l) => leagueLine(l, meId, label, Date.now())) : null), [inputs, meId, label]);
+  const leagues = useMemo(() => (inputs ? inputs.map((l) => leagueLine(l, meId, label, Date.now(), keepName)) : null), [inputs, meId, label]);
 
   const onPassword = useCallback((v: string) => {
     setPassword(v);

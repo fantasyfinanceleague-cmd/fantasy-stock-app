@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { space } from '@/constants/tokens';
+import { space, type } from '@/constants/tokens';
 import type { ThemeColors } from '@/constants/tokens/color';
 import { Icon } from '@/components/sp/Icon';
 import { PressableScale, PressableScaleProps } from '@/components/sp/PressableScale';
@@ -31,6 +31,13 @@ export type { ButtonStatus } from '@/components/sp/logic/buttonStatus';
 // effect at accessibility text sizes — below that threshold a button stays
 // sized to its content, matching the existing look.
 export const FULL_WIDTH_FONT_SCALE = 1.35;
+
+/**
+ * The label's Dynamic Type ceiling, the SAME for both sizes: the md label's own (`headline`, 1.6×). The sm label is a
+ * `callout`, which has no ceiling of its own, so a small pill (Share, Find a new manager) grew to ~2× body at XXXL
+ * (Design Lead gate, 2026-10-21). 1.6 is the correction; at Large (1.0) nothing changes.
+ */
+export const BUTTON_LABEL_MAX_SCALE = type.headline.maxScale ?? 1.6;
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 export type ButtonSize = 'md' | 'sm';
@@ -137,6 +144,7 @@ export function Button({ label, variant = 'primary', size = 'md', fullWidth = fa
         <Text
           variant={size === 'md' ? 'headline' : 'callout'}
           color={textColor}
+          maxFontSizeMultiplier={BUTTON_LABEL_MAX_SCALE}
           style={styles.label}
         >
           {label}
