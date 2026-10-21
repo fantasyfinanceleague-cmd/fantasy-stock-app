@@ -276,6 +276,7 @@ Deno.test('DL copy: the landing shows "You\'re already in {league}." + "Open the
 Deno.test('delete screen: a refused password scrolls the refusal back above the keyboard, and the capture seed never fills the field of a refused / limited state', () => {
   const screen = src('app/delete-account.tsx');
   assert(screen.includes('scrollRef.current?.scrollToEnd({ animated: true })'));
+  assert(screen.includes("Keyboard.addListener('keyboardDidShow', toEnd)"), 'driven by the keyboard, not one timer');
   assert(screen.includes('<AuthScaffold ref={scrollRef}'));
   assert(screen.includes('useFixtureScrollEnd(scrollRef)'));
   const seed = screen.slice(screen.indexOf('const [password, setPassword]'), screen.indexOf('const inputRef'));

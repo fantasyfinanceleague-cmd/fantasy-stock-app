@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type ScrollView, type TextInput } from 'react-native';
+import { Alert, Keyboard, type ScrollView, type TextInput } from 'react-native';
 import { router } from 'expo-router';
 
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
@@ -62,8 +62,15 @@ export default function DeleteAccountScreen() {
     setPassword('');
     inputRef.current?.focus();
     // The keyboard comes up over the foot of the screen: bring the refusal under the field (and the dimmed button) back into view.
-    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
-    return () => clearTimeout(t);
+    // Layout-driven, not one timer: when the keyboard finishes opening (or its frame changes), and again shortly after
+    // for a keyboard that was already up or a slow phone.
+    const toEnd = () => scrollRef.current?.scrollToEnd({ animated: true });
+    const subs = [Keyboard.addListener('keyboardDidShow', toEnd), Keyboard.addListener('keyboardDidChangeFrame', toEnd)];
+    const timers = [setTimeout(toEnd, 350), setTimeout(toEnd, 900)];
+    return () => {
+      subs.forEach((x) => x.remove());
+      timers.forEach(clearTimeout);
+    };
   }, [rejected]);
   const leagues = useMemo(() => (inputs ? inputs.map((l) => leagueLine(l, meId, label, Date.now())) : null), [inputs, meId, label]);
 
