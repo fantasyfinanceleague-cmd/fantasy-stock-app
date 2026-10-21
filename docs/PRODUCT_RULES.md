@@ -567,8 +567,10 @@ building anything, and don't reopen a rule without him.
   - The flow: "we also need to decide where the account deletion button and process lives.
     and i want to add a 'are you sure, this cant be reversed' kinda thing to ensure the user
     isnt misclicking or is sure of their action". So: after the destructive button a final
-    "Are you sure? This can't be undone." alert, safe default "Keep my account"; the
-    location (Profile last row vs a Profile › Account page) is his pick, pending.
+    "Are you sure? This can't be undone." alert, safe default "Keep my account".
+  - The location, from the A/B mockup: "last row in profile works but we shouldnt have it be
+    highlighted, that draws attention to it. the flow is also good". So: the last Profile
+    row, below Sign out, a plain row with danger text only, no tint or highlight.
   Planner rulings under standing rules (Giorgio may veto): confirming = re-authenticate
   (password / Apple / Google), the destructive button, then the are-you-sure alert; before the draft deletion acts like leaving; during a live draft the seat
   auto-picks and takeover opens once the draft is complete; after deletion the sign-in

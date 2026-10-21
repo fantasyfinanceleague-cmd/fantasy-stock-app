@@ -30,6 +30,8 @@ Each one is also in `docs/PRODUCT_RULES.md` under **Account deletion**.
 - 2026-10-21, on the flow: "we also need to decide where the account deletion button and
   process lives. and i want to add a 'are you sure, this cant be reversed' kinda thing to
   ensure the user isnt misclicking or is sure of their action".
+- 2026-10-21, picking the location from the A/B mockup: "last row in profile works but we
+  shouldnt have it be highlighted, that draws attention to it. the flow is also good".
 
 Research the rulings rest on (2026-10-21): Sleeper's help centre says deleting your account
 does not remove you from your leagues ("your teams stay in place because they affect other
@@ -43,7 +45,7 @@ outlives the account.
 
 | # | Question | Decision | Who / date |
 |---|---|---|---|
-| 1 | Where it lives | **Open (Giorgio picks):** A = last row in Profile, below Sign out, destructive style (Planner rec) · B = inside a new Profile › Account page with Email and Change password. Mockup shown 2026-10-21. | Giorgio, pending |
+| 1 | Where it lives | **A: the last row in Profile, below Sign out.** A plain row like the others, danger-coloured text only: no tinted background, no highlight, nothing that draws the eye to it. | Giorgio 2026-10-21 |
 | 2 | The mid-season team | **A + C.** The seat stays in every league whose draft has started this season, keeps playing on what it holds (no trades, no claims), and the commissioner can hand it to a new manager. | Giorgio 2026-10-21 |
 | 3 | Timing | **Immediate.** The auth account, profile, push tokens and every private row are gone when the request returns. No grace period, no restore. | Giorgio 2026-10-21 |
 | 4 | The name on the seat | The leaver rule (frozen name and avatar, no label) gets its one exception: a *deleted* manager's name and avatar are scrubbed everywhere and the seat shows a placeholder label with the default avatar. Label wording = board call (§Open questions). | Giorgio 2026-10-21 ("change the product rules") |
@@ -63,7 +65,6 @@ outlives the account.
 
 Board calls for Giorgio (the Design Lead draws them; none block the backend):
 
-0. **Where it lives**, A or B above (decision 1).
 1. **The placeholder label.** A: "Former manager" (already drawn as the unchosen option B
    on the inventory board) · B: "Open team". Planner recommends A: after the season there is
    nothing open about it, and "Former manager" reads the same in standings, matchups and
@@ -94,8 +95,9 @@ in the function's comments).
 
 ### The player's side
 
-1. **Profile › Delete account** (danger row below Sign out, decision 1). Tapping opens the
-   delete screen.
+1. **Profile › Delete account**: the last row, below Sign out, styled exactly like Sign out
+   (danger text, plain row, no tint or highlight; decision 1). Tapping opens the delete
+   screen.
 2. **The delete screen** (copy draft; the board settles wording and layout):
    - Title: "Delete your account?"
    - Body: "This deletes your account right away. Your leagues keep playing: in any league
@@ -284,7 +286,7 @@ succession mid-season; and `auth.admin.deleteUser` needs the secret key. Same re
 
 ## Done means
 
-- "Delete account" sits where Giorgio picked (decision 1); the flow runs re-auth → "Are you
+- "Delete account" is the last Profile row, plain, danger text only (decision 1); the flow runs re-auth → "Are you
   sure?" → the sign-in screen with "Your account is deleted." once. "Keep my account" on the
   alert sends nothing (verified by the function's request log staying empty).
 - After deleting a test account: no `auth.users`, `user_profiles` or `push_tokens` row;
