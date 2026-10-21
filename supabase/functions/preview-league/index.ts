@@ -77,7 +77,11 @@ Deno.serve(async (req: Request) => {
     let { data: league } = await admin.from('leagues').select('*').eq('invite_code', code).maybeSingle();
     let invite: any = null;
     if (!league) {
-      const { data: inv } = await admin.from('league_invites').select('*').eq('code', code).maybeSingle();
+      // kind = 'invite' ONLY: league_invites also holds takeover codes (a bearer capability for a
+      // deleted manager's seat), and a takeover code pasted into the join preview must read exactly like
+      // an unknown code, not reveal that league's name and member count. W2 adds the same filter to
+      // join_league_by_code and invite_preview_lookup in SQL.
+      const { data: inv } = await admin.from('league_invites').select('*').eq('code', code).eq('kind', 'invite').maybeSingle();
       if (inv) {
         invite = inv;
         const { data: lg } = await admin.from('leagues').select('*').eq('id', inv.league_id).maybeSingle();

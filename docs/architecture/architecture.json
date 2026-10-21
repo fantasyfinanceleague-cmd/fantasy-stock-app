@@ -2,27 +2,47 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "8d8d142b20ec164a55a66acfdbf6ee46f7fcc696",
-    "commitShort": "8d8d142b",
+    "commit": "d12825922b4a0f9ca145459d37078fbe573d26a4",
+    "commitShort": "d1282592",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "chore/db-snapshot-2026-10-21",
+    "branch": "feat/account-deletion-fn",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
+        "path": "supabase/functions/_shared/notice-delivery.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/delete-account/index.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/delete-account/run.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/delete-account/run.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/heal-account-deletions/run.test.ts"
+      },
+      {
+        "code": "M",
+        "path": "supabase/functions/heal-account-deletions/run.ts"
       }
     ],
-    "timestamp": "2026-10-21T18:45:47Z",
-    "sourceHash": "sha256:8bb0f0940a1a9fe640381fb99208c39364067deef5d63aec33b1c32789c716f4",
+    "timestamp": "2026-10-21T21:55:06Z",
+    "sourceHash": "sha256:d370bc4ac02bd004eaa82daae51b7f1a82193b6635e858b7dbee553c5e569141",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-21T18:45:14Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 3.2,
+    "ageDays": 0.1,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:e6237aa0b0c28a3a27cb9ce62b1728763dbddaf2c4eaff911ad87b9014e6b2a7",
@@ -505,8 +525,41 @@
     {
       "layer": "edge",
       "facts": {
+        "verifyJwt": true,
+        "verifyJwtSource": "supabase/config.toml:102",
+        "authGuard": null,
+        "localModules": [
+          "run.ts"
+        ],
+        "tests": [
+          "run.test.ts"
+        ],
+        "envVars": [
+          "SB_PUBLISHABLE_KEY",
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 204
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.delete-account",
+      "label": "delete-account",
+      "sublabel": "verify_jwt=true",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/delete-account/index.ts",
+        "line": 101
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:138",
+        "verifyJwtSource": "supabase/config.toml:156",
         "authGuard": "in-code guard (isAuthorized)",
         "localModules": [],
         "tests": [],
@@ -516,7 +569,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 218
+        "lines": 254
       },
       "db": null,
       "declared": null,
@@ -529,14 +582,14 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/draft-autopick-sweep/index.ts",
-        "line": 83
+        "line": 93
       }
     },
     {
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:104",
+        "verifyJwtSource": "supabase/config.toml:122",
         "authGuard": null,
         "localModules": [
           "rules.ts"
@@ -570,7 +623,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:149",
+        "verifyJwtSource": "supabase/config.toml:167",
         "authGuard": "in-code guard (isAuthorized)",
         "localModules": [
           "plan.ts"
@@ -602,7 +655,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:114",
+        "verifyJwtSource": "supabase/config.toml:132",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "price-batch.ts"
@@ -637,8 +690,40 @@
     {
       "layer": "edge",
       "facts": {
+        "verifyJwt": false,
+        "verifyJwtSource": "supabase/config.toml:111",
+        "authGuard": "in-code guard (isAuthorized)",
+        "localModules": [
+          "run.ts"
+        ],
+        "tests": [
+          "run.test.ts"
+        ],
+        "envVars": [
+          "SB_SECRET_KEY_INTERNAL",
+          "SUPABASE_URL"
+        ],
+        "lines": 77
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "fn.heal-account-deletions",
+      "label": "heal-account-deletions",
+      "sublabel": "verify_jwt=false · apikey guard",
+      "kind": "edge-function",
+      "source": {
+        "path": "supabase/functions/heal-account-deletions/index.ts",
+        "line": 39
+      }
+    },
+    {
+      "layer": "edge",
+      "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:209",
+        "verifyJwtSource": "supabase/config.toml:227",
         "authGuard": null,
         "localModules": [
           "paginate.ts"
@@ -709,14 +794,18 @@
         "verifyJwt": true,
         "verifyJwtSource": "supabase/config.toml:84",
         "authGuard": null,
-        "localModules": [],
-        "tests": [],
+        "localModules": [
+          "takeover.ts"
+        ],
+        "tests": [
+          "takeover.test.ts"
+        ],
         "envVars": [
           "SB_PUBLISHABLE_KEY",
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 85
+        "lines": 204
       },
       "db": null,
       "declared": null,
@@ -729,7 +818,7 @@
       "kind": "edge-function",
       "source": {
         "path": "supabase/functions/join-league/index.ts",
-        "line": 43
+        "line": 83
       }
     },
     {
@@ -786,7 +875,7 @@
           "SB_SECRET_KEY_INTERNAL",
           "SUPABASE_URL"
         ],
-        "lines": 130
+        "lines": 134
       },
       "db": null,
       "declared": null,
@@ -884,7 +973,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:168",
+        "verifyJwtSource": "supabase/config.toml:186",
         "authGuard": null,
         "localModules": [
           "commit.ts",
@@ -921,7 +1010,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:126",
+        "verifyJwtSource": "supabase/config.toml:144",
         "authGuard": "apikey header, constant-time, fail-closed",
         "localModules": [
           "plan.ts",
@@ -987,7 +1076,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:264",
+        "verifyJwtSource": "supabase/config.toml:282",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1086,7 +1175,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:214",
+        "verifyJwtSource": "supabase/config.toml:232",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1114,7 +1203,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:219",
+        "verifyJwtSource": "supabase/config.toml:237",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1144,7 +1233,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": false,
-        "verifyJwtSource": "supabase/config.toml:252",
+        "verifyJwtSource": "supabase/config.toml:270",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1175,7 +1264,7 @@
       "layer": "edge",
       "facts": {
         "verifyJwt": true,
-        "verifyJwtSource": "supabase/config.toml:159",
+        "verifyJwtSource": "supabase/config.toml:177",
         "authGuard": null,
         "localModules": [],
         "tests": [],
@@ -1200,6 +1289,25 @@
       "source": {
         "path": "supabase/functions/validate-and-record-pick/index.ts",
         "line": 140
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.delete-account/run",
+      "label": "run.ts",
+      "sublabel": "delete-account",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/delete-account/run.ts",
+        "line": 1
       }
     },
     {
@@ -1269,6 +1377,25 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "mod.heal-account-deletions/run",
+      "label": "run.ts",
+      "sublabel": "heal-account-deletions",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/heal-account-deletions/run.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "mod.historical-bars/paginate",
       "label": "paginate.ts",
       "sublabel": "historical-bars",
@@ -1313,6 +1440,25 @@
       "kind": "edge-module",
       "source": {
         "path": "supabase/functions/invite-preview/respond.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "module",
+      "facts": {
+        "hasTests": true
+      },
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "mod.join-league/takeover",
+      "label": "takeover.ts",
+      "sublabel": "join-league",
+      "kind": "edge-module",
+      "source": {
+        "path": "supabase/functions/join-league/takeover.ts",
         "line": 1
       }
     },
@@ -3269,10 +3415,11 @@
       },
       "declared": {
         "definedIn": [
-          "supabase/migrations/20261111000000_draft_auto_start.sql:381"
+          "supabase/migrations/20261111000000_draft_auto_start.sql:381",
+          "supabase/migrations/20261125000011_deleted_seat_sweep_guard.sql:49"
         ],
-        "latestDefinition": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "redefinitions": 1
+        "latestDefinition": "supabase/migrations/20261125000011_deleted_seat_sweep_guard.sql",
+        "redefinitions": 2
       },
       "drift": [],
       "annotation": null,
@@ -3282,8 +3429,8 @@
       "sublabel": "service_role",
       "kind": "pg-function",
       "source": {
-        "path": "supabase/migrations/20261111000000_draft_auto_start.sql",
-        "line": 381
+        "path": "supabase/migrations/20261125000011_deleted_seat_sweep_guard.sql",
+        "line": 49
       }
     },
     {
@@ -10817,13 +10964,54 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.delete-account->mod.delete-account/run",
+      "from": "fn.delete-account",
+      "to": "mod.delete-account/run",
+      "protocol": "esm-import",
+      "payload": "import from './run.ts'",
+      "callSites": [
+        "supabase/functions/delete-account/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.delete-account->pg.check_and_bump_rate_limit",
+      "from": "fn.delete-account",
+      "to": "pg.check_and_bump_rate_limit",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('check_and_bump_rate_limit')",
+      "callSites": [
+        "supabase/functions/delete-account/index.ts:47",
+        "supabase/functions/delete-account/index.ts:50",
+        "supabase/functions/delete-account/index.ts:89"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.delete-account->tbl.rate_limit_counters",
+      "from": "fn.delete-account",
+      "to": "tbl.rate_limit_counters",
+      "protocol": "postgrest-select",
+      "payload": ".from('rate_limit_counters').select('hits')",
+      "columns": [
+        "hits"
+      ],
+      "callSites": [
+        "supabase/functions/delete-account/index.ts:71"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.draft-autopick-sweep->pg.draft_watch_due",
       "from": "fn.draft-autopick-sweep",
       "to": "pg.draft_watch_due",
       "protocol": "postgrest-rpc",
       "payload": "rpc('draft_watch_due')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:125"
+        "supabase/functions/draft-autopick-sweep/index.ts:135"
       ]
     },
     {
@@ -10835,7 +11023,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('due_draft_starts')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:107"
+        "supabase/functions/draft-autopick-sweep/index.ts:117"
       ]
     },
     {
@@ -10847,7 +11035,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('overdue_draft_turns')",
       "callSites": [
-        "supabase/functions/draft-autopick-sweep/index.ts:148"
+        "supabase/functions/draft-autopick-sweep/index.ts:158"
       ]
     },
     {
@@ -11134,6 +11322,59 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.heal-account-deletions->mod.heal-account-deletions/run",
+      "from": "fn.heal-account-deletions",
+      "to": "mod.heal-account-deletions/run",
+      "protocol": "esm-import",
+      "payload": "import from './run.ts'",
+      "callSites": [
+        "supabase/functions/heal-account-deletions/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.heal-account-deletions->tbl.cron_job_status",
+      "from": "fn.heal-account-deletions",
+      "to": "tbl.cron_job_status",
+      "protocol": "postgrest-select",
+      "payload": ".from('cron_job_status').select('status, error_message')",
+      "columns": [
+        "status, error_message"
+      ],
+      "callSites": [
+        "supabase/functions/_shared/job-status-io.ts:149"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.heal-account-deletions->tbl.cron_job_status#update",
+      "from": "fn.heal-account-deletions",
+      "to": "tbl.cron_job_status",
+      "protocol": "postgrest-update",
+      "payload": ".from('cron_job_status').update()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/_shared/job-status-io.ts:198"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.heal-account-deletions->tbl.cron_job_status#upsert",
+      "from": "fn.heal-account-deletions",
+      "to": "tbl.cron_job_status",
+      "protocol": "postgrest-upsert",
+      "payload": ".from('cron_job_status').upsert()",
+      "columns": [],
+      "callSites": [
+        "supabase/functions/_shared/job-status-io.ts:99"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.historical-bars->ext.alpaca-data",
       "from": "fn.historical-bars",
       "to": "ext.alpaca-data",
@@ -11194,14 +11435,40 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.fn.join-league->mod.join-league/takeover",
+      "from": "fn.join-league",
+      "to": "mod.join-league/takeover",
+      "protocol": "esm-import",
+      "payload": "import from './takeover.ts'",
+      "callSites": [
+        "supabase/functions/join-league/index.ts"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.fn.join-league->pg.check_and_bump_rate_limit",
       "from": "fn.join-league",
       "to": "pg.check_and_bump_rate_limit",
       "protocol": "postgrest-rpc",
       "payload": "rpc('check_and_bump_rate_limit')",
       "callSites": [
-        "supabase/functions/join-league/index.ts:31",
-        "supabase/functions/join-league/index.ts:34"
+        "supabase/functions/join-league/index.ts:46",
+        "supabase/functions/join-league/index.ts:49",
+        "supabase/functions/join-league/index.ts:73",
+        "supabase/functions/join-league/index.ts:74"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.join-league->pg.deleted_manager_label",
+      "from": "fn.join-league",
+      "to": "pg.deleted_manager_label",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('deleted_manager_label')",
+      "callSites": [
+        "supabase/functions/join-league/index.ts:169"
       ]
     },
     {
@@ -11213,7 +11480,31 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('join_league_by_code')",
       "callSites": [
-        "supabase/functions/join-league/index.ts:76"
+        "supabase/functions/join-league/index.ts:195"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.join-league->pg.take_over_team",
+      "from": "fn.join-league",
+      "to": "pg.take_over_team",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('take_over_team')",
+      "callSites": [
+        "supabase/functions/join-league/index.ts:150"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.fn.join-league->pg.takeover_preview",
+      "from": "fn.join-league",
+      "to": "pg.takeover_preview",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('takeover_preview')",
+      "callSites": [
+        "supabase/functions/join-league/index.ts:129"
       ]
     },
     {
@@ -11340,7 +11631,7 @@
         "*"
       ],
       "callSites": [
-        "supabase/functions/preview-league/index.ts:80"
+        "supabase/functions/preview-league/index.ts:84"
       ]
     },
     {
@@ -11357,7 +11648,7 @@
       ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:100",
-        "supabase/functions/preview-league/index.ts:96"
+        "supabase/functions/preview-league/index.ts:104"
       ]
     },
     {
@@ -11373,7 +11664,7 @@
       ],
       "callSites": [
         "supabase/functions/preview-league/index.ts:77",
-        "supabase/functions/preview-league/index.ts:83"
+        "supabase/functions/preview-league/index.ts:87"
       ]
     },
     {
@@ -21087,7 +21378,7 @@
           "edge": "e.fn.join-league->pg.check_and_bump_rate_limit",
           "detail": "Same two buckets on the mutating path.",
           "files": [
-            "supabase/functions/join-league/index.ts:31"
+            "supabase/functions/join-league/index.ts:46"
           ]
         },
         {
@@ -21095,7 +21386,7 @@
           "edge": "e.fn.join-league->pg.join_league_by_code",
           "detail": "Atomic membership insert + invite accept. p_user_id comes from the verified JWT, never the request body. EXECUTE is service_role only, so the client cannot reach this directly.",
           "files": [
-            "supabase/functions/join-league/index.ts:76"
+            "supabase/functions/join-league/index.ts:195"
           ]
         },
         {
@@ -21988,6 +22279,31 @@
   ],
   "deadCode": [
     {
+      "node": "fn.delete-account",
+      "label": "delete-account",
+      "kind": "edge-function",
+      "source": "supabase/functions/delete-account/index.ts:101",
+      "outbound": [
+        "mod.delete-account/run",
+        "pg.check_and_bump_rate_limit",
+        "tbl.rate_limit_counters"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
+      "node": "fn.heal-account-deletions",
+      "label": "heal-account-deletions",
+      "kind": "edge-function",
+      "source": "supabase/functions/heal-account-deletions/index.ts:39",
+      "outbound": [
+        "mod.heal-account-deletions/run",
+        "tbl.cron_job_status",
+        "tbl.cron_job_status",
+        "tbl.cron_job_status"
+      ],
+      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
+    },
+    {
       "node": "fn.send-notification",
       "label": "send-notification",
       "kind": "edge-function",
@@ -22319,18 +22635,10 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "pg.deleted_manager_label",
-      "label": "deleted_manager_label()",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261125000001_deleted_seat_and_label.sql:72",
-      "outbound": [],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg.draft_auto_start_work_due",
       "label": "draft_auto_start_work_due()",
       "kind": "pg-function",
-      "source": "supabase/migrations/20261111000000_draft_auto_start.sql:381",
+      "source": "supabase/migrations/20261125000011_deleted_seat_sweep_guard.sql:49",
       "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -22593,46 +22901,10 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "pg.take_over_team",
-      "label": "take_over_team(p_code text, p_user_id uuid)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261125000006_take_over_team.sql:458",
-      "outbound": [
-        "tbl.drafts",
-        "tbl.drafts",
-        "tbl.league_draft_order",
-        "tbl.league_draft_order",
-        "tbl.league_invites",
-        "tbl.league_members",
-        "tbl.league_members",
-        "tbl.league_notifications",
-        "tbl.league_seasons",
-        "tbl.league_seasons",
-        "tbl.league_standings",
-        "tbl.league_standings",
-        "tbl.leagues",
-        "tbl.matchups",
-        "tbl.matchups",
-        "tbl.trades",
-        "tbl.trades",
-        "tbl.week_snapshots",
-        "tbl.week_snapshots"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "pg.takeover_guess_try_lock",
       "label": "takeover_guess_try_lock()",
       "kind": "pg-function",
       "source": "supabase/migrations/20261125000006_take_over_team.sql:300",
-      "outbound": [],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.takeover_preview",
-      "label": "takeover_preview(p_code text, p_user_id uuid)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261125000006_take_over_team.sql:424",
       "outbound": [],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
@@ -22752,6 +23024,14 @@
   "callSiteScan": {
     "covers": "Direct supabase calls with a literal name (.rpc / .functions.invoke / .from), plus calls through wrapper functions found from their DEFINITIONS (a function that forwards a parameter as the call name; a SEAM_ON stub that makes real calls; a callback wrapper whose closure makes them). Comments are ignored.",
     "wrappers": [
+      {
+        "surface": "edge-function",
+        "name": "call",
+        "file": "supabase/functions/_shared/account-deletion-db.ts",
+        "line": 68,
+        "kind": "forwarder:rpc",
+        "detail": "argument 0 is the RPC name"
+      },
       {
         "surface": "client",
         "name": "callRecordTrade",
@@ -22923,23 +23203,25 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 299,
-    "edges": 739,
+    "nodes": 304,
+    "edges": 750,
     "flows": 7,
     "drift": 33,
     "driftHigh": 0,
-    "deadCode": 67,
+    "deadCode": 66,
     "unverified": 11
   },
   "sourceIndex": {
     "edgeFunctions": [
+      "delete-account[run.ts]",
       "draft-autopick-sweep[]",
       "draft-control[rules.ts]",
       "draft-order-notify[plan.ts]",
       "enrich-symbols[price-batch.ts]",
+      "heal-account-deletions[run.ts]",
       "historical-bars[paginate.ts]",
       "invite-preview[lookup.ts,respond.ts]",
-      "join-league[]",
+      "join-league[takeover.ts]",
       "leave-league[logic.ts]",
       "preview-league[inviter.ts,reason.ts,shape.ts]",
       "process-week-results[grouping.ts,job-status.ts,playoff-progression.ts,scoring-eligibility.ts,season-completion.ts,season-transition.ts,user-score.ts]",
@@ -23035,6 +23317,16 @@
       "apps/web/src/pages/Leaderboard.jsx:178 -> league_standings_ranked",
       "apps/web/src/pages/Leaderboard.jsx:345 -> league_standings_ranked",
       "apps/web/src/pages/LeagueDetail.jsx:61 -> league_standings_ranked",
+      "supabase/functions/_shared/account-deletion-db.ts:103 -> account_deletion_apple_unrevoked (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:107 -> scrub_deleted_manager (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:115 -> account_deletion_mark_done (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:125 -> account_deletion_fail (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:136 -> heal_account_deletions (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:74 -> account_deletion_open (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:84 -> account_deletion_stash_apple_token (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:92 -> account_deletion_apple_token (via call)",
+      "supabase/functions/_shared/account-deletion-db.ts:98 -> account_deletion_apple_revoked (via call)",
+      "supabase/functions/_shared/deleted-seat.ts:80 -> unclocked_deleted_seat_turns",
       "supabase/functions/_shared/draft-start.ts:248 -> postpone_league_draft",
       "supabase/functions/_shared/draft-start.ts:334 -> start_league_draft",
       "supabase/functions/_shared/draft-start.ts:427 -> record_draft_watch",
@@ -23045,9 +23337,12 @@
       "supabase/functions/_shared/draft-write.ts:772 -> auto_pick_search_candidates",
       "supabase/functions/_shared/draft-write.ts:815 -> record_live_prices",
       "supabase/functions/_shared/market-guard.ts:48 -> check_and_bump_rate_limit",
-      "supabase/functions/draft-autopick-sweep/index.ts:107 -> due_draft_starts",
-      "supabase/functions/draft-autopick-sweep/index.ts:125 -> draft_watch_due",
-      "supabase/functions/draft-autopick-sweep/index.ts:148 -> overdue_draft_turns",
+      "supabase/functions/delete-account/index.ts:47 -> check_and_bump_rate_limit",
+      "supabase/functions/delete-account/index.ts:50 -> check_and_bump_rate_limit",
+      "supabase/functions/delete-account/index.ts:89 -> check_and_bump_rate_limit",
+      "supabase/functions/draft-autopick-sweep/index.ts:117 -> due_draft_starts",
+      "supabase/functions/draft-autopick-sweep/index.ts:135 -> draft_watch_due",
+      "supabase/functions/draft-autopick-sweep/index.ts:158 -> overdue_draft_turns",
       "supabase/functions/draft-control/index.ts:120 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:123 -> check_and_bump_rate_limit",
       "supabase/functions/draft-control/index.ts:330 -> confirm_league_roster",
@@ -23055,9 +23350,14 @@
       "supabase/functions/draft-order-notify/index.ts:74 -> open_due_draft_rooms",
       "supabase/functions/draft-order-notify/index.ts:78 -> finalize_due_draft_orders",
       "supabase/functions/invite-preview/index.ts:39 -> invite_preview_lookup",
-      "supabase/functions/join-league/index.ts:31 -> check_and_bump_rate_limit",
-      "supabase/functions/join-league/index.ts:34 -> check_and_bump_rate_limit",
-      "supabase/functions/join-league/index.ts:76 -> join_league_by_code",
+      "supabase/functions/join-league/index.ts:129 -> takeover_preview",
+      "supabase/functions/join-league/index.ts:150 -> take_over_team",
+      "supabase/functions/join-league/index.ts:169 -> deleted_manager_label",
+      "supabase/functions/join-league/index.ts:195 -> join_league_by_code",
+      "supabase/functions/join-league/index.ts:46 -> check_and_bump_rate_limit",
+      "supabase/functions/join-league/index.ts:49 -> check_and_bump_rate_limit",
+      "supabase/functions/join-league/index.ts:73 -> check_and_bump_rate_limit",
+      "supabase/functions/join-league/index.ts:74 -> check_and_bump_rate_limit",
       "supabase/functions/leave-league/index.ts:166 -> transfer_commissioner",
       "supabase/functions/leave-league/index.ts:171 -> leave_league",
       "supabase/functions/leave-league/index.ts:65 -> check_and_bump_rate_limit",
@@ -23199,12 +23499,14 @@
       "apps/web/src/pages/TradeHistory.jsx:35 -> league_members.select",
       "apps/web/src/pages/TradeHistory.jsx:50 -> leagues.select",
       "apps/web/src/pages/TradeHistory.jsx:86 -> trades.select",
+      "supabase/functions/_shared/account-deletion-db.ts:5 -> account_deletions.select",
       "supabase/functions/_shared/category-eligibility.ts:15 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:24 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:33 -> category_rules.select",
       "supabase/functions/_shared/category-eligibility.ts:58 -> symbol_category_overrides.select",
       "supabase/functions/_shared/category-eligibility.ts:70 -> symbols.select",
       "supabase/functions/_shared/category-eligibility.ts:84 -> category_rules.select",
+      "supabase/functions/_shared/deleted-seat.ts:44 -> league_members.select",
       "supabase/functions/_shared/draft-start.ts:197 -> leagues.select",
       "supabase/functions/_shared/draft-start.ts:201 -> league_members.select",
       "supabase/functions/_shared/draft-start.ts:204 -> league_roster_reconfirm.select",
@@ -23235,9 +23537,12 @@
       "supabase/functions/_shared/job-status-io.ts:149 -> cron_job_status.select",
       "supabase/functions/_shared/job-status-io.ts:198 -> cron_job_status.update",
       "supabase/functions/_shared/job-status-io.ts:99 -> cron_job_status.upsert",
+      "supabase/functions/_shared/notice-delivery.ts:46 -> league_notifications.update",
+      "supabase/functions/_shared/notice-delivery.ts:70 -> league_notifications.update",
       "supabase/functions/_shared/push.ts:49 -> user_profiles.select",
       "supabase/functions/_shared/push.ts:54 -> push_tokens.select",
       "supabase/functions/_shared/push.ts:60 -> user_profiles.select",
+      "supabase/functions/delete-account/index.ts:71 -> rate_limit_counters.select",
       "supabase/functions/draft-control/index.ts:172 -> leagues.select",
       "supabase/functions/draft-control/index.ts:180 -> league_members.select",
       "supabase/functions/draft-control/index.ts:191 -> league_roster_reconfirm.select",
@@ -23255,10 +23560,10 @@
       "supabase/functions/leave-league/index.ts:118 -> league_notifications.update",
       "supabase/functions/leave-league/index.ts:94 -> league_notifications.update",
       "supabase/functions/preview-league/index.ts:100 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:104 -> league_members.select",
       "supabase/functions/preview-league/index.ts:77 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:80 -> league_invites.select",
-      "supabase/functions/preview-league/index.ts:83 -> leagues.select",
-      "supabase/functions/preview-league/index.ts:96 -> league_members.select",
+      "supabase/functions/preview-league/index.ts:84 -> league_invites.select",
+      "supabase/functions/preview-league/index.ts:87 -> leagues.select",
       "supabase/functions/preview-league/inviter.ts:36 -> user_profiles.select",
       "supabase/functions/process-week-results/index.ts:1042 -> matchups.update",
       "supabase/functions/process-week-results/index.ts:1097 -> league_standings.select",
@@ -23328,6 +23633,7 @@
       "supabase/functions/validate-and-record-pick/index.ts:6 -> drafts.insert"
     ],
     "wrappers": [
+      "call forwarder:rpc supabase/functions/_shared/account-deletion-db.ts",
       "callRecordTrade seam-stub apps/mobile/lib/money/recordTrade.ts",
       "loadPortfolioLedger seam-stub apps/mobile/lib/money/usePortfolioLedger.ts",
       "loadSlots seam-stub apps/mobile/lib/game/useRosterData.ts",
@@ -23511,13 +23817,17 @@
       "20261125000006_take_over_team.sql",
       "20261125000007_heal_account_deletions.sql",
       "20261125000008_takeover_codes_not_join_codes.sql",
-      "20261125000009_unclocked_deleted_seat_turns.sql"
+      "20261125000009_unclocked_deleted_seat_turns.sql",
+      "20261125000010_schedule_heal_account_deletions.sql",
+      "20261125000011_deleted_seat_sweep_guard.sql"
     ],
     "config": [
+      "delete-account=true",
       "draft-autopick-sweep=false",
       "draft-control=true",
       "draft-order-notify=false",
       "enrich-symbols=false",
+      "heal-account-deletions=false",
       "historical-bars=true",
       "invite-preview=false",
       "join-league=true",

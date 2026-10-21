@@ -37,6 +37,13 @@
 // writes nothing. Chained timeouts cannot burst: each recorded pick is the
 // next turn's clock anchor, so the next turn is simply not overdue yet.
 //
+// DELETED SEATS (account deletion, 2026-10-21): in an UNCLOCKED draft a deleted seat would
+// stall the draft forever (auto-pick never fires without a clock). A third pass takes every
+// turn public.unclocked_deleted_seat_turns() lists (an unclocked live draft with a deleted
+// seat somewhere) and, only when the CURRENT turn's picker is that deleted seat, runs the
+// same gate + autoPickTurn (../_shared/deleted-seat.ts). Giorgio's rule: a player always
+// gets a pick. A live manager's seat in an unclocked draft is never auto-picked.
+//
 // SUCCESS-SIGNAL DISCIPLINE (CLAUDE.md): the response's top-level `ok` means
 // ONLY "the sweep ran to completion". Per-league outcomes are in `results`
 // and `errors`; nothing here claims every overdue turn was picked. The cron's
@@ -51,6 +58,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { isAuthorized } from '../_shared/cron-auth.ts';
 import { decideAutoPickGate } from '../_shared/auto-pick.ts';
+import { decideDeletedSeatPick, listUnclockedDeletedSeatTurns, seatReader, selectSeatTurns } from '../_shared/deleted-seat.ts';
 import { autoPickTurn, fetchDraftClock, finalizeDraft, isDraftFull, loadDraftContext } from '../_shared/draft-write.ts';
 import { startDraftIfDue, watchLeague } from '../_shared/draft-start.ts';
 
@@ -64,6 +72,8 @@ const CONCURRENCY = 4;
 // Starts and watches first, but capped, so a burst of drafts all set for noon
 // cannot starve overdue turns; the rest go on the next tick (10 s later).
 const MAX_STARTS_PER_RUN = 10;
+// Deleted-seat leagues per run (the cron re-fires every tick, so the rest wait ten seconds).
+const MAX_DELETED_SEAT_PER_RUN = 10;
 const MAX_WATCHES_PER_RUN = 10;
 
 interface StartResult {
@@ -155,7 +165,15 @@ Deno.serve(async (req: Request) => {
   const results: LeagueOutcome[] = [];
   const errors: LeagueOutcome[] = [];
 
-  async function sweepOne(row: { league_id: string; pick_number: number }) {
+  // DELETED-SEAT PASS input. A failure to list is reported and never blocks the overdue
+  // pass (live clocked drafts keep moving); it is never read as "no deleted seats".
+  const seatList = await listUnclockedDeletedSeatTurns(admin);
+  if (seatList.error) startErrors.push({ league_id: '', outcome: 'deleted_seat_list_failed' });
+  const overdueIds = new Set(rows.map((r) => String(r.league_id)));
+  const seatRows = selectSeatTurns(seatList.turns, overdueIds, MAX_DELETED_SEAT_PER_RUN)
+    .map((t) => ({ league_id: t.leagueId, pick_number: t.pickNumber, viaDeletedSeat: true }));
+
+  async function sweepOne(row: { league_id: string; pick_number: number; viaDeletedSeat?: boolean }) {
     const base = { league_id: String(row.league_id), pick_number: Number(row.pick_number) };
     try {
       const loaded = await loadDraftContext(admin, base.league_id);
@@ -164,6 +182,10 @@ Deno.serve(async (req: Request) => {
       if (ctx.league.draft_status !== 'in_progress') return results.push({ ...base, outcome: 'not_in_progress' });
 
       if (isDraftFull(ctx)) {
+        // The deleted-seat pass is only about PICKING for a deleted seat. A draft with every pick made has
+        // no picker (W2: its listed pick_number is one past the last pick), so there is nothing to do here;
+        // finalizing is the overdue pass's job and is not widened to unclocked drafts by this pass.
+        if (row.viaDeletedSeat) return results.push({ ...base, outcome: 'no_turn' });
         const finalizeError = await finalizeDraft(admin, ctx.league, ctx.order);
         return finalizeError === null
           ? results.push({ ...base, outcome: 'finalize_healed' })
@@ -172,8 +194,20 @@ Deno.serve(async (req: Request) => {
 
       const clock = await fetchDraftClock(admin, base.league_id);
       if (!clock) return errors.push({ ...base, outcome: 'clock_read_failed' });
-      const gate = decideAutoPickGate(clock.picksMade + 1, clock);
-      if (gate.kind !== 'go') return results.push({ ...base, outcome: gate.kind });
+      if (row.viaDeletedSeat) {
+        // The list only says "a deleted seat is somewhere in this unclocked draft". Whether it
+        // is THIS turn's picker, and whether the gate then agrees, is decided here, in JS.
+        // Act only on what the list asserted: if the draft moved on since (a pick landed), this row
+        // is stale and the NEXT tick's list names the new turn.
+        if (base.pick_number !== ctx.picks.length + 1) return results.push({ ...base, outcome: 'stale_pick_number' });
+        const d = await decideDeletedSeatPick(ctx, clock, seatReader(admin, base.league_id));
+        if (d.kind !== 'go') {
+          return (d.why === 'seat_read_failed' ? errors : results).push({ ...base, outcome: d.why });
+        }
+      } else {
+        const gate = decideAutoPickGate(clock.picksMade + 1, clock);
+        if (gate.kind !== 'go') return results.push({ ...base, outcome: gate.kind });
+      }
 
       const res = await autoPickTurn(
         admin,
@@ -196,8 +230,9 @@ Deno.serve(async (req: Request) => {
 
   // Bounded parallelism: leagues are independent; one slow Alpaca chain must
   // not serialize every other overdue draft behind it.
-  for (let i = 0; i < rows.length; i += CONCURRENCY) {
-    await Promise.all(rows.slice(i, i + CONCURRENCY).map(sweepOne));
+  const work = [...rows, ...seatRows];
+  for (let i = 0; i < work.length; i += CONCURRENCY) {
+    await Promise.all(work.slice(i, i + CONCURRENCY).map(sweepOne));
   }
 
   if (errors.length > 0) console.error('sweep errors', JSON.stringify(errors));
@@ -205,6 +240,7 @@ Deno.serve(async (req: Request) => {
   return json({
     ok: true, // the sweep RAN — not a claim that every overdue turn was picked or every due draft started
     examined: rows.length,
+    deleted_seat_total: seatList.turns.length, // unclocked live drafts with a deleted seat (per-league outcomes are in results/errors)
     overdue_total: (overdue ?? []).length,
     results,
     errors,
