@@ -18,7 +18,8 @@ import { pendingTakeover } from '../invite/pendingTakeoverStore';
 const DELETED_SEAT = SEAM_ON && process.env.EXPO_PUBLIC_DELETED_SEAT === '1';
 const TAKEOVER_FIXTURE = SEAM_ON ? parseTakeoverFixture(process.env.EXPO_PUBLIC_TAKEOVER_FIXTURE) : null;
 // The knob raises the REAL pending-takeover store once per launch; the root layout then opens the real landing.
-if (TAKEOVER_FIXTURE) pendingTakeover.capture(FIXTURE_TAKEOVER_CODE);
+// The shared https link previews by itself; only 'tap' captures the SCHEME origin (a link that waits for the person's tap).
+if (TAKEOVER_FIXTURE) pendingTakeover.capture(FIXTURE_TAKEOVER_CODE, TAKEOVER_FIXTURE === 'tap' ? 'scheme' : 'https');
 
 /** EXPO_PUBLIC_DRAFT_ROOM_FIXTURE: how far the board's draft has gone (seamRoom.ts).
  * 'turn_arrives' moves on once, when the room's auto-pick backstop reaches the seam. */

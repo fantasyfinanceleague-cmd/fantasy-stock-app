@@ -4,7 +4,7 @@
 //   EXPO_PUBLIC_DELETED_SEAT=1     Gianluigi's display name comes back as the label the SERVER sends for a deleted seat
 //                                  (every fixture answer, so the real components draw the seat: Avatar's isDeletedSeatName,
 //                                  useSeatInk). It replaces a value in the data; it never fakes the render.
-//   EXPO_PUBLIC_TAKEOVER_FIXTURE   found | taken | dead | unknown: join-league's takeover_preview / takeover answers.
+//   EXPO_PUBLIC_TAKEOVER_FIXTURE   found | tap (a scheme-origin link: waits for a tap) | taken | dead | unknown: join-league's takeover_preview / takeover answers.
 //   create_takeover_invite         answers {code} so "Find a new manager" opens the real share sheet.
 
 import { FORMER_MANAGER_FALLBACK } from '../account/deletedSeat';
@@ -28,7 +28,7 @@ export function seatify<T>(value: T, on: boolean, label: string = FORMER_MANAGER
   return walk(value) as T;
 }
 
-export const TAKEOVER_FIXTURES = ['found', 'taken', 'dead', 'unknown', 'member', 'rate_limited_moment', 'rate_limited_later'] as const;
+export const TAKEOVER_FIXTURES = ['found', 'tap', 'taken', 'dead', 'unknown', 'member', 'rate_limited_moment', 'rate_limited_later'] as const;
 export type TakeoverFixture = (typeof TAKEOVER_FIXTURES)[number];
 
 export function parseTakeoverFixture(raw: string | null | undefined): TakeoverFixture | null {
@@ -39,6 +39,7 @@ export function parseTakeoverFixture(raw: string | null | undefined): TakeoverFi
 export function takeoverFixtureFor(body: Record<string, unknown>, fixture: TakeoverFixture | null): { data: unknown; error: unknown } | null {
   if (!fixture || (body.action !== 'takeover_preview' && body.action !== 'takeover')) return null;
   switch (fixture) {
+    case 'tap': // the SAME answer as found; the knob only differs by capturing the link with the SCHEME origin (waits for a tap)
     case 'found':
       return body.action === 'takeover_preview'
         ? { data: { ok: true, league_name: 'Stock Scudetto', wins: 1, losses: 5, rank: 6 }, error: null }
