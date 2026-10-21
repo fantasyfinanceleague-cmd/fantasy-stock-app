@@ -253,7 +253,10 @@ building anything, and don't reopen a rule without him.
   **After someone leaves** (2026-10-11, "A with frozen names", board `#call-leaver-names`):
   they stay named, with name and avatar, in the seasons they played with you (history is
   kept), frozen as they were when they left, so nothing about them after they leave
-  reaches you. No "Former manager" label.
+  reaches you. No "Former manager" label. **One exception, a deleted account** (2026-10-21):
+  deletion scrubs the name and avatar too, so a deleted manager's seat shows a placeholder
+  label instead ("we stick with the plan and change the product rules. we need to comply
+  with the apple rules."). See **Account deletion** under League lifecycle.
 - **No added caveats:** implement Giorgio's rules as stated. Don't add exceptions he didn't ask for.
 - **Product name:** "Stockpile" must go (a live trademark), with Stockade the front-runner,
   but naming is DEFERRED to pre-launch. Keep the bundle id, slug and scheme.
@@ -544,6 +547,35 @@ building anything, and don't reopen a rule without him.
   test account only; they are never a product feature, and no rule about players is ever
   written around them. (Code: `MIN_DRAFT_MEMBERS = 4` in
   `supabase/functions/draft-control/rules.ts`; the draft order also waits for 4.)
+- **Account deletion** (2026-10-21; plan `docs/plans/2026-10-21-account-deletion.md`). Giorgio
+  asked to "plan out the flow" after the Orchestrator flagged App Store guideline 5.1.1(v),
+  and to "research how espn fantasy football, yahoo fantasy football, and sleeper handle if
+  someone deletes their account mid season" (all three: the team outlives the account; the
+  commissioner reassigns it). His rulings, verbatim:
+  - The mid-season team: "A plus C in this plan but we delete the account asap, not the 30
+    day window like sleeper". So: the seat stays in every league that has drafted this
+    season and keeps playing on what it holds (A); the commissioner can hand it to a new
+    manager (C); the account itself is gone when the request returns, with no grace period.
+  - The leaver rule's "No 'Former manager' label": "we stick with the plan and change the
+    product rules. we need to comply with the apple rules." A deleted manager's name and
+    avatar are scrubbed; the seat shows a placeholder label (wording = board call).
+  - A takeover: "keep the teams record just the owner is gone". The new manager inherits
+    the seat whole: roster, cash, record, waiver position, past weeks under their name.
+  - A commissioner who deletes: "lets just make the first person to join the league (besides
+    the commissioner) to auto become the commissioner". No picker, no refusal, in any
+    window; a league with nobody else in it is deleted with the account.
+  - The flow: "we also need to decide where the account deletion button and process lives.
+    and i want to add a 'are you sure, this cant be reversed' kinda thing to ensure the user
+    isnt misclicking or is sure of their action". So: after the destructive button a final
+    "Are you sure? This can't be undone." alert, safe default "Keep my account".
+  - The location, from the A/B mockup: "last row in profile works but we shouldnt have it be
+    highlighted, that draws attention to it. the flow is also good". So: the last Profile
+    row, below Sign out, a plain row with danger text only, no tint or highlight.
+  Planner rulings under standing rules (Giorgio may veto): confirming = re-authenticate
+  (password / Apple / Google), the destructive button, then the are-you-sure alert; before the draft deletion acts like leaving; during a live draft the seat
+  auto-picks and takeover opens once the draft is complete; after deletion the sign-in
+  screen says once "Your account is deleted."; the same email may sign up again as a new
+  account with no history.
 - **Playoffs:** the commissioner sets any playoff team count P from 2 up to the number of
   managers (never more). The bracket is derived (weeks = ceil(log2 P); byes to the top
   seeds). Rounds are named by teams left: Final / Semifinals / Quarterfinals / Round of
