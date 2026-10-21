@@ -27,6 +27,9 @@ Each one is also in `docs/PRODUCT_RULES.md` under **Account deletion**.
 - 2026-10-21, on the team after a takeover: "keep the teams record just the owner is gone".
 - 2026-10-21, on a commissioner who deletes: "lets just make the first person to join the
   league (besides the commissioner) to auto become the commissioner".
+- 2026-10-21, on the flow: "we also need to decide where the account deletion button and
+  process lives. and i want to add a 'are you sure, this cant be reversed' kinda thing to
+  ensure the user isnt misclicking or is sure of their action".
 
 Research the rulings rest on (2026-10-21): Sleeper's help centre says deleting your account
 does not remove you from your leagues ("your teams stay in place because they affect other
@@ -40,7 +43,7 @@ outlives the account.
 
 | # | Question | Decision | Who / date |
 |---|---|---|---|
-| 1 | Where it lives | Profile, last row, below Sign out, destructive style: "Delete account". Reached from the avatar on any tab, like the rest of Profile. | Planner rec 2026-10-21, standing |
+| 1 | Where it lives | **Open (Giorgio picks):** A = last row in Profile, below Sign out, destructive style (Planner rec) · B = inside a new Profile › Account page with Email and Change password. Mockup shown 2026-10-21. | Giorgio, pending |
 | 2 | The mid-season team | **A + C.** The seat stays in every league whose draft has started this season, keeps playing on what it holds (no trades, no claims), and the commissioner can hand it to a new manager. | Giorgio 2026-10-21 |
 | 3 | Timing | **Immediate.** The auth account, profile, push tokens and every private row are gone when the request returns. No grace period, no restore. | Giorgio 2026-10-21 |
 | 4 | The name on the seat | The leaver rule (frozen name and avatar, no label) gets its one exception: a *deleted* manager's name and avatar are scrubbed everywhere and the seat shows a placeholder label with the default avatar. Label wording = board call (§Open questions). | Giorgio 2026-10-21 ("change the product rules") |
@@ -49,7 +52,7 @@ outlives the account.
 | 7 | Before the draft | Same as leaving: the member row goes, the roster reconfirmation fires for the commissioner (`leave_league`'s pre-draft branch), the league stays joinable. | Planner, standing (leave rules) |
 | 8 | During a live draft | The seat stays and auto-picks for the rest of the draft, exactly as a manager who closed the app ("Out of time? We pick for you"). Takeover opens once the draft is complete. | Planner, standing (draft liveness rules) |
 | 9 | After the season | The seat stays in history under the placeholder; nothing to take over. | Planner, standing (history is kept) |
-| 10 | Confirming | Re-authenticate, then one destructive button. Email: password. Apple: Sign in with Apple again (this also yields the authorization code the Apple revoke needs). Google: Google sign-in again. The server checks the proof's subject is the caller. | Planner, security rule |
+| 10 | Confirming | Re-authenticate, then the destructive button, then a final **"Are you sure?"** alert ("This can't be undone.") with "Keep my account" as the safe default and "Delete" as the destructive action; nothing is sent to the server until that alert is answered. Email: password. Apple: Sign in with Apple again (this also yields the authorization code the Apple revoke needs). Google: Google sign-in again. The server checks the proof's subject is the caller. | Giorgio 2026-10-21 (the are-you-sure step); Planner (re-auth) |
 | 11 | After deletion | Every device is signed out (sessions die with the auth row). The sign-in screen shows once: "Your account is deleted." (UX rules 8/9: say what happened, where the person lands.) | Planner |
 | 12 | Signing up again | The same email can sign up again at once; it is a new account with no history (subject to the signup gate). | Planner |
 | 13 | How a takeover is offered | The commissioner sees "Find a new manager" on the placeholder seat (League › Members and the standings row). It shares a takeover link of the same https universal-link shape as an invite. The first signed-in person to open it who is not in the league takes the seat. | Planner rec; screen = board call |
@@ -60,6 +63,7 @@ outlives the account.
 
 Board calls for Giorgio (the Design Lead draws them; none block the backend):
 
+0. **Where it lives**, A or B above (decision 1).
 1. **The placeholder label.** A: "Former manager" (already drawn as the unchosen option B
    on the inventory board) · B: "Open team". Planner recommends A: after the season there is
    nothing open about it, and "Former manager" reads the same in standings, matchups and
@@ -105,12 +109,18 @@ in the function's comments).
    - Re-auth block, by how they signed in: a password field ("Enter your password to
      continue"), or the Apple button, or the Google button. The button below stays disabled
      until the proof is in hand.
-   - Button: "Delete my account" (destructive). No typed confirmation; the re-auth is the
-     deliberate step (decision 10).
-3. **While it runs:** the button shows a spinner and nothing is tappable. On a failure the
+   - Button: "Delete my account" (destructive). No typed confirmation; the re-auth plus the
+     final alert are the deliberate steps (decision 10).
+3. **Are you sure?** A native alert (Giorgio: "to ensure the user isnt misclicking or is
+   sure of their action"): title "Are you sure?", body "This can't be undone. Your account
+   and sign-in are deleted for good.", buttons "Keep my account" (default, cancel style)
+   and "Delete" (destructive). The request is sent only on "Delete". For Apple sign-ins the
+   alert comes AFTER the Apple sheet, so the authorization code is in hand and is used
+   within seconds; a cancel discards it.
+4. **While it runs:** the button shows a spinner and nothing is tappable. On a failure the
    screen stays with a plain line ("Couldn't delete your account. Try again.") and the same
    button; the server is idempotent, so a retry is safe (§System, ledger).
-4. **Done:** the app clears its session and lands on the sign-in screen with the one-time
+5. **Done:** the app clears its session and lands on the sign-in screen with the one-time
    line "Your account is deleted." Every other device is signed out on its next refresh.
 
 ### The commissioner's side (C)
@@ -274,8 +284,9 @@ succession mid-season; and `auth.admin.deleteUser` needs the secret key. Same re
 
 ## Done means
 
-- Profile shows "Delete account" below Sign out; the flow runs through re-auth to the
-  sign-in screen with "Your account is deleted." once.
+- "Delete account" sits where Giorgio picked (decision 1); the flow runs re-auth → "Are you
+  sure?" → the sign-in screen with "Your account is deleted." once. "Keep my account" on the
+  alert sends nothing (verified by the function's request log staying empty).
 - After deleting a test account: no `auth.users`, `user_profiles` or `push_tokens` row;
   `league_members.deleted_at` set and `frozen_*` NULL in each started league; the seat
   reads the placeholder in standings, matchups, history, Home and the web lookup; trade

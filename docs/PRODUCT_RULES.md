@@ -564,9 +564,13 @@ building anything, and don't reopen a rule without him.
   - A commissioner who deletes: "lets just make the first person to join the league (besides
     the commissioner) to auto become the commissioner". No picker, no refusal, in any
     window; a league with nobody else in it is deleted with the account.
-  Planner rulings under standing rules (Giorgio may veto): the entry lives in Profile below
-  Sign out; confirming = re-authenticate (password / Apple / Google) then one destructive
-  button; before the draft deletion acts like leaving; during a live draft the seat
+  - The flow: "we also need to decide where the account deletion button and process lives.
+    and i want to add a 'are you sure, this cant be reversed' kinda thing to ensure the user
+    isnt misclicking or is sure of their action". So: after the destructive button a final
+    "Are you sure? This can't be undone." alert, safe default "Keep my account"; the
+    location (Profile last row vs a Profile › Account page) is his pick, pending.
+  Planner rulings under standing rules (Giorgio may veto): confirming = re-authenticate
+  (password / Apple / Google), the destructive button, then the are-you-sure alert; before the draft deletion acts like leaving; during a live draft the seat
   auto-picks and takeover opens once the draft is complete; after deletion the sign-in
   screen says once "Your account is deleted."; the same email may sign up again as a new
   account with no history.
