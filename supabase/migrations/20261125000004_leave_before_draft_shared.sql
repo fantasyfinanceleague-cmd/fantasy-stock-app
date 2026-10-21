@@ -69,8 +69,8 @@ begin
      or v_l.commissioner_id = p_user_id
      or not exists (select 1 from public.league_members
                      where league_id = p_league_id and user_id = p_user_id) then
-    raise exception '_leave_league_before_draft: precondition failed for league %', p_league_id
-      using errcode = 'P0001';
+    -- No id in the message (it can reach the deletion ledger's last_error).
+    raise exception '_leave_league_before_draft: precondition failed' using errcode = 'P0001';
   end if;
 
   -- ---- Run it back (dynamic: #94 may not be on this database) ---------------
