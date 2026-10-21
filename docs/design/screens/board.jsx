@@ -383,6 +383,9 @@
   // ── The Archive: every decided call, newest first, stamped. A call moves here the moment
   // its decision is recorded in PRODUCT_RULES. `render` resolves to the section's component. ──
   const ARCHIVE = [
+    { id: 'call-del-label', title: 'A deleted manager\'s seat label', decision: 'A, "Former manager", with the default avatar (never initials), in the secondary text colour, everywhere a name would be.', date: '2026-10-21', rec: 'PRODUCT_RULES (Account deletion)', render: () => window.KSDelLabelArchived },
+    { id: 'call-del-screen', title: 'How the delete screen explains what happens', decision: 'B: "This deletes your account right away." then one line per league (including the one before its draft); the new strings "Use as written".', date: '2026-10-21', rec: 'PRODUCT_RULES (Account deletion)', render: () => window.KSDelScreenArchived },
+    { id: 'call-del-find', title: 'Where "Find a new manager" sits', decision: 'B: a pill on the seat\'s Members row; the standings row stays uniform and opens the seat\'s team view, where it is the commissioner\'s button.', date: '2026-10-21', rec: 'PRODUCT_RULES (Account deletion)', render: () => window.KSDelFindArchived },
     { id: 'call-ob-arrival', title: 'The invite arrival before sign-in', decision: 'B with C1: before sign-in, only "{inviter} invited you to {league}" and the three sign-ins (the no-sign-in preview returns only the name, the inviter and the refusal reason); the facts (Managers, Stakes, Season; the web adds Draft) move to "You\'re in {league}". A dead link shows only the panel and "Sign in".', date: '2026-10-14', rec: 'PRODUCT_RULES (Onboarding)', render: () => window.KSObArrivalArchived },
     { id: 'call-ob-cards', title: 'The three onboarding cards\' scenes', decision: 'B: the real screens (the draft squares, the Matchup scoreboard with the lead changing, FINAL with the real scoreboard). The titles stay as approved on 2026-09-29.', date: '2026-10-14', rec: 'PRODUCT_RULES (Onboarding)', render: () => window.KSObCardsArchived },
     { id: 'call-ob-username', title: 'The suggested username\'s style', decision: 'None of the three drawn: an Xbox-style gamertag, an adjective or word + an animal + digits ("HelpfulHornet151"), never a first name or anything from Apple, Google or the email. "You can change it later in Profile." approved.', date: '2026-10-14', rec: 'PRODUCT_RULES (Onboarding)', render: () => window.KSObUsernameArchived },
@@ -488,6 +491,7 @@
         </header>
 
         {window.KSDirections ? <window.KSDirections /> : null}
+        {window.KSAccountDeletion ? <window.KSAccountDeletion /> : null}
         {window.KSOnboarding ? <window.KSOnboarding /> : null}
 
         <header className="b-part" id="approved">
