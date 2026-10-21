@@ -573,7 +573,9 @@ building anything, and don't reopen a rule without him.
     row, below Sign out, a plain row with danger text only, no tint or highlight.
   Planner rulings under standing rules (Giorgio may veto): confirming = re-authenticate
   (password / Apple / Google), the destructive button, then the are-you-sure alert; before the draft deletion acts like leaving; during a live draft the seat
-  auto-picks and takeover opens once the draft is complete; after deletion the sign-in
+  auto-picks (in an unclocked draft too, as soon as it is the seat's turn: "there can never
+  be an instance where a player doesn't get a pick"; Orchestrator ruling 2026-10-21) and
+  takeover opens once the draft is complete; after deletion the sign-in
   screen says once "Your account is deleted."; the same email may sign up again as a new
   account with no history.
   **Giorgio's board picks (2026-10-21, `#call-del-label`, `#call-del-screen`, `#call-del-find`):**
