@@ -60,14 +60,16 @@ Replaced stills are in `superseded-run2/` (inside the stills directory).
 
 | Frames | What was re-shot |
 |---|---|
-| F24 | all 8 (L and XXXL, both themes, both phones), keyboard up. 7 of 8 are from the second pass; `17e-xxxl-light` is from the first pass (the second pass caught it before the scroll landed). The first-pass versions of the other 7 are `superseded-run2/runA-F24-*` |
+| F24 | all 8 (L and XXXL, both themes, both phones), keyboard up; re-shot again on `b5924d44`, see below |
 | F25, F26, F27 | all 8 each (the field is empty now; L too) |
 | F06, F07, F08, F09, F10, F11, F13, F14 | XXXL only (4 stills each), with `SHELL_SCROLL_END=1`: the foot of the page (proof, line, button) |
 
-**F24 verdict.** The refusal line and the dimmed button sit fully above the keyboard when the scroll lands, on both phones
-at L and XXXL (17e at L has the line and the button clear of the keyboard with room to spare). The scroll is racy: it
-did not land in 5 of the 16 shots across two passes (17e L dark, 17e XXXL dark, 17 Pro L dark and light in the first
-pass; 17e XXXL light in the second). Under load the page stays at the field with the line hidden under the keyboard.
+**F24 final (HEAD `b5924d44`, "a refused password scrolls on the keyboard's own events").** F24 was re-shot a third time,
+2 stills per combination ~2 s apart after the screen settled (the second of each pair differs only in the caret's blink;
+the first is kept). All 8 combinations (17e and 17 Pro, L and XXXL, dark and light) show the refusal line "That password
+isn't right. Try again." AND the dimmed "Delete my account" fully above the keyboard, with the empty red-rimmed field
+above them. The earlier passes (hidden in 5 of 16 shots with the single-timer scroll) are in `superseded-run2/`
+(`runA-F24-*`, `runB-F24-*`).
 
 ## Known notes
 
