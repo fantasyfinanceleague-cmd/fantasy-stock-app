@@ -11,7 +11,7 @@
 //
 // Dependencies are injected so every branch is testable without React Native.
 
-import { normalizeInviteCode } from './inviteLink';
+import { normalizeTakeoverCode } from './takeoverLink';
 
 export const TAKEOVER_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 export const TAKEOVER_STORAGE_KEY = 'sp.takeover.pending.v1';
@@ -56,7 +56,7 @@ export function parsePersistedTakeover(raw: string | null, now: number): Persist
   }
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return null;
   const o = v as Record<string, unknown>;
-  const code = normalizeInviteCode(o.code);
+  const code = normalizeTakeoverCode(o.code);
   if (o.v !== 1 || !code) return null;
   const capturedAt = typeof o.capturedAt === 'number' && Number.isFinite(o.capturedAt) ? o.capturedAt : null;
   if (capturedAt === null || now - capturedAt > TAKEOVER_TTL_MS || capturedAt - now > 24 * 60 * 60 * 1000) return null;
@@ -115,7 +115,7 @@ export function createPendingTakeover(deps: PendingTakeoverDeps) {
     },
     /** A takeover link arrived. The newest link replaces an older one. Returns false for a code that fails the shape. */
     capture(rawCode: string): boolean {
-      const code = normalizeInviteCode(rawCode);
+      const code = normalizeTakeoverCode(rawCode);
       if (!code) return false;
       generation++;
       capturedAt = deps.now();

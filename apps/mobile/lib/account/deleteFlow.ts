@@ -20,6 +20,8 @@ export interface DeleteState {
   phase: DeletePhase;
   kind: ProofKind;
   proof: DeleteProof | null;
+  /** When the proof arrived (ms, the caller's clock). Apple's authorization code lives ~5 minutes and an id token ~10, so a social proof is aged at Delete (lib/account/deleteRun.ts). */
+  proofAt: number | null;
   /** The plain line "Couldn't delete your account. Try again." is showing. */
   failed: boolean;
   /** The last proof was refused: the password field is marked invalid (no new copy), the social button is offered again. */
@@ -27,7 +29,7 @@ export interface DeleteState {
 }
 
 export function initialDeleteState(kind: ProofKind): DeleteState {
-  return { phase: 'editing', kind, proof: null, failed: false, proofRejected: false };
+  return { phase: 'editing', kind, proof: null, proofAt: null, failed: false, proofRejected: false };
 }
 
 /** Whether "Delete my account" is live: editing, with the proof in hand. */
@@ -36,10 +38,10 @@ export function canAsk(s: DeleteState): boolean {
 }
 
 /** Typing a password, or an Apple/Google proof arriving. A proof of the wrong kind is ignored. */
-export function setProof(s: DeleteState, proof: DeleteProof | null): DeleteState {
+export function setProof(s: DeleteState, proof: DeleteProof | null, now: number): DeleteState {
   if (s.phase !== 'editing') return s;
   if (proof !== null && proof.kind !== s.kind) return s;
-  return { ...s, proof, proofRejected: false };
+  return { ...s, proof, proofAt: proof === null ? null : now, proofRejected: false };
 }
 
 /** "Delete my account" tapped: opens the alert. Sends nothing. */
@@ -50,7 +52,7 @@ export function askConfirm(s: DeleteState): DeleteState {
 /** The alert's "Keep my account" (or a dismissal): back to editing, nothing sent. A social proof is discarded. */
 export function keepAccount(s: DeleteState): DeleteState {
   if (s.phase !== 'confirming') return s;
-  return { ...s, phase: 'editing', proof: s.kind === 'password' ? s.proof : null };
+  return { ...s, phase: 'editing', proof: s.kind === 'password' ? s.proof : null, proofAt: s.kind === 'password' ? s.proofAt : null };
 }
 
 export interface DeleteRequestBody {
@@ -61,23 +63,29 @@ export interface DeleteRequestBody {
  * The alert's "Delete". The ONLY producer of a request body: it exists only from `confirming` with a proof in hand.
  * Returns the next state and the body to send (null = nothing to send, e.g. a stray second tap).
  */
-export function confirmDelete(s: DeleteState): { state: DeleteState; body: DeleteRequestBody | null } {
-  if (s.phase !== 'confirming' || !proofInHand(s.proof, s.kind) || s.proof === null) return { state: s, body: null };
-  return { state: { ...s, phase: 'sending', failed: false }, body: { proof: s.proof } };
+export function confirmDelete(s: DeleteState): { state: DeleteState; body: DeleteRequestBody | null; proofAt: number | null } {
+  if (s.phase !== 'confirming' || !proofInHand(s.proof, s.kind) || s.proof === null) return { state: s, body: null, proofAt: null };
+  return { state: { ...s, phase: 'sending', failed: false }, body: { proof: s.proof }, proofAt: s.proofAt };
 }
 
 export type DeleteOutcome =
   | { kind: 'deleted' }
   | { kind: 'bad_proof' }
   | { kind: 'apple_required' }
+  /** The Apple/Google token was over ~10 minutes old (does not count toward the proof limit): ask for a fresh one, never the generic failure. */
+  | { kind: 'proof_expired' }
+  /** The person closed the Apple/Google sheet that refreshed an aged proof: nothing was sent, nothing to say. */
+  | { kind: 'cancelled' }
   | { kind: 'failed' };
 
 /** Reads the function's answer. Only an explicit `ok: true` is deleted; a transport failure is an unknown, shown as failed. */
 export function deleteOutcome(r: FunctionRefusal): DeleteOutcome {
   if (r.transport) return { kind: 'failed' };
-  if (r.reason === null) return r.body.ok === true ? { kind: 'deleted' } : { kind: 'failed' };
+  // ok:true AND stage 'done' (W3: ok is returned only when the deletion is fully done; apple_revoke pending/unrevoked is the server's to retry, not ours to show).
+  if (r.reason === null) return r.body.ok === true && r.body.stage === 'done' ? { kind: 'deleted' } : { kind: 'failed' };
   if (r.reason === 'bad_proof') return { kind: 'bad_proof' };
   if (r.reason === 'apple_proof_required') return { kind: 'apple_required' };
+  if (r.reason === 'proof_expired') return { kind: 'proof_expired' };
   return { kind: 'failed' };
 }
 
@@ -88,10 +96,14 @@ export function applyOutcome(s: DeleteState, o: DeleteOutcome): DeleteState {
     case 'deleted':
       return { ...s, phase: 'done', failed: false, proofRejected: false };
     case 'bad_proof':
-      return { ...s, phase: 'editing', proof: null, failed: false, proofRejected: true };
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, proofRejected: true };
     case 'apple_required':
-      return { ...s, phase: 'editing', kind: 'apple', proof: null, failed: false, proofRejected: false };
+      return { ...s, phase: 'editing', kind: 'apple', proof: null, proofAt: null, failed: false, proofRejected: false };
+    case 'proof_expired':
+    case 'cancelled':
+      // Re-ask: the proof block is back (the button's reason), with no failure line.
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: false, proofRejected: false };
     case 'failed':
-      return { ...s, phase: 'editing', proof: null, failed: true, proofRejected: false };
+      return { ...s, phase: 'editing', proof: null, proofAt: null, failed: true, proofRejected: false };
   }
 }

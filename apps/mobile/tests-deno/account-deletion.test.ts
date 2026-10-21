@@ -19,7 +19,8 @@ import { proofInHand, proofKindFor, type DeleteProof } from '../lib/account/proo
 import {
   applyOutcome, askConfirm, canAsk, confirmDelete, deleteOutcome, initialDeleteState, keepAccount, setProof, type DeleteState,
 } from '../lib/account/deleteFlow.ts';
-import { accountCheckFromGetUser, runDelete, type DeleteRunDeps } from '../lib/account/deleteRun.ts';
+import { PROOF_MAX_AGE_MS, accountCheckFromGetUser, proofIsStale, runDelete, runDeleteFlow, type DeleteFlowDeps, type DeleteRunDeps } from '../lib/account/deleteRun.ts';
+import type { SocialProofResult } from '../lib/auth/socialOutcome.ts';
 import { canFindNewManager, membersRows } from '../lib/account/findManager.ts';
 import { leagueLine, successorOf, type DeleteLeagueInput, type LeagueMemberFact } from '../lib/account/leagueLines.ts';
 import { deadLine, interpretTakeover, interpretTakeoverPreview, recordLine } from '../lib/account/takeoverView.ts';
@@ -27,14 +28,14 @@ import { isDeletedNotice, setDeletedNotice, subscribeDeletedNotice } from '../li
 import { readFunctionRefusal } from '../lib/functionRefusal.ts';
 import { INVITE_COPY } from '../lib/invite/inviteCopy.ts';
 import { parseInviteArrival } from '../lib/invite/inviteLink.ts';
-import { buildTakeoverUrl, parseTakeoverArrival, parseTakeoverLink, takeoverShareMessage } from '../lib/invite/takeoverLink.ts';
+import { buildTakeoverUrl, normalizeTakeoverCode, parseTakeoverArrival, parseTakeoverLink, takeoverShareMessage } from '../lib/invite/takeoverLink.ts';
 import {
   TAKEOVER_STORAGE_KEY, TAKEOVER_TTL_MS, createPendingTakeover, parsePersistedTakeover, shouldOpenTakeover, takeoverOwnerAction,
 } from '../lib/invite/pendingTakeover.ts';
 import { USERNAME_PATTERN } from '../lib/shell/usernameRules.ts';
 import { avatarInitials } from '../components/sp/logic/avatar.ts';
 
-const CODE = 'QX7P4K';
+const CODE = 'QX7P4KM3AB';
 const BASE = 'https://fantasy-stock-app.vercel.app';
 
 // ── The words: verbatim ─────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ Deno.test('proofKind: Apple wins over everything; Google over email; password on
   assertEquals(proofKindFor([{ provider: 'APPLE' }]), 'password', 'a provider is matched exactly, never folded');
 });
 
+const T0 = 1_000_000;
 const PW: DeleteProof = { kind: 'password', password: 'hunter2hunter2' };
 const AP: DeleteProof = { kind: 'apple', identityToken: 'id.tok', authorizationCode: 'c1', nonce: 'n1' };
 const GO: DeleteProof = { kind: 'google', idToken: 'g.tok' };
@@ -150,9 +152,9 @@ Deno.test('proof gating: in hand only when EVERY field the server reads is prese
 Deno.test('proof gating: the button is dimmed until the proof is in hand, and again while anything runs', () => {
   let s = initialDeleteState('password');
   assertFalse(canAsk(s), 'no proof yet');
-  s = setProof(s, { kind: 'password', password: '' });
+  s = setProof(s, { kind: 'password', password: '' }, T0);
   assertFalse(canAsk(s), 'an empty password is no proof');
-  s = setProof(s, PW);
+  s = setProof(s, PW, T0);
   assert(canAsk(s));
   assertEquals(askConfirm(initialDeleteState('password')).phase, 'editing', 'asking without a proof does nothing');
   s = askConfirm(s);
@@ -161,7 +163,7 @@ Deno.test('proof gating: the button is dimmed until the proof is in hand, and ag
 });
 
 Deno.test('proof gating: a proof of the wrong kind is ignored', () => {
-  const s = setProof(initialDeleteState('apple'), PW);
+  const s = setProof(initialDeleteState('apple'), PW, T0);
   assertEquals(s.proof, null);
   assertFalse(canAsk(s));
 });
@@ -169,7 +171,7 @@ Deno.test('proof gating: a proof of the wrong kind is ignored', () => {
 // ── Nothing is sent before Delete ───────────────────────────────────────────
 
 Deno.test('nothing sent before Delete: only confirmDelete (from the open alert) yields a body', () => {
-  const ready = setProof(initialDeleteState('password'), PW);
+  const ready = setProof(initialDeleteState('password'), PW, T0);
   // The button opens the alert: no body anywhere on that path.
   assertEquals(confirmDelete(ready).body, null, 'editing: nothing to send');
   const asking = askConfirm(ready);
@@ -188,13 +190,13 @@ Deno.test('nothing sent before Delete: only confirmDelete (from the open alert) 
 });
 
 Deno.test('nothing sent before Delete: a social proof is discarded by "Keep my account" (the code is single-use and short-lived)', () => {
-  let s = setProof(initialDeleteState('apple'), AP);
+  let s = setProof(initialDeleteState('apple'), AP, T0);
   assert(canAsk(s));
   s = keepAccount(askConfirm(s));
   assertEquals(s.proof, null);
   assertFalse(canAsk(s), 'a new Apple sheet is needed');
   // A password the person typed stays (it is theirs, not a single-use credential).
-  let p = keepAccount(askConfirm(setProof(initialDeleteState('password'), PW)));
+  let p = keepAccount(askConfirm(setProof(initialDeleteState('password'), PW, T0)));
   assertEquals(p.proof, PW);
   assert(canAsk(p));
   p = keepAccount(p); // already editing: unchanged
@@ -210,7 +212,10 @@ async function refusal(status: number, body: unknown) {
 }
 
 Deno.test('reasons: ok:true is the ONLY success', async () => {
-  assertEquals(deleteOutcome(await refusal(200, { ok: true })), { kind: 'deleted' });
+  assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'done', apple_revoke: 'none' })), { kind: 'deleted' });
+  for (const revoke of ['done', 'pending', 'unrevoked']) assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'done', apple_revoke: revoke })), { kind: 'deleted' }, 'the revoke state is the server\'s to retry, never ours to show');
+  assertEquals(deleteOutcome(await refusal(200, { ok: true })).kind, 'failed', 'ok without stage done is not a deletion (the re-check recovers a real one)');
+  assertEquals(deleteOutcome(await refusal(200, { ok: true, stage: 'scrubbed' })).kind, 'failed');
   assertEquals(deleteOutcome(await refusal(200, {})).kind, 'failed', 'a 200 with no ok is not a deletion');
   assertEquals(deleteOutcome(await refusal(200, { ok: 'true' })).kind, 'failed');
   assertEquals(deleteOutcome(await refusal(200, { ok: 1 })).kind, 'failed');
@@ -235,7 +240,7 @@ Deno.test('reasons: bad_proof and apple_proof_required have their own paths; eve
 });
 
 Deno.test('reasons: a failure clears the proof and shows the plain line; bad_proof marks the field; apple_required switches the proof to Apple', () => {
-  const sending = (kind: 'password' | 'apple', proof: DeleteProof): DeleteState => confirmDelete(askConfirm(setProof(initialDeleteState(kind), proof))).state;
+  const sending = (kind: 'password' | 'apple', proof: DeleteProof): DeleteState => confirmDelete(askConfirm(setProof(initialDeleteState(kind), proof, T0))).state;
   let s = applyOutcome(sending('password', PW), { kind: 'failed' });
   assertEquals([s.phase, s.proof, s.failed, s.proofRejected], ['editing', null, true, false]);
   s = applyOutcome(sending('password', PW), { kind: 'bad_proof' });
@@ -250,11 +255,11 @@ Deno.test('reasons: a failure clears the proof and shows the plain line; bad_pro
 });
 
 Deno.test('apple_proof_required path: password attempt -> Apple block -> Apple proof -> deletes', () => {
-  let s = confirmDelete(askConfirm(setProof(initialDeleteState('password'), PW))).state;
+  let s = confirmDelete(askConfirm(setProof(initialDeleteState('password'), PW, T0))).state;
   s = applyOutcome(s, { kind: 'apple_required' });
   assertEquals(s.kind, 'apple');
   assertFalse(canAsk(s), 'the button is dimmed again until Apple confirms');
-  s = setProof(s, AP);
+  s = setProof(s, AP, T0);
   assert(canAsk(s));
   const { body } = confirmDelete(askConfirm(s));
   assertEquals(body, { proof: AP });
@@ -264,7 +269,7 @@ Deno.test('apple_proof_required path: password attempt -> Apple block -> Apple p
 
 function deps(over: Partial<DeleteRunDeps> & { sent?: unknown[] }): DeleteRunDeps {
   return {
-    invoke: over.invoke ?? ((b) => { over.sent?.push(b); return Promise.resolve({ data: { ok: true }, error: null }); }),
+    invoke: over.invoke ?? ((b) => { over.sent?.push(b); return Promise.resolve({ data: { ok: true, stage: 'done', apple_revoke: 'none' }, error: null }); }),
     checkAccount: over.checkAccount ?? (() => Promise.resolve('exists')),
   };
 }
@@ -431,7 +436,7 @@ Deno.test('takeover link: hostile and malformed inputs are refused, never repair
     null, undefined, 42, {}, '', ' ', `${BASE}/take`, `${BASE}/take/`, `${BASE}/take//${CODE}`, `${BASE}//take/${CODE}x/y`,
     `${BASE}/take/${CODE}/extra`, `${BASE}/take/${CODE}/../join/${CODE}`, `${BASE}/take/abc`, `${BASE}/take/${'A'.repeat(13)}`,
     `${BASE}/take/QX7P-4K`, `${BASE}/take/QX7P%34K`, `${BASE}/take/QX7P 4K`, `${BASE}/take/QX7P.4K`, `${BASE}/take/QX7P\\4K`,
-    `${BASE}/take/QX7P4K%00`, `${BASE}/take/ıX7P4K`, `${BASE}/take/QX7P4K`, `${BASE}/take/straße`,
+    `${BASE}/take/QX7P4KM3AB%00`, `${BASE}/take/ıX7P4K`, `${BASE}/take/QX7P4K`, `${BASE}/take/straße`,
     `https://fantasy-stock-app.vercel.app.evil.com/take/${CODE}`, `https://evil.com/take/${CODE}`,
     `https://fantasy-stock-app.vercel.app@evil.com/take/${CODE}`, `https://evil.com/?https://fantasy-stock-app.vercel.app/take/${CODE}`,
     `http://fantasy-stock-app.vercel.app/take/${CODE}`, `ftp://fantasy-stock-app.vercel.app/take/${CODE}`,
@@ -485,7 +490,7 @@ function store(init: string | null = null, now = 1_000_000) {
 
 Deno.test('pending takeover: capture persists; a relaunch restores; clear removes', async () => {
   const a = store();
-  assert(a.s.capture('qx7p4k'));
+  assert(a.s.capture('qx7p4km3ab'));
   assertEquals(a.s.getSnapshot().code, CODE);
   await new Promise((r) => setTimeout(r, 0));
   const b = store(a.read());
@@ -553,9 +558,9 @@ Deno.test('pending takeover: claim stamps once; markAutoOpened is per code; clea
 // ── Mutation survivors, pinned ──────────────────────────────────────────────
 
 Deno.test('nothing sent: an alert opened over an EMPTY proof still yields no body (the proof is re-checked at Delete)', () => {
-  const forced: DeleteState = { phase: 'confirming', kind: 'password', proof: { kind: 'password', password: '' }, failed: false, proofRejected: false };
+  const forced: DeleteState = { phase: 'confirming', kind: 'password', proofAt: T0, proof: { kind: 'password', password: '' }, failed: false, proofRejected: false };
   assertEquals(confirmDelete(forced).body, null);
-  const forcedApple: DeleteState = { phase: 'confirming', kind: 'apple', proof: { kind: 'apple', identityToken: 't', authorizationCode: '', nonce: 'n' }, failed: false, proofRejected: false };
+  const forcedApple: DeleteState = { phase: 'confirming', kind: 'apple', proofAt: T0, proof: { kind: 'apple', identityToken: 't', authorizationCode: '', nonce: 'n' }, failed: false, proofRejected: false };
   assertEquals(confirmDelete(forcedApple).body, null);
 });
 
@@ -589,4 +594,104 @@ Deno.test('Members: you first, the rest A–Z, deleted seats last; only current 
   assertEquals(rows.find((r) => r.userId === ME)?.isYou, true);
   assertFalse(rows.some((r) => r.userId === 'u-gone'), 'a member who left is not listed');
   assertEquals(rows.find((r) => r.userId === 'u-null')?.name, 'Former manager', 'a missing name reads as the placeholder, never blank');
+});
+
+// ── W3's contract: proof_expired, proof age, 10-character codes ─────────────
+
+Deno.test('reasons: proof_expired is its own outcome (never the generic failure) and re-asks without a failure line', async () => {
+  assertEquals(deleteOutcome(await refusal(200, { ok: false, reason: 'proof_expired' })), { kind: 'proof_expired' });
+  const sending = confirmDelete(askConfirm(setProof(initialDeleteState('apple'), AP, T0))).state;
+  const s = applyOutcome(sending, { kind: 'proof_expired' });
+  assertEquals([s.phase, s.kind, s.proof, s.proofAt, s.failed, s.proofRejected], ['editing', 'apple', null, null, false, false]);
+  const c = applyOutcome(sending, { kind: 'cancelled' });
+  assertEquals([c.phase, c.proof, c.failed], ['editing', null, false]);
+  for (const [status, reason] of [[429, 'rate_limited'], [503, 'try_again'], [400, 'bad_request']] as const) {
+    assertEquals(deleteOutcome(await refusal(status, { ok: false, reason })).kind, 'failed', reason);
+  }
+});
+
+const FRESH: SocialProofResult = { kind: 'proof', proof: { kind: 'apple', identityToken: 'fresh', authorizationCode: 'c2', nonce: 'n2' } };
+function flow(opts: { now: () => number; reprove?: DeleteFlowDeps['reprove']; replies?: unknown[] }) {
+  const sent: unknown[] = [];
+  const reproved: string[] = [];
+  const replies = [...(opts.replies ?? [{ ok: true, stage: 'done', apple_revoke: 'none' }])];
+  const deps: DeleteFlowDeps = {
+    now: opts.now,
+    reprove: (k) => { reproved.push(k); return (opts.reprove ?? (() => Promise.resolve(FRESH)))(k); },
+    invoke: (b) => { sent.push(b); return Promise.resolve({ data: replies.shift() ?? { ok: false, reason: 'x' }, error: null }); },
+    checkAccount: () => Promise.resolve('exists'),
+  };
+  return { deps, sent, reproved };
+}
+
+Deno.test('proof age: older than ~4 minutes at Delete re-runs the Apple sheet FIRST, then sends the FRESH proof', async () => {
+  assertEquals(PROOF_MAX_AGE_MS, 4 * 60 * 1000);
+  const f = flow({ now: () => T0 + PROOF_MAX_AGE_MS + 1 });
+  assertEquals(await runDeleteFlow({ proof: AP }, T0, f.deps), { kind: 'deleted' });
+  assertEquals(f.reproved, ['apple']);
+  assertEquals(f.sent, [{ proof: FRESH.kind === 'proof' ? FRESH.proof : null }], 'the stale code never goes out');
+});
+
+Deno.test('proof age: exactly at the limit and a fresh proof are sent as they are; a password never ages', async () => {
+  const atLimit = flow({ now: () => T0 + PROOF_MAX_AGE_MS });
+  await runDeleteFlow({ proof: AP }, T0, atLimit.deps);
+  assertEquals([atLimit.reproved.length, atLimit.sent], [0, [{ proof: AP }]]);
+  const pw = flow({ now: () => T0 + 60 * 60 * 1000 });
+  await runDeleteFlow({ proof: PW }, T0, pw.deps);
+  assertEquals([pw.reproved.length, pw.sent], [0, [{ proof: PW }]]);
+  assert(proofIsStale(GO, T0, T0 + PROOF_MAX_AGE_MS + 1));
+  assertFalse(proofIsStale(GO, T0, T0 + 1000));
+  assert(proofIsStale(AP, null, T0), 'an unknown age is stale, never trusted');
+  assert(proofIsStale(AP, T0, T0 - 1), 'a clock that went backwards is not trusted either');
+});
+
+Deno.test('proof age: a Google proof refreshes through Google, not Apple', async () => {
+  const f = flow({ now: () => T0 + PROOF_MAX_AGE_MS + 1, reprove: () => Promise.resolve({ kind: 'proof', proof: { kind: 'google', idToken: 'g2' } }) });
+  await runDeleteFlow({ proof: GO }, T0, f.deps);
+  assertEquals([f.reproved, f.sent], [['google'], [{ proof: { kind: 'google', idToken: 'g2' } }]]);
+});
+
+Deno.test('proof age: a closed sheet sends NOTHING and says nothing; a sheet error is the plain failure (nothing sent either)', async () => {
+  const stale = () => T0 + PROOF_MAX_AGE_MS + 1;
+  for (const kind of ['cancelled', 'unavailable'] as const) {
+    const f = flow({ now: stale, reprove: () => Promise.resolve({ kind }) });
+    assertEquals(await runDeleteFlow({ proof: AP }, T0, f.deps), { kind: 'cancelled' });
+    assertEquals(f.sent, []);
+  }
+  const e = flow({ now: stale, reprove: () => Promise.resolve({ kind: 'error', error: { message: 'x' } }) });
+  assertEquals((await runDeleteFlow({ proof: AP }, T0, e.deps)).kind, 'failed');
+  assertEquals(e.sent, []);
+});
+
+Deno.test('proof_expired from the server: ONE silent refresh and resend; a second expiry re-asks (never the generic failure)', async () => {
+  const once = flow({ now: () => T0, replies: [{ ok: false, reason: 'proof_expired' }, { ok: true, stage: 'done', apple_revoke: 'pending' }] });
+  assertEquals(await runDeleteFlow({ proof: AP }, T0, once.deps), { kind: 'deleted' });
+  assertEquals([once.reproved, once.sent.length], [['apple'], 2]);
+  const twice = flow({ now: () => T0, replies: [{ ok: false, reason: 'proof_expired' }, { ok: false, reason: 'proof_expired' }] });
+  assertEquals(await runDeleteFlow({ proof: AP }, T0, twice.deps), { kind: 'proof_expired' });
+  assertEquals([twice.reproved.length, twice.sent.length], [1, 2], 'never a third try');
+  // bad_proof is not retried silently (it counts toward the limit)
+  const bad = flow({ now: () => T0, replies: [{ ok: false, reason: 'bad_proof' }] });
+  assertEquals(await runDeleteFlow({ proof: AP }, T0, bad.deps), { kind: 'bad_proof' });
+  assertEquals([bad.reproved.length, bad.sent.length], [0, 1]);
+});
+
+Deno.test('proof age: setProof stamps the clock and a cleared proof clears it; "Keep my account" drops a social proof\'s stamp', () => {
+  let s = setProof(initialDeleteState('apple'), AP, T0 + 5);
+  assertEquals(s.proofAt, T0 + 5);
+  assertEquals(confirmDelete(askConfirm(s)).proofAt, T0 + 5);
+  s = keepAccount(askConfirm(s));
+  assertEquals([s.proof, s.proofAt], [null, null]);
+  assertEquals(setProof(setProof(initialDeleteState('password'), PW, T0), null, T0 + 1).proofAt, null);
+});
+
+Deno.test('takeover codes: EXACTLY 10 upper-case A-Z/0-9 (W3), ASCII-checked before folding', () => {
+  assertEquals(normalizeTakeoverCode('qx7p4km3ab'), 'QX7P4KM3AB');
+  assertEquals(normalizeTakeoverCode(' QX7P4KM3AB '), 'QX7P4KM3AB');
+  for (const bad of ['QX7P4K', 'QX7P4KM3A', 'QX7P4KM3ABC', 'QX7P4KM3A-', '\u0131X7P4KM3AB', 'QX7P4KM3A\u212A', 'QX7P4KM3A\u00DF', '', null, 7]) {
+    assertEquals(normalizeTakeoverCode(bad), null, String(bad));
+  }
+  assertEquals(parseTakeoverLink(`${BASE}/take/QX7P4K`, false), null, 'a 6-character code is an invite\'s, not a takeover\'s');
+  assertEquals(parseTakeoverLink(`${BASE}/take/QX7P4KM3ABC`, false), null);
+  assertEquals(buildTakeoverUrl('QX7P4K'), null);
 });

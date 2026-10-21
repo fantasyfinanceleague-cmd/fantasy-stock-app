@@ -30,7 +30,7 @@ Deno.test('send: delete-account is called from exactly one place, and only the a
   const screen = src('app/delete-account.tsx');
   assertEquals(count(screen, 'deleteAccount('), 1, 'one call site');
   // The one call sits in `send`, which is reached only through the alert's destructive button.
-  assert(/const send = useCallback\(async \(\) => \{[\s\S]*?await deleteAccount\(body\)/.test(screen));
+  assert(/const send = useCallback\(async \(\) => \{[\s\S]*?await deleteAccount\(body, proofAt\)/.test(screen));
   assertEquals(count(screen, 'send()'), 1);
   assert(/\{ text: ALERT_DELETE, style: 'destructive', onPress: \(\) => void send\(\) \}/.test(screen));
   // The button the person taps only ASKS.

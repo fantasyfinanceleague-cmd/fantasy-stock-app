@@ -17,13 +17,24 @@
 import { isDevBuild } from '../auth/authLink';
 import { WEB_BASE } from '../links/webDomain';
 import { takeoverShareSentence } from '../account/deleteCopy';
-import { asciiLower, normalizeInviteCode, relativeToBase, type InviteOrigin } from './inviteLink';
+import { asciiLower, relativeToBase, type InviteOrigin } from './inviteLink';
 
 export const TAKEOVER_PATH = 'take';
 
+/**
+ * A takeover code as the server mints it: EXACTLY 10 upper-case A-Z / 0-9 (the same as today's invite codes; W3's
+ * contract, 2026-10-21). Unlike an invite code there are no legacy 6-character ones. The shape is checked on ASCII
+ * ONLY, before upper-casing (toUpperCase() folds some non-ASCII letters onto ASCII ones).
+ */
+export function normalizeTakeoverCode(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const code = raw.trim();
+  return /^[A-Za-z0-9]{10}$/.test(code) ? code.toUpperCase() : null;
+}
+
 /** The link "Find a new manager" shares. Null when the code can't be a link. */
 export function buildTakeoverUrl(code: string): string | null {
-  const ok = normalizeInviteCode(code);
+  const ok = normalizeTakeoverCode(code);
   return ok ? `${WEB_BASE}${TAKEOVER_PATH}/${ok}` : null;
 }
 
@@ -47,7 +58,7 @@ export function parseTakeoverArrival(raw: string | null | undefined, dev: boolea
   const origin: InviteOrigin = asciiLower(url).startsWith(asciiLower(WEB_BASE)) ? 'https' : 'scheme';
   const parts = rel.replace(/\/+$/, '').split('/');
   if (parts.length !== 2 || parts[0] !== TAKEOVER_PATH) return null;
-  const code = normalizeInviteCode(parts[1]);
+  const code = normalizeTakeoverCode(parts[1]);
   return code ? { code, origin } : null;
 }
 

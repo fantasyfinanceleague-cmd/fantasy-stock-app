@@ -39,14 +39,14 @@ export function fixtureState(f: DeleteFixture | null, real: ProofKind): DeleteSt
     case 'google':
       return base;
     case 'failed':
-      return { ...base, proof: FIXTURE_PROOF[kind], failed: true };
+      return { ...base, proof: FIXTURE_PROOF[kind], proofAt: Date.now(), failed: true };
     case 'running':
-      return { ...base, proof: FIXTURE_PROOF[kind], phase: 'sending' };
+      return { ...base, proof: FIXTURE_PROOF[kind], proofAt: Date.now(), phase: 'sending' };
     case 'password_ready':
     case 'apple_done':
     case 'google_done':
     case 'alert':
-      return { ...base, proof: FIXTURE_PROOF[kind] };
+      return { ...base, proof: FIXTURE_PROOF[kind], proofAt: Date.now() };
   }
 }
 

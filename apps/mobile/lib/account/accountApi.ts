@@ -7,10 +7,11 @@
 import { supabase } from '../supabase';
 import { seamInvoke, seamRpc } from '../game/seamCalls';
 import { readFunctionRefusal } from '../functionRefusal';
-import { accountCheckFromGetUser, runDelete, type DeleteRunDeps } from './deleteRun';
+import { accountCheckFromGetUser, runDeleteFlow, type DeleteRunDeps } from './deleteRun';
+import { proveWithApple, proveWithGoogle } from '../auth/socialSignIn';
 import type { DeleteOutcome, DeleteRequestBody } from './deleteFlow';
 import { interpretTakeover, interpretTakeoverPreview, type TakeoverPreview, type TakeoverResult } from './takeoverView';
-import { normalizeInviteCode } from '../invite/inviteLink';
+import { normalizeTakeoverCode } from '../invite/takeoverLink';
 
 export const deleteRunDeps: DeleteRunDeps = {
   invoke: (body) => seamInvoke('delete-account', { body: { proof: body.proof } }),
@@ -20,8 +21,12 @@ export const deleteRunDeps: DeleteRunDeps = {
   },
 };
 
-export function deleteAccount(body: DeleteRequestBody): Promise<DeleteOutcome> {
-  return runDelete(body, deleteRunDeps);
+export function deleteAccount(body: DeleteRequestBody, proofAt: number | null): Promise<DeleteOutcome> {
+  return runDeleteFlow(body, proofAt, {
+    ...deleteRunDeps,
+    now: () => Date.now(),
+    reprove: (kind) => (kind === 'apple' ? proveWithApple() : proveWithGoogle()),
+  });
 }
 
 async function joinLeague(body: Record<string, unknown>) {
@@ -47,7 +52,7 @@ export async function createTakeoverInvite(leagueId: string, seatUserId: string)
     const { data, error } = await seamRpc('create_takeover_invite', { p_league_id: leagueId, p_seat_user_id: seatUserId });
     if (error) return null;
     const row = Array.isArray(data) ? data[0] : data;
-    return normalizeInviteCode((row as { code?: unknown } | null)?.code);
+    return normalizeTakeoverCode((row as { code?: unknown } | null)?.code);
   } catch {
     return null;
   }

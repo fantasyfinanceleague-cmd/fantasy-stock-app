@@ -55,11 +55,11 @@ export default function DeleteAccountScreen() {
 
   const onPassword = useCallback((v: string) => {
     setPassword(v);
-    setState((s) => setProof(s, v.length > 0 ? { kind: 'password', password: v } : null));
+    setState((s) => setProof(s, v.length > 0 ? { kind: 'password', password: v } : null, Date.now()));
   }, []);
 
   const onProof = useCallback((r: SocialProofResult) => {
-    if (r.kind === 'proof') setState((s) => setProof(s, r.proof));
+    if (r.kind === 'proof') setState((s) => setProof(s, r.proof, Date.now()));
     // cancelled / unavailable / error: say nothing and leave the button dimmed (the proof line is the reason)
   }, []);
   const onApple = useCallback(() => void proveWithApple().then(onProof), [onProof]);
@@ -69,10 +69,10 @@ export default function DeleteAccountScreen() {
   const onAsk = useCallback(() => setState((s) => askConfirm(s)), []);
 
   const send = useCallback(async () => {
-    const { state: next, body } = confirmDelete(stateRef.current);
+    const { state: next, body, proofAt } = confirmDelete(stateRef.current);
     if (!body) return;
     setState(next);
-    const outcome = await deleteAccount(body);
+    const outcome = await deleteAccount(body, proofAt);
     setState((s) => applyOutcome(s, outcome));
     if (outcome.kind !== 'deleted') return;
     // The server deleted the auth user: every device is signed out. Raise the line BEFORE the local clear so Sign in
