@@ -221,7 +221,7 @@ Phase 3: **app first**.
 ## 4. Open items (ordered by launch impact)
 
 > **2026-10-20: before the 1.3 build (Giorgio).**
-> 1. **Real-phone pass**, on a 1.3 dev/TestFlight build:
+> 1. **Real-phone pass**, on a 1.3 dev/TestFlight build (the tick-off checklist: [`docs/testing/WALKTHROUGH_1.3.md`](testing/WALKTHROUGH_1.3.md), 28 items, onboarding last):
 >    - VoiceOver: Home's standings card and the Matchup halves read their content, then "button", then "View {name}'s team"; one amount each on the Join preview and in Trade history reads as normal money.
 >    - XXXL: the Transfer commissioner, Renewal change and sale-picker sheets, plus the trade review and pre-draft Home with Share visible (no fixture reaches these).
 >    - The server writes the simulator couldn't confirm: Move forward / Invite someone new, the playoff-teams stepper, Save queue, the nudge, Schedule the draft.
