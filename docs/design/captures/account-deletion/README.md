@@ -42,7 +42,7 @@ File name: `<id>-<state>-<17e|17pro>-<l|xxxl>-<dark|light>.png`.
 | F27 | proof limit "Too many tries. Try again later." | |
 | F29 | takeover rate-limited, `-moment` and `-later` | two lines |
 
-`not-reachable/F28-*`: the already-in-league panel (2 stills, 17e L only). The live server answers an already-member
+`not-reachable/F28-*`: the already-in-league panel (8 stills). The live server answers an already-member
 link with only `{ok:false, reason}`, so the app opens Home; the panel is a fallback. Not part of the review set.
 
 ## Baseline diffs (L, both phones, both themes; `diffs/`)
@@ -78,6 +78,35 @@ above them. The earlier passes (hidden in 5 of 16 shots with the single-timer sc
 | F30 | takeover **tap view** (`TAKEOVER_FIXTURE=tap`, a scheme-origin link): the default avatar, then "Find league" (primary) and "Not now" docked at the bottom | 8 stills. The avatar is centred horizontally and sits in the middle of the space above the docked buttons; no heading, no text. At XXXL the buttons grow, nothing clips or overlaps |
 | F31 | takeover with **no pending code** (`SHELL_INITIAL_ROUTE=/takeover`, no knob, fresh simulators so nothing stored) | 8 stills: the dead-link view ("This invite link doesn't work anymore. Ask for a new one." + "Go to Home", no heading, centred), never a spinner. Two stills (17e and 17 Pro, L, light) were first caught on Home with a "No native module" dev toast, because the DEV initial-route push did not land on that launch; they were re-shot and the first versions are in `superseded-run2/F31-NOTROUTED-*` |
 | F20, F21 | spot check, 17e L dark and light (also 17 Pro) | unchanged: F20 shows the found question with the record and "Take the team" / "Not now" (no tap view); F21 shows "Someone already took this team." + "Go to Home" |
+
+## Re-gate on `60b36a1c` (shot from `d8c960dd`, docs-only on top): sm Button ceiling 1.6x, proof lines in the Field styles, names that never split, no "Try again" on the hour's lockout
+
+Origin/main for the diffs: `4e24ea92`. Replaced stills are in `superseded-run3/`.
+
+| Frames | What |
+|---|---|
+| F16 | Members with "Find a new manager", L and XXXL (all 8): the pill at XXXL is one line, about 230 pt wide under the seat's name (it was a two-line pill at about 2x body size); on the 17 Pro at L it sits inline on the seat's row, on the 17e at L it wraps under the name |
+| F32 (new) | League settings, member view before the draft: the invite Share pill (L and XXXL, all 8): inline right of "Invite code" at L; at XXXL it drops under the code, a one-line sm pill |
+| F33-commissioner-settings-foot (new, L only, 4) | the commissioner's pre-draft League settings scrolled to the foot (Roster slots "Add slot" sm pill, League info, Save). The commissioner's invite row has no Share pill (and F33 at XXXL cannot be shot, see below; those stills are in `not-reachable/`) |
+| F06 (XXXL foot), F06-top (new, XXXL), F08, F09, F25 (XXXL foot) | the proof prompt and refusal lines in the password field's label/error styles |
+| F20, F29-later, F29-moment, F30, F31 | all 8 each on this build |
+
+**Judgements.**
+- Proof prompt: "Enter your password to continue" (F06) and "Confirm it's you to continue" (F08, F25) are now the same size and weight (headline weight, full size). "Confirmed with Apple" (F09) is the same size in green: it wraps to "Confirmed with / Apple" with a small check mark at the left of the first line (the check looks small and low next to the text). The refusal line in F25 ("Couldn't confirm it's you. Try again.", coral dark / red light) is as large and as heavy as the prompt above it, so it competes with it. The native Apple button stays at its fixed height and text size beside this large text.
+- Names that never split: the F06 league lines and the "Past seasons keep your results under “Former manager”." line hold at XXXL ("Stock Scudetto", "Friday Night Stocks", "Paolo M." and "“Former manager”" each stay on one line). F20 does not at XXXL: "Take over / Former / manager's / team in / Stock / Scudetto?" splits both "Former manager's" and "Stock Scudetto" across lines (at L it is "Take over / Former manager's / team in / Stock Scudetto?").
+- F29-later shows only "Not now" (no "Try again"); F29-moment keeps both. F30 and F31 as before (avatar centred above the docked "Find league" / "Not now"; the dead view for no code, no spinner).
+- F33 at XXXL: the commissioner's League settings crash in dev with a red "Cannot read property 'layout' of null" screen (SetupRows.tsx line 58, `onLayout` reads `e.nativeEvent` inside the `setBrokeAt` updater after the event is released). It reproduces on `origin/main` too, so it is not from this branch.
+
+**L diffs against a detached `origin/main` (`4e24ea92`)**, both phones, both themes, identical fixtures (`leagues-member` / `leagues`, `LEAVE_LEAGUE=1`), no `DELETED_SEAT` / `DELETE_FIXTURE`:
+
+| Screen | Result |
+|---|---|
+| Profile | only the Sign-out card region and below (17e y 1767-2074 px, 17 Pro y 1812-2119); everything above identical |
+| League Standings, League Matchup | identical, 0 px, all 4 combinations each |
+| League settings (member, after the draft) | only from the new Members section down (17e y 966-2357; 17 Pro y 1056-2447) |
+| League settings (member, before the draft): the invite Share pill | identical, 0 px, all 4 |
+| League settings (commissioner, before the draft), top and scrolled to the foot (the "Add slot" sm pill) | identical, 0 px, all 4 each |
+| League Standings, load failed ("Try again" sm pill) | identical, 0 px, all 4 |
 
 ## Known notes
 
