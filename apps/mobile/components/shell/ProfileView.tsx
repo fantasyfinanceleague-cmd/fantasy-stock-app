@@ -10,6 +10,7 @@ import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme, type ThemePreference } from '@/components/sp/ThemeProvider';
+import { DELETE_ROW } from '@/lib/account/deleteCopy';
 
 // Phase 3b-1 — Profile (spec row 11, board "Profile"). It left the tab bar;
 // the Home avatar opens it. Username (→ the Pick-a-username validation in
@@ -39,9 +40,11 @@ export interface ProfileViewProps {
   /** Opens the three onboarding cards, still (onboarding W4). */
   onHowItWorks: () => void;
   onSignOut: () => void;
+  /** Account deletion (W4): the last row, plain danger text like Sign out, NO highlight (Giorgio, 2026-10-21). */
+  onDeleteAccount: () => void;
 }
 
-export function ProfileView({ username, email, onUsername, onChangePassword, onAppearance, onHowItWorks, onSignOut }: ProfileViewProps) {
+export function ProfileView({ username, email, onUsername, onChangePassword, onAppearance, onHowItWorks, onSignOut, onDeleteAccount }: ProfileViewProps) {
   const { preference } = useTheme();
   const version = Constants.expoConfig?.version ?? '';
 
@@ -70,6 +73,8 @@ export function ProfileView({ username, email, onUsername, onChangePassword, onA
 
       <Card style={styles.card}>
         <Row label="Sign out" onPress={onSignOut} danger />
+        <RowGap />
+        <Row label={DELETE_ROW} onPress={onDeleteAccount} danger />
       </Card>
 
       <Text variant="caption" tone="secondary" maxFontSizeMultiplier={PROFILE_ROW_MAX_SCALE} style={styles.version}>

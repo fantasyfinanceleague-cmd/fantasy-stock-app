@@ -37,6 +37,9 @@ import { useMotion } from '@/components/sp/motion';
 import { takeSignInIntent } from '@/lib/shell/signInTransition';
 import { useGetStartedOpen, useOnboardingSeen } from '@/lib/shell/firstRun';
 import { useArrivalInvite } from '@/lib/invite/useArrivalInvite';
+import { shouldOpenTakeover, takeoverOwnerAction } from '@/lib/invite/pendingTakeover';
+import { pendingTakeover as takeoverStore, useTakeoverSnapshot } from '@/lib/invite/pendingTakeoverStore';
+import { loadDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
 import { ThemeDipProvider } from '@/components/shell/ThemeDip';
 import { ThemeProvider, useTheme } from '@/components/sp/ThemeProvider';
 
@@ -220,6 +223,27 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
     setTimeout(() => router.push(route as never), 0);
   }, [shownPhase, invite, holdTick, ownerAction, arrivalSettled]);
 
+  // Account deletion (W4): a takeover link's code, kept as the PENDING TAKEOVER (app/+native-intent.tsx), opens the
+  // landing ONCE per code per launch, the moment the person is in the full app. It belongs to the person who tapped it
+  // (stamped on the first sign-in with it pending; a different person drops it), and it never joins by itself: the
+  // landing waits for "Take the team".
+  const takeover = useTakeoverSnapshot();
+  const takeoverOwner = takeover.loaded && takeover.code ? takeoverOwnerAction(takeover.ownerUserId, userId) : 'none';
+  useEffect(() => {
+    if (!takeover.code) return;
+    if (takeoverOwner === 'claim' && userId) takeoverStore.claim(userId, takeover.code);
+    else if (takeoverOwner === 'clear') void takeoverStore.clear(takeover.code);
+  }, [takeoverOwner, userId, takeover.code]);
+  useEffect(() => {
+    if (!shouldOpenTakeover({ phase: shownPhase, code: takeover.code, autoOpenedCode: takeover.autoOpenedCode, recoveryHold: isRecoveryHold(), ownerAction: takeoverOwner })) return;
+    takeoverStore.markAutoOpened(takeover.code as string);
+    setTimeout(() => router.push('/takeover' as never), 0);
+  }, [shownPhase, takeover.code, takeover.autoOpenedCode, takeoverOwner, holdTick]);
+  // The deleted seat's word is the server's (deleted_manager_label()): read once per launch, signed in.
+  useEffect(() => {
+    if (shownPhase === 'ready') void loadDeletedManagerLabel();
+  }, [shownPhase]);
+
   // The two email return links, both PKCE one-time codes (lib/supabase.ts flowType 'pkce'):
   //   fantasystockapp://auth/confirm?code=…                  sign-up confirmation (onboarding W2)
   //   fantasystockapp://reset-password?flow=pkce&code=…      password recovery
@@ -363,6 +387,8 @@ function RootLayoutNav({ fontsLoaded }: { fontsLoaded: boolean }) {
                   <Stack.Screen name="username" />
                   <Stack.Screen name="appearance" />
                   <Stack.Screen name="change-password" />
+                  <Stack.Screen name="delete-account" />
+                  <Stack.Screen name="takeover" options={HIDDEN_HEADER_FULLSCREEN} />
                   <Stack.Screen name="notifications-ask" options={HIDDEN_HEADER} />
                   <Stack.Screen name="create-league" options={HIDDEN_HEADER_FULLSCREEN} />
                   <Stack.Screen name="join-league" options={HIDDEN_HEADER_FULLSCREEN} />

@@ -48,14 +48,18 @@ function useLabelBreaks() {
   const [brokeAt, setBrokeAt] = useState<number | null>(null);
   const onTextLayout = useCallback(
     (e: NativeSyntheticEvent<TextLayoutEventData>) => {
-      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines: e.nativeEvent.lines }));
+      // Read the event BEFORE the updater: it runs after the handler returns, when the native event is already released
+      // ("Cannot read property 'layout' of null" at Accessibility XXXL, found by the account-deletion capture pass).
+      const lines = e.nativeEvent.lines;
+      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines }));
     },
     [fontScale],
   );
   // A label squeezed to nothing reports no broken line (there was no room for one): its column's width says so.
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
-      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width: e.nativeEvent.layout.width }));
+      const width = e.nativeEvent.layout.width;
+      setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width }));
     },
     [fontScale],
   );

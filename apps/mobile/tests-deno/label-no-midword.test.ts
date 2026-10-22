@@ -289,8 +289,8 @@ Deno.test('SettingRow and SwitchRow: the stacked layout (wrap, a label that neve
   assert(src.includes('<View style={stack ? styles.growWrap : styles.grow} onLayout={onPress || sub ? onLabelBox : undefined}>'));
   assert(src.includes('<RowKey maxScale={maxScale} onTextLayout={onPress || sub ? onLabelLayout : undefined}>'));
   // the detection: the label's broken lines, or a collapsed label column; reset when the text size changes
-  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines: e.nativeEvent.lines }));"));
-  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width: e.nativeEvent.layout.width }));"));
+  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'lines', lines }));")); // `lines` is read from the event BEFORE the updater (it is released by then)
+  assert(src.includes("setBrokeAt((prev) => nextBrokeAt(prev, fontScale, { kind: 'width', width }));"));
   assert(src.includes('broke: isStacked(brokeAt, fontScale)'));
 });
 

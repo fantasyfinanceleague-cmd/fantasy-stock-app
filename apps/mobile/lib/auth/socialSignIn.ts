@@ -39,7 +39,7 @@ import { Platform } from 'react-native';
 import { CryptoDigestAlgorithm, digestStringAsync, getRandomBytes } from 'expo-crypto';
 
 import { supabase } from '../supabase';
-import { isAppleCancel, isGoogleCancel, toAuthError, type SocialSignInResult } from './socialOutcome';
+import { isAppleCancel, isGoogleCancel, toAuthError, type SocialProofResult, type SocialSignInResult } from './socialOutcome';
 
 type AppleModule = typeof import('expo-apple-authentication');
 type GoogleModule = typeof import('@react-native-google-signin/google-signin');
@@ -126,6 +126,35 @@ export async function signInWithApple(): Promise<SocialSignInResult> {
   return { kind: 'signedIn' };
 }
 
+/**
+ * Account deletion (W4): Sign in with Apple as a PROOF. Opens Apple's sheet and returns the identity token, the
+ * single-use authorization code and the raw nonce for delete-account; it never calls signInWithIdToken, so no
+ * session is created, replaced or refreshed (lib/auth's PKCE / verifier / lock logic is not involved). The code is
+ * short-lived: the caller sends it within seconds, and discards it if the person cancels at the alert.
+ */
+export async function proveWithApple(): Promise<SocialProofResult> {
+  const apple = loadApple();
+  if (!apple) return { kind: 'unavailable' };
+
+  const rawNonce = toHex(getRandomBytes(32));
+  let credential: Awaited<ReturnType<AppleModule['signInAsync']>>;
+  try {
+    const hashedNonce = await digestStringAsync(CryptoDigestAlgorithm.SHA256, rawNonce);
+    credential = await apple.signInAsync({
+      requestedScopes: [apple.AppleAuthenticationScope.EMAIL],
+      nonce: hashedNonce,
+    });
+  } catch (e) {
+    if (isAppleCancel(e)) return { kind: 'cancelled' };
+    return { kind: 'error', error: toAuthError(e) };
+  }
+  if (!credential.identityToken || !credential.authorizationCode) return { kind: 'error', error: { message: '' } };
+  return {
+    kind: 'proof',
+    proof: { kind: 'apple', identityToken: credential.identityToken, authorizationCode: credential.authorizationCode, nonce: rawNonce },
+  };
+}
+
 let googleConfiguredOnce = false;
 
 function configureGoogle(google: GoogleModule): void {
@@ -185,4 +214,28 @@ export async function signInWithGoogle(): Promise<SocialSignInResult> {
     return { kind: 'error', error: { message: error.message, code: error.code } };
   }
   return { kind: 'signedIn' };
+}
+
+/**
+ * Account deletion (W4): Google sign-in as a PROOF. The native sheet's id token is returned for delete-account to
+ * verify (signInWithIdToken on the server's own client); no session is created here. Like the sign-in, no nonce
+ * (see GOOGLE above). The SDK's own account is left alone: it is the account this phone is already signed in with.
+ */
+export async function proveWithGoogle(): Promise<SocialProofResult> {
+  const google = loadGoogle();
+  if (!google || !googleConfigured()) return { kind: 'unavailable' };
+  const { GoogleSignin, statusCodes, isCancelledResponse } = google;
+  const codes = { cancelled: statusCodes.SIGN_IN_CANCELLED, inProgress: statusCodes.IN_PROGRESS };
+  try {
+    configureGoogle(google);
+    if (Platform.OS === 'android') await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const response = await GoogleSignin.signIn();
+    if (isCancelledResponse(response)) return { kind: 'cancelled' };
+    const idToken = response.data.idToken;
+    if (!idToken) return { kind: 'error', error: { message: '' } };
+    return { kind: 'proof', proof: { kind: 'google', idToken } };
+  } catch (e) {
+    if (isGoogleCancel(e, codes)) return { kind: 'cancelled' };
+    return { kind: 'error', error: toAuthError(e) };
+  }
 }

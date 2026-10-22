@@ -175,7 +175,7 @@ Deno.test("Home's Standings rows stack (name over the numbers) at large text, so
   assertEquals(EXCERPT_STACK_SCALE, 1.5);
   assertEquals([excerptStacks(1), excerptStacks(1.35), excerptStacks(1.5), excerptStacks(2.35)], [false, false, true, true]);
   assert(src.includes('const stacked = excerpt && excerptStacks(fontScale);'));
-  assert(src.includes('<Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>'));
+  assert(src.includes('<Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)} color={seatInk}>{name}</Text>')); // color: the deleted seat's secondary ink (account deletion W4)
 });
 
 // ── Pass-2 DL items (2026-10-13) ───────────────────────────────────────────────

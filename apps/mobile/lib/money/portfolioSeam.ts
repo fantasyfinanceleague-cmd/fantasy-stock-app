@@ -5,6 +5,7 @@
  * agree. Pure (no `__DEV__`, no env): devSeam.ts reads the flags and passes them in, so
  * tests-deno can pin it. Production never reaches it (usePortfolioData gates on SEAM_ON).
  */
+import { seatify } from '../game/seamAccountDeletion';
 import { fixtureSeasonBars, matchupWeekExtras, MSFT_BUY, seamSheetQuote, type MatchupFixtureVariant } from '../game/matchupFixture';
 import { fixtureQty, GIANLUIGI_HOLDINGS, ROBERTO_HOLDINGS, XL_MILLION_ROBERTO_HOLDINGS, XL_ROBERTO_HOLDINGS } from '../home/homeFixtureData';
 import { fixtureLedger } from '../game/matchupFixture';
@@ -145,7 +146,7 @@ export function seamOpenSales(ledger: PortfolioLedger, userId: string): { symbol
  * league ledger with YOUR rows scoped to the roster the Home fixture actually holds (the
  * shared fixture also carries the XL leagues' extra stocks, which would read as a 7th and 8th
  * holding in a 6-slot league). Everyone else's rows are kept (owners in search). */
-export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string, draftAt: string | null = null, leaguemates = false): PortfolioLedger {
+function seamPortfolioLedgerRaw(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string, draftAt: string | null = null, leaguemates = false): PortfolioLedger {
   const base = fixtureLedger(variant, me, opp);
   // Capture only: your draft happened at `draftAt` (the one-point Season line on draft day).
   const ledger = draftAt ? { ...base, activity: base.activity.map((a) => (a.user_id === me && a.kind === 'draft' ? { ...a, occurred_at: draftAt } : a)) } : base;
@@ -162,4 +163,9 @@ export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture:
     activity: [...scoped.activity, ...others.flatMap((o) => scoped.activity.filter((a) => a.user_id === opp).map((a) => ({ ...a, user_id: o.user_id })))],
     members: [...scoped.members, ...others.map((o) => ({ ...o, is_bot: false }))],
   };
+}
+
+/** DEV capture (EXPO_PUBLIC_DELETED_SEAT=1): Gianluigi's seat reads as the deleted-seat label (lib/game/seamAccountDeletion.ts), so the seat's team view names it. Off: the raw fixture, untouched. */
+export function seamPortfolioLedger(variant: MatchupFixtureVariant, homeFixture: string | null, me: string, opp: string, draftAt: string | null = null, leaguemates = false): PortfolioLedger {
+  return seatify(seamPortfolioLedgerRaw(variant, homeFixture, me, opp, draftAt, leaguemates), process.env.EXPO_PUBLIC_DELETED_SEAT === '1');
 }

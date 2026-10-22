@@ -13,6 +13,7 @@ import { isAppleSignInAvailable, isGoogleSignInAvailable, loadApple } from '@/li
 import type { SocialSignInResult } from '@/lib/auth/socialOutcome';
 import { SHELL_FIXTURE } from '@/lib/shell/devFixture';
 import { clearSignInIntent, markSignInIntent } from '@/lib/shell/signInTransition';
+import { setDeletedNotice } from '@/lib/account/deletedNotice';
 
 // Onboarding W2 — Continue with Apple / Continue with Google (plan 2026-10-14: "Apple first on
 // iOS, then Google, then email"). Labels are the plan's own. Apple's button is Apple's NATIVE
@@ -56,6 +57,7 @@ export function SocialSignIn({
 
   async function run(provider: Provider) {
     if (busy) return;
+    setDeletedNotice(false); // "Your account is deleted." is shown once; the next sign-in attempt spends it
     setError(null);
     setBusy(provider);
     if (provider === 'google') setGoogleStatus('loading');

@@ -35,3 +35,18 @@ export function toAuthError(error: unknown): { message: string; code?: string } 
     code: typeof e?.code === 'string' ? e.code : undefined,
   };
 }
+
+/**
+ * Account deletion (W4): the PROOF mode. Same native sheet, but the token is returned instead of exchanged, so no
+ * session is created or replaced. Apple's `authorizationCode` and the raw nonce travel with the token (the server
+ * both verifies the identity and exchanges the code for the refresh token it must revoke); Google carries its id token.
+ */
+export type SocialProof =
+  | { kind: 'apple'; identityToken: string; authorizationCode: string; nonce: string }
+  | { kind: 'google'; idToken: string };
+
+export type SocialProofResult =
+  | { kind: 'proof'; proof: SocialProof }
+  | { kind: 'cancelled' }
+  | { kind: 'unavailable' }
+  | { kind: 'error'; error: { message: string; code?: string } };

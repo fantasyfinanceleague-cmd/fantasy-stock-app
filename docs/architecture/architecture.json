@@ -2,27 +2,22 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "c04f33aa7ab422c29eedcf2e688a40ba8c0c99e9",
-    "commitShort": "c04f33aa",
+    "commit": "5af0451c7d259ed345218e97baffa03a5a95dc58",
+    "commitShort": "5af0451c",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "docs/status-account-deletion-w3",
-    "dirty": true,
-    "dirtyPaths": [
-      {
-        "code": "M",
-        "path": "docs/architecture/db-snapshot.json"
-      }
-    ],
-    "timestamp": "2026-10-22T01:25:21Z",
-    "sourceHash": "sha256:c0f70b7cbf04e5d01f0598db4852164cc13897d9effa9b31f5abbe00ba89847b",
+    "branch": "",
+    "dirty": false,
+    "dirtyPaths": [],
+    "timestamp": "2026-10-22T16:19:20Z",
+    "sourceHash": "sha256:00c64421d322a8f3f8a77fbc6bc9956d2d3ae78e4b0e75e5cf2a2bb5924a4612",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
     "capturedAt": "2026-10-22T01:22:49Z",
-    "ageHours": 0,
-    "ageDays": 0,
+    "ageHours": 14.9,
+    "ageDays": 0.6,
     "staleAfterDays": 14,
     "stale": false,
     "hash": "sha256:d6107036938ffaf8a53341cfe733b6e3cdd021617f5b5f94ca31e3ea518feb9b",
@@ -9653,6 +9648,57 @@
       "drift": [],
       "annotation": null,
       "verified": true,
+      "id": "ui.account.accountApi",
+      "label": "accountApi.ts",
+      "sublabel": "mobile/lib/account/accountApi.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/account/accountApi.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.account.deletedLabelStore",
+      "label": "deletedLabelStore.ts",
+      "sublabel": "mobile/lib/account/deletedLabelStore.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/account/deletedLabelStore.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.account.deleteLeaguesApi",
+      "label": "deleteLeaguesApi.ts",
+      "sublabel": "mobile/lib/account/deleteLeaguesApi.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/lib/account/deleteLeaguesApi.ts",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
       "id": "ui.categoryData",
       "label": "categoryData.ts",
       "sublabel": "mobile/lib/categoryData.ts",
@@ -10713,6 +10759,23 @@
       "kind": "client-screen",
       "source": {
         "path": "apps/web/src/Ticker.jsx",
+        "line": 1
+      }
+    },
+    {
+      "layer": "client",
+      "facts": {},
+      "db": null,
+      "declared": null,
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "ui.tests-deno.account-deletion-wiring.test",
+      "label": "account-deletion-wiring.test.ts",
+      "sublabel": "mobile/tests-deno/account-deletion-wiring.test.ts",
+      "kind": "client-screen",
+      "source": {
+        "path": "apps/mobile/tests-deno/account-deletion-wiring.test.ts",
         "line": 1
       }
     },
@@ -18909,6 +18972,107 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.account.accountApi->fn.delete-account",
+      "from": "ui.account.accountApi",
+      "to": "fn.delete-account",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('delete-account')",
+      "callSites": [
+        "apps/mobile/lib/account/accountApi.ts:21"
+      ],
+      "via": [
+        "seamInvoke"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.accountApi->fn.join-league",
+      "from": "ui.account.accountApi",
+      "to": "fn.join-league",
+      "protocol": "https-invoke",
+      "payload": "functions.invoke('join-league')",
+      "callSites": [
+        "apps/mobile/lib/account/accountApi.ts:38"
+      ],
+      "via": [
+        "seamInvoke"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.accountApi->pg.create_takeover_invite",
+      "from": "ui.account.accountApi",
+      "to": "pg.create_takeover_invite",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('create_takeover_invite')",
+      "callSites": [
+        "apps/mobile/lib/account/accountApi.ts:56"
+      ],
+      "via": [
+        "seamRpc"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.deletedLabelStore->pg.deleted_manager_label",
+      "from": "ui.account.deletedLabelStore",
+      "to": "pg.deleted_manager_label",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('deleted_manager_label')",
+      "callSites": [
+        "apps/mobile/lib/account/deletedLabelStore.ts:15"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.deleteLeaguesApi->pg.get_league_display_names",
+      "from": "ui.account.deleteLeaguesApi",
+      "to": "pg.get_league_display_names",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('get_league_display_names')",
+      "callSites": [
+        "apps/mobile/lib/account/deleteLeaguesApi.ts:42"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.deleteLeaguesApi->tbl.league_members",
+      "from": "ui.account.deleteLeaguesApi",
+      "to": "tbl.league_members",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_members').select('league_id')",
+      "columns": [
+        "league_id",
+        "league_id, user_id, joined_at, hidden_at"
+      ],
+      "callSites": [
+        "apps/mobile/lib/account/deleteLeaguesApi.ts:33",
+        "apps/mobile/lib/account/deleteLeaguesApi.ts:39"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.account.deleteLeaguesApi->tbl.leagues",
+      "from": "ui.account.deleteLeaguesApi",
+      "to": "tbl.leagues",
+      "protocol": "postgrest-select",
+      "payload": ".from('leagues').select('id, name, commissioner_id, season_status, draft_status, draft_date, created_at')",
+      "columns": [
+        "id, name, commissioner_id, season_status, draft_status, draft_date, created_at"
+      ],
+      "callSites": [
+        "apps/mobile/lib/account/deleteLeaguesApi.ts:38"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.categoryData->tbl.categories",
       "from": "ui.categoryData",
       "to": "tbl.categories",
@@ -19181,7 +19345,7 @@
       "payload": ".from('league_members').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:88"
+        "apps/mobile/lib/game/seamCalls.ts:102"
       ]
     },
     {
@@ -19194,7 +19358,7 @@
       "payload": ".from('leagues').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:82"
+        "apps/mobile/lib/game/seamCalls.ts:96"
       ]
     },
     {
@@ -19207,7 +19371,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/lib/game/seamCalls.ts:53"
+        "apps/mobile/lib/game/seamCalls.ts:67"
       ]
     },
     {
@@ -19773,7 +19937,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('historical-bars')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:671"
+        "apps/mobile/lib/home/useHomeLeague.ts:681"
       ]
     },
     {
@@ -19785,7 +19949,7 @@
       "protocol": "https-invoke",
       "payload": "functions.invoke('quote')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:654"
+        "apps/mobile/lib/home/useHomeLeague.ts:664"
       ]
     },
     {
@@ -19797,7 +19961,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_home_league')",
       "callSites": [
-        "apps/mobile/lib/home/useHomeLeague.ts:627"
+        "apps/mobile/lib/home/useHomeLeague.ts:637"
       ]
     },
     {
@@ -19904,7 +20068,7 @@
       "payload": ".from('league_draft_slots').delete()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:265"
+        "apps/mobile/app/league-settings.tsx:285"
       ],
       "via": [
         "seamSaveLeagueSlots"
@@ -19920,7 +20084,7 @@
       "payload": ".from('league_draft_slots').insert()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:265"
+        "apps/mobile/app/league-settings.tsx:285"
       ],
       "via": [
         "seamSaveLeagueSlots"
@@ -19936,7 +20100,7 @@
       "payload": ".from('leagues').update()",
       "columns": [],
       "callSites": [
-        "apps/mobile/app/league-settings.tsx:243"
+        "apps/mobile/app/league-settings.tsx:263"
       ],
       "via": [
         "seamUpdateLeague"
@@ -20123,7 +20287,7 @@
       "protocol": "postgrest-rpc",
       "payload": "rpc('get_portfolio_ledger')",
       "callSites": [
-        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112"
       ],
       "via": [
         "useRosterData"
@@ -20141,7 +20305,7 @@
         "id, slug, name, is_misc"
       ],
       "callSites": [
-        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112"
       ],
       "via": [
         "useRosterData"
@@ -20159,7 +20323,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112"
       ],
       "via": [
         "useRosterData"
@@ -20177,7 +20341,7 @@
         "id, slot_index, slot_count, price_min, price_max, category_id"
       ],
       "callSites": [
-        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112"
       ],
       "via": [
         "useRosterData"
@@ -20195,7 +20359,7 @@
         "user_id, symbol, slot_id, created_at"
       ],
       "callSites": [
-        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93"
+        "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112"
       ],
       "via": [
         "useRosterData"
@@ -20426,7 +20590,7 @@
         "username"
       ],
       "callSites": [
-        "apps/mobile/lib/SessionProvider.tsx:188"
+        "apps/mobile/lib/SessionProvider.tsx:204"
       ]
     },
     {
@@ -21232,6 +21396,48 @@
     {
       "annotation": null,
       "verified": true,
+      "id": "e.ui.tests-deno.account-deletion-wiring.test->pg.deleted_manager_label",
+      "from": "ui.tests-deno.account-deletion-wiring.test",
+      "to": "pg.deleted_manager_label",
+      "protocol": "postgrest-rpc",
+      "payload": "rpc('deleted_manager_label')",
+      "callSites": [
+        "apps/mobile/tests-deno/account-deletion-wiring.test.ts:154"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.tests-deno.account-deletion-wiring.test->tbl.league_invites",
+      "from": "ui.tests-deno.account-deletion-wiring.test",
+      "to": "tbl.league_invites",
+      "protocol": "postgrest-select",
+      "payload": ".from('league_invites').select()",
+      "columns": [
+        "code"
+      ],
+      "callSites": [
+        "apps/mobile/tests-deno/account-deletion-wiring.test.ts:224",
+        "apps/mobile/tests-deno/account-deletion-wiring.test.ts:245",
+        "apps/mobile/tests-deno/account-deletion-wiring.test.ts:246"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.ui.tests-deno.account-deletion-wiring.test->tbl.league_invites#insert",
+      "from": "ui.tests-deno.account-deletion-wiring.test",
+      "to": "tbl.league_invites",
+      "protocol": "postgrest-insert",
+      "payload": ".from('league_invites').insert()",
+      "columns": [],
+      "callSites": [
+        "apps/mobile/tests-deno/account-deletion-wiring.test.ts:249"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
       "id": "e.ui.tests-deno.leaguemate-team-view.test->tbl.week_snapshots",
       "from": "ui.tests-deno.leaguemate-team-view.test",
       "to": "tbl.week_snapshots",
@@ -21896,7 +22102,7 @@
           "detail": "quote — single-symbol live price. The most-invoked function in the app.",
           "files": [
             "apps/mobile/lib/game/useAllMatchups.ts:83",
-            "apps/mobile/lib/home/useHomeLeague.ts:654",
+            "apps/mobile/lib/home/useHomeLeague.ts:664",
             "apps/mobile/lib/money/priceReads.ts:38",
             "apps/web/src/components/TradeModal.jsx:159",
             "apps/web/src/components/TradeModal.jsx:63",
@@ -21955,7 +22161,7 @@
           ],
           "detail": "historical-bars — chart series for portfolio P/L.",
           "files": [
-            "apps/mobile/lib/home/useHomeLeague.ts:671",
+            "apps/mobile/lib/home/useHomeLeague.ts:681",
             "apps/mobile/lib/money/priceReads.ts:52",
             "apps/mobile/lib/money/useStockChartData.ts:46"
           ]
@@ -22299,18 +22505,6 @@
   ],
   "deadCode": [
     {
-      "node": "fn.delete-account",
-      "label": "delete-account",
-      "kind": "edge-function",
-      "source": "supabase/functions/delete-account/index.ts:101",
-      "outbound": [
-        "mod.delete-account/run",
-        "pg.check_and_bump_rate_limit",
-        "tbl.rate_limit_counters"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "fn.send-notification",
       "label": "send-notification",
       "kind": "edge-function",
@@ -22623,20 +22817,6 @@
       "source": "supabase/migrations/20261115000003_run_it_back_rpcs.sql:504",
       "outbound": [
         "tbl.leagues",
-        "tbl.leagues"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
-      "node": "pg.create_takeover_invite",
-      "label": "create_takeover_invite(p_league_id uuid, p_seat_user_id text)",
-      "kind": "pg-function",
-      "source": "supabase/migrations/20261125000006_take_over_team.sql:214",
-      "outbound": [
-        "tbl.league_invites",
-        "tbl.league_invites",
-        "tbl.league_invites",
-        "tbl.league_members",
         "tbl.leagues"
       ],
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
@@ -23067,7 +23247,7 @@
         "surface": "client",
         "name": "seamInsertLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 77,
+        "line": 91,
         "kind": "seam-stub",
         "detail": "leagues.insert"
       },
@@ -23075,7 +23255,7 @@
         "surface": "client",
         "name": "seamInsertMember",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 85,
+        "line": 99,
         "kind": "seam-stub",
         "detail": "league_members.insert"
       },
@@ -23083,7 +23263,7 @@
         "surface": "client",
         "name": "seamInvoke",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 44,
+        "line": 58,
         "kind": "forwarder:invoke",
         "detail": "argument 0 is the function name"
       },
@@ -23091,7 +23271,7 @@
         "surface": "client",
         "name": "seamRpc",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 35,
+        "line": 45,
         "kind": "forwarder:rpc",
         "detail": "argument 0 is the RPC name"
       },
@@ -23099,7 +23279,7 @@
         "surface": "client",
         "name": "seamSaveLeagueSlots",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 91,
+        "line": 105,
         "kind": "seam-stub",
         "detail": "league_draft_slots.delete, league_draft_slots.insert"
       },
@@ -23115,7 +23295,7 @@
         "surface": "client",
         "name": "seamUpdateLeague",
         "file": "apps/mobile/lib/game/seamCalls.ts",
-        "line": 50,
+        "line": 64,
         "kind": "seam-stub",
         "detail": "leagues.update"
       },
@@ -23210,12 +23390,12 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 305,
-    "edges": 751,
+    "nodes": 309,
+    "edges": 761,
     "flows": 7,
     "drift": 33,
     "driftHigh": 0,
-    "deadCode": 65,
+    "deadCode": 63,
     "unverified": 11
   },
   "sourceIndex": {
@@ -23250,13 +23430,15 @@
       "apps/mobile/components/game/DraftRoom.tsx:220 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:244 -> validate-and-record-pick (via seamInvoke)",
       "apps/mobile/components/game/DraftRoom.tsx:289 -> validate-and-record-pick (via seamInvoke)",
+      "apps/mobile/lib/account/accountApi.ts:21 -> delete-account (via seamInvoke)",
+      "apps/mobile/lib/account/accountApi.ts:38 -> join-league (via seamInvoke)",
       "apps/mobile/lib/game/useAllMatchups.ts:83 -> quote (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:120 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftAutoStart.ts:79 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useDraftStatus.ts:46 -> draft-control (via seamInvoke)",
       "apps/mobile/lib/game/useLeaveLeague.ts:47 -> leave-league (via seamInvoke)",
-      "apps/mobile/lib/home/useHomeLeague.ts:654 -> quote",
-      "apps/mobile/lib/home/useHomeLeague.ts:671 -> historical-bars",
+      "apps/mobile/lib/home/useHomeLeague.ts:664 -> quote",
+      "apps/mobile/lib/home/useHomeLeague.ts:681 -> historical-bars",
       "apps/mobile/lib/invite/invitePreviewApi.ts:14 -> invite-preview",
       "apps/mobile/lib/money/priceReads.ts:38 -> quote",
       "apps/mobile/lib/money/priceReads.ts:52 -> historical-bars",
@@ -23294,10 +23476,13 @@
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> nudge_renewal (via seamRpc, inferred)",
       "apps/mobile/components/game/RenewalRoster.tsx:58 -> remove_renewal_invitee (via seamRpc, inferred)",
       "apps/mobile/components/home/RunItBackCard.tsx:22 -> renew_league (via seamRpc)",
-      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> get_portfolio_ledger (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:89 -> get_portfolio_ledger (via useRosterData)",
       "apps/mobile/lib/LeagueContext.tsx:177 -> get_home_summary",
       "apps/mobile/lib/LeagueContext.tsx:182 -> market_session_status",
+      "apps/mobile/lib/account/accountApi.ts:56 -> create_takeover_invite (via seamRpc)",
+      "apps/mobile/lib/account/deleteLeaguesApi.ts:42 -> get_league_display_names",
+      "apps/mobile/lib/account/deletedLabelStore.ts:15 -> deleted_manager_label",
       "apps/mobile/lib/game/useDraftRoom.ts:46 -> get_draft_clock (via seamRpc)",
       "apps/mobile/lib/game/useDraftRoom.ts:47 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/game/useDraftRoom.ts:49 -> get_league_display_names (via seamRpc)",
@@ -23310,7 +23495,7 @@
       "apps/mobile/lib/game/useSeasonPlayoffs.ts:30 -> get_season_matchups (via seamRpc)",
       "apps/mobile/lib/home/useDraftingData.ts:84 -> get_draft_clock",
       "apps/mobile/lib/home/useDraftingData.ts:85 -> get_draft_order",
-      "apps/mobile/lib/home/useHomeLeague.ts:627 -> get_home_league",
+      "apps/mobile/lib/home/useHomeLeague.ts:637 -> get_home_league",
       "apps/mobile/lib/home/usePreDraftData.ts:110 -> get_draft_order (via seamRpc)",
       "apps/mobile/lib/home/usePreDraftData.ts:111 -> get_league_display_names (via seamRpc)",
       "apps/mobile/lib/home/useSeasonResult.ts:8 -> get_season_result",
@@ -23318,6 +23503,7 @@
       "apps/mobile/lib/money/usePortfolioLedger.ts:41 -> get_portfolio_ledger",
       "apps/mobile/lib/shell/usernameApi.ts:30 -> check_usernames",
       "apps/mobile/lib/shell/usernameApi.ts:49 -> set_username",
+      "apps/mobile/tests-deno/account-deletion-wiring.test.ts:154 -> deleted_manager_label",
       "apps/web/src/context/UserProfilesContext.jsx:30 -> get_visible_profiles",
       "apps/web/src/pages/DraftPage.jsx:379 -> get_draft_order",
       "apps/web/src/pages/DraftPage.jsx:392 -> get_real_user_ids",
@@ -23394,13 +23580,13 @@
       "apps/mobile/app/create-league.tsx:222 -> league_members.insert (via seamInsertMember)",
       "apps/mobile/app/create-league.tsx:232 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
       "apps/mobile/app/create-league.tsx:232 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
-      "apps/mobile/app/league-settings.tsx:243 -> leagues.update (via seamUpdateLeague)",
-      "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
-      "apps/mobile/app/league-settings.tsx:265 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
-      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> categories.select (via useRosterData)",
-      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> drafts.select (via useRosterData)",
-      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> league_draft_slots.select (via useRosterData)",
-      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:93 -> trades.select (via useRosterData)",
+      "apps/mobile/app/league-settings.tsx:263 -> leagues.update (via seamUpdateLeague)",
+      "apps/mobile/app/league-settings.tsx:285 -> league_draft_slots.delete (via seamSaveLeagueSlots)",
+      "apps/mobile/app/league-settings.tsx:285 -> league_draft_slots.insert (via seamSaveLeagueSlots)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112 -> categories.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112 -> drafts.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112 -> league_draft_slots.select (via useRosterData)",
+      "apps/mobile/components/money/PlayerPortfolioScreen.tsx:112 -> trades.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:89 -> categories.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:89 -> drafts.select (via useRosterData)",
       "apps/mobile/components/money/PortfolioScreen.tsx:89 -> league_draft_slots.select (via useRosterData)",
@@ -23410,7 +23596,10 @@
       "apps/mobile/lib/LeagueContext.tsx:183 -> market_calendar.select",
       "apps/mobile/lib/LeagueContext.tsx:322 -> league_members.select",
       "apps/mobile/lib/LeagueContext.tsx:334 -> leagues.select",
-      "apps/mobile/lib/SessionProvider.tsx:188 -> user_profiles.select",
+      "apps/mobile/lib/SessionProvider.tsx:204 -> user_profiles.select",
+      "apps/mobile/lib/account/deleteLeaguesApi.ts:33 -> league_members.select",
+      "apps/mobile/lib/account/deleteLeaguesApi.ts:38 -> leagues.select",
+      "apps/mobile/lib/account/deleteLeaguesApi.ts:39 -> league_members.select",
       "apps/mobile/lib/categoryData.ts:103 -> category_rules.select",
       "apps/mobile/lib/categoryData.ts:113 -> symbols.select",
       "apps/mobile/lib/categoryData.ts:114 -> symbols.select",
@@ -23423,9 +23612,9 @@
       "apps/mobile/lib/categoryData.ts:66 -> categories.select",
       "apps/mobile/lib/categoryData.ts:85 -> symbol_category_overrides.select",
       "apps/mobile/lib/categoryData.ts:96 -> symbols.select",
-      "apps/mobile/lib/game/seamCalls.ts:53 -> leagues.update",
-      "apps/mobile/lib/game/seamCalls.ts:82 -> leagues.insert",
-      "apps/mobile/lib/game/seamCalls.ts:88 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:102 -> league_members.insert",
+      "apps/mobile/lib/game/seamCalls.ts:67 -> leagues.update",
+      "apps/mobile/lib/game/seamCalls.ts:96 -> leagues.insert",
       "apps/mobile/lib/game/useAllMatchups.ts:45 -> matchups.select",
       "apps/mobile/lib/game/useAllMatchups.ts:58 -> week_snapshots.select",
       "apps/mobile/lib/game/useAllMatchups.ts:68 -> trades.select",
@@ -23454,6 +23643,10 @@
       "apps/mobile/lib/useLeagues.ts:53 -> leagues.select",
       "apps/mobile/lib/usePortfolio.ts:116 -> drafts.select",
       "apps/mobile/lib/usePortfolio.ts:128 -> trades.select",
+      "apps/mobile/tests-deno/account-deletion-wiring.test.ts:224 -> league_invites.select",
+      "apps/mobile/tests-deno/account-deletion-wiring.test.ts:245 -> league_invites.select",
+      "apps/mobile/tests-deno/account-deletion-wiring.test.ts:246 -> league_invites.select",
+      "apps/mobile/tests-deno/account-deletion-wiring.test.ts:249 -> league_invites.insert",
       "apps/mobile/tests-deno/leaguemate-team-view.test.ts:193 -> week_snapshots.select",
       "apps/web/src/Header.jsx:110 -> league_members.select",
       "apps/web/src/Header.jsx:118 -> leagues.select",

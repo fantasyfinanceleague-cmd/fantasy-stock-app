@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { radius, space } from '@/constants/tokens';
 import { Avatar } from '@/components/sp/Avatar';
+import { useSeatInk } from '@/components/sp/useSeatInk';
 import { PressableScale } from '@/components/sp/PressableScale';
 import { Text } from '@/components/sp/Text';
 import { keepMoney } from '@/lib/game/keepDots';
@@ -74,6 +75,7 @@ export function ManagerRow(props: ManagerRowProps) {
   const { fontScale } = useWindowDimensions();
   // Before any early return: a hook (the medal disc's size; League's final standings).
   const disc = useMedalDiscSize();
+  const seatInk = useSeatInk(name);
   if (props.kind === 'order') {
     // The seat in text2 (seat 1 leads nothing), the 32pt avatar, the name; your row as ever.
     const tile = [styles.tile, { backgroundColor: colors.surface }];
@@ -82,7 +84,7 @@ export function ManagerRow(props: ManagerRowProps) {
         {isYou ? <View testID="manager-row-you" pointerEvents="none" style={[styles.youOverlay, { backgroundColor: colors.youTint, borderColor: colors.you }]} /> : null}
         <Text variant="score.md" color={colors.text2} style={styles.rank}>{rank}</Text>
         <Avatar name={name} uri={avatarUri} size={32} tone={isYou ? 'you' : 'neutral'} />
-        <Text variant="body" numberOfLines={2} style={[styles.name, yourNameStyle(isYou)]}>{name}</Text>
+        <Text variant="body" numberOfLines={2} style={[styles.name, yourNameStyle(isYou)]} color={seatInk}>{name}</Text>
       </View>
     );
   }
@@ -111,7 +113,7 @@ export function ManagerRow(props: ManagerRowProps) {
         // League at large text (the open P2): the name takes its own line(s), the record and
         // gain sit under it; no line of the row is larger than its gain (textCap).
         <View style={styles.stack}>
-          <Text variant="body" numberOfLines={2} maxFontSizeMultiplier={textCap} style={yourNameStyle(isYou)}>{name}</Text>
+          <Text variant="body" numberOfLines={2} maxFontSizeMultiplier={textCap} style={yourNameStyle(isYou)} color={seatInk}>{name}</Text>
           {tag ? <Text variant="caption" tone="secondary" maxFontSizeMultiplier={textCap}>{tag}</Text> : null}
           <View style={styles.stackNumbers}>
             <Text variant="callout" tone="secondary" maxFontSizeMultiplier={textCap} style={styles.record}>{record}</Text>
@@ -122,7 +124,7 @@ export function ManagerRow(props: ManagerRowProps) {
         <>
           {/* One line of numbers; the name may take a second line rather than an ellipsis. */}
           <View style={styles.name}>
-            <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>
+            <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)} color={seatInk}>{name}</Text>
             {tag ? <Text variant="caption" tone="secondary">{tag}</Text> : null}
           </View>
           <Text variant="callout" tone="secondary" style={[styles.record, recordWidth ? { minWidth: recordWidth } : null]}>{record}</Text>
@@ -132,7 +134,7 @@ export function ManagerRow(props: ManagerRowProps) {
         // Home's excerpt at large text (W4 gate): the name takes its own line(s) and the
         // record and gain sit under it, so the name never shrinks to a letter.
         <View style={styles.stack}>
-          <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)}>{name}</Text>
+          <Text variant="body" numberOfLines={2} style={yourNameStyle(isYou)} color={seatInk}>{name}</Text>
           <View style={styles.stackNumbers}>
             <Text variant="callout" tone="secondary" style={styles.record}>{record}</Text>
             <Text variant="score.sm" color={colors[toneOf(seasonGain)]} style={styles.gain}>{keepMoney(gainText)}</Text>

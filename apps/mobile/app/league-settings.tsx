@@ -5,7 +5,7 @@
 // card-of-rows vocabulary (RibReview). handleSave, the save-outcome rules
 // (lib/game/settingsSave) and the seam writes are unchanged.
 import { Alert, Share, StyleSheet, View } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/lib/useAuth';
 import { useLeagueContext } from '@/lib/LeagueContext';
@@ -49,6 +49,10 @@ import { Field } from '@/components/shell/Field';
 import { SetupScaffold } from '@/components/game/SetupScaffold';
 import { Stepper } from '@/components/game/Stepper';
 import { DraftDateSheet } from '@/components/game/DraftDateSheet';
+import { MembersSection } from '@/components/league/MembersSection';
+import { canFindNewManager, membersRows } from '@/lib/account/findManager';
+import { useDeletedManagerLabel } from '@/lib/account/deletedLabelStore';
+import { useFindNewManager } from '@/lib/account/useFindNewManager';
 import { ChoiceRow, LockNote, RowDivider, SettingRow, SetupCard, SwitchRow, WarnNote } from '@/components/game/SetupRows';
 
 /** The leave flow's kill switch (item 13; board #call-leave). On: members reach League settings too (Invite
@@ -128,6 +132,22 @@ export default function LeagueSettingsScreen() {
   const leaving = useLeaveLeague(league?.id ?? null, leaveOn, user?.id ?? '', league?.name ?? '');
   const membershipWindow = leaveWindow({ seasonStatus: league?.season_status, draftStatus: league?.draft_status, draftDate: league?.draft_date }, Date.now());
   const commissionerName = leaving.names.find((n) => n.user_id === league?.commissioner_id)?.display_name?.trim() || COMMISSIONER_FALLBACK;
+  // Account deletion (W4): League › Members after the draft, with the commissioner's "Find a new manager" on a deleted seat.
+  const deletedLabel = useDeletedManagerLabel();
+  const findManager = useFindNewManager(league?.id ?? null, league?.name ?? '');
+  const memberRows = useMemo(
+    () => membersRows(leaving.names, leaving.memberIds, league?.commissioner_id, user?.id ?? '', deletedLabel),
+    [leaving.names, leaving.memberIds, league?.commissioner_id, user?.id, deletedLabel],
+  );
+  const membersBlock = leaveOn && league && league.draft_status !== 'not_started' && memberRows.length > 0 ? (
+    <MembersSection
+      rows={memberRows}
+      findable={canFindNewManager({ isCommissioner, seatDeleted: true, draftStatus: league.draft_status, seasonStatus: league.season_status })}
+      busyId={findManager.busyId}
+      failed={findManager.failed}
+      onFind={findManager.find}
+    />
+  ) : null;
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
@@ -297,6 +317,7 @@ export default function LeagueSettingsScreen() {
           <RowDivider />
           <SettingRow label={COMMISSIONER_ROW} value={commissionerName} />
         </SetupCard>
+        {membersBlock}
         {leaveBlock}
       </SetupScaffold>
     );
@@ -532,6 +553,7 @@ export default function LeagueSettingsScreen() {
         </SetupCard>
       </View>
 
+      {membersBlock}
       {leaveBlock}
       {transferSheet}
 

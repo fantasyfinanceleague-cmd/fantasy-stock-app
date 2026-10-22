@@ -3,6 +3,8 @@ import { getLiveSession } from '@/lib/auth/liveSession';
 import { stripInviteParam } from '@/lib/invite/autoJoin';
 import { parseInviteArrival } from '@/lib/invite/inviteLink';
 import { pendingInvite } from '@/lib/invite/pendingInviteStore';
+import { pendingTakeover } from '@/lib/invite/pendingTakeoverStore';
+import { parseTakeoverArrival } from '@/lib/invite/takeoverLink';
 import { isRecoveryRoute } from '@/lib/recoveryLink';
 import { markOnboardingSeen } from '@/lib/shell/firstRun';
 import { pendingRoute } from '@/lib/shell/pendingRoute';
@@ -48,6 +50,19 @@ export function redirectSystemPath({ path }: { path: string; initial: boolean })
     }
   } catch (e) {
     console.warn('[native-intent] could not record invite link', e);
+  }
+  // Account deletion (W4): a takeover link (https://<domain>/take/<CODE> or fantasystockapp://take/<CODE>) is not a
+  // screen either, and it is NOT an invite: its own path, its own strict parser (lib/invite/takeoverLink.ts) and its own
+  // pending record (lib/invite/pendingTakeover.ts). The root layout opens the landing once the person is in the app;
+  // the landing waits for their tap. The router just opens the root.
+  try {
+    const takeover = parseTakeoverArrival(path);
+    if (takeover && pendingTakeover.capture(takeover.code, takeover.origin)) {
+      markOnboardingSeen();
+      return '/';
+    }
+  } catch (e) {
+    console.warn('[native-intent] could not record takeover link', e);
   }
   // Onboarding W2: the email-confirmation return (fantasystockapp://auth/confirm?code=…) is not a
   // screen. The root layout's link handler reads it; the router just opens sign-in, which the
