@@ -108,6 +108,14 @@ Origin/main for the diffs: `4e24ea92`. Replaced stills are in `superseded-run3/`
 | League settings (commissioner, before the draft), top and scrolled to the foot (the "Add slot" sm pill) | identical, 0 px, all 4 each |
 | League Standings, load failed ("Try again" sm pill) | identical, 0 px, all 4 |
 
+## Re-gate round 2 on `b4d23ecd` (takeover heading ceiling 1.15x; SetupRows reads the layout event before its state updater)
+
+Replaced stills are in `superseded-run4/`.
+
+- **F20 takeover found, XXXL (4 stills).** Now wraps "Take over / Former manager's / team in / Stock Scudetto?": "Former manager's" and "Stock Scudetto" each stay on ONE line, on both phones, both themes (it was six lines splitting both names). The heading is smaller than before; the record pill, "Take the team" and "Not now" are unchanged.
+- **F33 commissioner League settings (pre-draft; Roster slots / "Add slot"), XXXL: now reachable.** `F33-commissioner-settings-top-*` and `F33-commissioner-settings-foot-*` (`SHELL_SCROLL_END=1`), 8 stills, no crash (the red "Cannot read property 'layout' of null" screen is gone; that was `SetupRows.tsx` reading `e.nativeEvent` inside the state updater). The earlier crashed stills (`not-reachable/F33-share-pill-commissioner-*`) were moved to `superseded-run4/`. There is no Share pill on the commissioner's invite row at XXXL: the foot shows the code, then "Commissioner / You", with nothing between them (the same as at L). One top still (17e XXXL light) was first caught on the Expo Go splash and was re-shot.
+- **L diffs vs `origin/main` (`4e24ea92`) for the SetupRows change**, both phones, both themes: League settings, commissioner pre-draft (top) and (scrolled to the foot), and member pre-draft (Share pill): identical, 0 changed pixels in all 12 pairs.
+
 ## Known notes
 
 - F19 (share sheet) was opened by a capture-script action (a dev-only hook, since reverted and not committed).
