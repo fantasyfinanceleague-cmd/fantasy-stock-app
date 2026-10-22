@@ -5,7 +5,7 @@ Update this file at the end of any session that changes prod state or lands a
 workstream. Per-workstream detail lives in the documents linked below and in the
 PRs; this page summarises and points.
 
-**Last verified against prod: 2026-10-22** (most recently: the account-deletion server side #308, 5 functions + `20261125000010`–`11`, checks 8/8, the live 1.2.0 invite preview re-checked on a phone, db-snapshot re-captured, 2026-10-22; before that the account-deletion database layer #306, `20261125000000`–`09` pushed, effect test 22/22 PASS, db-snapshot re-captured with 0 HIGH drift rows, 2026-10-21; before that the onboarding invite-preview limiter #284, migration + 2 functions + HTTP checks, 2026-10-15; the legacy web client hardening #286, Vercel prod deploy checked live 2026-10-16. Before that: read-only SQL, deploy downloads and
+**Last verified against prod: 2026-10-22** (most recently: the account-deletion server side #308 (its app screens #310 merged the same day, not yet in a build), 5 functions + `20261125000010`–`11`, checks 8/8, the live 1.2.0 invite preview re-checked on a phone, db-snapshot re-captured, 2026-10-22; before that the account-deletion database layer #306, `20261125000000`–`09` pushed, effect test 22/22 PASS, db-snapshot re-captured with 0 HIGH drift rows, 2026-10-21; before that the onboarding invite-preview limiter #284, migration + 2 functions + HTTP checks, 2026-10-15; the legacy web client hardening #286, Vercel prod deploy checked live 2026-10-16. Before that: read-only SQL, deploy downloads and
 effect tests run with Giorgio; results recorded inline; scoring/snapshot hardening released 2026-10-04/05; draft-never-skips #105 and the record-trade concurrency fix #113/#115 and tier trade slots #117 released 2026-10-06; then the freeze #123, the auto-pick sweep #120, leave-league #126, truthful cron status #121 and the join preview #125, all released and verified 2026-10-06; then commissioner transfer #132 (2026-10-06) and the server-side "your turn" push #160 (2026-10-07), both released and verified; then draft auto-start #133 (2026-10-07, live-tested), the game + League-setup screens #171 and Money screens #172 (their migrations applied 2026-10-07/08), and Giorgio's "nothing scrapable" lockdown: symbols signed-in only #175/#177 and market-data guards #183 (2026-10-08/09), all verified; then on 2026-10-10 Run it back #94 (server side; the app keeps it behind its kill switch), scrape hardening #195 and profile visibility stage 1 #198, all released and verified). Anything marked
 **UNVERIFIED** has not been checked against prod and must be confirmed before
 anyone builds on it. Resolved defects are collapsed into §5. Their full reasoning
@@ -15,7 +15,9 @@ lives in the linked PRs and in git history (`git log -p -- docs/STATUS.md`).
 
 ## 1. Where things stand
 
-**2026-10-22 (latest): account deletion's SERVER SIDE is LIVE (#308): `delete-account`, `heal-account-deletions` (hourly at :23), takeover links in `join-league`, `preview-league` invite-only, the deleted-seat auto-pick in `draft-autopick-sweep`.** Apple secrets set by Giorgio; dashboard: Secure password change ON, manual identity linking OFF, CAPTCHA and single-session OFF. The app screens (W4) are in review; until they ship nothing calls `delete-account`. The real-deletion checks are walkthrough §6.
+**2026-10-22 (latest, evening): account deletion is COMPLETE IN CODE.** The app screens merged (#310): Profile › Delete account, "Former manager" everywhere a deleted seat shows, League settings › Members › Find a new manager (a `/take/` link; a hand-typed scheme link waits for a tap), and a real XXXL crash in the commissioner's pre-draft League settings fixed on the way. They ship in the next 1.3 build; **the only open check is walkthrough §6 on Giorgio's phone, with TEST accounts**. Housekeeping the same day: the README fact-checked and its preview replaced with current Game Night screens (#311); #279 marked draft; #45 (the pre-Game Night landing) closed, branch kept; 95 finished worker chats archived (unpushed work tagged `archive/2026-10-22/*` first) and auto-archive on PR close turned on. **Nothing goes to the App Store until Giorgio says so.**
+
+**2026-10-22: account deletion's SERVER SIDE is LIVE (#308): `delete-account`, `heal-account-deletions` (hourly at :23), takeover links in `join-league`, `preview-league` invite-only, the deleted-seat auto-pick in `draft-autopick-sweep`.** Apple secrets set by Giorgio; dashboard: Secure password change ON, manual identity linking OFF, CAPTCHA and single-session OFF. The app screens (W4) merged later that day (#310); until a build with them ships, nothing calls `delete-account`. The real-deletion checks are walkthrough §6.
 
 **2026-10-21: in-app account deletion (the 1.3 App Store blocker, plan `docs/plans/2026-10-21-account-deletion.md`) has its database layer LIVE (#306).** League history keeps the deleted seat as "Former manager", a commissioner is handed over, and a deleted seat can be taken over by a `/take/` link. Effect test 22/22 PASS. Still to come: the `delete-account` / `heal-account-deletions` functions + hourly heal cron (W3, needs Giorgio's Apple secrets first) and the app screens (W4, merges after W3). Until both ship, nothing in prod calls the new functions.
 
@@ -59,7 +61,7 @@ refused by RLS when they draft (confirmed on Giorgio's phone). The fix is the
 - **Product direction (Giorgio, 2026-09-29): the app and platform come FIRST.**
   - The Design Lead is designing the real key app screens for approval.
   - The mobile phases build to them.
-  - The landing redesign (PR #45, draft) is **parked** until then, so that it shows the real app.
+  - The landing redesign (PR #45) was parked until then, so that it shows the real app (closed 2026-10-22; it predates Game Night and will be rebuilt).
 - **Backend release, 2026-09-29 afternoon (PRs #54–#58).** It is live and effect-verified, and every deployed function was byte-verified against `main`:
   - fixed-notional rebuys reinvest exactly the sale's proceeds (#54);
   - the username format is enforced on every write, and `set_username` / `check_usernames` exist (#55);
@@ -217,7 +219,8 @@ Phase 3: **app first**.
 | Product name | Deferred to pre-launch. Stockpile must go (a live third-party TM); **Stockade** is the front-runner and Odd Lot the runner-up. The rename is prepared on a local, unpushed branch `chore/rename-to-stockade`. Keep the bundle id, slug and scheme | `docs/design/NAMING.md` |
 | Mobile design-system pass (PR #15) | ✅ Merged; ships with 1.1.0 | — |
 | Architecture map | Current on `main`; db-snapshot re-captured **2026-10-22** after #308: **0 high** drift rows (33 rows: 6 medium, 27 low) | `docs/architecture/`, CLAUDE.md |
-| Onboarding (plan 2026-10-14) | ✅ W1 board, W2 auth (#277), W3 invite links (#284, server live), W4 screens (#283). ⏸ W5 web (#279, draft, parked until launch prep). Remaining: launch-prep dashboard steps (§4 top) | `docs/plans/2026-10-14-onboarding.md`, `docs/security/universal-links.md` |
+| Onboarding (plan 2026-10-14) | ✅ W1 board, W2 auth (#277), W3 invite links (#284, server live), W4 screens (#283). ⏸ W5 web (#279, draft, parked until launch prep). Remaining: launch-prep dashboard steps (§4 top). #279 also needs the account-deletion web pieces (its PR comment lists them) | `docs/plans/2026-10-14-onboarding.md`, `docs/security/universal-links.md` |
+| Account deletion (plan 2026-10-21) | ✅ W1 board (#304), W2 DB (#306, live), W3 server (#308, live), W4 screens (#310, merged; ships in the next 1.3 build). Remaining: walkthrough §6 on a phone. Follow-ups: a Google nonce for the proof; "already a member" could name the league (a migration); a deleted user's JWT can create an empty league for up to an hour; W5's AASA `/take/*` + web page + the web invite list's `kind` filter | `docs/plans/2026-10-21-account-deletion.md`, `docs/testing/account-deletion-effect-test.md` |
 | Pre-1.3 sweep (tap-through + large text) | ✅ #287 #289 #292 #293 #294 #295 #296 #297 #298 #299; leaguemate team view #291 | `docs/design/reviews/tap-through-2026-10.md`, `docs/design/captures/*` |
 
 ---
@@ -225,7 +228,7 @@ Phase 3: **app first**.
 ## 4. Open items (ordered by launch impact)
 
 > **2026-10-20: before the 1.3 build (Giorgio).**
-> 1. **Real-phone pass**, on a 1.3 dev/TestFlight build (the tick-off checklist: [`docs/testing/WALKTHROUGH_1.3.md`](testing/WALKTHROUGH_1.3.md), 28 items, onboarding last):
+> 1. **Real-phone pass**, on a 1.3 dev/TestFlight build (the tick-off checklist: [`docs/testing/WALKTHROUGH_1.3.md`](testing/WALKTHROUGH_1.3.md), 33 items: onboarding §5, then account deletion §6 with TEST accounts only):
 >    - VoiceOver: Home's standings card and the Matchup halves read their content, then "button", then "View {name}'s team"; one amount each on the Join preview and in Trade history reads as normal money.
 >    - XXXL: the Transfer commissioner, Renewal change and sale-picker sheets, plus the trade review and pre-draft Home with Share visible (no fixture reaches these).
 >    - The server writes the simulator couldn't confirm: Move forward / Invite someone new, the playoff-teams stepper, Save queue, the nudge, Schedule the draft.
@@ -355,7 +358,7 @@ Phase 3: **app first**.
     - PR #53 (mobile foundation) gets the Light/Dark ThemeProvider per §9A;
     - then 3b-1 (its backend precondition, `set_username`, is ✅ live);
     - then 3b-2 / 3c / 3e, then 3d (the web app);
-    - then the landing resumes from PR #45 (`~/fantasy-stock-design-review/ui-landing-gameday/PARKED.md`).
+    - then the landing is rebuilt against the Game Night screens. PR #45 (the pre-Game Night landing) was **closed 2026-10-22**; its branch `ui/landing-gameday` is kept for parts (prerendering, the 100 Lighthouse work).
 16. **Market-data attribution.** Giorgio approved a credit line; the board uses "Market data provided by Alpaca" on price surfaces. Confirm the exact wording against the provider's terms. The live landing still shows `[MARKET DATA ATTRIBUTION PLACEHOLDER]`.
 17. **Before public launch:** item 1, F8, trade race, leave-league, season 2+, legacy
     keys disabled, `APP_PAUSED = false`, then open signups with
@@ -512,15 +515,10 @@ Phase 3: **app first**.
 |---|---|
 | `main` | Deployed to Vercel prod (landing only). The mobile 1.3 line: do not `eas update` from it. |
 | `feat/onboarding-w5-web-join` | PR #279, **draft, parked** until launch prep: the web invite page + web sign-up. Merging it is a Vercel prod deploy, and its build fails until the App Store URL is set. |
-| `ui/landing-gameday` | PR #45, **draft, parked**: the Game Day 3D landing, round 4. Resume after the key screens are approved. |
-| `ui/foundation-mobile` | PR #53, **draft, held** for the Light/Dark ThemeProvider rework (§9A). |
-| `design/key-screens-2026-09-29` | PR #52, **draft**: the design board (v3.3), the source of truth for the app screens. Merge after Giorgio signs off. |
-| `ui/mobile-shell-3b1` | 3b-1 app shell + first run: in progress; merge HELD until the 1.1.0 build is cut. |
-
+| `ui/landing-gameday` | PR #45, **closed 2026-10-22** (pre-Game Night style, ~1,400 commits behind). Branch kept for parts. |
 | `chore/rename-to-stockade` | LOCAL only (a97bfbb), parked until the name is final. |
-| `fix/effect-test-anon-expectations` | PR #50 (test file only). |
-| `docs/status-sync-2026-09-29` | This update (PR #51). |
-| Merged 2026-09-29, safe to delete | `fix/fixed-notional-slot-proceeds`, `fix/username-write-path`, `fix/all-cash-unscoreable-matchup`, `fix/snapshot-bots-and-skip-rows`, `feat/draft-pick-clock-autopick`, `fix/unified-league-ranking` |
+| Archive tags | `archive/2026-10-22/*` (local only): the HEADs of 8 archived worker chats whose commits weren't on any remote. Their content is on `main` or superseded; the tags keep it recoverable. |
+| Merged, safe to delete | `ui/foundation-mobile` (#53), `design/key-screens-2026-09-29` (#52), `ui/mobile-shell-3b1` (#73), `fix/effect-test-anon-expectations` (#50), `docs/status-sync-2026-09-29` (#51), `fix/fixed-notional-slot-proceeds`, `fix/username-write-path`, `fix/all-cash-unscoreable-matchup`, `fix/snapshot-bots-and-skip-rows`, `feat/draft-pick-clock-autopick`, `fix/unified-league-ranking` |
 | Merged, safe to delete with `git branch -d` | `security/claude-security-fixes-20260730`, `feat/server-schedule-generation`, `feat/mobile-draft-start-search-finalize`, `fix/*` from PRs #12/#13/#16–#19/#22, `docs/status-sync-2026-09-25`, `ui/design-system-pass-v2`, `docs/ui-ux-program`, `claude/platform-project-analysis-34b47a`, plus ~20 older (`simulator-core`, `phase4-*`, `item*`, …) |
 | Superseded backups | `ui/design-system-pass`, `item4-fix-refresh-symbols-cron`, `backup/pre-filter-2025-08-20` |
 
