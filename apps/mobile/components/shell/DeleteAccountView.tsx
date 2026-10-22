@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define -- RN styles-at-bottom idiom: `styles` is declared below and only referenced inside the render, which runs after module init, so there is no TDZ. See CLAUDE.md ("ESLint (mobile)"). */
 import type { RefObject } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
-import { radius, space } from '@/constants/tokens';
+import { radius, space, type } from '@/constants/tokens';
 import { Button } from '@/components/sp/Button';
 import { Card } from '@/components/sp/Card';
 import { Icon } from '@/components/sp/Icon';
+import { iconPointSize } from '@/components/sp/logic/icon';
 import { Text } from '@/components/sp/Text';
 import { useTheme } from '@/components/sp/ThemeProvider';
 import { WarnPanel } from '@/components/sp/WarnPanel';
@@ -51,6 +52,10 @@ export interface DeleteAccountViewProps {
 export function DeleteAccountView({ state, leagues, label, password, inputRef, onPassword, onApple, onGoogle, onDelete }: DeleteAccountViewProps) {
   const { colors } = useTheme();
   const sending = state.phase === 'sending';
+  const { fontScale } = useWindowDimensions();
+  // The check hangs on the label's FIRST line like a bullet (the label wraps at XXXL): offset by half the gap between the
+  // label's line box (callout, uncapped, so it follows fontScale) and the icon's own point size.
+  const checkOffset = Math.max(0, Math.round((type.callout.lineHeight * fontScale - iconPointSize('callout', fontScale)) / 2));
   const proven = proofInHand(state.proof, state.kind);
 
   return (
@@ -94,7 +99,9 @@ export function DeleteAccountView({ state, leagues, label, password, inputRef, o
         />
       ) : proven ? (
         <View style={styles.confirmed} accessible accessibilityLiveRegion="polite">
-          <Icon name="check" size="body" tone="gain" />
+          <View style={{ marginTop: checkOffset }}>
+            <Icon name="check" size="callout" tone="gain" />
+          </View>
           {/* The Field label's style (not a capped label of its own), in the gain colour: it reads as the password prompt does. */}
           <FieldLabel color={colors.gain}>{state.kind === 'apple' ? CONFIRMED_WITH_APPLE : CONFIRMED_WITH_GOOGLE}</FieldLabel>
         </View>
@@ -166,7 +173,7 @@ const styles = StyleSheet.create({
   },
   confirmed: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: space[2],
     minHeight: 44,
   },

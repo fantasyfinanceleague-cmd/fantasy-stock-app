@@ -53,6 +53,9 @@ export function pastSeasonsLine(label: string): string {
   return `Past seasons keep your results under “${label}”.`;
 }
 
+/** The tap view's heading: the approved share text with the league cut off (the league can't be shown before the tap; UX rule 8: say what the screen is). */
+export const TAKEOVER_TAP_TITLE = 'Take over a team';
+
 /** The share text (NEW, "Use as written"). */
 export function takeoverShareSentence(leagueName: string): string {
   return `Take over a team in ${leagueName}`;

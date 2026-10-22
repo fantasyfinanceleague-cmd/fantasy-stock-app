@@ -10,7 +10,7 @@ import { useTheme } from '@/components/sp/ThemeProvider';
 import { WARN_TEXT_MAX_SCALE, WarnPanel } from '@/components/sp/WarnPanel';
 import { AuthScaffold } from '@/components/shell/AuthScaffold';
 import { ScreenTitle } from '@/components/shell/ScreenTitle';
-import { FIND_LEAGUE, GO_TO_HOME, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
+import { FIND_LEAGUE, GO_TO_HOME, TAKEOVER_TAP_TITLE, NOT_NOW, OPEN_THE_LEAGUE, TAKE_THE_TEAM, TRY_LATER, takeoverQuestion } from '@/lib/account/deleteCopy';
 import type { RateWait } from '@/lib/account/takeoverReply';
 import { keepName } from '@/lib/account/keepName';
 import { deadLine, recordLine, type TakeoverPreview } from '@/lib/account/takeoverView';
@@ -102,8 +102,11 @@ export function TakeoverLanding({
           </View>
         }
       >
+        {/* The arrival's layout: the person icon and the heading centred, the actions docked. The heading says what this is
+            (UX rule 8) with the approved share text minus the league, which cannot be shown before the tap. */}
         <View style={styles.block}>
           <Avatar name={label} size={DISC} tone="neutral" />
+          <ScreenTitle style={styles.title} maxFontSizeMultiplier={TAKEOVER_TITLE_MAX_SCALE}>{TAKEOVER_TAP_TITLE}</ScreenTitle>
         </View>
       </AuthScaffold>
     );

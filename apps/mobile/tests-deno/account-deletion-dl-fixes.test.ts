@@ -7,7 +7,7 @@
 import { assert, assertEquals, assertFalse } from 'jsr:@std/assert';
 import { keepName, NAME_KEEP_WHOLE } from '../lib/account/keepName.ts';
 import { leagueLine, type DeleteLeagueInput } from '../lib/account/leagueLines.ts';
-import { takeoverQuestion, pastSeasonsLine } from '../lib/account/deleteCopy.ts';
+import { takeoverQuestion, pastSeasonsLine, takeoverShareSentence, TAKEOVER_TAP_TITLE } from '../lib/account/deleteCopy.ts';
 import { takeoverShareMessage, parseTakeoverArrival } from '../lib/invite/takeoverLink.ts';
 import { WEB_BASE } from '../lib/links/webDomain.ts';
 import { SOURCES } from './sourceManifest.generated.ts';
@@ -122,4 +122,31 @@ Deno.test('SetupRows: the native event is read BEFORE the state updater (it is r
   const rows = src('components/game/SetupRows.tsx');
   assertFalse(/setBrokeAt\(\(prev\) => [^\n]*e\.nativeEvent/.test(rows), 'no e.nativeEvent inside a setState updater');
   assert(rows.includes('const lines = e.nativeEvent.lines;') && rows.includes('const width = e.nativeEvent.layout.width;'));
+});
+
+// ── Round 3: the tap view says what it is; the check hangs on the first line ─
+
+Deno.test('tap view: heading "Take over a team" (the share text without the league), in the arrival layout, with the two shipped buttons', () => {
+  assertEquals(TAKEOVER_TAP_TITLE, 'Take over a team');
+  assert(takeoverShareSentence('Stock Scudetto').startsWith(TAKEOVER_TAP_TITLE + ' in '), 'it IS the approved share text with the league cut off');
+  const landing = src('components/shell/TakeoverLanding.tsx');
+  const tap = landing.slice(landing.indexOf("state.kind === 'tap'"), landing.indexOf("state.kind === 'loading'"));
+  assert(tap.includes('<Avatar name={label} size={DISC} tone="neutral" />'));
+  assert(tap.includes('{TAKEOVER_TAP_TITLE}</ScreenTitle>'));
+  assert(tap.includes('maxFontSizeMultiplier={TAKEOVER_TITLE_MAX_SCALE}'));
+  assert(tap.includes('<Button label={FIND_LEAGUE} onPress={onFind} fullWidth />') && tap.includes('<Link label={NOT_NOW} onPress={onNotNow} muted />'));
+  assert(tap.indexOf('<Avatar') < tap.indexOf('{TAKEOVER_TAP_TITLE}'), 'icon above the heading');
+  assertFalse(/leagueName/.test(tap), 'nothing about the league before the tap');
+});
+
+Deno.test('Confirmed with Apple/Google: the check hangs on the FIRST line (flex-start + the line box offset), not the middle of a wrapped label', () => {
+  const view = src('components/shell/DeleteAccountView.tsx');
+  const style = view.slice(view.indexOf('  confirmed: {'));
+  assert(style.slice(0, style.indexOf('},')).includes("alignItems: 'flex-start'"));
+  assert(view.includes('<View style={{ marginTop: checkOffset }}>'));
+  assert(view.includes("const checkOffset = Math.max(0, Math.round((type.callout.lineHeight * fontScale - iconPointSize('callout', fontScale)) / 2));"));
+  // the arithmetic: at Large the line box is 18pt and the icon 16pt: 1pt; at XXXL (fontScale 3.1) the line is ~56pt, the icon capped at 25.6pt: ~15pt
+  const off = (fs: number, icon: number) => Math.max(0, Math.round((18 * fs - icon) / 2));
+  assertEquals(off(1, 16), 1);
+  assert(off(3.1, 25.6) > 12);
 });
