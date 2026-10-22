@@ -85,7 +85,7 @@ export default function TakeoverScreen() {
       return;
     }
     await settle(r);
-  }, [view, code, refresh, settle]);
+  }, [view, code, refresh, setActiveLeagueId, settle]);
 
   const open = useCallback(async () => {
     if (code) await pendingTakeover.clear(code);

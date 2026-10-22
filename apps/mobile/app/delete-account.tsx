@@ -36,6 +36,10 @@ export default function DeleteAccountScreen() {
   const [state, setState] = useState<DeleteState>(() => fixtureState(DELETE_FIXTURE, realKind));
   const stateRef = useRef(state);
   stateRef.current = state;
+  // The user id is read at send time from a ref, not captured: a profile that hydrates after mount must still clear the per-user
+  // active-league key, and `send` must stay stable (a changing `send` while the alert is up would open the alert twice).
+  const meIdRef = useRef(meId);
+  meIdRef.current = meId;
   const [password, setPassword] = useState(() => (DELETE_FIXTURE === 'password_ready' || DELETE_FIXTURE === 'failed' || DELETE_FIXTURE === 'running' || DELETE_FIXTURE === 'alert') && fixtureKind(DELETE_FIXTURE, realKind) === 'password' ? 'fixture-password' : '');
   const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -103,7 +107,7 @@ export default function DeleteAccountScreen() {
     // shows it from its first render; the auth guard then lands the signed-out stack (Sign in) by itself.
     setDeletedNotice(true);
     if (SHELL_FIXTURE) await signOut();
-    else await endSessionAfterDeletion(meId || null);
+    else await endSessionAfterDeletion(meIdRef.current || null);
   }, [signOut]);
 
   // Open the native alert exactly when the state says so.

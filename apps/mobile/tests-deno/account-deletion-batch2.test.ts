@@ -95,7 +95,11 @@ Deno.test('end session wiring: the real binding checks the signOut result, publi
   assert(end.includes("signOutLocal: () => supabase.auth.signOut({ scope: 'local' })"));
   assert(end.includes('forceSignedOut,'));
   assert(src('lib/SessionProvider.tsx').includes('subscribeForcedSignOut('));
-  assert(src('app/delete-account.tsx').includes('endSessionAfterDeletion(meId || null)'));
+  const del = src('app/delete-account.tsx');
+  assert(del.includes('endSessionAfterDeletion(meIdRef.current || null)'), 'the id is read at send time, so a late-hydrating user still clears their active-league key');
+  assert(del.includes('meIdRef.current = meId;'));
+  assertFalse(del.includes('endSessionAfterDeletion(meId'), 'never the value captured at first render');
+  assert(src('app/takeover.tsx').includes('[view, code, refresh, setActiveLeagueId, settle]'));
   const core = src('lib/account/endSessionCore.ts');
   assert(core.includes("'error' in r && r.error"), 'the resolved error is READ, not just awaited');
 });
