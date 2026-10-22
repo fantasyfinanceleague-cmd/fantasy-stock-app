@@ -8,7 +8,7 @@ Built by [Giorgio Fatica](https://github.com/giorgiofatica). [Portfolio](https:/
 
 **Pre-launch, in closed testing.** React Native is the primary app; the public website is a landing page, and public registration remains closed.
 
-As of **October 22, 2026**, the core league flow includes server-side draft validation, season schedule generation, weekly scoring, standings, and playoffs. The `main` branch carries the 1.3 mobile release work, including the redesigned interface and onboarding. The 1.3 release remains in preparation, with real-device checks and distribution setup outstanding.
+As of **October 22, 2026**, the core league flow includes server-side draft validation, season schedule generation, weekly scoring, standings, and playoffs. The `main` branch carries the 1.3 mobile release work, including the redesigned interface and onboarding. It also has invite links, Sign in with Apple and Google, and in-app account deletion (with the server side live since October 22). The 1.3 release remains in preparation, with real-device checks and distribution setup outstanding.
 
 The [project status log](docs/STATUS.md) records deployment evidence, release constraints, and remaining work. This README summarizes the project; the status log tracks operations.
 
@@ -18,17 +18,18 @@ The [project status log](docs/STATUS.md) records deployment evidence, release co
 - **Draft a portfolio:** take turns choosing stocks in a snake draft, with a pick clock, queue, and server-side automatic picks.
 - **Compete each week:** compare dollar gains in head-to-head matchups, follow standings, and advance through playoffs. A duration format supports a single longer competition.
 - **Manage the season:** make simulated trades, inspect portfolio performance, and retain results across seasons.
+- **Join and come back:** join from an invite link, sign in with Apple, Google, or email, and run a finished league back for another season with the same group.
+- **Leave cleanly:** delete your account in the app. Past seasons keep your results under "Former manager", and the commissioner can hand your team to someone new with a takeover link.
 
 No brokerage account or real-money deposit is required. [The design decision behind simulated investing](docs/decisions/DR-001-in-house-simulated-trading.md) explains the scope and tradeoffs.
 
-<details>
-<summary>Mobile interface preview</summary>
+<p>
+  <img src="docs/design/captures/gn-w4-home/01-live_open-17pro-dark.png" alt="Home: the team's value, season chart, this week's live matchup, and standings" width="240" />
+  <img src="docs/design/captures/gn-w4-draft/01-on_clock-17pro-dark.png" alt="Draft room: the pick clock, the snake-draft board, and stock search" width="240" />
+  <img src="docs/design/captures/gn-w4-matchup/17pro-large-category-live-dark.png" alt="Matchup: two managers' weekly gains with their stocks paired by category" width="240" />
+</p>
 
-Development capture with sample league data from the mobile UI review.
-
-<img src="docs/design/reviews/captures/ux-audit-home/01-live-light-standard.png" alt="Stockpile mobile Home screen showing portfolio value, a weekly matchup, and season performance" width="280" />
-
-</details>
+<sub>Home, the draft room, and a live matchup in the current mobile design. Development captures with sample league data; light mode is also supported.</sub>
 
 ## Technical decisions worth exploring
 
@@ -37,6 +38,7 @@ Development capture with sample league data from the mobile UI review.
 | Drafts and trades must obey league rules even when clients send conflicting requests. | Validate picks on the server and use database transactions for trade recording. | [Draft validation](supabase/functions/validate-and-record-pick/), [trade transaction tests](supabase/tests/record_trade_atomic.pglite.test.ts) |
 | Missing market prices or partial snapshots must not silently produce an incomplete score. | Track coverage per participant, retry incomplete work, and refuse scoring when required data is missing. | [Week-start snapshots](supabase/functions/snapshot-week-start/), [week-end snapshots](supabase/functions/snapshot-week-end/), [scoring](supabase/functions/process-week-results/) |
 | A database migration can apply successfully while its functions behave incorrectly. | Execute SQL against PGlite test databases and keep separate checks of deployed behavior. | [SQL test guide](supabase/tests/README.md), [deployment evidence](docs/STATUS.md) |
+| Deleting an account must finish, and stay honest, even if a step fails midway. | Record each deletion in a ledger that moves through fixed stages, have an hourly job finish any interrupted one, and mark it done only after the sign-in record is verified gone. | [Deletion ledger and scrub](supabase/migrations/20261125000003_account_deletions_ledger.sql), [delete-account](supabase/functions/delete-account/), [hourly heal](supabase/functions/heal-account-deletions/) |
 | Documentation can drift from a growing backend. | Generate an architecture map from migrations and client call sites, alongside a dated database snapshot. | [Architecture map and sources](docs/architecture/) |
 
 ## Stack and repository layout
@@ -104,8 +106,11 @@ The web app currently has `APP_PAUSED = true` in `apps/web/src/App.jsx`, so its 
 The repo includes Deno tests for backend logic, PGlite tests that execute SQL migrations, frontend tests, and device walkthroughs. From the repository root:
 
 ```bash
-# Backend unit tests
-deno test supabase/functions/
+# Backend and SQL tests (edge-function logic, plus PGlite runs of the migrations)
+deno test --allow-read --allow-env supabase/
+
+# Mobile app logic, copy, and layout rules
+(cd apps/mobile/tests-deno && deno test --allow-read --allow-env --allow-sys --allow-run .)
 
 # Generated architecture map freshness
 node scripts/gen-architecture.mjs --check
