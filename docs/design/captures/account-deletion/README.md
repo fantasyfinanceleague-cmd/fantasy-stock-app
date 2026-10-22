@@ -116,6 +116,13 @@ Replaced stills are in `superseded-run4/`.
 - **F33 commissioner League settings (pre-draft; Roster slots / "Add slot"), XXXL: now reachable.** `F33-commissioner-settings-top-*` and `F33-commissioner-settings-foot-*` (`SHELL_SCROLL_END=1`), 8 stills, no crash (the red "Cannot read property 'layout' of null" screen is gone; that was `SetupRows.tsx` reading `e.nativeEvent` inside the state updater). The earlier crashed stills (`not-reachable/F33-share-pill-commissioner-*`) were moved to `superseded-run4/`. There is no Share pill on the commissioner's invite row at XXXL: the foot shows the code, then "Commissioner / You", with nothing between them (the same as at L). One top still (17e XXXL light) was first caught on the Expo Go splash and was re-shot.
 - **L diffs vs `origin/main` (`4e24ea92`) for the SetupRows change**, both phones, both themes: League settings, commissioner pre-draft (top) and (scrolled to the foot), and member pre-draft (Share pill): identical, 0 changed pixels in all 12 pairs.
 
+## Round 4 on `4a614aec` (scheme-link tap view has a heading; the "Confirmed with" check hangs on the first line)
+
+17e only; replaced stills are in `superseded-run5/`.
+
+- **F30 (takeover tap view), 17e L and XXXL, dark and light (4 stills).** The default avatar and the heading "Take over a team" are centred, one line, not clipped, with "Find league" and "Not now" docked below. **For the 17e these supersede the earlier F30 stills; the 17 Pro F30 stills are from an earlier build (no heading) and are NOT current.**
+- **F09 (Apple confirmed, delete screen), 17e XXXL foot, dark and light (2 stills).** The check now sits on the first line, beside "Confirmed with", with "Apple" on the second line. The 17e L F09 stills and all 17 Pro F09 stills are unchanged from the earlier build.
+
 ## Known notes
 
 - F19 (share sheet) was opened by a capture-script action (a dev-only hook, since reverted and not committed).
