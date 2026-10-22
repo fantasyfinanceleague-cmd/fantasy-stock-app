@@ -197,6 +197,31 @@ step. For the invite steps you need **[2+ accounts]**.
   doesn't sign the phone in (a confirmation only completes in the app that asked for it); go back
   to the phone and **sign in with that email and password**, and you're in.
 
+## 6. Deleting an account and taking over a team
+
+The server side is live (2026-10-22); the screens arrive with the account-deletion app PR. **Use
+throwaway test accounts only: a deletion cannot be undone.** You'll need a test league with
+**[2+ accounts]**, and for item 29 a test Apple ID that has signed in to the app.
+
+- [ ] **29. Delete an account that signed in with Apple.** **[iPhone]** On a test account: Profile ›
+  **Delete account** (the last row). Right: **"Delete your account?"** lists each league and what
+  happens to it; **Continue with Apple** asks you to confirm; then **"Confirmed with Apple"**. Tap
+  **Delete my account**, then **Delete** in **"Are you sure?"**. Right: you're signed out and sign-in
+  shows **"Your account is deleted."** Then on the phone: Settings › your name › Sign in with Apple:
+  the app is **gone** from the list (allow a minute).
+- [ ] **30. Delete an account that uses a password.** Same path on an email test account. Type a
+  wrong password first. Right: **"That password isn't right. Try again."** under the field, the field
+  clears. Then the right password: deleted as in 29.
+- [ ] **31. What the league sees.** **[2+ accounts]** On another account in that league: Standings,
+  Matchup and the team view show **"Former manager"** with the plain person avatar, never the old
+  name. If the deleted account was the commissioner, someone else is commissioner now.
+- [ ] **32. Find a new manager, for real.** **[2+ accounts]** As the commissioner: League settings ›
+  Members › the **Former manager** row › **Find a new manager**, then **Share** and send it to the
+  other phone in Messages with a **real tap** on the share sheet. Right: the message carries a link.
+  On the other phone tap it. Right: the app opens on **"Take over Former manager's team in
+  {league}?"**; **Take the team** puts that account in the league with that team. Open the same link
+  again from a third account. Right: **"Someone already took this team."**
+
 ## If something isn't right
 
 Write down: what you tapped (and on which screen), what you expected, what you saw, the time, and
