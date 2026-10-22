@@ -8,7 +8,7 @@ Built by [Giorgio Fatica](https://github.com/giorgiofatica). [Portfolio](https:/
 
 **Pre-launch, in closed testing.** React Native is the primary app; the public website is a landing page, and public registration remains closed.
 
-As of **October 22, 2026**, the core league flow includes server-side draft validation, season schedule generation, weekly scoring, standings, and playoffs. The `main` branch carries the 1.3 mobile release work, including the redesigned interface and onboarding. Release preparation still includes real-device checks and distribution setup; code on `main` should not be mistaken for a public App Store release.
+As of **October 22, 2026**, the core league flow includes server-side draft validation, season schedule generation, weekly scoring, standings, and playoffs. The `main` branch carries the 1.3 mobile release work, including the redesigned interface and onboarding. The 1.3 release remains in preparation, with real-device checks and distribution setup outstanding.
 
 The [project status log](docs/STATUS.md) records deployment evidence, release constraints, and remaining work. This README summarizes the project; the status log tracks operations.
 
@@ -115,7 +115,7 @@ node scripts/gen-architecture.mjs --check
 (cd apps/mobile && npm run lint && npx tsc --noEmit)
 ```
 
-See the [SQL test guide](supabase/tests/README.md) for individual database suites and their permissions, and the [1.3 device walkthrough](docs/testing/WALKTHROUGH_1.3.md) for release checks. These are commands and coverage areas, not a claim that every suite currently passes. Season simulations use a configured backend and are documented separately in the [simulation guide](docs/testing/SEASON_SIMULATION_TEST.md).
+See the [SQL test guide](supabase/tests/README.md) for individual database suites and their permissions, and the [1.3 device walkthrough](docs/testing/WALKTHROUGH_1.3.md) for release checks. Season simulations use a configured backend and are documented separately in the [simulation guide](docs/testing/SEASON_SIMULATION_TEST.md).
 
 ## Further reading
 
