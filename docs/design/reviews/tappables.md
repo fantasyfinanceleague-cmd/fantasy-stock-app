@@ -121,9 +121,9 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/game/RenewalReview.tsx:148` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/game/RenewalRoster.tsx:85` | Pressable | onPress | `inline: () => setChanging(true)` | state setChanging |  |
 | `components/game/RenewalRoster.tsx:107` | Pressable | onPress | `inline: () => runSheet(p)` | fn runSheet |  |
-| `components/game/SetupRows.tsx:133` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:157` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
-| `components/game/SetupRows.tsx:194` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:137` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:161` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/game/SetupRows.tsx:198` | Switch | onValueChange | `onValueChange` | prop onValueChange (the caller's) | `disabled` |
 | `components/game/SetupScaffold.tsx:52` | Pressable | onPress | `back.onPress` | prop back.onPress |  |
 | `components/game/StandingsTable.tsx:73` | ManagerRow | onPress | `inline: href ? () => router.push(href) : undefined` | route push(href) |  |
 | `components/game/Stepper.tsx:67` | Pressable | onPress | `inline: () => down && onStep(-1)` | fn onStep | `!down` |
@@ -226,15 +226,15 @@ Destination kinds: `route` (expo-router), `tab` (tab bar), `sheet` (a state sett
 | `components/shell/ShellTabBar.tsx:151` | Pressable | onPress | `onPress` | prop onPress (the caller's) |  |
 | `components/shell/ShellTabBar.tsx:152` | Pressable | onLongPress | `onLongPress` | prop onLongPress (the caller's) |  |
 | `components/shell/SocialSignIn.tsx:107` | Button | onPress | `inline: () => run('google')` | fn run | `busy === 'apple'` |
-| `components/shell/TakeoverLanding.tsx:66` | Link | onPress | `onHome` | prop onHome (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:78` | Link | onPress | `onOpen` | prop onOpen (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:92` | Button | onPress | `onFind` | prop onFind (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:93` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:118` | Link | onPress | `onRetry` | prop onRetry (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:119` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:133` | Button | onPress | `onTake` | prop onTake (the caller's) |  |
-| `components/shell/TakeoverLanding.tsx:134` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) | `taking` |
-| `components/shell/TakeoverLanding.tsx:154` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
+| `components/shell/TakeoverLanding.tsx:74` | Link | onPress | `onHome` | prop onHome (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:86` | Link | onPress | `onOpen` | prop onOpen (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:100` | Button | onPress | `onFind` | prop onFind (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:101` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:126` | Link | onPress | `onRetry` | prop onRetry (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:127` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:141` | Button | onPress | `onTake` | prop onTake (the caller's) |  |
+| `components/shell/TakeoverLanding.tsx:142` | Link | onPress | `onNotNow` | prop onNotNow (the caller's) | `taking` |
+| `components/shell/TakeoverLanding.tsx:162` | Pressable | onPress | `onPress` | prop onPress (the caller's) | `disabled` |
 | `components/shell/UsernamePicker.tsx:263` | Chip | onPress | `inline: () => onChange(s)` | fn onChange |  |
 | `components/shell/UsernamePicker.tsx:272` | Button | onPress | `onContinue` | sheet setEmailJustConfirmed(false) | `mode === 'suggesting' \|\| (!view.canConti` |
 | `components/shell/UsernamePicker.tsx:273` | Button | onPress | `startEditing` | fn startEditing |  |
