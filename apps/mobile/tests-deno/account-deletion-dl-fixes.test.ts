@@ -106,3 +106,20 @@ Deno.test('share: the payload is the approved sentence AND the https /take/<CODE
   const hook = src('lib/account/useFindNewManager.ts');
   assert(hook.includes('takeoverShareMessage(leagueName, code)') && hook.includes('Share.share({ message })'));
 });
+
+// ── Round 2 of the gate: F20 at XXXL, and the crash found at XXXL ───────────
+
+Deno.test('takeover heading: its own ceiling (1.15x) so both names fit on one line at XXXL; nothing changes at Large', () => {
+  const landing = src('components/shell/TakeoverLanding.tsx');
+  assert(landing.includes('export const TAKEOVER_TITLE_MAX_SCALE = 1.15;'));
+  assert(landing.includes('<ScreenTitle style={styles.title} maxFontSizeMultiplier={TAKEOVER_TITLE_MAX_SCALE}>'));
+  assert(src('components/shell/ScreenTitle.tsx').includes('maxFontSizeMultiplier={maxFontSizeMultiplier}'));
+  // display is 32pt: capped at 1.15 it is ~37pt, narrow enough for ~16 characters of the 'display' face on a 340pt line
+  assertEquals(Math.round(32 * 1.15), 37);
+});
+
+Deno.test('SetupRows: the native event is read BEFORE the state updater (it is released by the time the updater runs)', () => {
+  const rows = src('components/game/SetupRows.tsx');
+  assertFalse(/setBrokeAt\(\(prev\) => [^\n]*e\.nativeEvent/.test(rows), 'no e.nativeEvent inside a setState updater');
+  assert(rows.includes('const lines = e.nativeEvent.lines;') && rows.includes('const width = e.nativeEvent.layout.width;'));
+});

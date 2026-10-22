@@ -24,6 +24,14 @@ import { ARRIVAL_COPY } from '@/lib/invite/arrivalView';
 
 const DISC = 64;
 
+/**
+ * The heading's own ceiling. At the `display` style's 1.6× (51pt) "Former manager's" is ~460pt wide on a ~340pt screen, so
+ * keeping each name on one line (keepName) is physically impossible and the iOS layout broke both names word by word
+ * (F20 XXXL). At 1.15× (~37pt) both names fit on one line each; at Large (1.0) nothing changes. A longer league name
+ * still wraps between its words (keepName leaves names over 20 characters breakable).
+ */
+export const TAKEOVER_TITLE_MAX_SCALE = 1.15;
+
 /** One sentence capped so it stays a panel at XXXL. */
 const LINK_MAX_SCALE = WARN_TEXT_MAX_SCALE;
 
@@ -137,7 +145,7 @@ export function TakeoverLanding({
     >
       <View style={styles.block}>
         <Avatar name={label} size={DISC} tone="neutral" />
-        <ScreenTitle style={styles.title}>{takeoverQuestion(keepName(label), keepName(found.leagueName))}</ScreenTitle>
+        <ScreenTitle style={styles.title} maxFontSizeMultiplier={TAKEOVER_TITLE_MAX_SCALE}>{takeoverQuestion(keepName(label), keepName(found.leagueName))}</ScreenTitle>
         <Card style={styles.record}>
           <Text variant="headline" maxFontSizeMultiplier={LINK_MAX_SCALE} style={styles.num}>
             {recordLine(found.wins, found.losses, found.rank)}

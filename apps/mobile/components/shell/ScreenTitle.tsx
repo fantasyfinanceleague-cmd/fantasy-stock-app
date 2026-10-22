@@ -7,9 +7,9 @@ import { Text } from '@/components/sp/Text';
 // because it also sets big numbers that must never wrap; a heading must
 // wrap instead, or at accessibility sizes it truncates ("Pick a usern…").
 // numberOfLines 0 = unlimited. Always announced as a header.
-export function ScreenTitle({ children, style }: { children: string; style?: StyleProp<TextStyle> }) {
+export function ScreenTitle({ children, style, maxFontSizeMultiplier }: { children: string; style?: StyleProp<TextStyle>; maxFontSizeMultiplier?: number }) {
   return (
-    <Text variant="display" numberOfLines={0} accessibilityRole="header" style={style}>
+    <Text variant="display" numberOfLines={0} accessibilityRole="header" maxFontSizeMultiplier={maxFontSizeMultiplier} style={style}>
       {children}
     </Text>
   );
