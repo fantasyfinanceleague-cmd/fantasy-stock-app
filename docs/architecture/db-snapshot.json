@@ -1358,6 +1358,15 @@
             "username": "postgres"
         },
         {
+            "jobid": 46,
+            "active": true,
+            "command": "\n  select net.http_post(\n    url     := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/heal-account-deletions',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_apikey' limit 1)\n    ),\n    body    := '{}'::jsonb,\n    timeout_milliseconds := 180000\n  )\n  where public.heal_account_deletions_due();\n  ",
+            "jobname": "heal_account_deletions",
+            "database": "postgres",
+            "schedule": "23 * * * *",
+            "username": "postgres"
+        },
+        {
             "jobid": 34,
             "active": true,
             "command": "\n  SELECT net.http_post(\n    url := 'https://haiaaifjcclsvmkfqgmd.supabase.co/functions/v1/process-week-results',\n    headers := jsonb_build_object(\n      'Content-Type', 'application/json',\n      'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'cron_apikey' LIMIT 1)\n    ),\n    body := '{}'::jsonb,\n    timeout_milliseconds := 180000\n  );\n  ",
@@ -3364,7 +3373,7 @@
             "securityDefiner": false
         }
     ],
-    "capturedAt": "2026-10-21T18:45:14Z",
+    "capturedAt": "2026-10-22T01:22:49Z",
     "publications": [
         {
             "table": "drafts",

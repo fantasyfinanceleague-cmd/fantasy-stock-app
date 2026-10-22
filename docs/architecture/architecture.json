@@ -2,56 +2,36 @@
   "_comment": "GENERATED — do not hand-edit. Run node scripts/gen-architecture.mjs.",
   "schemaVersion": 1,
   "generated": {
-    "commit": "d12825922b4a0f9ca145459d37078fbe573d26a4",
-    "commitShort": "d1282592",
+    "commit": "c04f33aa7ab422c29eedcf2e688a40ba8c0c99e9",
+    "commitShort": "c04f33aa",
     "commitMeaning": "The source state this map describes. The map is committed on top of it, so this is the PARENT of the commit containing this file.",
-    "branch": "feat/account-deletion-fn",
+    "branch": "docs/status-account-deletion-w3",
     "dirty": true,
     "dirtyPaths": [
       {
         "code": "M",
-        "path": "supabase/functions/_shared/notice-delivery.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/delete-account/index.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/delete-account/run.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/delete-account/run.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/heal-account-deletions/run.test.ts"
-      },
-      {
-        "code": "M",
-        "path": "supabase/functions/heal-account-deletions/run.ts"
+        "path": "docs/architecture/db-snapshot.json"
       }
     ],
-    "timestamp": "2026-10-21T21:55:06Z",
-    "sourceHash": "sha256:d370bc4ac02bd004eaa82daae51b7f1a82193b6635e858b7dbee553c5e569141",
+    "timestamp": "2026-10-22T01:25:21Z",
+    "sourceHash": "sha256:c0f70b7cbf04e5d01f0598db4852164cc13897d9effa9b31f5abbe00ba89847b",
     "command": "node scripts/gen-architecture.mjs",
     "generatorVersion": 1
   },
   "dbSnapshot": {
     "present": true,
-    "capturedAt": "2026-10-21T18:45:14Z",
-    "ageHours": 3.2,
-    "ageDays": 0.1,
+    "capturedAt": "2026-10-22T01:22:49Z",
+    "ageHours": 0,
+    "ageDays": 0,
     "staleAfterDays": 14,
     "stale": false,
-    "hash": "sha256:e6237aa0b0c28a3a27cb9ce62b1728763dbddaf2c4eaff911ad87b9014e6b2a7",
+    "hash": "sha256:d6107036938ffaf8a53341cfe733b6e3cdd021617f5b5f94ca31e3ea518feb9b",
     "database": "postgres",
     "postgresVersion": "17.4",
     "counts": {
       "functions": 129,
       "tables": 39,
-      "cronJobs": 13
+      "cronJobs": 14
     }
   },
   "layers": [
@@ -171,6 +151,34 @@
       "source": {
         "path": "supabase/migrations/20261108000000_cron_explicit_timeouts.sql",
         "line": 152
+      }
+    },
+    {
+      "layer": "trigger",
+      "facts": {
+        "schedule": "23 * * * *",
+        "active": true,
+        "username": "postgres",
+        "target": "heal-account-deletions",
+        "sendsApikey": true
+      },
+      "db": null,
+      "declared": {
+        "schedule": "23 * * * *",
+        "definedIn": [
+          "supabase/migrations/20261125000010_schedule_heal_account_deletions.sql:41"
+        ]
+      },
+      "drift": [],
+      "annotation": null,
+      "verified": true,
+      "id": "cron.heal_account_deletions",
+      "label": "heal_account_deletions",
+      "sublabel": "23 * * * *",
+      "kind": "cron-job",
+      "source": {
+        "path": "supabase/migrations/20261125000010_schedule_heal_account_deletions.sql",
+        "line": 41
       }
     },
     {
@@ -10863,6 +10871,18 @@
       "payload": "net.http_post · apikey from vault cron_apikey",
       "callSites": [
         "supabase/migrations/20261108000000_cron_explicit_timeouts.sql:152"
+      ]
+    },
+    {
+      "annotation": null,
+      "verified": true,
+      "id": "e.cron.heal_account_deletions->fn.heal-account-deletions",
+      "from": "cron.heal_account_deletions",
+      "to": "fn.heal-account-deletions",
+      "protocol": "pg-net-http",
+      "payload": "net.http_post · apikey from vault cron_apikey",
+      "callSites": [
+        "supabase/migrations/20261125000010_schedule_heal_account_deletions.sql:41"
       ]
     },
     {
@@ -22291,19 +22311,6 @@
       "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
     },
     {
-      "node": "fn.heal-account-deletions",
-      "label": "heal-account-deletions",
-      "kind": "edge-function",
-      "source": "supabase/functions/heal-account-deletions/index.ts:39",
-      "outbound": [
-        "mod.heal-account-deletions/run",
-        "tbl.cron_job_status",
-        "tbl.cron_job_status",
-        "tbl.cron_job_status"
-      ],
-      "caveat": "No scanned caller. Call sites are found by grep over TS/TSX/JSX and SQL function bodies; a dynamic invoke would be missed."
-    },
-    {
       "node": "fn.send-notification",
       "label": "send-notification",
       "kind": "edge-function",
@@ -23203,12 +23210,12 @@
   ],
   "orphanAnnotations": [],
   "stats": {
-    "nodes": 304,
-    "edges": 750,
+    "nodes": 305,
+    "edges": 751,
     "flows": 7,
     "drift": 33,
     "driftHigh": 0,
-    "deadCode": 66,
+    "deadCode": 65,
     "unverified": 11
   },
   "sourceIndex": {
@@ -23846,6 +23853,6 @@
       "ticker-quotes=false",
       "validate-and-record-pick=true"
     ],
-    "dbSnapshot": "sha256:e6237aa0b0c28a3a27cb9ce62b1728763dbddaf2c4eaff911ad87b9014e6b2a7"
+    "dbSnapshot": "sha256:d6107036938ffaf8a53341cfe733b6e3cdd021617f5b5f94ca31e3ea518feb9b"
   }
 }
