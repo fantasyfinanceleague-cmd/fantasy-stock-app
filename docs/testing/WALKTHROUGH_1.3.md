@@ -221,6 +221,11 @@ throwaway test accounts only: a deletion cannot be undone.** You'll need a test 
   On the other phone tap it. Right: the app opens on **"Take over Former manager's team in
   {league}?"**; **Take the team** puts that account in the league with that team. Open the same link
   again from a third account. Right: **"Someone already took this team."**
+- [ ] **33. A takeover link typed by hand waits for a tap.** **[2+ accounts]** While signed in, type
+  **fantasystockapp://take/CODE** (the code from a fresh **Find a new manager** link) into Notes and
+  tap it. Right: the app opens on **"Take over a team"** with **Find league** and **Not now**, and
+  **nothing about the league shows until you tap Find league**. Tap it: the takeover question
+  appears. Tap **Not now** instead and nothing happens.
 
 ## If something isn't right
 
